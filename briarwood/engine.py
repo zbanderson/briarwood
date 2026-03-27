@@ -5,6 +5,13 @@ from briarwood.schemas import AnalysisModule, AnalysisReport, ModuleResult, Prop
 
 class AnalysisEngine:
     def __init__(self, modules: list[AnalysisModule]) -> None:
+        module_names = [module.name for module in modules]
+        duplicate_names = sorted({name for name in module_names if module_names.count(name) > 1})
+        if duplicate_names:
+            raise ValueError(
+                "AnalysisEngine received duplicate module names: "
+                + ", ".join(duplicate_names)
+            )
         self._modules = {module.name: module for module in modules}
 
     def run_module(self, module_name: str, property_input: PropertyInput) -> ModuleResult:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 from briarwood.agents.scarcity.schemas import ScarcitySupportInputs
@@ -14,6 +15,7 @@ from briarwood.agents.town_county.sources import TownCountyOutlookRequest
 from briarwood.schemas import PropertyInput
 
 
+@lru_cache(maxsize=1)
 def build_default_town_county_service() -> TownCountyDataService:
     """Create the file-backed location service used by the v1 report pipeline."""
 

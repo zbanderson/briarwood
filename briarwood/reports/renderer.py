@@ -17,7 +17,12 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$subtitle": escape(tear_sheet.header.subtitle),
         "$investment_stance": escape(tear_sheet.header.investment_stance),
         "$ask_price": _currency(tear_sheet.conclusion.ask_price),
-        "$base_value": _currency(tear_sheet.conclusion.base_value),
+        "$briarwood_current_value": _currency(tear_sheet.conclusion.briarwood_current_value),
+        "$bcv_range": (
+            f"{_currency(tear_sheet.conclusion.value_range_low)} - "
+            f"{_currency(tear_sheet.conclusion.value_range_high)}"
+        ),
+        "$pricing_view": escape(tear_sheet.conclusion.pricing_view.title()),
         "$bull_value": _currency(tear_sheet.conclusion.bull_value),
         "$bear_value": _currency(tear_sheet.conclusion.bear_value),
         "$valuation_method_summary": escape(tear_sheet.conclusion.explanation),
@@ -34,6 +39,13 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$durability_supporting_points": _render_list_items(tear_sheet.market_durability.supporting_points),
         "$durability_caveats": _render_list_items(tear_sheet.market_durability.caveats),
         "$durability_confidence_notes": _render_case_list_items(tear_sheet.market_durability.confidence_notes),
+        "$carry_title": escape(tear_sheet.carry_support.title),
+        "$carry_summary": escape(tear_sheet.carry_support.summary),
+        "$carry_support_label": escape(tear_sheet.carry_support.support_label),
+        "$carry_ratio": escape(tear_sheet.carry_support.income_support_ratio_text),
+        "$carry_cash_flow": escape(tear_sheet.carry_support.estimated_cash_flow_text),
+        "$carry_assessment": escape(tear_sheet.carry_support.assessment.summary),
+        "$carry_warnings": _render_case_list_items(tear_sheet.carry_support.warnings),
         "$case_columns": _render_case_columns(tear_sheet.bull_base_bear),
     }
     html = template
@@ -66,7 +78,7 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
     if chart.plot_html:
         return chart.plot_html
 
-    all_values = [chart.current_ask, chart.market_reference_value, chart.forward_base_value]
+    all_values = [chart.current_ask, chart.current_value, chart.market_reference_value, chart.forward_base_value]
     all_values.extend(band.value for band in chart.fan_bands)
     min_value = min(all_values)
     max_value = max(all_values)
@@ -85,6 +97,7 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
     x_right = 520.0
 
     ask_y = y_for(chart.current_ask)
+    bcv_y = y_for(chart.current_value)
     marker_y = y_for(chart.market_reference_value)
     base_y = y_for(chart.forward_base_value)
     band_map = {band.label: band.value for band in chart.fan_bands}
@@ -104,6 +117,7 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
         f'<line class="scenario-line bear-line" x1="{x_mid}" y1="{base_y:.1f}" x2="{x_right}" y2="{bear_y:.1f}"></line>'
         f'<circle class="scenario-dot market-dot" cx="{x_left}" cy="{marker_y:.1f}" r="6"></circle>'
         f'<circle class="scenario-dot ask-dot" cx="{x_left}" cy="{ask_y:.1f}" r="6"></circle>'
+        f'<circle class="scenario-dot bcv-dot" cx="{x_left}" cy="{bcv_y:.1f}" r="6"></circle>'
         f'<circle class="scenario-dot base-dot" cx="{x_right}" cy="{base_y:.1f}" r="6"></circle>'
         f'<circle class="scenario-dot bull-dot" cx="{x_right}" cy="{bull_y:.1f}" r="6"></circle>'
         f'<circle class="scenario-dot bear-dot" cx="{x_right}" cy="{bear_y:.1f}" r="6"></circle>'
@@ -111,6 +125,7 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
         f'<text class="chart-label" x="{x_right}" y="252" text-anchor="middle">{escape(chart.forward_year_label)}</text>'
         f'<text class="chart-annotation" x="{x_left - 12}" y="{marker_y - 12:.1f}" text-anchor="end">{escape(chart.market_reference_label)} {_currency(chart.market_reference_value)}</text>'
         f'<text class="chart-annotation" x="{x_left - 12}" y="{ask_y + 22:.1f}" text-anchor="end">Ask {_currency(chart.current_ask)}</text>'
+        f'<text class="chart-annotation" x="{x_left - 12}" y="{bcv_y + 4:.1f}" text-anchor="end">{escape(chart.current_value_label)} {_currency(chart.current_value)}</text>'
         f'<text class="chart-annotation base-text" x="{x_right + 14}" y="{base_y + 4:.1f}">Base {_currency(chart.forward_base_value)}</text>'
         f'<text class="chart-annotation bull-text" x="{x_right + 14}" y="{bull_y + 4:.1f}">Bull {_currency(band_map.get("Bull", chart.forward_base_value))}</text>'
         f'<text class="chart-annotation bear-text" x="{x_right + 14}" y="{bear_y + 4:.1f}">Bear {_currency(band_map.get("Bear", chart.forward_base_value))}</text>'

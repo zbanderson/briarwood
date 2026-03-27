@@ -56,7 +56,8 @@ class IncomeAgentTests(unittest.TestCase):
         self.assertEqual(result.monthly_maintenance_reserve, 0.0)
         self.assertEqual(result.effective_monthly_rent, 3600.0)
         self.assertFalse(result.score_inputs_complete)
-        self.assertEqual(len(result.warnings), 5)
+        self.assertEqual(len(result.warnings), 4)
+        self.assertNotIn("Monthly HOA missing; treating HOA as $0.00/month.", result.warnings)
 
     def test_zero_hoa_is_preserved_without_warning(self) -> None:
         payload = sample_payload()

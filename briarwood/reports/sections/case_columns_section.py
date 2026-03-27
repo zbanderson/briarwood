@@ -13,6 +13,7 @@ from briarwood.schemas import AnalysisReport
 def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     valuation = get_valuation_output(report)
     scenario = get_scenario_output(report)
+    scenario_module = report.get_module("bull_base_bear")
     outlook = get_town_county_outlook(report)
     history = get_market_value_history(report)
     risk = report.get_module("risk_constraints")
@@ -21,6 +22,10 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     monthly_cash_flow = valuation.monthly_cash_flow
     cap_rate = valuation.cap_rate or 0.0
     gross_yield = valuation.gross_yield or 0.0
+    base_growth_rate = _number(scenario_module.metrics.get("base_growth_rate"))
+    bull_growth_rate = _number(scenario_module.metrics.get("bull_growth_rate"))
+    bear_growth_rate = _number(scenario_module.metrics.get("bear_growth_rate"))
+    income_support_ratio = scenario_module.metrics.get("income_support_ratio")
     risk_flags = str(risk.metrics.get("risk_flags", "none"))
     town_score = outlook.score
     town_trend = history.one_year_change_pct or 0.0
@@ -39,14 +44,18 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         name="Bull Case",
         scenario_value=scenario.bull_case_value,
         assumptions=[
-            "Strong exit environment and stable financing backdrop.",
-            f"Historical market appreciation stays near {town_trend:.1%}.",
-            f"Location thesis remains {town_score.location_thesis_label}.",
+            "Exit demand stays healthy and the market rewards supportive local conditions.",
+            f"Forward value compounds at about {bull_growth_rate:.1%} over the next 12 months.",
+            f"Historical market appreciation stays near {town_trend:.1%} and location remains {town_score.location_thesis_label}.",
         ],
         key_drivers=[
             f"Scenario upside benefits from current gross yield of {gross_yield:.1%}.",
             location_driver,
-            "Execution risk remains manageable.",
+            (
+                f"Fallback rent support near {float(income_support_ratio):.2f}x helps hold flexibility."
+                if isinstance(income_support_ratio, (int, float))
+                else "The upside case leans primarily on resale strength because fallback rent support is not fully known."
+            ),
         ],
         risk_factors=[
             "Optimistic exit assumptions may not materialize.",
@@ -57,7 +66,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             confidence=0.65,
             summary=(
                 f"Bull case implies {_ratio(scenario.bull_case_value - ask_price, ask_price):.1%} "
-                "upside if operating support and exit sentiment both improve."
+                "upside from today's ask if operating support and exit sentiment both improve."
             ),
         ),
     )
@@ -66,12 +75,12 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         scenario_value=scenario.base_case_value,
         assumptions=[
             f"Current underwriting implies a {cap_rate:.1%} cap rate.",
-            f"Monthly cash flow remains around ${monthly_cash_flow:,.0f}.",
+            f"Base case compounds at about {base_growth_rate:.1%} over the next 12 months.",
             f"Location backdrop remains {town_score.location_thesis_label} rather than improving materially.",
         ],
         key_drivers=[
-            "Value anchored to current purchase underwriting.",
-            "Moderate scenario uplift relative to ask.",
+            f"Monthly cash flow remains around ${monthly_cash_flow:,.0f}.",
+            "Value is anchored to current underwriting and market-history momentum rather than a simple markup.",
             location_driver,
         ],
         risk_factors=[
@@ -83,7 +92,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             confidence=0.8,
             summary=(
                 f"Base case implies {_ratio(scenario.base_case_value - ask_price, ask_price):.1%} "
-                "value support versus ask under current assumptions."
+                "12-month value support versus ask under current assumptions."
             ),
         ),
     )
@@ -92,11 +101,11 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         scenario_value=scenario.bear_case_value,
         assumptions=[
             "Exit pricing softens and upside assumptions compress.",
-            "Cash flow remains pressured.",
+            f"Bear case assumes roughly {bear_growth_rate:.1%} forward value change over the next 12 months.",
             f"Location support slips below today's {town_score.location_thesis_label} reading.",
         ],
         key_drivers=[
-            "Value support falls back toward current income profile.",
+            "Value support falls back toward current underwriting with less help from market momentum.",
             "Lower optimism on exit drives the downside case.",
             "Operating leverage works against returns.",
         ],
@@ -110,7 +119,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             confidence=0.72,
             summary=(
                 f"Bear case implies {_ratio(scenario.bear_case_value - ask_price, ask_price):.1%} "
-                "downside if current pressures intensify."
+                "12-month downside if current pressures intensify."
             ),
         ),
     )

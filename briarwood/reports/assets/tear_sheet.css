@@ -111,6 +111,10 @@ h3 {
   margin: 18px 0;
 }
 
+.compact-metrics strong {
+  font-size: 20px;
+}
+
 .metric-grid span {
   display: block;
   color: #6b7278;
@@ -136,6 +140,10 @@ h3 {
 
 .chart-card {
   margin-bottom: 4px;
+}
+
+.carry-card {
+  margin-top: 20px;
 }
 
 .chart {

@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+from briarwood.agents.income import IncomeAgent
+from briarwood.agents.income.schemas import IncomeAgentInput
 from briarwood.schemas import ModuleResult, PropertyInput, ValuationOutput
-from briarwood.settings import CostValuationSettings, DEFAULT_COST_VALUATION_SETTINGS
 from briarwood.scoring import clamp_score
+from briarwood.settings import CostValuationSettings, DEFAULT_COST_VALUATION_SETTINGS
 from briarwood.utils import safe_divide
 
 
 class CostValuationModule:
     name = "cost_valuation"
 
-    def __init__(self, settings: CostValuationSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: CostValuationSettings | None = None,
+        *,
+        income_agent: IncomeAgent | None = None,
+    ) -> None:
         self.settings = settings or DEFAULT_COST_VALUATION_SETTINGS
+        self.income_agent = income_agent or IncomeAgent()
 
     def run(self, property_input: PropertyInput) -> ModuleResult:
         purchase_price = property_input.purchase_price or 0.0
@@ -24,25 +32,42 @@ class CostValuationModule:
             if property_input.vacancy_rate is not None
             else self.settings.default_vacancy_rate
         )
+        loan_term_years = property_input.loan_term_years or self.settings.loan_term_years
+        monthly_hoa = property_input.monthly_hoa if property_input.monthly_hoa is not None else 0.0
+
+        income = self.income_agent.run(
+            IncomeAgentInput(
+                price=purchase_price or 1.0,
+                down_payment_pct=down_payment_percent,
+                interest_rate=interest_rate,
+                loan_term_years=loan_term_years,
+                annual_taxes=annual_taxes,
+                annual_insurance=annual_insurance,
+                monthly_hoa=monthly_hoa,
+                estimated_monthly_rent=monthly_rent,
+                vacancy_pct=vacancy_rate,
+                maintenance_pct=self.settings.default_maintenance_reserve_pct,
+            )
+        )
 
         down_payment_amount = purchase_price * down_payment_percent
-        loan_amount = purchase_price - down_payment_amount
-        monthly_taxes = annual_taxes / 12
-        monthly_insurance = annual_insurance / 12
-        monthly_mortgage = self._calculate_monthly_mortgage(
-            loan_amount,
-            interest_rate,
-            years=self.settings.loan_term_years,
-        )
-        monthly_operating_cost = monthly_taxes + monthly_insurance
-        monthly_total_cost = monthly_operating_cost + monthly_mortgage
+        loan_amount = income.loan_amount
+        effective_monthly_rent = income.effective_monthly_rent or 0.0
+        monthly_taxes = income.monthly_taxes
+        monthly_insurance = income.monthly_insurance
+        monthly_hoa = income.monthly_hoa
+        monthly_maintenance_reserve = income.monthly_maintenance_reserve
+        monthly_mortgage = income.monthly_principal_interest
+        monthly_total_cost = income.gross_monthly_cost
 
         annual_gross_rent = monthly_rent * 12
-        annual_effective_rent = annual_gross_rent * (1 - vacancy_rate)
-        annual_noi = annual_effective_rent - annual_taxes - annual_insurance
+        annual_effective_rent = effective_monthly_rent * 12
+        annual_hoa = monthly_hoa * 12
+        annual_maintenance = monthly_maintenance_reserve * 12
+        annual_noi = annual_effective_rent - annual_taxes - annual_insurance - annual_hoa - annual_maintenance
         annual_debt_service = monthly_mortgage * 12
         annual_cash_flow = annual_noi - annual_debt_service
-        monthly_cash_flow = annual_cash_flow / 12
+        monthly_cash_flow = income.estimated_monthly_cash_flow or 0.0
 
         price_per_sqft = safe_divide(purchase_price, property_input.sqft)
         cap_rate = safe_divide(annual_noi, purchase_price)
@@ -62,11 +87,15 @@ class CostValuationModule:
             purchase_price=purchase_price,
             price_per_sqft=price_per_sqft,
             monthly_rent=monthly_rent,
+            effective_monthly_rent=effective_monthly_rent,
             monthly_taxes=monthly_taxes,
             monthly_insurance=monthly_insurance,
+            monthly_hoa=monthly_hoa,
+            monthly_maintenance_reserve=monthly_maintenance_reserve,
             monthly_mortgage_payment=monthly_mortgage,
             monthly_total_cost=monthly_total_cost,
             monthly_cash_flow=monthly_cash_flow,
+            annual_noi=annual_noi,
             cap_rate=cap_rate,
             gross_yield=gross_yield,
             dscr=dscr,
@@ -93,16 +122,6 @@ class CostValuationModule:
         if value is None:
             return 0.0
         return value / 100 if value > 1 else value
-
-    def _calculate_monthly_mortgage(self, principal: float, annual_rate: float, years: int = 30) -> float:
-        if principal <= 0:
-            return 0.0
-        monthly_rate = annual_rate / 12
-        periods = years * 12
-        if monthly_rate == 0:
-            return principal / periods
-        growth = (1 + monthly_rate) ** periods
-        return principal * (monthly_rate * growth) / (growth - 1)
 
     def _score_valuation(
         self,

@@ -8,6 +8,7 @@ from briarwood.runner import preview_intake_from_listing_text
 from briarwood.runner import render_report_html
 from briarwood.runner import run_report
 from briarwood.runner import run_report_from_listing_text
+from briarwood.runner import validate_property_input
 from briarwood.runner import write_report_html
 from briarwood.schemas import PropertyInput
 
@@ -50,12 +51,18 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(report.address, "1 Main St")
         self.assertIn("property_snapshot", report.module_results)
 
+    def test_engine_rejects_duplicate_module_names(self) -> None:
+        with self.assertRaises(ValueError):
+            AnalysisEngine(modules=[PropertySnapshotModule(), PropertySnapshotModule()])
+
     def test_runner_can_build_report_from_property_file(self) -> None:
         report = run_report("data/sample_property.json")
 
         self.assertEqual(report.property_id, "brookline-001")
         self.assertIn("cost_valuation", report.module_results)
         self.assertIn("market_value_history", report.module_results)
+        self.assertIn("current_value", report.module_results)
+        self.assertIn("income_support", report.module_results)
         self.assertIn("town_county_outlook", report.module_results)
         self.assertIn("scarcity_support", report.module_results)
 
@@ -77,6 +84,8 @@ class EngineTests(unittest.TestCase):
         self.assertIn("What this is:", html)
         self.assertIn("So what:", html)
         self.assertIn("Why Buyers Will Still Want This", html)
+        self.assertIn("Fallback Rental Support", html)
+        self.assertIn("Support Ratio", html)
         self.assertIn("Buyer Takeaway", html)
         self.assertIn("Why Demand May Hold", html)
         self.assertIn("What Could Weaken It", html)
@@ -93,6 +102,21 @@ class EngineTests(unittest.TestCase):
 
         self.assertEqual(report.property_id, "belmar-001")
         self.assertIn("cost_valuation", report.module_results)
+
+    def test_validate_property_input_rejects_negative_values(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_property_input(
+                PropertyInput(
+                    property_id="1",
+                    address="1 Main St",
+                    town="Testville",
+                    state="MA",
+                    beds=2,
+                    baths=1.0,
+                    sqft=1000,
+                    purchase_price=-100.0,
+                )
+            )
 
     def test_runner_can_format_intake_preview(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:

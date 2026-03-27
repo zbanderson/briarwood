@@ -21,12 +21,13 @@ class HeaderSection:
 @dataclass(slots=True)
 class ConclusionSection:
     ask_price: float
-    base_value: float
+    briarwood_current_value: float
     bull_value: float
     bear_value: float
     premium_discount_to_ask: float
     value_range_low: float
     value_range_high: float
+    pricing_view: str
     explanation: str
     assessment: SectionAssessment
 
@@ -54,6 +55,19 @@ class MarketDurabilitySection:
 
 
 @dataclass(slots=True)
+class CarrySupportSection:
+    title: str
+    summary: str
+    support_label: str
+    income_support_ratio_text: str
+    estimated_cash_flow_text: str
+    warnings: list[str] = field(default_factory=list)
+    assessment: SectionAssessment = field(
+        default_factory=lambda: SectionAssessment(score=0.0, confidence=0.0, summary="")
+    )
+
+
+@dataclass(slots=True)
 class ScenarioPoint:
     label: str
     value: float
@@ -69,6 +83,8 @@ class ScenarioFanBand:
 class ScenarioChartSection:
     chart_title: str
     current_ask: float
+    current_value_label: str
+    current_value: float
     market_reference_label: str
     market_reference_value: float
     forward_year_label: str
@@ -105,5 +121,6 @@ class TearSheet:
     conclusion: ConclusionSection
     thesis: ThesisSection
     market_durability: MarketDurabilitySection
+    carry_support: CarrySupportSection
     scenario_chart: ScenarioChartSection
     bull_base_bear: BullBaseBearSection

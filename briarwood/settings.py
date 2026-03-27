@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 @dataclass(slots=True)
 class CostValuationSettings:
     default_vacancy_rate: float = 0.05
+    default_maintenance_reserve_pct: float = 0.01
     loan_term_years: int = 30
     base_score: float = 45.0
     cap_rate_weight: float = 500.0
@@ -25,14 +26,24 @@ class CostValuationSettings:
 
 @dataclass(slots=True)
 class BullBaseBearSettings:
-    bull_price_multiplier: float = 1.12
-    bull_rent_multiple: float = 0.40
-    base_price_multiplier: float = 1.05
-    base_rent_multiple: float = 0.25
-    bear_price_multiplier: float = 0.94
-    bear_rent_multiple: float = 0.10
+    trend_persistence_weight: float = 0.90
+    one_year_history_weight: float = 0.60
+    three_year_history_weight: float = 0.40
+    max_location_adjustment: float = 0.03
+    max_income_adjustment: float = 0.015
+    max_risk_penalty: float = 0.04
+    bull_upside_buffer: float = 0.03
+    bear_downside_buffer: float = 0.04
+    min_growth_rate: float = -0.12
+    max_growth_rate: float = 0.12
+    min_spread_ratio: float = 0.05
     base_score: float = 55.0
     spread_weight: float = 20.0
+
+
+@dataclass(slots=True)
+class CurrentValueSettings:
+    income_cap_rate_assumption: float = 0.05
 
 
 @dataclass(slots=True)
@@ -53,5 +64,6 @@ class AppSettings:
 
 DEFAULT_COST_VALUATION_SETTINGS = CostValuationSettings()
 DEFAULT_BULL_BASE_BEAR_SETTINGS = BullBaseBearSettings()
+DEFAULT_CURRENT_VALUE_SETTINGS = CurrentValueSettings()
 DEFAULT_RISK_SETTINGS = RiskSettings()
 DEFAULT_APP_SETTINGS = AppSettings()

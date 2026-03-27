@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from briarwood.schemas import PropertyInput
@@ -77,6 +78,7 @@ class NormalizedPropertyData:
         lot_size_acres = None
         if self.lot_sqft is not None:
             lot_size_acres = round(self.lot_sqft / 43560, 4)
+        listing_date = _infer_listing_date(self.price_history, self.days_on_market)
         return PropertyInput(
             property_id=property_id,
             address=self.address or "Unknown Address",
@@ -86,11 +88,16 @@ class NormalizedPropertyData:
             baths=self.baths or 0.0,
             sqft=self.sqft or 0,
             county=self.county,
+            property_type=self.property_type,
             lot_size=lot_size_acres,
             year_built=self.year_built,
             purchase_price=self.price,
             taxes=self.taxes_annual,
+            monthly_hoa=self.hoa_monthly,
             days_on_market=self.days_on_market,
+            listing_date=listing_date,
+            source_url=self.source_url,
+            price_history=[asdict(entry) for entry in self.price_history],
         )
 
 
@@ -101,3 +108,34 @@ class ListingIntakeResult:
     normalized_property_data: NormalizedPropertyData
     missing_fields: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+
+def _infer_listing_date(
+    price_history: list[PriceHistoryEntry],
+    days_on_market: int | None,
+) -> str | None:
+    if days_on_market is not None:
+        return (date.today() - timedelta(days=days_on_market)).isoformat()
+
+    dated_entries = []
+    for entry in price_history:
+        parsed_date = _parse_date(entry.date)
+        if parsed_date is None:
+            continue
+        event = (entry.event or "").lower()
+        if "list" in event:
+            dated_entries.append(parsed_date)
+    if dated_entries:
+        return max(dated_entries).isoformat()
+    return None
+
+
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%b %d, %Y", "%B %d, %Y"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+    return None

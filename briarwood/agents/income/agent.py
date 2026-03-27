@@ -28,12 +28,7 @@ class IncomeAgent:
             warning="Annual insurance missing; treating insurance as $0.00/month.",
             warnings=warnings,
         )
-        monthly_hoa = self._optional_value(
-            value=income_input.monthly_hoa,
-            default=0.0,
-            warning="Monthly HOA missing; treating HOA as $0.00/month.",
-            warnings=warnings,
-        )
+        monthly_hoa = 0.0 if income_input.monthly_hoa is None else income_input.monthly_hoa
         vacancy_pct = self._optional_value(
             value=income_input.vacancy_pct,
             default=0.0,

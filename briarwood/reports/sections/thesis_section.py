@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.reports.section_helpers import (
+    get_current_value,
     get_market_value_history,
     get_town_county_outlook,
     get_valuation_output,
@@ -12,6 +13,7 @@ from briarwood.schemas import AnalysisReport
 def build_thesis_section(report: AnalysisReport) -> ThesisSection:
     valuation_module = report.get_module("cost_valuation")
     valuation = get_valuation_output(report)
+    current_value = get_current_value(report)
     scenario = report.get_module("bull_base_bear")
     risk = report.get_module("risk_constraints")
     outlook = get_town_county_outlook(report)
@@ -26,7 +28,7 @@ def build_thesis_section(report: AnalysisReport) -> ThesisSection:
     risk_flags = str(risk.metrics.get("risk_flags", "none"))
     town_score = outlook.score
     one_year_change = history.one_year_change_pct
-    premium_discount = _ratio(base_case_value - ask_price, ask_price)
+    premium_discount = current_value.mispricing_pct
     thesis_label = _classify_thesis(cash_flow, premium_discount)
     must_be_true = _must_be_true(town_score, one_year_change)
     breaks_it = _breaks_it(
@@ -40,11 +42,12 @@ def build_thesis_section(report: AnalysisReport) -> ThesisSection:
         f"Why it matters: the asset is underwriting to {_percent_or_na(cap_rate)} cap rate with monthly cash flow around ${_number(cash_flow):,.0f}, so the case depends on {'current income support' if _number(cash_flow) >= 0 else 'future value creation more than present income'}.",
         f"What must be true: {must_be_true}",
         f"What breaks it: {breaks_it}",
-        f"So what: versus today's ask, Briarwood's base case is {_percent_or_na(premium_discount)} {'above' if premium_discount >= 0 else 'below'} the market marker, which frames this as a {'supported' if premium_discount >= 0 else 'fragile'} underwriting story rather than just a collection of metrics.",
+        f"So what: versus today's ask, Briarwood Current Value is {_percent_or_na(premium_discount)} {'above' if premium_discount >= 0 else 'below'} the ask, which reads as {current_value.pricing_view}. The bull, base, and bear cases should be read as a forward outlook from that starting point, not as today's fair value.",
     ]
     summary = (
         f"Briarwood reads this as a {thesis_label.lower()}: the numbers matter because they tell us whether "
-        "the asset is already paying for itself, or whether the return story depends on appreciation, cleaner execution, and future multiple support."
+        "the asset is already paying for itself, or whether the return story depends on appreciation, cleaner execution, and future multiple support. "
+        "BCV is the present-day anchor; the scenario range is the forward view."
     )
     return ThesisSection(
         title="Why This Matters",

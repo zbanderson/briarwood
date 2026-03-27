@@ -8,12 +8,15 @@ from briarwood.listing_intake.schemas import ListingIntakeResult
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.cost_valuation import CostValuationModule
+from briarwood.modules.current_value import CurrentValueModule
+from briarwood.modules.income_support import IncomeSupportModule
+from briarwood.modules.location_context import build_default_town_county_service
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
-from briarwood.schemas import AnalysisReport
+from briarwood.schemas import AnalysisReport, PropertyInput
 from briarwood.reports.renderer import render_tear_sheet_html, write_tear_sheet_html
 from briarwood.reports.tear_sheet import build_tear_sheet
 from briarwood.settings import (
@@ -30,15 +33,32 @@ def build_engine(
     bull_base_bear_settings: BullBaseBearSettings | None = None,
     risk_settings: RiskSettings | None = None,
 ) -> AnalysisEngine:
+    market_value_history_module = MarketValueHistoryModule()
+    income_support_module = IncomeSupportModule(settings=cost_settings)
+    risk_constraints_module = RiskConstraintsModule(settings=risk_settings)
+    town_county_service = build_default_town_county_service()
+    town_county_outlook_module = TownCountyOutlookModule(service=town_county_service)
+
     return AnalysisEngine(
         modules=[
             PropertySnapshotModule(),
-            MarketValueHistoryModule(),
+            market_value_history_module,
+            CurrentValueModule(
+                market_value_history_module=market_value_history_module,
+                income_support_module=income_support_module,
+            ),
             CostValuationModule(settings=cost_settings),
-            BullBaseBearModule(settings=bull_base_bear_settings),
-            RiskConstraintsModule(settings=risk_settings),
-            TownCountyOutlookModule(),
-            ScarcitySupportModule(),
+            income_support_module,
+            BullBaseBearModule(
+                settings=bull_base_bear_settings,
+                market_value_history_module=market_value_history_module,
+                town_county_outlook_module=town_county_outlook_module,
+                risk_constraints_module=risk_constraints_module,
+                income_support_module=income_support_module,
+            ),
+            risk_constraints_module,
+            town_county_outlook_module,
+            ScarcitySupportModule(service=town_county_service),
         ]
     )
 
@@ -51,6 +71,7 @@ def run_report(
     risk_settings: RiskSettings | None = None,
 ) -> AnalysisReport:
     property_input = load_property_from_json(property_path)
+    validate_property_input(property_input)
     engine = build_engine(
         cost_settings=cost_settings,
         bull_base_bear_settings=bull_base_bear_settings,
@@ -73,6 +94,7 @@ def run_report_from_listing_text(
         property_id=property_id,
         source_url=source_url,
     )
+    validate_property_input(property_input)
     engine = build_engine(
         cost_settings=cost_settings,
         bull_base_bear_settings=bull_base_bear_settings,
@@ -138,7 +160,7 @@ def format_tear_sheet_summary(report: AnalysisReport) -> str:
         "",
         "[conclusion]",
         f"ask_price: {tear_sheet.conclusion.ask_price:,.0f}",
-        f"base_value: {tear_sheet.conclusion.base_value:,.0f}",
+        f"briarwood_current_value: {tear_sheet.conclusion.briarwood_current_value:,.0f}",
         f"bull_value: {tear_sheet.conclusion.bull_value:,.0f}",
         f"bear_value: {tear_sheet.conclusion.bear_value:,.0f}",
         f"summary: {tear_sheet.conclusion.assessment.summary}",
@@ -200,3 +222,34 @@ def format_intake_preview(
             ]
         )
     return "\n".join(lines)
+
+
+def validate_property_input(property_input: PropertyInput) -> None:
+    """Fail fast on obviously invalid inputs before running analysis."""
+
+    numeric_validations = {
+        "purchase_price": property_input.purchase_price,
+        "beds": property_input.beds,
+        "baths": property_input.baths,
+        "sqft": property_input.sqft,
+        "lot_size": property_input.lot_size,
+        "taxes": property_input.taxes,
+        "insurance": property_input.insurance,
+        "monthly_hoa": property_input.monthly_hoa,
+        "estimated_monthly_rent": property_input.estimated_monthly_rent,
+    }
+    invalid_negative = [
+        field_name
+        for field_name, value in numeric_validations.items()
+        if value is not None and value < 0
+    ]
+    if invalid_negative:
+        raise ValueError(
+            "Property input contains negative values for fields that must be non-negative: "
+            + ", ".join(sorted(invalid_negative))
+        )
+
+    if not property_input.address:
+        raise ValueError("Property input is missing address.")
+    if not property_input.town or not property_input.state:
+        raise ValueError("Property input must include town and state.")

@@ -5,6 +5,7 @@ from datetime import date
 import plotly.graph_objects as go
 
 from briarwood.reports.section_helpers import (
+    get_current_value,
     get_market_value_history,
     get_scenario_output,
     get_valuation_output,
@@ -15,10 +16,12 @@ from briarwood.schemas import AnalysisReport
 
 def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection:
     valuation = get_valuation_output(report)
+    current_value = get_current_value(report)
     scenario = get_scenario_output(report)
     history = get_market_value_history(report)
 
     ask_price = valuation.purchase_price
+    briarwood_current_value = current_value.briarwood_current_value
     market_reference_value = history.current_value or ask_price
     market_reference_label = (
         f"Current Zillow Market ({history.geography_name})"
@@ -32,6 +35,7 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
     plot_html = _build_plotly_chart(
         history=history,
         current_ask=ask_price,
+        current_value=briarwood_current_value,
         market_reference_value=market_reference_value,
         bear_value=bear_value,
         base_value=base_value,
@@ -42,6 +46,8 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
     return ScenarioChartSection(
         chart_title="Historic Market Context and Forward Value Range",
         current_ask=ask_price,
+        current_value_label="Briarwood Current Value",
+        current_value=briarwood_current_value,
         market_reference_label=market_reference_label,
         market_reference_value=market_reference_value,
         forward_year_label="12M outlook",
@@ -53,6 +59,7 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
         ],
         points=[
             ScenarioPoint(label="Ask", value=ask_price),
+            ScenarioPoint(label="BCV", value=briarwood_current_value),
             ScenarioPoint(label="Market Reference", value=market_reference_value),
             ScenarioPoint(label="Bear", value=bear_value),
             ScenarioPoint(label="Base", value=base_value),
@@ -61,7 +68,8 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
         plot_html=plot_html,
         caption=(
             f"This chart uses {history_years} historical Zillow-style market value points to anchor the left side, "
-            "then extends into a 12-month forward fan for the bull, base, and bear view. "
+            "plots Briarwood Current Value beside today's ask and market reference, then extends into a 12-month forward fan for the bull, base, and bear view. "
+            "BCV is the present-day Briarwood estimate; the fan is the forward scenario range. "
             "The historical series is market-level context, not a property-specific Zestimate history."
         ),
     )
@@ -71,6 +79,7 @@ def _build_plotly_chart(
     *,
     history: object,
     current_ask: float,
+    current_value: float,
     market_reference_value: float,
     bear_value: float,
     base_value: float,
@@ -159,6 +168,15 @@ def _build_plotly_chart(
             mode="markers",
             name="Current Ask",
             marker={"size": 11, "symbol": "diamond", "color": "#17212b"},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[historical_dates[-1]],
+            y=[current_value],
+            mode="markers",
+            name="Briarwood Current Value",
+            marker={"size": 11, "symbol": "circle", "color": "#c48a3a"},
         )
     )
     fig.update_layout(

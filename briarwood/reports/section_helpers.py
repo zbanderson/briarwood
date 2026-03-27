@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from briarwood.agents.current_value.schemas import CurrentValueOutput
 from briarwood.agents.scarcity.schemas import ScarcitySupportScore
 from briarwood.agents.market_history.schemas import MarketValueHistoryOutput
+from briarwood.agents.income.schemas import IncomeAgentOutput
+from briarwood.modules.current_value import get_current_value_payload
 from briarwood.agents.town_county.service import TownCountyOutlookResult
+from briarwood.modules.income_support import get_income_support_payload
 from briarwood.modules.market_value_history import get_market_value_history_payload
 from briarwood.modules.scarcity_support import get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import get_town_county_outlook_payload
@@ -14,6 +18,10 @@ def get_valuation_output(report: AnalysisReport) -> ValuationOutput:
     if not isinstance(module.payload, ValuationOutput):
         raise TypeError("cost_valuation module payload is not a ValuationOutput")
     return module.payload
+
+
+def get_current_value(report: AnalysisReport) -> CurrentValueOutput:
+    return get_current_value_payload(report.get_module("current_value"))
 
 
 def get_scenario_output(report: AnalysisReport) -> ScenarioOutput:
@@ -33,3 +41,7 @@ def get_scarcity_support(report: AnalysisReport) -> ScarcitySupportScore:
 
 def get_market_value_history(report: AnalysisReport) -> MarketValueHistoryOutput:
     return get_market_value_history_payload(report.get_module("market_value_history"))
+
+
+def get_income_support(report: AnalysisReport) -> IncomeAgentOutput:
+    return get_income_support_payload(report.get_module("income_support"))
