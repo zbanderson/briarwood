@@ -24,6 +24,7 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertEqual(result.normalized_property_data.baths, 2.0)
         self.assertEqual(result.normalized_property_data.sqft, 1850)
         self.assertEqual(result.normalized_property_data.year_built, 1958)
+        self.assertEqual(result.normalized_property_data.county, "Norfolk")
         self.assertEqual(result.normalized_property_data.taxes_annual, 10800.0)
         self.assertAlmostEqual(result.normalized_property_data.price_per_sqft, 483.78, places=2)
         self.assertEqual(len(result.normalized_property_data.tax_history), 2)
@@ -44,6 +45,7 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertEqual(property_input.address, "17 Cedar Lane, Brookline, MA 02445")
         self.assertEqual(property_input.purchase_price, 895000.0)
         self.assertEqual(property_input.sqft, 1850)
+        self.assertEqual(property_input.county, "Norfolk")
         self.assertEqual(property_input.taxes, 10800.0)
 
     def test_listing_source_can_be_loaded_directly_into_property_input(self) -> None:
@@ -78,6 +80,7 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertEqual(result.normalized_property_data.lot_sqft, 5880)
         self.assertEqual(result.normalized_property_data.property_type, "Single Family Residence")
         self.assertEqual(result.normalized_property_data.year_built, 1988)
+        self.assertEqual(result.normalized_property_data.county, "Monmouth")
         self.assertEqual(result.normalized_property_data.days_on_market, 0)
         self.assertEqual(result.normalized_property_data.hoa_monthly, 0.0)
         self.assertEqual(result.normalized_property_data.taxes_annual, 6278.0)
@@ -103,8 +106,10 @@ class ListingIntakeTests(unittest.TestCase):
         )
 
         self.assertEqual(property_input.purchase_price, 999000.0)
+        self.assertEqual(property_input.county, "Monmouth")
         self.assertEqual(report.property_id, "belmar-001")
         self.assertIn("cost_valuation", report.module_results)
+        self.assertIn("town_county_outlook", report.module_results)
 
     def test_zillow_url_listing_returns_partial_result_with_warning(self) -> None:
         service = ListingIntakeService()

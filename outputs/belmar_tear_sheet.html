@@ -149,40 +149,101 @@ h3 {
   margin-top: 16px;
 }
 
-.chart-row {
+.durability-assessment {
+  margin-top: 12px;
+  color: #2d4450;
+  font-weight: 600;
+}
+
+.durability-takeaway {
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: #f4efe5;
+  border: 1px solid #d9cfbe;
+  border-radius: 14px;
+}
+
+.durability-grid {
   display: grid;
-  grid-template-columns: 56px 1fr 120px;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 18px;
 }
 
-.bar-track {
-  height: 18px;
-  border-radius: 999px;
-  background: #ece4d6;
-  overflow: hidden;
+.scenario-chart-wrap {
+  overflow-x: auto;
 }
 
-.bar {
-  height: 100%;
-  border-radius: 999px;
+.scenario-chart {
+  width: 100%;
+  min-width: 640px;
+  height: auto;
+  display: block;
+  overflow: visible;
 }
 
-.ask {
-  background: #8b7c67;
+.scenario-grid {
+  stroke: #d8cfbf;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
 }
 
-.bear {
-  background: #b14d3b;
+.scenario-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 4;
 }
 
-.base {
-  background: #2f6173;
+.market-line,
+.ask-line {
+  stroke: #8b7c67;
 }
 
-.bull {
-  background: #3b7f5f;
+.base-line,
+.base-dot,
+.base-text {
+  stroke: #2f6173;
+  fill: #2f6173;
+}
+
+.bull-line,
+.bull-dot,
+.bull-text {
+  stroke: #3b7f5f;
+  fill: #3b7f5f;
+}
+
+.bear-line,
+.bear-dot,
+.bear-text {
+  stroke: #b14d3b;
+  fill: #b14d3b;
+}
+
+.market-dot,
+.ask-dot {
+  fill: #8b7c67;
+}
+
+.scenario-dot {
+  stroke: #fffdf8;
+  stroke-width: 2.5;
+}
+
+.chart-label,
+.chart-annotation {
+  fill: #46515a;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.chart-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-annotation {
+  font-size: 13px;
 }
 
 .case-card {
@@ -205,12 +266,9 @@ h3 {
 @media (max-width: 900px) {
   .top-grid,
   .case-grid,
-  .header {
+  .header,
+  .durability-grid {
     grid-template-columns: 1fr;
-  }
-
-  .chart-row {
-    grid-template-columns: 52px 1fr 92px;
   }
 
   .metric-grid {
@@ -245,33 +303,70 @@ h3 {
 
       <section class="card thesis">
         <div class="section-label">Thesis</div>
-        <h2>Investment Thesis</h2>
-        <p class="body-copy">The investment thesis combines current cash flow, scenario upside, town quality, and flagged constraints into one concise view.</p>
+        <h2>Why This Matters</h2>
+        <p class="body-copy">Briarwood reads this as a appreciation-led but valuation-supported case: the numbers matter because they tell us whether the asset is already paying for itself, or whether the return story depends on appreciation, cleaner execution, and future multiple support.</p>
         <ul class="bullet-list">
-          <li>Income support is currently -0.6% on cap rate.</li>
-          <li>Monthly cash flow screens at $-3,298 before reserves.</li>
-          <li>Town quality proxy is 0 with favorable price trend.</li>
-          <li>Physical profile is 38 years old.</li>
-          <li>Primary flagged risks: none.</li>
+          <li>What this is: appreciation-led but valuation-supported case</li>
+          <li>Why it matters: the asset is underwriting to -0.6% cap rate with monthly cash flow around $-3,298, so the case depends on future value creation more than present income.</li>
+          <li>What must be true: the location thesis needs to stay mixed, with town home values are trending up at 6.6% and historical market momentum holding near 6.6%.</li>
+          <li>What breaks it: downside grows quickly if negative carry persists, the property&#x27;s age (38 years) leads to surprise spend, or these risks worsen: none It also becomes harder to lean on the location thesis if demand durability lacks a school-quality signal.</li>
+          <li>So what: versus today&#x27;s ask, Briarwood&#x27;s base case is 5.0% above the market marker, which frames this as a supported underwriting story rather than just a collection of metrics.</li>
         </ul>
       </section>
     </section>
 
     <section class="card chart-card">
-      <div class="section-label">Scenario Value vs. Current Ask</div>
+      <div class="section-label">Historic Market Context and Forward Value Range</div>
       <div class="chart">
-<div class="chart-row"><span>Ask</span><div class="bar-track"><div class="bar ask" style="width: 89.3%;"></div></div><strong>$999,000</strong></div>
-<div class="chart-row"><span>Bear</span><div class="bar-track"><div class="bar bear" style="width: 83.9%;"></div></div><strong>$939,060</strong></div>
-<div class="chart-row"><span>Base</span><div class="bar-track"><div class="bar base" style="width: 93.8%;"></div></div><strong>$1,048,950</strong></div>
-<div class="chart-row"><span>Bull</span><div class="bar-track"><div class="bar bull" style="width: 100.0%;"></div></div><strong>$1,118,880</strong></div>
+<div>                        <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.4.0.min.js" integrity="sha256-KEmPoupLpFyGMyGAiOsiNDbKDKAvxXAn/W+oQa0ZAfk=" crossorigin="anonymous"></script>                <div id="e5565474-6b6d-4dfa-a126-9a0677a6eac3" class="plotly-graph-div" style="height:380px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("e5565474-6b6d-4dfa-a126-9a0677a6eac3")) {                    Plotly.newPlot(                        "e5565474-6b6d-4dfa-a126-9a0677a6eac3",                        [{"line":{"color":"#8b7c67","width":3},"marker":{"size":6},"mode":"lines+markers","name":"Historic Market Value","x":["2006-02-28","2007-02-28","2008-02-29","2009-02-28","2010-02-28","2011-02-28","2012-02-29","2013-02-28","2014-02-28","2015-02-28","2016-02-29","2017-02-28","2018-02-28","2019-02-28","2020-02-29","2021-02-28","2022-02-28","2023-02-28","2024-02-29","2025-02-28","2026-02-28"],"y":[498000.0,512000.0,501000.0,468000.0,441000.0,429000.0,438000.0,462000.0,487000.0,512000.0,536000.0,559000.0,584000.0,605000.0,624000.0,646000.0,655000.0,701000.0,734000.0,760000.0,810000.0],"type":"scatter"},{"hoverinfo":"skip","line":{"color":"rgba(59,127,95,0.0)","width":0},"mode":"lines","name":"Bull Ceiling","showlegend":false,"x":["2026-02-28","2027-02-28"],"y":[810000.0,1118880.0],"type":"scatter"},{"fill":"tonexty","fillcolor":"rgba(47,97,115,0.14)","hoverinfo":"skip","line":{"color":"rgba(177,77,59,0.0)","width":0},"mode":"lines","name":"Forward Range","showlegend":false,"x":["2026-02-28","2027-02-28"],"y":[810000.0,939060.0],"type":"scatter"},{"line":{"color":"#2f6173","width":4},"marker":{"size":7},"mode":"lines+markers","name":"Base Case","x":["2026-02-28","2027-02-28"],"y":[810000.0,1048950.0],"type":"scatter"},{"line":{"color":"#3b7f5f","dash":"dash","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Bull Case","x":["2026-02-28","2027-02-28"],"y":[810000.0,1118880.0],"type":"scatter"},{"line":{"color":"#b14d3b","dash":"dash","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Bear Case","x":["2026-02-28","2027-02-28"],"y":[810000.0,939060.0],"type":"scatter"},{"marker":{"color":"#17212b","size":11,"symbol":"diamond"},"mode":"markers","name":"Current Ask","x":["2026-02-28"],"y":[999000.0],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":20,"b":20},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0},"xaxis":{"title":{"text":""},"showgrid":false},"yaxis":{"title":{"text":"Value"},"tickprefix":"$","separatethousands":true,"gridcolor":"#e4dbc9","zeroline":false},"height":380,"paper_bgcolor":"#fffdf8","plot_bgcolor":"#fffdf8"},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
       </div>
-      <p class="body-copy">The chart compares current ask to Briarwood scenario values and highlights the current underwriting range.</p>
+      <p class="body-copy">This chart uses 21 historical Zillow-style market value points to anchor the left side, then extends into a 12-month forward fan for the bull, base, and bear view. The historical series is market-level context, not a property-specific Zestimate history.</p>
+    </section>
+
+    <section class="card durability-card">
+      <div class="section-label">Market Durability</div>
+      <h2>Why Buyers Will Still Want This</h2>
+      <p class="body-copy">This section explains why buyers may still want the property in a few years, and whether that demand looks durable enough to support a cleaner exit.</p>
+      <p class="durability-assessment">Location demand reads mixed, while scarcity support reads limited scarcity support.</p>
+      <div class="durability-takeaway">
+        <div class="case-block-label">Buyer Takeaway</div>
+        <p class="body-copy">Belmar, NJ offers a mixed location backdrop; some demand signals help, but the area alone should not be relied on to rescue a stretched purchase. Current evidence confidence is moderate. There may be some scarce traits here, but Briarwood would not lean too heavily on scarcity alone as downside protection.</p>
+      </div>
+      <div class="durability-grid">
+        <div>
+          <div class="case-block-label">Why Demand May Hold</div>
+          <ul class="bullet-list">
+          <li>Town home values are trending up at 6.6%.</li>
+          <li>County pricing also supports the hold thesis at 4.5%.</li>
+          <li>Liquidity conditions appear orderly.</li>
+          <li>Town price trend is supportive at 6.6%.</li>
+          <li>Location scarcity should be treated cautiously because some anchor context is missing.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">What Could Weaken It</div>
+          <ul class="bullet-list">
+          <li>Flood exposure is flagged as medium.</li>
+          <li>Demand durability lacks a school-quality signal.</li>
+          <li>Confidence was reduced because some populated fields rely on weaker or manual sources.</li>
+          <li>School-related demand support is missing.</li>
+          <li>Anchor feature type is missing.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="case-block-label">Confidence Notes</div>
+      <ul class="case-list">
+<li>Town/county confidence: 0.72.</li>
+<li>Scarcity confidence: 0.42.</li>
+<li>Data as of: 2026-02-28.</li>
+      </ul>
     </section>
 
     <section class="case-grid">
-      <section class="card case-card"><div class="section-label">Bull Case</div><h3>Bull Case</h3><div class="case-value">$1,118,880</div><p class="body-copy">Bull case implies 12.0% upside if operating support and exit sentiment both improve.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Strong exit environment and stable financing backdrop.</li><li>Town price trend continues around 0.0%.</li><li>Rent support remains intact with limited vacancy drag.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Scenario upside benefits from current gross yield of 0.0%.</li><li>Positive market sentiment expands valuation range.</li><li>Execution risk remains manageable.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Optimistic exit assumptions may not materialize.</li><li>Rate volatility can compress upside.</li></ul></section>
-<section class="card case-card"><div class="section-label">Base Case</div><h3>Base Case</h3><div class="case-value">$1,048,950</div><p class="body-copy">Base case implies 5.0% value support versus ask under current assumptions.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Current underwriting implies a -0.6% cap rate.</li><li>Monthly cash flow remains around $-3,298.</li><li>No major change to property quality or town profile.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value anchored to current purchase underwriting.</li><li>Moderate scenario uplift relative to ask.</li><li>Town quality and demand support hold steady.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Known flagged risks: none.</li><li>Execution remains sensitive to financing costs.</li></ul></section>
-<section class="card case-card"><div class="section-label">Bear Case</div><h3>Bear Case</h3><div class="case-value">$939,060</div><p class="body-copy">Bear case implies -6.0% downside if current pressures intensify.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Exit pricing softens and upside assumptions compress.</li><li>Cash flow remains pressured.</li><li>Diligence uncovers additional friction or capex needs.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value support falls back toward current income profile.</li><li>Lower optimism on exit drives the downside case.</li><li>Operating leverage works against returns.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Sustained negative cash flow reduces hold flexibility.</li><li>Existing constraints can intensify: none.</li></ul></section>
+      <section class="card case-card"><div class="section-label">Bull Case</div><h3>Bull Case</h3><div class="case-value">$1,118,880</div><p class="body-copy">Bull case implies 12.0% upside if operating support and exit sentiment both improve.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Strong exit environment and stable financing backdrop.</li><li>Historical market appreciation stays near 6.6%.</li><li>Location thesis remains mixed.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Scenario upside benefits from current gross yield of 0.0%.</li><li>Town home values are trending up at 6.6%.</li><li>Execution risk remains manageable.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Optimistic exit assumptions may not materialize.</li><li>Rate volatility can compress upside.</li></ul></section>
+<section class="card case-card"><div class="section-label">Base Case</div><h3>Base Case</h3><div class="case-value">$1,048,950</div><p class="body-copy">Base case implies 5.0% value support versus ask under current assumptions.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Current underwriting implies a -0.6% cap rate.</li><li>Monthly cash flow remains around $-3,298.</li><li>Location backdrop remains mixed rather than improving materially.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value anchored to current purchase underwriting.</li><li>Moderate scenario uplift relative to ask.</li><li>Town home values are trending up at 6.6%.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Known flagged risks: none.</li><li>Flood exposure is flagged as medium.</li></ul></section>
+<section class="card case-card"><div class="section-label">Bear Case</div><h3>Bear Case</h3><div class="case-value">$939,060</div><p class="body-copy">Bear case implies -6.0% downside if current pressures intensify.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Exit pricing softens and upside assumptions compress.</li><li>Cash flow remains pressured.</li><li>Location support slips below today&#x27;s mixed reading.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value support falls back toward current income profile.</li><li>Lower optimism on exit drives the downside case.</li><li>Operating leverage works against returns.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Sustained negative cash flow reduces hold flexibility.</li><li>Existing constraints can intensify: none.</li><li>Flood exposure is flagged as medium.</li></ul></section>
     </section>
   </main>
 </body>

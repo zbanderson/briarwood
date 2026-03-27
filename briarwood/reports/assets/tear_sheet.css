@@ -142,40 +142,101 @@ h3 {
   margin-top: 16px;
 }
 
-.chart-row {
+.durability-assessment {
+  margin-top: 12px;
+  color: #2d4450;
+  font-weight: 600;
+}
+
+.durability-takeaway {
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: #f4efe5;
+  border: 1px solid #d9cfbe;
+  border-radius: 14px;
+}
+
+.durability-grid {
   display: grid;
-  grid-template-columns: 56px 1fr 120px;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 18px;
 }
 
-.bar-track {
-  height: 18px;
-  border-radius: 999px;
-  background: #ece4d6;
-  overflow: hidden;
+.scenario-chart-wrap {
+  overflow-x: auto;
 }
 
-.bar {
-  height: 100%;
-  border-radius: 999px;
+.scenario-chart {
+  width: 100%;
+  min-width: 640px;
+  height: auto;
+  display: block;
+  overflow: visible;
 }
 
-.ask {
-  background: #8b7c67;
+.scenario-grid {
+  stroke: #d8cfbf;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
 }
 
-.bear {
-  background: #b14d3b;
+.scenario-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 4;
 }
 
-.base {
-  background: #2f6173;
+.market-line,
+.ask-line {
+  stroke: #8b7c67;
 }
 
-.bull {
-  background: #3b7f5f;
+.base-line,
+.base-dot,
+.base-text {
+  stroke: #2f6173;
+  fill: #2f6173;
+}
+
+.bull-line,
+.bull-dot,
+.bull-text {
+  stroke: #3b7f5f;
+  fill: #3b7f5f;
+}
+
+.bear-line,
+.bear-dot,
+.bear-text {
+  stroke: #b14d3b;
+  fill: #b14d3b;
+}
+
+.market-dot,
+.ask-dot {
+  fill: #8b7c67;
+}
+
+.scenario-dot {
+  stroke: #fffdf8;
+  stroke-width: 2.5;
+}
+
+.chart-label,
+.chart-annotation {
+  fill: #46515a;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.chart-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-annotation {
+  font-size: 13px;
 }
 
 .case-card {
@@ -198,12 +259,9 @@ h3 {
 @media (max-width: 900px) {
   .top-grid,
   .case-grid,
-  .header {
+  .header,
+  .durability-grid {
     grid-template-columns: 1fr;
-  }
-
-  .chart-row {
-    grid-template-columns: 52px 1fr 92px;
   }
 
   .metric-grid {

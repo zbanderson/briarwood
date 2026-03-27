@@ -3,6 +3,7 @@
   "address": "17 Cedar Lane",
   "town": "Brookline",
   "state": "MA",
+  "county": "Norfolk",
   "beds": 3,
   "baths": 2.0,
   "sqft": 1850,

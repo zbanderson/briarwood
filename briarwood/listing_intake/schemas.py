@@ -64,6 +64,7 @@ class NormalizedPropertyData:
     source_url: str | None = None
     town: str | None = None
     state: str | None = None
+    county: str | None = None
     zip_code: str | None = None
     source: str | None = None
     tax_history: list[TaxHistoryEntry] = field(default_factory=list)
@@ -84,6 +85,7 @@ class NormalizedPropertyData:
             beds=self.beds or 0,
             baths=self.baths or 0.0,
             sqft=self.sqft or 0,
+            county=self.county,
             lot_size=lot_size_acres,
             year_built=self.year_built,
             purchase_price=self.price,

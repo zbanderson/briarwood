@@ -1,0 +1,20 @@
+{
+  "towns": [
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "inventory_count": 42,
+      "monthly_sales_count": 11,
+      "months_of_supply": 3.8,
+      "as_of": "2026-02-28"
+    },
+    {
+      "name": "Brookline",
+      "state": "MA",
+      "inventory_count": 58,
+      "monthly_sales_count": 17,
+      "months_of_supply": 3.4,
+      "as_of": "2026-02-28"
+    }
+  ]
+}

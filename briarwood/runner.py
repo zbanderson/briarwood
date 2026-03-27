@@ -8,9 +8,11 @@ from briarwood.listing_intake.schemas import ListingIntakeResult
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.cost_valuation import CostValuationModule
+from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
-from briarwood.modules.town_intelligence import TownIntelligenceModule
+from briarwood.modules.scarcity_support import ScarcitySupportModule
+from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import AnalysisReport
 from briarwood.reports.renderer import render_tear_sheet_html, write_tear_sheet_html
 from briarwood.reports.tear_sheet import build_tear_sheet
@@ -31,10 +33,12 @@ def build_engine(
     return AnalysisEngine(
         modules=[
             PropertySnapshotModule(),
+            MarketValueHistoryModule(),
             CostValuationModule(settings=cost_settings),
             BullBaseBearModule(settings=bull_base_bear_settings),
             RiskConstraintsModule(settings=risk_settings),
-            TownIntelligenceModule(),
+            TownCountyOutlookModule(),
+            ScarcitySupportModule(),
         ]
     )
 

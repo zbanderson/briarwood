@@ -2,9 +2,11 @@ import unittest
 
 from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.cost_valuation import CostValuationModule
+from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
-from briarwood.modules.town_intelligence import TownIntelligenceModule
+from briarwood.modules.scarcity_support import ScarcitySupportModule
+from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import PropertyInput, ScenarioOutput, ValuationOutput
 from briarwood.settings import CostValuationSettings
 
@@ -15,6 +17,7 @@ def sample_property() -> PropertyInput:
         address="17 Cedar Lane",
         town="Brookline",
         state="MA",
+        county="Norfolk",
         beds=3,
         baths=2.0,
         sqft=1850,
@@ -40,10 +43,12 @@ class ModuleTests(unittest.TestCase):
         property_input = sample_property()
         modules = [
             PropertySnapshotModule(),
+            MarketValueHistoryModule(),
             CostValuationModule(),
             BullBaseBearModule(),
             RiskConstraintsModule(),
-            TownIntelligenceModule(),
+            TownCountyOutlookModule(),
+            ScarcitySupportModule(),
         ]
 
         for module in modules:
@@ -81,6 +86,22 @@ class ModuleTests(unittest.TestCase):
 
         self.assertIsInstance(result.payload, ScenarioOutput)
         self.assertIn("base_case_value", result.metrics)
+
+    def test_location_modules_return_payloads(self) -> None:
+        town_result = TownCountyOutlookModule().run(sample_property())
+        scarcity_result = ScarcitySupportModule().run(sample_property())
+
+        self.assertIn("town_county_score", town_result.metrics)
+        self.assertGreaterEqual(town_result.confidence, 0.0)
+        self.assertIn("scarcity_support_score", scarcity_result.metrics)
+        self.assertIn("buyer_takeaway", scarcity_result.metrics)
+
+    def test_market_value_history_module_returns_payload(self) -> None:
+        result = MarketValueHistoryModule().run(sample_property())
+
+        self.assertIn("current_value", result.metrics)
+        self.assertIn("history_points", result.metrics)
+        self.assertGreaterEqual(result.confidence, 0.0)
 
 
 if __name__ == "__main__":

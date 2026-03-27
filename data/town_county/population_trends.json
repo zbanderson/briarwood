@@ -1,0 +1,34 @@
+{
+  "towns": [
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "current_population": 5750,
+      "prior_population": 5680,
+      "as_of": "2025-07-01"
+    },
+    {
+      "name": "Brookline",
+      "state": "MA",
+      "current_population": 63200,
+      "prior_population": 62650,
+      "as_of": "2025-07-01"
+    }
+  ],
+  "counties": [
+    {
+      "name": "Monmouth",
+      "state": "NJ",
+      "current_population": 645000,
+      "prior_population": 641000,
+      "as_of": "2025-07-01"
+    },
+    {
+      "name": "Norfolk",
+      "state": "MA",
+      "current_population": 735000,
+      "prior_population": 729000,
+      "as_of": "2025-07-01"
+    }
+  ]
+}

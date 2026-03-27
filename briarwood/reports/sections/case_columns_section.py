@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from briarwood.reports.section_helpers import get_scenario_output, get_valuation_output
+from briarwood.reports.section_helpers import (
+    get_market_value_history,
+    get_scenario_output,
+    get_town_county_outlook,
+    get_valuation_output,
+)
 from briarwood.reports.schemas import BullBaseBearSection, ScenarioCase, SectionAssessment
 from briarwood.schemas import AnalysisReport
 
@@ -8,27 +13,39 @@ from briarwood.schemas import AnalysisReport
 def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     valuation = get_valuation_output(report)
     scenario = get_scenario_output(report)
+    outlook = get_town_county_outlook(report)
+    history = get_market_value_history(report)
     risk = report.get_module("risk_constraints")
-    town = report.get_module("town_intelligence")
     ask_price = valuation.purchase_price
 
     monthly_cash_flow = valuation.monthly_cash_flow
     cap_rate = valuation.cap_rate or 0.0
     gross_yield = valuation.gross_yield or 0.0
     risk_flags = str(risk.metrics.get("risk_flags", "none"))
-    town_trend = _number(town.metrics.get("town_price_trend"))
+    town_score = outlook.score
+    town_trend = history.one_year_change_pct or 0.0
+    location_driver = (
+        town_score.demand_drivers[0]
+        if town_score.demand_drivers
+        else "Location demand remains orderly but not especially strong."
+    )
+    location_risk = (
+        town_score.demand_risks[0]
+        if town_score.demand_risks
+        else "Location support weakens if the current demand backdrop loses momentum."
+    )
 
     bull_case = ScenarioCase(
         name="Bull Case",
         scenario_value=scenario.bull_case_value,
         assumptions=[
             "Strong exit environment and stable financing backdrop.",
-            f"Town price trend continues around {town_trend:.1%}.",
-            "Rent support remains intact with limited vacancy drag.",
+            f"Historical market appreciation stays near {town_trend:.1%}.",
+            f"Location thesis remains {town_score.location_thesis_label}.",
         ],
         key_drivers=[
             f"Scenario upside benefits from current gross yield of {gross_yield:.1%}.",
-            "Positive market sentiment expands valuation range.",
+            location_driver,
             "Execution risk remains manageable.",
         ],
         risk_factors=[
@@ -50,16 +67,16 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         assumptions=[
             f"Current underwriting implies a {cap_rate:.1%} cap rate.",
             f"Monthly cash flow remains around ${monthly_cash_flow:,.0f}.",
-            "No major change to property quality or town profile.",
+            f"Location backdrop remains {town_score.location_thesis_label} rather than improving materially.",
         ],
         key_drivers=[
             "Value anchored to current purchase underwriting.",
             "Moderate scenario uplift relative to ask.",
-            "Town quality and demand support hold steady.",
+            location_driver,
         ],
         risk_factors=[
             f"Known flagged risks: {risk_flags}.",
-            "Execution remains sensitive to financing costs.",
+            location_risk,
         ],
         assessment=SectionAssessment(
             score=58.0,
@@ -76,7 +93,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         assumptions=[
             "Exit pricing softens and upside assumptions compress.",
             "Cash flow remains pressured.",
-            "Diligence uncovers additional friction or capex needs.",
+            f"Location support slips below today's {town_score.location_thesis_label} reading.",
         ],
         key_drivers=[
             "Value support falls back toward current income profile.",
@@ -86,6 +103,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         risk_factors=[
             "Sustained negative cash flow reduces hold flexibility.",
             f"Existing constraints can intensify: {risk_flags}.",
+            location_risk,
         ],
         assessment=SectionAssessment(
             score=44.0,

@@ -16,6 +16,7 @@ class PropertyInput:
     beds: int
     baths: float
     sqft: int
+    county: str | None = None
     lot_size: float | None = None
     year_built: int | None = None
     purchase_price: float | None = None

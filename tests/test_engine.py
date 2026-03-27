@@ -5,6 +5,7 @@ from briarwood.engine import AnalysisEngine
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.runner import format_intake_preview
 from briarwood.runner import preview_intake_from_listing_text
+from briarwood.runner import render_report_html
 from briarwood.runner import run_report
 from briarwood.runner import run_report_from_listing_text
 from briarwood.runner import write_report_html
@@ -54,6 +55,9 @@ class EngineTests(unittest.TestCase):
 
         self.assertEqual(report.property_id, "brookline-001")
         self.assertIn("cost_valuation", report.module_results)
+        self.assertIn("market_value_history", report.module_results)
+        self.assertIn("town_county_outlook", report.module_results)
+        self.assertIn("scarcity_support", report.module_results)
 
     def test_runner_can_write_tear_sheet_html(self) -> None:
         report = run_report("data/sample_property.json")
@@ -61,6 +65,21 @@ class EngineTests(unittest.TestCase):
 
         self.assertTrue(Path(output_path).exists())
         self.assertIn("tear_sheet", output_path.name)
+
+    def test_rendered_tear_sheet_includes_forward_chart_and_interpretive_thesis(self) -> None:
+        report = run_report("data/sample_property.json")
+
+        html = render_report_html(report)
+
+        self.assertIn("Historic Market Context and Forward Value Range", html)
+        self.assertIn("Historic Market Value", html)
+        self.assertIn("Plotly.newPlot", html)
+        self.assertIn("What this is:", html)
+        self.assertIn("So what:", html)
+        self.assertIn("Why Buyers Will Still Want This", html)
+        self.assertIn("Buyer Takeaway", html)
+        self.assertIn("Why Demand May Hold", html)
+        self.assertIn("What Could Weaken It", html)
 
     def test_runner_can_build_report_from_listing_text(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:

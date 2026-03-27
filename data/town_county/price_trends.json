@@ -1,0 +1,34 @@
+{
+  "towns": [
+    {
+      "RegionName": "Belmar",
+      "State": "NJ",
+      "current_value": 810000,
+      "prior_year_value": 760000,
+      "as_of": "2026-02-28"
+    },
+    {
+      "RegionName": "Brookline",
+      "State": "MA",
+      "current_value": 1450000,
+      "prior_year_value": 1395000,
+      "as_of": "2026-02-28"
+    }
+  ],
+  "counties": [
+    {
+      "RegionName": "Monmouth",
+      "State": "NJ",
+      "current_value": 690000,
+      "prior_year_value": 660000,
+      "as_of": "2026-02-28"
+    },
+    {
+      "RegionName": "Norfolk",
+      "State": "MA",
+      "current_value": 955000,
+      "prior_year_value": 920000,
+      "as_of": "2026-02-28"
+    }
+  ]
+}

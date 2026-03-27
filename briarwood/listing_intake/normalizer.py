@@ -8,10 +8,21 @@ from briarwood.listing_intake.schemas import (
     NormalizedPropertyData,
 )
 
+_COUNTY_BY_ZIP: dict[str, str] = {
+    "02445": "Norfolk",
+    "07719": "Monmouth",
+}
+
+_COUNTY_BY_TOWN_STATE: dict[tuple[str, str], str] = {
+    ("brookline", "MA"): "Norfolk",
+    ("belmar", "NJ"): "Monmouth",
+}
+
 
 def normalize_listing(raw_data: ListingRawData, warnings: list[str] | None = None) -> ListingIntakeResult:
     warnings = list(warnings or [])
     town, state, zip_code = _parse_location(raw_data.address)
+    county = _infer_county(town=town, state=state, zip_code=zip_code)
     price_per_sqft = _compute_price_per_sqft(raw_data.price, raw_data.sqft)
 
     normalized = NormalizedPropertyData(
@@ -31,6 +42,7 @@ def normalize_listing(raw_data: ListingRawData, warnings: list[str] | None = Non
         source_url=raw_data.source_url,
         town=town,
         state=state,
+        county=county,
         zip_code=zip_code,
         source=raw_data.source,
         tax_history=raw_data.tax_history,
@@ -81,3 +93,11 @@ def _parse_location(address: str | None) -> tuple[str | None, str | None, str | 
     if not match:
         return None, None, None
     return match.group(1).strip(), match.group(2).strip(), match.group(3)
+
+
+def _infer_county(*, town: str | None, state: str | None, zip_code: str | None) -> str | None:
+    if zip_code and zip_code in _COUNTY_BY_ZIP:
+        return _COUNTY_BY_ZIP[zip_code]
+    if town and state:
+        return _COUNTY_BY_TOWN_STATE.get((town.strip().lower(), state.strip().upper()))
+    return None

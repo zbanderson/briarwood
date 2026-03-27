@@ -44,9 +44,38 @@ $thesis_bullets
     <section class="card chart-card">
       <div class="section-label">$chart_title</div>
       <div class="chart">
-$scenario_rows
+$scenario_chart
       </div>
       <p class="body-copy">$distribution_summary</p>
+    </section>
+
+    <section class="card durability-card">
+      <div class="section-label">Market Durability</div>
+      <h2>$durability_title</h2>
+      <p class="body-copy">$durability_summary</p>
+      <p class="durability-assessment">$durability_assessment</p>
+      <div class="durability-takeaway">
+        <div class="case-block-label">Buyer Takeaway</div>
+        <p class="body-copy">$durability_takeaway</p>
+      </div>
+      <div class="durability-grid">
+        <div>
+          <div class="case-block-label">Why Demand May Hold</div>
+          <ul class="bullet-list">
+$durability_supporting_points
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">What Could Weaken It</div>
+          <ul class="bullet-list">
+$durability_caveats
+          </ul>
+        </div>
+      </div>
+      <div class="case-block-label">Confidence Notes</div>
+      <ul class="case-list">
+$durability_confidence_notes
+      </ul>
     </section>
 
     <section class="case-grid">

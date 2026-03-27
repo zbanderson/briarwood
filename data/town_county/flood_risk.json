@@ -1,0 +1,16 @@
+{
+  "towns": [
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "flood_risk": "Moderate",
+      "as_of": "2025-01-01"
+    },
+    {
+      "name": "Brookline",
+      "state": "MA",
+      "flood_risk": "Low",
+      "as_of": "2025-01-01"
+    }
+  ]
+}
