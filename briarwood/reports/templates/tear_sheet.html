@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Briarwood Tear Sheet</title>
+  <style>
+__CSS__
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div>
+        <div class="eyebrow">Briarwood Tear Sheet</div>
+        <h1>$property_name</h1>
+        <p class="subtitle">$subtitle</p>
+      </div>
+      <div class="stance">$investment_stance</div>
+    </header>
+
+    <section class="top-grid">
+      <section class="card conclusion">
+        <div class="section-label">Conclusion</div>
+        <div class="metric-grid">
+          <div><span>Ask Price</span><strong>$ask_price</strong></div>
+          <div><span>Base Value</span><strong>$base_value</strong></div>
+          <div><span>Bull Value</span><strong>$bull_value</strong></div>
+          <div><span>Bear Value</span><strong>$bear_value</strong></div>
+        </div>
+        <p class="body-copy">$valuation_method_summary</p>
+      </section>
+
+      <section class="card thesis">
+        <div class="section-label">Thesis</div>
+        <h2>$thesis_title</h2>
+        <p class="body-copy">$thesis_summary</p>
+        <ul class="bullet-list">
+$thesis_bullets
+        </ul>
+      </section>
+    </section>
+
+    <section class="card chart-card">
+      <div class="section-label">$chart_title</div>
+      <div class="chart">
+$scenario_rows
+      </div>
+      <p class="body-copy">$distribution_summary</p>
+    </section>
+
+    <section class="case-grid">
+      $case_columns
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "property_id": "brookline-001",
+  "address": "17 Cedar Lane",
+  "town": "Brookline",
+  "state": "MA",
+  "beds": 3,
+  "baths": 2.0,
+  "sqft": 1850,
+  "lot_size": 0.11,
+  "year_built": 1958,
+  "purchase_price": 895000,
+  "taxes": 10800,
+  "insurance": 1800,
+  "estimated_monthly_rent": 4200,
+  "down_payment_percent": 0.2,
+  "interest_rate": 0.0675,
+  "days_on_market": 18,
+  "vacancy_rate": 0.04,
+  "town_population_trend": 0.01,
+  "town_price_trend": 0.035,
+  "school_rating": 8.0,
+  "flood_risk": "low"
+}

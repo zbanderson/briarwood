@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Briarwood Tear Sheet</title>
+  <style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f1e8;
+  color: #17212b;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.header,
+.top-grid,
+.case-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.header {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.eyebrow,
+.section-label,
+.stance {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.eyebrow,
+.section-label {
+  color: #6a7177;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+}
+
+h1 {
+  font-size: 38px;
+  line-height: 1.05;
+  margin-top: 8px;
+}
+
+h2 {
+  font-size: 22px;
+  margin: 12px 0 10px;
+}
+
+h3 {
+  font-size: 20px;
+  margin: 10px 0 14px;
+}
+
+.subtitle,
+.body-copy,
+.case-list {
+  color: #3f4850;
+  line-height: 1.5;
+}
+
+.subtitle {
+  margin-top: 10px;
+  max-width: 700px;
+  font-size: 17px;
+}
+
+.stance {
+  border: 1px solid #c3b8a4;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #fffaf2;
+  color: #5b5347;
+}
+
+.top-grid {
+  grid-template-columns: 1.1fr 0.9fr;
+  margin-bottom: 20px;
+}
+
+.case-grid {
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+}
+
+.card {
+  background: #fffdf8;
+  border: 1px solid #d9cfbe;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 10px 30px rgba(43, 46, 52, 0.04);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.metric-grid span {
+  display: block;
+  color: #6b7278;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.metric-grid strong {
+  font-size: 28px;
+}
+
+.bullet-list,
+.case-list {
+  padding-left: 18px;
+}
+
+.bullet-list li,
+.case-list li {
+  margin-top: 8px;
+}
+
+.chart-card {
+  margin-bottom: 4px;
+}
+
+.chart {
+  margin-top: 16px;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 120px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.bar-track {
+  height: 18px;
+  border-radius: 999px;
+  background: #ece4d6;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.ask {
+  background: #8b7c67;
+}
+
+.bear {
+  background: #b14d3b;
+}
+
+.base {
+  background: #2f6173;
+}
+
+.bull {
+  background: #3b7f5f;
+}
+
+.case-card {
+  min-height: 100%;
+}
+
+.case-value {
+  font-size: 30px;
+  margin-bottom: 14px;
+}
+
+.case-block-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6a7177;
+  margin: 18px 0 8px;
+}
+
+@media (max-width: 900px) {
+  .top-grid,
+  .case-grid,
+  .header {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-row {
+    grid-template-columns: 52px 1fr 92px;
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div>
+        <div class="eyebrow">Briarwood Tear Sheet</div>
+        <h1>1600 L Street, Belmar, NJ 07719</h1>
+        <p class="subtitle">Cautious stance based on current underwriting, with $179,820 scenario spread.</p>
+      </div>
+      <div class="stance">Cautious</div>
+    </header>
+
+    <section class="top-grid">
+      <section class="card conclusion">
+        <div class="section-label">Conclusion</div>
+        <div class="metric-grid">
+          <div><span>Ask Price</span><strong>$999,000</strong></div>
+          <div><span>Base Value</span><strong>$1,048,950</strong></div>
+          <div><span>Bull Value</span><strong>$1,118,880</strong></div>
+          <div><span>Bear Value</span><strong>$939,060</strong></div>
+        </div>
+        <p class="body-copy">Value is triangulated from purchase underwriting, rent support, scenario outputs, and cash flow. Current base math implies a -0.6% cap rate and monthly cash flow of $-3,298.</p>
+      </section>
+
+      <section class="card thesis">
+        <div class="section-label">Thesis</div>
+        <h2>Investment Thesis</h2>
+        <p class="body-copy">The investment thesis combines current cash flow, scenario upside, town quality, and flagged constraints into one concise view.</p>
+        <ul class="bullet-list">
+          <li>Income support is currently -0.6% on cap rate.</li>
+          <li>Monthly cash flow screens at $-3,298 before reserves.</li>
+          <li>Town quality proxy is 0 with favorable price trend.</li>
+          <li>Physical profile is 38 years old.</li>
+          <li>Primary flagged risks: none.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="card chart-card">
+      <div class="section-label">Scenario Value vs. Current Ask</div>
+      <div class="chart">
+<div class="chart-row"><span>Ask</span><div class="bar-track"><div class="bar ask" style="width: 89.3%;"></div></div><strong>$999,000</strong></div>
+<div class="chart-row"><span>Bear</span><div class="bar-track"><div class="bar bear" style="width: 83.9%;"></div></div><strong>$939,060</strong></div>
+<div class="chart-row"><span>Base</span><div class="bar-track"><div class="bar base" style="width: 93.8%;"></div></div><strong>$1,048,950</strong></div>
+<div class="chart-row"><span>Bull</span><div class="bar-track"><div class="bar bull" style="width: 100.0%;"></div></div><strong>$1,118,880</strong></div>
+      </div>
+      <p class="body-copy">The chart compares current ask to Briarwood scenario values and highlights the current underwriting range.</p>
+    </section>
+
+    <section class="case-grid">
+      <section class="card case-card"><div class="section-label">Bull Case</div><h3>Bull Case</h3><div class="case-value">$1,118,880</div><p class="body-copy">Bull case implies 12.0% upside if operating support and exit sentiment both improve.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Strong exit environment and stable financing backdrop.</li><li>Town price trend continues around 0.0%.</li><li>Rent support remains intact with limited vacancy drag.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Scenario upside benefits from current gross yield of 0.0%.</li><li>Positive market sentiment expands valuation range.</li><li>Execution risk remains manageable.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Optimistic exit assumptions may not materialize.</li><li>Rate volatility can compress upside.</li></ul></section>
+<section class="card case-card"><div class="section-label">Base Case</div><h3>Base Case</h3><div class="case-value">$1,048,950</div><p class="body-copy">Base case implies 5.0% value support versus ask under current assumptions.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Current underwriting implies a -0.6% cap rate.</li><li>Monthly cash flow remains around $-3,298.</li><li>No major change to property quality or town profile.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value anchored to current purchase underwriting.</li><li>Moderate scenario uplift relative to ask.</li><li>Town quality and demand support hold steady.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Known flagged risks: none.</li><li>Execution remains sensitive to financing costs.</li></ul></section>
+<section class="card case-card"><div class="section-label">Bear Case</div><h3>Bear Case</h3><div class="case-value">$939,060</div><p class="body-copy">Bear case implies -6.0% downside if current pressures intensify.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Exit pricing softens and upside assumptions compress.</li><li>Cash flow remains pressured.</li><li>Diligence uncovers additional friction or capex needs.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value support falls back toward current income profile.</li><li>Lower optimism on exit drives the downside case.</li><li>Operating leverage works against returns.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Sustained negative cash flow reduces hold flexibility.</li><li>Existing constraints can intensify: none.</li></ul></section>
+    </section>
+  </main>
+</body>
+</html>
