@@ -71,6 +71,8 @@ class TownCountySourceBridge:
             warnings.append("County population trend could not be derived from the available source values.")
 
         direct_fields = {
+            "county_macro_sentiment": record.county_macro_sentiment,
+            "coastal_profile_signal": record.coastal_profile_signal,
             "school_signal": record.school_signal,
             "flood_risk": record.flood_risk,
             "liquidity_signal": record.liquidity_signal,
@@ -96,6 +98,8 @@ class TownCountySourceBridge:
             county_price_trend=county_price_trend,
             town_population_trend=town_population_trend,
             county_population_trend=county_population_trend,
+            county_macro_sentiment=record.county_macro_sentiment,
+            coastal_profile_signal=record.coastal_profile_signal,
             school_signal=record.school_signal,
             flood_risk=record.flood_risk,
             liquidity_signal=record.liquidity_signal,
@@ -112,6 +116,8 @@ class TownCountySourceBridge:
                 "county_price_trend",
                 "town_population_trend",
                 "county_population_trend",
+                "county_macro_sentiment",
+                "coastal_profile_signal",
                 "school_signal",
                 "flood_risk",
                 "liquidity_signal",
@@ -159,6 +165,7 @@ class TownCountySourceBridge:
             "county_price_trend",
             "town_population_trend",
             "county_population_trend",
+            "county_macro_sentiment",
             "school_signal",
             "flood_risk",
             "liquidity_signal",
@@ -166,7 +173,7 @@ class TownCountySourceBridge:
             return "market_source"
         if field_name in {"days_on_market", "price_position"}:
             return "listing_source"
-        if field_name == "scarcity_signal":
+        if field_name in {"scarcity_signal", "coastal_profile_signal"}:
             return "derived"
         return "unknown"
 

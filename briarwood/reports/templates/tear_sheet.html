@@ -45,8 +45,19 @@ $thesis_bullets
 
     <section class="card chart-card">
       <div class="section-label">$chart_title</div>
-      <div class="chart">
+      <div class="chart-grid">
+        <div class="chart-panel">
+          <div class="case-block-label">Historic Context</div>
+          <div class="chart">
 $scenario_chart
+          </div>
+        </div>
+        <div class="chart-panel">
+          <div class="case-block-label">$secondary_chart_title</div>
+          <div class="chart">
+$scenario_zoom_chart
+          </div>
+        </div>
       </div>
       <p class="body-copy">$distribution_summary</p>
     </section>

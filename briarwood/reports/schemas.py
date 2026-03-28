@@ -82,6 +82,7 @@ class ScenarioFanBand:
 @dataclass(slots=True)
 class ScenarioChartSection:
     chart_title: str
+    secondary_chart_title: str
     current_ask: float
     current_value_label: str
     current_value: float
@@ -92,6 +93,7 @@ class ScenarioChartSection:
     fan_bands: list[ScenarioFanBand] = field(default_factory=list)
     points: list[ScenarioPoint] = field(default_factory=list)
     plot_html: str = ""
+    secondary_plot_html: str = ""
     caption: str = ""
 
 

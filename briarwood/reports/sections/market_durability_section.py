@@ -38,6 +38,12 @@ def build_market_durability_section(report: AnalysisReport) -> MarketDurabilityS
             else [f"Town/county confidence: {town_score.confidence:.2f}.", f"Scarcity confidence: {scarcity.confidence:.2f}."]
         )
     )
+    confidence_notes.extend(
+        note
+        for note in town_score.assumptions_used
+        if "FRED-backed" in note or "refreshed about every" in note or "last reviewed on" in note
+    )
+    confidence_notes = list(dict.fromkeys(confidence_notes))
 
     if not supporting_points:
         supporting_points = ["Supporting location and scarcity evidence is still thin."]

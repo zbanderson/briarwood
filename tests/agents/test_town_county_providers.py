@@ -2,9 +2,11 @@ import unittest
 
 from briarwood.agents.town_county.providers import (
     FileBackedFloodRiskProvider,
+    FileBackedFredMacroProvider,
     FileBackedLiquidityProvider,
     FileBackedPopulationProvider,
     FileBackedPriceTrendProvider,
+    FileBackedTownProfileProvider,
 )
 
 
@@ -44,6 +46,25 @@ class TownCountyProviderTests(unittest.TestCase):
 
         self.assertIsNotNone(row)
         self.assertEqual(row["months_of_supply"], 3.8)
+
+    def test_file_backed_fred_macro_provider_returns_matching_rows(self) -> None:
+        provider = FileBackedFredMacroProvider("data/town_county/fred_macro.json")
+
+        row = provider.get_county_row(county="Monmouth", state="NJ")
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["unemployment_rate_current"], 4.1)
+        self.assertEqual(row["house_price_index_current"], 301.39)
+
+    def test_file_backed_town_profile_provider_returns_matching_rows(self) -> None:
+        provider = FileBackedTownProfileProvider("data/town_county/monmouth_coastal_profiles.json")
+
+        row = provider.get_town_row(town="Spring Lake", state="NJ", county="Monmouth")
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["coastal_profile_signal"], 0.97)
+        self.assertEqual(row["scarcity_signal"], 0.94)
+        self.assertEqual(row["refresh_frequency_days"], 90)
 
 
 if __name__ == "__main__":

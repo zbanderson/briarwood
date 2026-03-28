@@ -29,11 +29,12 @@ class BullBaseBearSettings:
     trend_persistence_weight: float = 0.90
     one_year_history_weight: float = 0.60
     three_year_history_weight: float = 0.40
-    max_location_adjustment: float = 0.03
-    max_income_adjustment: float = 0.015
-    max_risk_penalty: float = 0.04
-    bull_upside_buffer: float = 0.03
-    bear_downside_buffer: float = 0.04
+    max_market_drift_adjustment: float = 0.10
+    max_location_premium: float = 0.04
+    max_risk_discount: float = 0.05
+    max_optionality_premium: float = 0.03
+    bull_upside_buffer: float = 0.025
+    bear_downside_buffer: float = 0.035
     min_growth_rate: float = -0.12
     max_growth_rate: float = 0.12
     min_spread_ratio: float = 0.05

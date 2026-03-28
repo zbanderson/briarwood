@@ -121,6 +121,14 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertIsNotNone(result.normalized_property_data.address)
         self.assertIn("price", result.missing_fields)
         self.assertTrue(result.warnings)
+        self.assertIn(
+            "URL intake is metadata-only in v1; no live page fetching is performed.",
+            result.warnings,
+        )
+        self.assertIn(
+            "Provide pasted listing text to extract richer fields like description, HOA, tax history, and price history.",
+            result.warnings,
+        )
 
 
 if __name__ == "__main__":

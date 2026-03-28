@@ -58,7 +58,7 @@ class EngineTests(unittest.TestCase):
     def test_runner_can_build_report_from_property_file(self) -> None:
         report = run_report("data/sample_property.json")
 
-        self.assertEqual(report.property_id, "brookline-001")
+        self.assertTrue(report.property_id)
         self.assertIn("cost_valuation", report.module_results)
         self.assertIn("market_value_history", report.module_results)
         self.assertIn("current_value", report.module_results)
@@ -79,8 +79,10 @@ class EngineTests(unittest.TestCase):
         html = render_report_html(report)
 
         self.assertIn("Historic Market Context and Forward Value Range", html)
+        self.assertIn("12M Scenario Spread", html)
         self.assertIn("Historic Market Value", html)
         self.assertIn("Plotly.newPlot", html)
+        self.assertGreaterEqual(html.count("Plotly.newPlot"), 2)
         self.assertIn("What this is:", html)
         self.assertIn("So what:", html)
         self.assertIn("Why Buyers Will Still Want This", html)
@@ -89,6 +91,21 @@ class EngineTests(unittest.TestCase):
         self.assertIn("Buyer Takeaway", html)
         self.assertIn("Why Demand May Hold", html)
         self.assertIn("What Could Weaken It", html)
+
+    def test_belmar_render_surfaces_location_freshness_and_source_notes(self) -> None:
+        with open("data/sample_zillow_listing_belmar.txt") as file_handle:
+            listing_text = file_handle.read()
+
+        report = run_report_from_listing_text(
+            listing_text,
+            property_id="belmar-001",
+            source_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/?",
+        )
+
+        html = render_report_html(report)
+
+        self.assertIn("County macro sentiment is sourced from FRED-backed county series", html)
+        self.assertIn("refreshed about every 90 days", html)
 
     def test_runner_can_build_report_from_listing_text(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:

@@ -28,6 +28,8 @@ class TownCountyInputs(BaseModel):
     county_price_trend: float | None = None
     town_population_trend: float | None = None
     county_population_trend: float | None = None
+    county_macro_sentiment: float | None = Field(default=None, ge=0, le=1)
+    coastal_profile_signal: float | None = Field(default=None, ge=0, le=1)
     school_signal: float | None = Field(default=None, ge=0, le=10)
     flood_risk: str | None = Field(default=None, pattern="^(low|medium|high|none)$")
     liquidity_signal: str | None = Field(default=None, pattern="^(strong|normal|fragile)$")
@@ -53,6 +55,8 @@ class TownCountySourceRecord(BaseModel):
     town_population_prior: int | None = Field(default=None, gt=0)
     county_population_current: int | None = Field(default=None, gt=0)
     county_population_prior: int | None = Field(default=None, gt=0)
+    county_macro_sentiment: float | None = Field(default=None, ge=0, le=1)
+    coastal_profile_signal: float | None = Field(default=None, ge=0, le=1)
     school_signal: float | None = Field(default=None, ge=0, le=10)
     flood_risk: str | None = Field(default=None, pattern="^(low|medium|high|none)$")
     liquidity_signal: str | None = Field(default=None, pattern="^(strong|normal|fragile)$")
@@ -83,6 +87,7 @@ class TownCountyScore(BaseModel):
     county_support_score: float | None
     market_alignment_score: float
     town_county_score: float
+    area_sentiment_score: float
     location_thesis_label: str
     appreciation_support_view: str
     liquidity_view: str

@@ -18,6 +18,7 @@ class IncomeAgentInput(BaseModel):
     estimated_monthly_rent: float | None = Field(default=None, ge=0)
     vacancy_pct: float | None = Field(default=None, ge=0, le=1)
     maintenance_pct: float | None = Field(default=None, ge=0, le=1)
+    market_price_to_rent_benchmark: float | None = Field(default=None, gt=0)
 
     @field_validator("price", "loan_term_years")
     @classmethod
@@ -39,9 +40,22 @@ class IncomeAgentOutput(BaseModel):
     monthly_hoa: float
     monthly_maintenance_reserve: float
     gross_monthly_cost: float
+    total_monthly_cost: float
     effective_monthly_rent: float | None
+    annual_rent: float | None
     income_support_ratio: float | None
+    rent_coverage: float | None
+    price_to_rent: float | None
     estimated_monthly_cash_flow: float | None
+    monthly_cash_flow: float | None
+    rent_support_classification: str
+    price_to_rent_classification: str
+    downside_burden: float | None
+    risk_view: str
+    confidence: float
+    assumptions: list[str]
+    unsupported_claims: list[str]
+    summary: str
     score_inputs_complete: bool
     warnings: list[str]
     explanation: str

@@ -125,6 +125,8 @@ class ModuleTests(unittest.TestCase):
         result = IncomeSupportModule().run(sample_property())
 
         self.assertIn("income_support_ratio", result.metrics)
+        self.assertIn("price_to_rent", result.metrics)
+        self.assertIn("downside_burden", result.metrics)
         self.assertIn("support_label", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
 

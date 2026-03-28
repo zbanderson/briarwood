@@ -1,0 +1,58 @@
+{
+  "towns": [
+    {
+      "name": "Avon by the Sea",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.91,
+      "scarcity_signal": 0.88,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    },
+    {
+      "name": "Spring Lake",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.97,
+      "scarcity_signal": 0.94,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    },
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.84,
+      "scarcity_signal": 0.78,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    },
+    {
+      "name": "Bradley Beach",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.82,
+      "scarcity_signal": 0.76,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    },
+    {
+      "name": "Sea Girt",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.95,
+      "scarcity_signal": 0.92,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    },
+    {
+      "name": "Manasquan",
+      "state": "NJ",
+      "county": "Monmouth",
+      "coastal_profile_signal": 0.89,
+      "scarcity_signal": 0.84,
+      "as_of": "2026-03-01",
+      "refresh_frequency_days": 90
+    }
+  ]
+}

@@ -8,8 +8,19 @@ from briarwood.listing_intake.service import ListingIntakeService
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Normalize a listing into Briarwood property intake data.")
-    parser.add_argument("input_value", help="A Zillow URL or a path to a text file containing pasted listing text.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Normalize a listing into Briarwood property intake data. "
+            "Zillow URL intake is metadata-only; Briarwood does not fetch or scrape live Zillow pages."
+        )
+    )
+    parser.add_argument(
+        "input_value",
+        help=(
+            "A Zillow URL or a path to a text file containing pasted listing text. "
+            "For Zillow URLs, only the URL metadata is parsed unless listing text is provided separately."
+        ),
+    )
     return parser.parse_args()
 
 

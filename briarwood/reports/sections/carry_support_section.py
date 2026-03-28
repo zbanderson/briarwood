@@ -10,27 +10,33 @@ def build_carry_support_section(report: AnalysisReport) -> CarrySupportSection:
     income = get_income_support(report)
     support_label = str(module.metrics.get("support_label", "unavailable")).title()
     ratio_text = (
-        f"{income.income_support_ratio:.2f}x"
-        if income.income_support_ratio is not None
+        f"{income.rent_coverage:.2f}x"
+        if income.rent_coverage is not None
         else "Unavailable"
     )
     cash_flow_text = (
-        f"${income.estimated_monthly_cash_flow:,.0f}/mo"
-        if income.estimated_monthly_cash_flow is not None
+        f"${income.monthly_cash_flow:,.0f}/mo"
+        if income.monthly_cash_flow is not None
         else "Unavailable"
     )
+    summary = income.summary
+    if income.price_to_rent is not None:
+        summary = (
+            f"{summary} Price-to-rent is {income.price_to_rent:.1f} "
+            f"({income.price_to_rent_classification.lower()})."
+        )
     assessment_summary = (
-        f"Fallback rent covers about {income.income_support_ratio:.0%} of monthly carrying cost."
-        if income.income_support_ratio is not None
+        f"Fallback rent covers about {income.rent_coverage:.0%} of monthly carrying cost."
+        if income.rent_coverage is not None
         else "Fallback rent support could not be assessed because a rent estimate is missing."
     )
     return CarrySupportSection(
         title="Fallback Rental Support",
-        summary=income.explanation,
+        summary=summary,
         support_label=support_label,
         income_support_ratio_text=ratio_text,
         estimated_cash_flow_text=cash_flow_text,
-        warnings=income.warnings[:3],
+        warnings=(income.warnings + income.unsupported_claims)[:4],
         assessment=SectionAssessment(
             score=module.score,
             confidence=module.confidence,

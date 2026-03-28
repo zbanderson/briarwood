@@ -33,9 +33,21 @@ class IncomeAgentTests(unittest.TestCase):
         self.assertEqual(result.monthly_hoa, 150.0)
         self.assertAlmostEqual(result.monthly_maintenance_reserve, 416.67, places=2)
         self.assertAlmostEqual(result.gross_monthly_cost, 3714.87, places=2)
+        self.assertAlmostEqual(result.total_monthly_cost, 3714.87, places=2)
         self.assertEqual(result.effective_monthly_rent, 3420.0)
+        self.assertEqual(result.annual_rent, 41040.0)
         self.assertAlmostEqual(result.income_support_ratio, 0.9206, places=4)
+        self.assertAlmostEqual(result.rent_coverage, 0.9206, places=4)
+        self.assertAlmostEqual(result.price_to_rent, 12.18, places=2)
         self.assertAlmostEqual(result.estimated_monthly_cash_flow, -294.87, places=2)
+        self.assertAlmostEqual(result.monthly_cash_flow, -294.87, places=2)
+        self.assertAlmostEqual(result.downside_burden, 294.87, places=2)
+        self.assertEqual(result.rent_support_classification, "Neutral Support")
+        self.assertEqual(result.price_to_rent_classification, "Strong Value")
+        self.assertEqual(result.risk_view, "neutral_support")
+        self.assertLess(result.confidence, 0.9)
+        self.assertTrue(result.assumptions)
+        self.assertIn("price-to-rent ratio", result.summary.lower())
         self.assertTrue(result.score_inputs_complete)
         self.assertEqual(result.warnings, [])
         self.assertIn("does not fully support", result.explanation)
@@ -58,6 +70,8 @@ class IncomeAgentTests(unittest.TestCase):
         self.assertFalse(result.score_inputs_complete)
         self.assertEqual(len(result.warnings), 4)
         self.assertNotIn("Monthly HOA missing; treating HOA as $0.00/month.", result.warnings)
+        self.assertGreaterEqual(len(result.assumptions), 3)
+        self.assertGreaterEqual(len(result.unsupported_claims), 2)
 
     def test_zero_hoa_is_preserved_without_warning(self) -> None:
         payload = sample_payload()
@@ -77,8 +91,29 @@ class IncomeAgentTests(unittest.TestCase):
         self.assertIsNone(result.effective_monthly_rent)
         self.assertIsNone(result.income_support_ratio)
         self.assertIsNone(result.estimated_monthly_cash_flow)
+        self.assertIsNone(result.price_to_rent)
+        self.assertEqual(result.rent_support_classification, "Unavailable")
         self.assertFalse(result.score_inputs_complete)
         self.assertIn("Estimated monthly rent missing; income support metrics were not computed.", result.warnings)
+        self.assertIn("could not be assessed", result.summary)
+
+    def test_price_to_rent_uses_benchmark_when_available(self) -> None:
+        payload = sample_payload()
+        payload["market_price_to_rent_benchmark"] = 13.0
+
+        result = IncomeAgent().run(payload)
+
+        self.assertEqual(result.price_to_rent_classification, "Fair")
+
+    def test_strong_negative_cash_flow_reads_as_weak_support(self) -> None:
+        payload = sample_payload()
+        payload["estimated_monthly_rent"] = 2400.0
+
+        result = IncomeAgent().run(payload)
+
+        self.assertEqual(result.risk_view, "weak_support")
+        self.assertEqual(result.rent_support_classification, "Weak Support")
+        self.assertGreater(result.downside_burden or 0.0, 1000.0)
 
     def test_invalid_values_raise_validation_error(self) -> None:
         with self.assertRaises(ValidationError):

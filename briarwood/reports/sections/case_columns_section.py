@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.reports.section_helpers import (
+    get_current_value,
     get_market_value_history,
     get_scenario_output,
     get_town_county_outlook,
@@ -12,6 +13,7 @@ from briarwood.schemas import AnalysisReport
 
 def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     valuation = get_valuation_output(report)
+    current_value = get_current_value(report)
     scenario = get_scenario_output(report)
     scenario_module = report.get_module("bull_base_bear")
     outlook = get_town_county_outlook(report)
@@ -22,10 +24,14 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     monthly_cash_flow = valuation.monthly_cash_flow
     cap_rate = valuation.cap_rate or 0.0
     gross_yield = valuation.gross_yield or 0.0
+    bcv_anchor = _number(scenario_module.metrics.get("bcv_anchor"))
+    market_drift = _number(scenario_module.metrics.get("market_drift"))
+    location_premium = _number(scenario_module.metrics.get("location_premium"))
+    risk_discount = _number(scenario_module.metrics.get("risk_discount"))
+    optionality_premium = _number(scenario_module.metrics.get("optionality_premium"))
     base_growth_rate = _number(scenario_module.metrics.get("base_growth_rate"))
     bull_growth_rate = _number(scenario_module.metrics.get("bull_growth_rate"))
     bear_growth_rate = _number(scenario_module.metrics.get("bear_growth_rate"))
-    income_support_ratio = scenario_module.metrics.get("income_support_ratio")
     risk_flags = str(risk.metrics.get("risk_flags", "none"))
     town_score = outlook.score
     town_trend = history.one_year_change_pct or 0.0
@@ -49,13 +55,9 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"Historical market appreciation stays near {town_trend:.1%} and location remains {town_score.location_thesis_label}.",
         ],
         key_drivers=[
-            f"Scenario upside benefits from current gross yield of {gross_yield:.1%}.",
+            f"BCV starts around ${bcv_anchor:,.0f} before the upside case adds drift and optionality.",
             location_driver,
-            (
-                f"Fallback rent support near {float(income_support_ratio):.2f}x helps hold flexibility."
-                if isinstance(income_support_ratio, (int, float))
-                else "The upside case leans primarily on resale strength because fallback rent support is not fully known."
-            ),
+            f"Optionality adds about ${max(optionality_premium, 0.0):,.0f} when scarcity and redevelopment support are present.",
         ],
         risk_factors=[
             "Optimistic exit assumptions may not materialize.",
@@ -74,16 +76,18 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         name="Base Case",
         scenario_value=scenario.base_case_value,
         assumptions=[
-            f"Current underwriting implies a {cap_rate:.1%} cap rate.",
+            f"BCV anchor is about ${current_value.briarwood_current_value:,.0f}.",
             f"Base case compounds at about {base_growth_rate:.1%} over the next 12 months.",
             f"Location backdrop remains {town_score.location_thesis_label} rather than improving materially.",
         ],
         key_drivers=[
-            f"Monthly cash flow remains around ${monthly_cash_flow:,.0f}.",
-            "Value is anchored to current underwriting and market-history momentum rather than a simple markup.",
+            f"Market drift contributes about ${market_drift:,.0f}.",
+            f"Location premium contributes about ${location_premium:,.0f}.",
+            f"Optionality contributes about ${optionality_premium:,.0f}.",
             location_driver,
         ],
         risk_factors=[
+            f"Risk discount removes about ${risk_discount:,.0f}.",
             f"Known flagged risks: {risk_flags}.",
             location_risk,
         ],
@@ -105,7 +109,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"Location support slips below today's {town_score.location_thesis_label} reading.",
         ],
         key_drivers=[
-            "Value support falls back toward current underwriting with less help from market momentum.",
+            "Value support falls back toward BCV with less help from market drift and optionality.",
             "Lower optimism on exit drives the downside case.",
             "Operating leverage works against returns.",
         ],

@@ -3,8 +3,10 @@ import unittest
 from briarwood.agents.town_county.sources import (
     CensusPopulationAdapter,
     FemaFloodAdapter,
+    FredMacroAdapter,
     LiquidityAdapter,
     LiquiditySlice,
+    TownProfileAdapter,
     TownCountyOutlookBuilder,
     TownCountyOutlookRequest,
     ZillowTrendAdapter,
@@ -67,6 +69,42 @@ class TownCountySourceAdapterTests(unittest.TestCase):
         self.assertEqual(result.months_of_supply, 3.8)
         self.assertEqual(adapter.derive_signal(result), "normal")
 
+    def test_fred_macro_adapter_derives_county_sentiment(self) -> None:
+        row = {
+            "name": "Monmouth",
+            "unemployment_rate_current": 4.1,
+            "per_capita_income_current": 104887,
+            "per_capita_income_prior": 100491,
+            "house_price_index_current": 301.39,
+            "house_price_index_prior": 277.94,
+            "median_days_on_market_current": 61.5,
+            "median_days_on_market_yoy_pct": -0.0315,
+            "as_of": "2026-02-13",
+        }
+
+        adapter = FredMacroAdapter()
+        result = adapter.from_row(row, geography_type="county")
+
+        self.assertEqual(result.unemployment_rate_current, 4.1)
+        self.assertGreater(adapter.derive_sentiment(result) or 0.0, 0.7)
+
+    def test_town_profile_adapter_parses_monmouth_profile(self) -> None:
+        row = {
+            "name": "Sea Girt",
+            "coastal_profile_signal": 0.95,
+            "scarcity_signal": 0.92,
+            "as_of": "2026-03-01",
+            "refresh_frequency_days": 90,
+        }
+
+        result = TownProfileAdapter().from_row(row, geography_type="town")
+
+        self.assertEqual(result.geography_name, "Sea Girt")
+        self.assertEqual(result.coastal_profile_signal, 0.95)
+        self.assertEqual(result.scarcity_signal, 0.92)
+        self.assertEqual(result.as_of, "2026-03-01")
+        self.assertEqual(result.refresh_frequency_days, 90)
+
     def test_outlook_builder_assembles_source_record(self) -> None:
         zillow = ZillowTrendAdapter()
         census = CensusPopulationAdapter()
@@ -116,6 +154,30 @@ class TownCountySourceAdapterTests(unittest.TestCase):
             },
             geography_type="town",
         )
+        fred_macro = FredMacroAdapter().from_row(
+            {
+                "name": "Monmouth",
+                "unemployment_rate_current": 4.1,
+                "per_capita_income_current": 104887,
+                "per_capita_income_prior": 100491,
+                "house_price_index_current": 301.39,
+                "house_price_index_prior": 277.94,
+                "median_days_on_market_current": 61.5,
+                "median_days_on_market_yoy_pct": -0.0315,
+                "as_of": "2026-02-13",
+            },
+            geography_type="county",
+        )
+        town_profile = TownProfileAdapter().from_row(
+            {
+                "name": "Belmar",
+                "coastal_profile_signal": 0.84,
+                "scarcity_signal": 0.78,
+                "as_of": "2026-03-01",
+                "refresh_frequency_days": 90,
+            },
+            geography_type="town",
+        )
         liquidity = LiquiditySlice(
             geography_name="Belmar",
             geography_type="town",
@@ -142,16 +204,22 @@ class TownCountySourceAdapterTests(unittest.TestCase):
             county_population=county_population,
             flood=flood,
             liquidity=liquidity,
+            fred_macro=fred_macro,
+            town_profile=town_profile,
         )
 
         self.assertEqual(result.town, "Belmar")
         self.assertEqual(result.state, "NJ")
         self.assertEqual(result.town_price_index_current, 810000.0)
         self.assertEqual(result.county_population_current, 645000)
+        self.assertIsNotNone(result.county_macro_sentiment)
+        self.assertEqual(result.coastal_profile_signal, 0.84)
         self.assertEqual(result.flood_risk, "medium")
         self.assertEqual(result.liquidity_signal, "normal")
         self.assertEqual(result.source_names["town_price_trend"], "zillow_zhvi")
-        self.assertEqual(result.data_as_of, "2026-02-28")
+        self.assertEqual(result.source_names["county_macro_sentiment"], "fred_macro")
+        self.assertEqual(result.source_names["coastal_profile_signal"], "monmouth_coastal_profile_v1")
+        self.assertEqual(result.data_as_of, "2026-03-01")
 
 
 if __name__ == "__main__":

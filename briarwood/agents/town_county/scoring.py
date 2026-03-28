@@ -9,9 +9,11 @@ class TownCountyScorer:
     _CONFIDENCE_WEIGHTS = {
         "town_price_trend": 0.20,
         "town_population_trend": 0.15,
-        "school_signal": 0.20,
+        "county_macro_sentiment": 0.10,
+        "coastal_profile_signal": 0.10,
+        "school_signal": 0.15,
         "county_price_trend": 0.15,
-        "county_population_trend": 0.10,
+        "county_population_trend": 0.05,
         "liquidity_signal": 0.10,
         "scarcity_signal": 0.05,
         "flood_risk": 0.05,
@@ -28,24 +30,32 @@ class TownCountyScorer:
         normalized_school = self._normalize_school_signal(inputs.school_signal)
         normalized_scarcity = self._normalize_scarcity_signal(inputs.scarcity_signal)
         normalized_liquidity = self._normalize_liquidity_signal(inputs.liquidity_signal)
+        normalized_macro = self._normalize_macro_sentiment(inputs.county_macro_sentiment)
+        normalized_coastal = self._normalize_coastal_profile(inputs.coastal_profile_signal)
         flood_penalty = self._flood_penalty(inputs.flood_risk)
 
         town_demand_score = self._clamp_score(
             (35 * (normalized_town_price or 0.0))
             + (20 * (normalized_town_population or 0.0))
-            + (25 * (normalized_school or 0.0))
+            + (20 * (normalized_school or 0.0))
+            + (10 * (normalized_coastal or 0.0))
             + (10 * (normalized_scarcity or 0.0))
-            + (10 * (normalized_liquidity or 0.0))
+            + (5 * (normalized_liquidity or 0.0))
             - flood_penalty
         )
 
         normalized_county_price = self._normalize_price_trend(inputs.county_price_trend)
         normalized_county_population = self._normalize_population_trend(inputs.county_population_trend)
         county_support_score: float | None = None
-        if normalized_county_price is not None or normalized_county_population is not None:
+        if (
+            normalized_county_price is not None
+            or normalized_county_population is not None
+            or normalized_macro is not None
+        ):
             county_support_score = self._clamp_score(
-                (60 * (normalized_county_price or 0.0))
-                + (40 * (normalized_county_population or 0.0))
+                (45 * (normalized_county_price or 0.0))
+                + (20 * (normalized_county_population or 0.0))
+                + (35 * (normalized_macro or 0.0))
             )
         else:
             assumptions_used.append("County context unavailable; thesis relies more heavily on town-level signals.")
@@ -65,6 +75,14 @@ class TownCountyScorer:
                 + (0.25 * county_support_score)
                 + (0.25 * market_alignment_score)
             )
+        if normalized_macro is None:
+            unsupported_claims.append("County macro sentiment is unavailable, so broader economic tone is only partly measured.")
+
+        area_sentiment_score = self._clamp_score(
+            (0.70 * town_county_score)
+            + (0.20 * ((normalized_macro or 0.50) * 100))
+            + (0.10 * ((normalized_coastal or 0.50) * 100))
+        )
 
         confidence = self._confidence(inputs)
         location_thesis_label = self._location_label(town_county_score, confidence)
@@ -83,6 +101,8 @@ class TownCountyScorer:
             unsupported_claims.append("Appreciation support lacks town and county price-trend data.")
         if inputs.school_signal is None:
             unsupported_claims.append("Demand durability lacks a school-quality signal.")
+        if inputs.coastal_profile_signal is None:
+            unsupported_claims.append("Town-specific coastal profile support is missing.")
         if confidence < 0.60:
             unsupported_claims.append("Location thesis is low confidence due to missing core data.")
 
@@ -94,6 +114,7 @@ class TownCountyScorer:
             county_support_score=round(county_support_score, 2) if county_support_score is not None else None,
             market_alignment_score=round(market_alignment_score, 2),
             town_county_score=round(town_county_score, 2),
+            area_sentiment_score=round(area_sentiment_score, 2),
             location_thesis_label=location_thesis_label,
             appreciation_support_view=appreciation_support_view,
             liquidity_view=liquidity_view,
@@ -170,6 +191,16 @@ class TownCountyScorer:
             return None
         return max(0.0, min(value, 1.0))
 
+    def _normalize_macro_sentiment(self, value: float | None) -> float | None:
+        if value is None:
+            return None
+        return max(0.0, min(value, 1.0))
+
+    def _normalize_coastal_profile(self, value: float | None) -> float | None:
+        if value is None:
+            return None
+        return max(0.0, min(value, 1.0))
+
     def _flood_penalty(self, value: str | None) -> float:
         if value in {None, "none", "low"}:
             return 0.0
@@ -241,6 +272,10 @@ class TownCountyScorer:
             drivers.append(f"School signal is supportive at {inputs.school_signal:.1f}/10.")
         if inputs.liquidity_signal == "strong":
             drivers.append("Local liquidity signals suggest exits should remain manageable.")
+        if inputs.county_macro_sentiment is not None and inputs.county_macro_sentiment >= 0.7:
+            drivers.append("County macro sentiment is supportive, reinforcing local buyer confidence.")
+        if inputs.coastal_profile_signal is not None and inputs.coastal_profile_signal >= 0.8:
+            drivers.append("Town-specific coastal demand and scarcity traits appear unusually durable.")
         if inputs.scarcity_signal is not None and inputs.scarcity_signal >= 0.75:
             drivers.append("Supply appears constrained enough to support scarcity value.")
         if not drivers and score >= 50:
@@ -257,6 +292,8 @@ class TownCountyScorer:
             risks.append(f"Flood exposure is flagged as {inputs.flood_risk}.")
         if inputs.liquidity_signal == "fragile":
             risks.append("Liquidity looks fragile, which could weaken exit flexibility.")
+        if inputs.county_macro_sentiment is not None and inputs.county_macro_sentiment < 0.45:
+            risks.append("County macro sentiment is soft, which tempers local demand confidence.")
         if confidence < 0.60:
             risks.append("Core location inputs are incomplete, reducing confidence in the thesis.")
         if not risks and unsupported_claims:

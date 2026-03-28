@@ -41,10 +41,19 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
         base_value=base_value,
         bull_value=bull_value,
     )
+    secondary_plot_html = _build_plotly_scenario_zoom_chart(
+        current_ask=ask_price,
+        current_value=briarwood_current_value,
+        market_reference_value=market_reference_value,
+        bear_value=bear_value,
+        base_value=base_value,
+        bull_value=bull_value,
+    )
 
     history_years = len(history.points)
     return ScenarioChartSection(
         chart_title="Historic Market Context and Forward Value Range",
+        secondary_chart_title="12M Scenario Spread",
         current_ask=ask_price,
         current_value_label="Briarwood Current Value",
         current_value=briarwood_current_value,
@@ -66,9 +75,11 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
             ScenarioPoint(label="Bull", value=bull_value),
         ],
         plot_html=plot_html,
+        secondary_plot_html=secondary_plot_html,
         caption=(
-            f"This chart uses {history_years} historical Zillow-style market value points to anchor the left side, "
-            "plots Briarwood Current Value beside today's ask and market reference, then extends into a 12-month forward fan for the bull, base, and bear view. "
+            f"The left chart uses {history_years} historical Zillow-style market value points to anchor the current picture, "
+            "plots Briarwood Current Value beside today's ask and market reference, then extends into a 12-month forward fan. "
+            "The right chart zooms in on the present-day anchor and the bull, base, and bear spread so the scenario range is easier to read. "
             "BCV is the present-day Briarwood estimate; the fan is the forward scenario range. "
             "The historical series is market-level context, not a property-specific Zestimate history."
         ),
@@ -199,3 +210,71 @@ def _build_plotly_chart(
         },
     )
     return fig.to_html(full_html=False, include_plotlyjs="cdn", config={"displayModeBar": False})
+
+
+def _build_plotly_scenario_zoom_chart(
+    *,
+    current_ask: float,
+    current_value: float,
+    market_reference_value: float,
+    bear_value: float,
+    base_value: float,
+    bull_value: float,
+) -> str:
+    x_values = ["Current Market", "Ask", "BCV", "Bear", "Base", "Bull"]
+    y_values = [
+        market_reference_value,
+        current_ask,
+        current_value,
+        bear_value,
+        base_value,
+        bull_value,
+    ]
+    colors = [
+        "#8b7c67",
+        "#17212b",
+        "#c48a3a",
+        "#b14d3b",
+        "#2f6173",
+        "#3b7f5f",
+    ]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=["BCV", "Base", "Bull", "Base", "Bear"],
+            y=[current_value, base_value, bull_value, base_value, bear_value],
+            mode="lines",
+            line={"color": "rgba(47,97,115,0.25)", "width": 3},
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x_values,
+            y=y_values,
+            mode="markers+text",
+            text=[f"${value:,.0f}" for value in y_values],
+            textposition="top center",
+            marker={"size": 14, "color": colors, "line": {"width": 2, "color": "#fffdf8"}},
+            name="Scenario Spread",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(
+        template="plotly_white",
+        margin={"l": 20, "r": 20, "t": 20, "b": 20},
+        height=380,
+        paper_bgcolor="#fffdf8",
+        plot_bgcolor="#fffdf8",
+        xaxis={"title": "", "showgrid": False},
+        yaxis={
+            "title": "Value",
+            "tickprefix": "$",
+            "separatethousands": True,
+            "gridcolor": "#e4dbc9",
+            "zeroline": False,
+        },
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False, config={"displayModeBar": False})

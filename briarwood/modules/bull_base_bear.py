@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from math import pow
 
-from briarwood.modules.income_support import IncomeSupportModule
+from briarwood.modules.current_value import CurrentValueModule, get_current_value_payload
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
+from briarwood.modules.scarcity_support import ScarcitySupportModule, get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import ModuleResult, PropertyInput, ScenarioOutput
 from briarwood.settings import BullBaseBearSettings, DEFAULT_BULL_BASE_BEAR_SETTINGS
@@ -18,16 +19,18 @@ class BullBaseBearModule:
         self,
         settings: BullBaseBearSettings | None = None,
         *,
+        current_value_module: CurrentValueModule | None = None,
         market_value_history_module: MarketValueHistoryModule | None = None,
         town_county_outlook_module: TownCountyOutlookModule | None = None,
         risk_constraints_module: RiskConstraintsModule | None = None,
-        income_support_module: IncomeSupportModule | None = None,
+        scarcity_support_module: ScarcitySupportModule | None = None,
     ) -> None:
         self.settings = settings or DEFAULT_BULL_BASE_BEAR_SETTINGS
+        self.current_value_module = current_value_module or CurrentValueModule()
         self.market_value_history_module = market_value_history_module or MarketValueHistoryModule()
         self.town_county_outlook_module = town_county_outlook_module or TownCountyOutlookModule()
         self.risk_constraints_module = risk_constraints_module or RiskConstraintsModule()
-        self.income_support_module = income_support_module or IncomeSupportModule()
+        self.scarcity_support_module = scarcity_support_module or ScarcitySupportModule()
 
     def run(self, property_input: PropertyInput) -> ModuleResult:
         price = float(property_input.purchase_price or 0.0)
@@ -48,38 +51,45 @@ class BullBaseBearModule:
                 payload=scenario_output,
             )
 
+        current_value_result = self.current_value_module.run(property_input)
         history_result = self.market_value_history_module.run(property_input)
         outlook_result = self.town_county_outlook_module.run(property_input)
         risk_result = self.risk_constraints_module.run(property_input)
-        income_result = self.income_support_module.run(property_input)
+        scarcity_result = self.scarcity_support_module.run(property_input)
+
+        current_value = get_current_value_payload(current_value_result)
+        scarcity = get_scarcity_support_payload(scarcity_result)
+        bcv = current_value.briarwood_current_value
 
         one_year_change = self._as_float(history_result.metrics.get("one_year_change_pct"))
         three_year_change = self._as_float(history_result.metrics.get("three_year_change_pct"))
         location_score = float(outlook_result.score)
         risk_score = float(risk_result.score)
-        income_support_ratio = self._as_float(income_result.metrics.get("income_support_ratio"))
+        optionality_score = float(scarcity.scarcity_support_score)
+        optionality_confidence = float(scarcity.confidence)
 
         historical_growth = self._historical_growth_rate(
             one_year_change=one_year_change,
             three_year_change=three_year_change,
         )
-        location_adjustment = self._location_adjustment(location_score)
-        income_adjustment = self._income_adjustment(income_support_ratio)
-        risk_penalty = self._risk_penalty(risk_score)
-
-        base_growth_rate = self._clamp_growth(
-            historical_growth * self.settings.trend_persistence_weight
-            + location_adjustment
-            + income_adjustment
-            - risk_penalty
+        market_drift = self._market_drift(bcv, historical_growth)
+        location_premium = self._location_premium(bcv, location_score)
+        risk_discount = self._risk_discount(bcv, risk_score)
+        optionality_premium = self._optionality_premium(
+            bcv,
+            optionality_score=optionality_score,
+            optionality_confidence=optionality_confidence,
         )
+
+        base_value = bcv + market_drift + location_premium - risk_discount + optionality_premium
+        base_growth_rate = self._clamp_growth((base_value - price) / price)
         bull_growth_rate = self._clamp_growth(
             max(
                 base_growth_rate + self.settings.min_spread_ratio / 2,
                 base_growth_rate
                 + self.settings.bull_upside_buffer
-                + max(location_adjustment, 0.0) * 0.5
-                + max(income_adjustment, 0.0) * 0.5,
+                + max(location_premium / bcv, 0.0) * 0.35
+                + max(optionality_premium / bcv, 0.0) * 0.35,
             )
         )
         bear_growth_rate = self._clamp_growth(
@@ -87,13 +97,11 @@ class BullBaseBearModule:
                 base_growth_rate - self.settings.min_spread_ratio / 2,
                 base_growth_rate
                 - self.settings.bear_downside_buffer
-                - risk_penalty * 0.5
-                - max(-income_adjustment, 0.0) * 0.5,
+                - max(risk_discount / bcv, 0.0) * 0.5,
             )
         )
 
         bull_value = price * (1 + bull_growth_rate)
-        base_value = price * (1 + base_growth_rate)
         bear_value = price * (1 + bear_growth_rate)
 
         spread = bull_value - bear_value
@@ -110,22 +118,19 @@ class BullBaseBearModule:
         )
         confidence = round(
             (
-                history_result.confidence
+                current_value_result.confidence
+                + history_result.confidence
                 + outlook_result.confidence
                 + risk_result.confidence
-                + income_result.confidence
+                + scarcity_result.confidence
             )
-            / 4,
+            / 5,
             2,
         )
         summary = (
-            f"Base case points to roughly ${base_value:,.0f}, using historical market momentum of "
-            f"{historical_growth:.1%}, location support of {location_score:.0f}/100, risk score of "
-            f"{risk_score:.0f}/100, and fallback income support of "
-            f"{income_support_ratio:.2f}x." if income_support_ratio is not None else
-            f"Base case points to roughly ${base_value:,.0f}, using historical market momentum of "
-            f"{historical_growth:.1%}, location support of {location_score:.0f}/100, and risk score of "
-            f"{risk_score:.0f}/100."
+            f"Base case points to roughly ${base_value:,.0f}, starting from BCV of ${bcv:,.0f} and then "
+            f"adding market drift of ${market_drift:,.0f}, location premium of ${location_premium:,.0f}, "
+            f"subtracting risk discount of ${risk_discount:,.0f}, and adding optionality of ${optionality_premium:,.0f}. "
         )
         summary = (
             f"{summary} This forward range is still heuristic and should be treated as an outlook, "
@@ -135,15 +140,18 @@ class BullBaseBearModule:
             module_name=self.name,
             metrics={
                 **scenario_output.to_metrics(),
+                "bcv_anchor": round(bcv, 2),
                 "historical_growth_rate": round(historical_growth, 4),
+                "market_drift": round(market_drift, 2),
+                "location_premium": round(location_premium, 2),
+                "risk_discount": round(risk_discount, 2),
+                "optionality_premium": round(optionality_premium, 2),
                 "base_growth_rate": round(base_growth_rate, 4),
                 "bull_growth_rate": round(bull_growth_rate, 4),
                 "bear_growth_rate": round(bear_growth_rate, 4),
                 "location_score": round(location_score, 2),
                 "risk_score": round(risk_score, 2),
-                "income_support_ratio": round(income_support_ratio, 4)
-                if income_support_ratio is not None
-                else None,
+                "optionality_score": round(optionality_score, 2),
                 "market_history_confidence": history_result.confidence,
             },
             score=clamp_score(score),
@@ -174,19 +182,34 @@ class BullBaseBearModule:
             return 0.0
         return weighted_growth / total_weight
 
-    def _location_adjustment(self, location_score: float) -> float:
-        centered_score = (location_score - 50.0) / 50.0
-        return centered_score * self.settings.max_location_adjustment
+    def _market_drift(self, bcv: float, historical_growth: float) -> float:
+        drift_rate = max(
+            -self.settings.max_market_drift_adjustment,
+            min(
+                historical_growth * self.settings.trend_persistence_weight,
+                self.settings.max_market_drift_adjustment,
+            ),
+        )
+        return bcv * drift_rate
 
-    def _income_adjustment(self, income_support_ratio: float | None) -> float:
-        if income_support_ratio is None:
-            return 0.0
-        centered_ratio = max(min((income_support_ratio - 0.75) / 0.75, 1.0), -1.0)
-        return centered_ratio * self.settings.max_income_adjustment
+    def _location_premium(self, bcv: float, location_score: float) -> float:
+        centered_score = max(min((location_score - 50.0) / 50.0, 1.0), -1.0)
+        return bcv * centered_score * self.settings.max_location_premium
 
-    def _risk_penalty(self, risk_score: float) -> float:
-        risk_gap = max(0.0, (80.0 - risk_score) / 80.0)
-        return risk_gap * self.settings.max_risk_penalty
+    def _risk_discount(self, bcv: float, risk_score: float) -> float:
+        risk_gap = max(0.0, min((85.0 - risk_score) / 85.0, 1.0))
+        return bcv * risk_gap * self.settings.max_risk_discount
+
+    def _optionality_premium(
+        self,
+        bcv: float,
+        *,
+        optionality_score: float,
+        optionality_confidence: float,
+    ) -> float:
+        centered_optionality = max(min((optionality_score - 50.0) / 50.0, 1.0), -1.0)
+        confidence_scale = max(min(optionality_confidence, 1.0), 0.0)
+        return bcv * centered_optionality * self.settings.max_optionality_premium * confidence_scale
 
     def _clamp_growth(self, value: float) -> float:
         return max(self.settings.min_growth_rate, min(self.settings.max_growth_rate, value))

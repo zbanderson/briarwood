@@ -6,9 +6,11 @@ from pathlib import Path
 from briarwood.agents.scarcity.schemas import ScarcitySupportInputs
 from briarwood.agents.town_county.providers import (
     FileBackedFloodRiskProvider,
+    FileBackedFredMacroProvider,
     FileBackedLiquidityProvider,
     FileBackedPopulationProvider,
     FileBackedPriceTrendProvider,
+    FileBackedTownProfileProvider,
 )
 from briarwood.agents.town_county.service import TownCountyDataService, TownCountyOutlookResult
 from briarwood.agents.town_county.sources import TownCountyOutlookRequest
@@ -25,6 +27,8 @@ def build_default_town_county_service() -> TownCountyDataService:
         population_provider=FileBackedPopulationProvider(data_root / "population_trends.json"),
         flood_provider=FileBackedFloodRiskProvider(data_root / "flood_risk.json"),
         liquidity_provider=FileBackedLiquidityProvider(data_root / "liquidity.json"),
+        fred_macro_provider=FileBackedFredMacroProvider(data_root / "fred_macro.json"),
+        town_profile_provider=FileBackedTownProfileProvider(data_root / "monmouth_coastal_profiles.json"),
     )
 
 

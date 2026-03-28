@@ -37,6 +37,7 @@ class PropertyInput:
     town_price_trend: float | None = None
     school_rating: float | None = None
     flood_risk: str | None = None
+    market_price_to_rent_benchmark: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

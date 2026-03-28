@@ -69,12 +69,13 @@ class IncomeSupportModule:
                 estimated_monthly_rent=property_input.estimated_monthly_rent,
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,
+                market_price_to_rent_benchmark=property_input.market_price_to_rent_benchmark,
             )
         )
         warnings = wrapper_warnings + output.warnings
-        support_label = self._support_label(output)
-        confidence = self._confidence(property_input)
-        summary = output.explanation
+        support_label = output.rent_support_classification
+        confidence = output.confidence
+        summary = output.summary
         if warnings:
             summary = f"{summary} Key assumption gaps: {' '.join(warnings[:2])}"
 
@@ -85,10 +86,18 @@ class IncomeSupportModule:
             summary=summary,
             metrics={
                 "gross_monthly_cost": output.gross_monthly_cost,
+                "total_monthly_cost": output.total_monthly_cost,
                 "effective_monthly_rent": output.effective_monthly_rent,
                 "income_support_ratio": output.income_support_ratio,
+                "rent_coverage": output.rent_coverage,
+                "price_to_rent": output.price_to_rent,
                 "estimated_monthly_cash_flow": output.estimated_monthly_cash_flow,
+                "monthly_cash_flow": output.monthly_cash_flow,
+                "downside_burden": output.downside_burden,
+                "risk_view": output.risk_view,
                 "support_label": support_label,
+                "rent_support_classification": output.rent_support_classification,
+                "price_to_rent_classification": output.price_to_rent_classification,
                 "warning_count": len(warnings),
             },
             payload=output.model_copy(update={"warnings": warnings}),
@@ -98,31 +107,7 @@ class IncomeSupportModule:
         ratio = output.income_support_ratio
         if ratio is None:
             return 0.0
-        return max(0.0, min(ratio * 100, 100.0))
-
-    def _confidence(self, property_input: PropertyInput) -> float:
-        required_values = [
-            property_input.purchase_price,
-            property_input.down_payment_percent,
-            property_input.interest_rate,
-            property_input.taxes,
-            property_input.insurance,
-            property_input.estimated_monthly_rent,
-        ]
-        populated = sum(value is not None for value in required_values)
-        return round(0.35 + (populated / len(required_values)) * 0.55, 2)
-
-    def _support_label(self, output: IncomeAgentOutput) -> str:
-        ratio = output.income_support_ratio
-        if ratio is None:
-            return "unavailable"
-        if ratio >= 1.0:
-            return "rent fully supports carry"
-        if ratio >= 0.8:
-            return "rent offsets much of carry"
-        if ratio >= 0.5:
-            return "rent offsets part of carry"
-        return "weak fallback rental support"
+        return max(0.0, min(ratio * 95, 100.0))
 
 
 def get_income_support_payload(result: ModuleResult) -> IncomeAgentOutput:

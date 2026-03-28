@@ -35,30 +35,33 @@ def build_engine(
 ) -> AnalysisEngine:
     market_value_history_module = MarketValueHistoryModule()
     income_support_module = IncomeSupportModule(settings=cost_settings)
+    current_value_module = CurrentValueModule(
+        market_value_history_module=market_value_history_module,
+        income_support_module=income_support_module,
+    )
     risk_constraints_module = RiskConstraintsModule(settings=risk_settings)
     town_county_service = build_default_town_county_service()
     town_county_outlook_module = TownCountyOutlookModule(service=town_county_service)
+    scarcity_support_module = ScarcitySupportModule(service=town_county_service)
 
     return AnalysisEngine(
         modules=[
             PropertySnapshotModule(),
             market_value_history_module,
-            CurrentValueModule(
-                market_value_history_module=market_value_history_module,
-                income_support_module=income_support_module,
-            ),
+            current_value_module,
             CostValuationModule(settings=cost_settings),
             income_support_module,
             BullBaseBearModule(
                 settings=bull_base_bear_settings,
+                current_value_module=current_value_module,
                 market_value_history_module=market_value_history_module,
                 town_county_outlook_module=town_county_outlook_module,
                 risk_constraints_module=risk_constraints_module,
-                income_support_module=income_support_module,
+                scarcity_support_module=scarcity_support_module,
             ),
             risk_constraints_module,
             town_county_outlook_module,
-            ScarcitySupportModule(service=town_county_service),
+            scarcity_support_module,
         ]
     )
 

@@ -30,7 +30,9 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$thesis_summary": escape(tear_sheet.thesis.assessment.summary),
         "$thesis_bullets": _render_list_items(tear_sheet.thesis.bullets),
         "$chart_title": escape(tear_sheet.scenario_chart.chart_title),
+        "$secondary_chart_title": escape(tear_sheet.scenario_chart.secondary_chart_title),
         "$scenario_chart": _render_scenario_chart(chart),
+        "$scenario_zoom_chart": _render_secondary_scenario_chart(chart),
         "$distribution_summary": escape(tear_sheet.scenario_chart.caption),
         "$durability_title": escape(tear_sheet.market_durability.title),
         "$durability_summary": escape(tear_sheet.market_durability.summary),
@@ -132,6 +134,12 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
         "</svg>"
         "</div>"
     )
+
+
+def _render_secondary_scenario_chart(chart: ScenarioChartSection) -> str:
+    if chart.secondary_plot_html:
+        return chart.secondary_plot_html
+    return _render_scenario_chart(chart)
 
 
 def _render_case_columns(section: object) -> str:

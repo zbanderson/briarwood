@@ -3,9 +3,11 @@
 from briarwood.agents.town_county.bridge import TownCountySourceBridge, normalize_town_county_sources
 from briarwood.agents.town_county.providers import (
     FileBackedFloodRiskProvider,
+    FileBackedFredMacroProvider,
     FileBackedLiquidityProvider,
     FileBackedPopulationProvider,
     FileBackedPriceTrendProvider,
+    FileBackedTownProfileProvider,
 )
 from briarwood.agents.town_county.scoring import TownCountyScorer, score_town_county
 from briarwood.agents.town_county.service import TownCountyDataService, TownCountyOutlookResult
@@ -21,8 +23,12 @@ from briarwood.agents.town_county.sources import (
     CensusPopulationSlice,
     FemaFloodAdapter,
     FemaFloodSlice,
+    FredMacroAdapter,
+    FredMacroSlice,
     LiquidityAdapter,
     LiquiditySlice,
+    TownProfileAdapter,
+    TownProfileSlice,
     TownCountyOutlookBuilder,
     TownCountyOutlookRequest,
     ZillowTrendAdapter,
@@ -35,9 +41,13 @@ __all__ = [
     "FemaFloodAdapter",
     "FemaFloodSlice",
     "FileBackedFloodRiskProvider",
+    "FileBackedFredMacroProvider",
     "FileBackedLiquidityProvider",
     "FileBackedPopulationProvider",
     "FileBackedPriceTrendProvider",
+    "FileBackedTownProfileProvider",
+    "FredMacroAdapter",
+    "FredMacroSlice",
     "LiquidityAdapter",
     "LiquiditySlice",
     "SourceFieldStatus",
@@ -51,6 +61,8 @@ __all__ = [
     "TownCountySourceRecord",
     "TownCountySourceBridge",
     "TownCountyScorer",
+    "TownProfileAdapter",
+    "TownProfileSlice",
     "ZillowTrendAdapter",
     "ZillowTrendSlice",
     "normalize_town_county_sources",
