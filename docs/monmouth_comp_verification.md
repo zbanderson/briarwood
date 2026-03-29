@@ -13,6 +13,19 @@ to:
 
 The goal is to improve trust before MLS integration is ready.
 
+Primary county/public-record source path:
+
+- Monmouth County OPRS / Clerk records search:
+  - https://oprs.co.monmouth.nj.us/Oprs/clerk/clerkhome.aspx
+- Monmouth County OPRS Tax Board tools:
+  - https://oprs.co.monmouth.nj.us/Oprs/GoogleWithUC/ShowMod4.aspx
+
+These are the right pre-MLS sources for:
+
+- deed / sale verification
+- tax / parcel cross-checks
+- sale-record confidence upgrades
+
 ---
 
 ## What We Need
@@ -45,6 +58,18 @@ That file is only a shape/template. It is not real county data.
 Place the actual county export somewhere like:
 
 - `data/comps/monmouth_public_records_2026_03_29.csv`
+
+If we need to add a comp before the county export is in hand, start from:
+
+- [manual_comp_template.json](/Users/zachanderson/projects/briarwood/data/comps/manual_comp_template.json)
+
+and append it with:
+
+```bash
+./venv/bin/python -m briarwood.agents.comparable_sales.curate append \
+  --input data/comps/my_new_comp.json \
+  --comps data/comps/sales_comps.json
+```
 
 ---
 
@@ -100,6 +125,21 @@ Until MLS is connected:
 - public-record verification is the strongest comp evidence tier
 - seeded comps should still influence the model less
 - the tear sheet should say when the comp set is still mostly seed/review only
+
+Condition and capex notes should also be tracked explicitly on new comps:
+
+- `condition_profile`
+  - `renovated`
+  - `updated`
+  - `maintained`
+  - `dated`
+  - `needs_work`
+- `capex_lane`
+  - `light`
+  - `moderate`
+  - `heavy`
+
+This gives Briarwood a cleaner path into future capex-aware modeling instead of hiding condition only inside free-text notes.
 
 ---
 

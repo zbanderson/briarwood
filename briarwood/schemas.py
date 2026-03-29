@@ -52,6 +52,8 @@ class PropertyFacts:
     lot_size: float | None = None
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = None
+    capex_lane: str | None = None
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
@@ -94,6 +96,8 @@ class UserAssumptions:
     interest_rate: float | None = None
     loan_term_years: int | None = None
     vacancy_rate: float | None = None
+    condition_profile_override: str | None = None
+    capex_lane_override: str | None = None
     repair_capex_budget: float | None = None
     manual_comp_inputs: list[dict[str, Any]] = field(default_factory=list)
 
@@ -129,6 +133,8 @@ class PropertyInput:
     county: str | None = None
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = None
+    capex_lane: str | None = None
     lot_size: float | None = None
     year_built: int | None = None
     stories: float | None = None
@@ -147,6 +153,7 @@ class PropertyInput:
     source_url: str | None = None
     price_history: list[dict[str, Any]] = field(default_factory=list)
     vacancy_rate: float | None = None
+    repair_capex_budget: float | None = None
     town_population_trend: float | None = None
     town_price_trend: float | None = None
     school_rating: float | None = None
@@ -176,6 +183,8 @@ class PropertyInput:
             county=facts.county,
             property_type=facts.property_type,
             architectural_style=facts.architectural_style,
+            condition_profile=assumptions.condition_profile_override or facts.condition_profile,
+            capex_lane=assumptions.capex_lane_override or facts.capex_lane,
             lot_size=facts.lot_size,
             year_built=facts.year_built,
             stories=facts.stories,
@@ -194,6 +203,7 @@ class PropertyInput:
             source_url=facts.source_url,
             price_history=facts.price_history,
             vacancy_rate=assumptions.vacancy_rate,
+            repair_capex_budget=assumptions.repair_capex_budget,
             town_population_trend=market.town_population_trend,
             town_price_trend=market.town_price_trend,
             school_rating=market.school_rating,

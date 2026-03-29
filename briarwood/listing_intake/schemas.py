@@ -44,6 +44,8 @@ class ListingRawData:
     lot_sqft: int | None = None
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = None
+    capex_lane: str | None = None
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
@@ -70,6 +72,8 @@ class NormalizedPropertyData:
     lot_sqft: int | None = None
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = None
+    capex_lane: str | None = None
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
@@ -107,6 +111,8 @@ class NormalizedPropertyData:
             lot_size=lot_size_acres,
             property_type=self.property_type,
             architectural_style=self.architectural_style,
+            condition_profile=self.condition_profile,
+            capex_lane=self.capex_lane,
             year_built=self.year_built,
             stories=self.stories,
             garage_spaces=self.garage_spaces,

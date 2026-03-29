@@ -73,6 +73,8 @@ class ZillowTextParser(ListingParser):
             lot_sqft=_extract_lot_sqft(text),
             property_type=_extract_property_type(text),
             architectural_style=_extract_architectural_style(text),
+            condition_profile=_extract_condition_profile(text),
+            capex_lane=_extract_capex_lane(text),
             year_built=_extract_year_built(text),
             stories=_extract_stories(text),
             garage_spaces=_extract_garage_spaces(text),
@@ -246,6 +248,30 @@ def _extract_stories(text: str) -> float | None:
     match = re.search(r"Stories:\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
     if match:
         return float(match.group(1))
+    return None
+
+
+def _extract_condition_profile(text: str) -> str | None:
+    lowered = text.lower()
+    if any(token in lowered for token in ("gut renovated", "fully renovated", "completely renovated", "brand new interior")):
+        return "renovated"
+    if any(token in lowered for token in ("updated", "renovated", "freshly painted", "new sink", "new kitchen", "new bath", "move in ready")):
+        return "updated"
+    if any(token in lowered for token in ("needs work", "as is", "fixer", "contractor special", "tear down", "rehab")):
+        return "needs_work"
+    if any(token in lowered for token in ("original condition", "dated", "maintained", "well kept")):
+        return "maintained"
+    return None
+
+
+def _extract_capex_lane(text: str) -> str | None:
+    condition = _extract_condition_profile(text)
+    if condition == "renovated":
+        return "light"
+    if condition in {"updated", "maintained"}:
+        return "moderate"
+    if condition == "needs_work":
+        return "heavy"
     return None
 
 

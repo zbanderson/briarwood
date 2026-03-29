@@ -19,6 +19,8 @@ class ComparableSalesAgentTests(unittest.TestCase):
                 state="NJ",
                 property_type="single family residence",
                 architectural_style="Ranch",
+                condition_profile="updated",
+                capex_lane="moderate",
                 beds=3,
                 baths=2.0,
                 sqft=1600,
@@ -51,6 +53,7 @@ class ComparableSalesAgentTests(unittest.TestCase):
         self.assertIn(top_comp.fit_label, {"strong", "usable", "stretch"})
         self.assertTrue(top_comp.adjustments_summary)
         self.assertTrue(top_comp.comp_status)
+        self.assertIn(top_comp.capex_lane, {"light", "moderate", "heavy", None})
         self.assertTrue(top_comp.source_ref)
         self.assertEqual(top_comp.address_verification_status, "verified")
         self.assertEqual(top_comp.sale_verification_status, "seeded")
@@ -75,6 +78,8 @@ class ComparableSalesAgentTests(unittest.TestCase):
                 town="Belmar",
                 state="NJ",
                 property_type="condo",
+                condition_profile="renovated",
+                capex_lane="light",
                 beds=6,
                 baths=4.0,
                 sqft=4200,

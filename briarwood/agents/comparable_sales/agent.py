@@ -107,6 +107,7 @@ class ComparableSalesAgent:
                     source_ref=sale.source_ref,
                     reviewed_at=sale.reviewed_at,
                     comp_status=sale.comp_status,
+                    capex_lane=sale.capex_lane,
                     address_verification_status=sale.address_verification_status,
                     sale_verification_status=sale.sale_verification_status,
                     verification_source_type=sale.verification_source_type,
@@ -375,12 +376,22 @@ class ComparableSalesAgent:
                 cautions.append("Micro-location traits differ from the subject's listing profile.")
 
         if sale.condition_profile:
-            subject_condition = self._condition_tag(request.listing_description)
+            subject_condition = request.condition_profile or self._condition_tag(request.listing_description)
             if subject_condition and subject_condition == sale.condition_profile:
                 score += 0.02
                 why_comp.append(f"Condition profile looks similarly {sale.condition_profile}.")
             elif subject_condition and subject_condition != sale.condition_profile:
                 cautions.append("Condition profile may differ from subject.")
+
+        if sale.capex_lane:
+            subject_capex_lane = request.capex_lane or self._capex_lane_for_condition(
+                request.condition_profile or self._condition_tag(request.listing_description)
+            )
+            if subject_capex_lane and subject_capex_lane == sale.capex_lane:
+                score += 0.015
+                why_comp.append(f"Capex lane is similarly {sale.capex_lane}.")
+            elif subject_capex_lane and subject_capex_lane != sale.capex_lane:
+                cautions.append("Likely capex burden differs from subject.")
 
         sale_age_days = max((date.today() - self._parse_date(sale.sale_date)).days, 0)
         if sale_age_days <= 365:
@@ -457,6 +468,13 @@ class ComparableSalesAgent:
             pct += garage_pct
             if abs(garage_pct) >= 0.005:
                 notes.append(f"Garage adjustment: {garage_pct:+.1%}.")
+
+        subject_condition = request.condition_profile or self._condition_tag(request.listing_description)
+        if subject_condition and sale.condition_profile and subject_condition != sale.condition_profile:
+            condition_pct = self._condition_adjustment_pct(subject_condition, sale.condition_profile)
+            pct += condition_pct
+            if abs(condition_pct) >= 0.01:
+                notes.append(f"Condition adjustment: {condition_pct:+.1%}.")
 
         if not notes:
             notes.append("Only minor subject adjustments were required.")
@@ -604,6 +622,27 @@ class ComparableSalesAgent:
         elif sale.reviewed_at:
             parts.append(f"reviewed {sale.reviewed_at}")
         return " | ".join(parts) if parts else None
+
+    def _condition_adjustment_pct(self, subject_condition: str, comp_condition: str) -> float:
+        rank = {
+            "needs_work": 0,
+            "dated": 1,
+            "maintained": 2,
+            "updated": 3,
+            "renovated": 4,
+        }
+        subject_rank = rank.get(subject_condition, 2)
+        comp_rank = rank.get(comp_condition, 2)
+        return max(-0.05, min((subject_rank - comp_rank) * 0.015, 0.05))
+
+    def _capex_lane_for_condition(self, condition: str | None) -> str | None:
+        if condition == "renovated":
+            return "light"
+        if condition in {"updated", "maintained", "dated"}:
+            return "moderate"
+        if condition == "needs_work":
+            return "heavy"
+        return None
 
     def _median_sale_age_days(self, comps: list[AdjustedComparable]) -> int | None:
         if not comps:

@@ -104,6 +104,8 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         lot_size=_optional_float(facts_payload.get("lot_size", data.get("lot_size"))),
         property_type=_optional_str(facts_payload.get("property_type", data.get("property_type"))),
         architectural_style=_optional_str(facts_payload.get("architectural_style", data.get("architectural_style"))),
+        condition_profile=_optional_str(facts_payload.get("condition_profile", data.get("condition_profile"))),
+        capex_lane=_optional_str(facts_payload.get("capex_lane", data.get("capex_lane"))),
         year_built=_optional_int(facts_payload.get("year_built", data.get("year_built"))),
         stories=_optional_float(facts_payload.get("stories", data.get("stories"))),
         garage_spaces=_optional_int(facts_payload.get("garage_spaces", data.get("garage_spaces"))),
@@ -135,6 +137,9 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         interest_rate=_optional_float(assumptions_payload.get("interest_rate", data.get("interest_rate"))),
         loan_term_years=_optional_int(assumptions_payload.get("loan_term_years", data.get("loan_term_years"))),
         vacancy_rate=_optional_float(assumptions_payload.get("vacancy_rate", data.get("vacancy_rate"))),
+        condition_profile_override=_optional_str(assumptions_payload.get("condition_profile_override")),
+        capex_lane_override=_optional_str(assumptions_payload.get("capex_lane_override")),
+        repair_capex_budget=_optional_float(assumptions_payload.get("repair_capex_budget", data.get("repair_capex_budget"))),
     )
     raw_mode = str(metadata_payload.get("evidence_mode") or "public_record")
     evidence_mode = (

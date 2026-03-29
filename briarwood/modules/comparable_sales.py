@@ -40,6 +40,8 @@ class ComparableSalesModule:
                 state=property_input.state,
                 property_type=property_input.property_type,
                 architectural_style=property_input.architectural_style,
+                condition_profile=property_input.condition_profile,
+                capex_lane=property_input.capex_lane,
                 beds=property_input.beds,
                 baths=property_input.baths,
                 sqft=property_input.sqft,

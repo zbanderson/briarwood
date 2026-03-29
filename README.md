@@ -528,3 +528,39 @@ Dynamic:
 - valuation explanation
 - thesis bullets
 - case assumptions, drivers, and risks
+
+## Dash Workspace
+
+Briarwood now also has a lightweight Dash workspace for interactive analysis.
+
+- [`briarwood/dash_app/app.py`](/Users/zachanderson/projects/briarwood/briarwood/dash_app/app.py): Dash entrypoint and callbacks
+- [`briarwood/dash_app/data.py`](/Users/zachanderson/projects/briarwood/briarwood/dash_app/data.py): sample property presets and analysis/export orchestration
+- [`briarwood/dash_app/view_models.py`](/Users/zachanderson/projects/briarwood/briarwood/dash_app/view_models.py): UI-facing adapters over the existing Briarwood report pipeline
+- [`briarwood/dash_app/compare.py`](/Users/zachanderson/projects/briarwood/briarwood/dash_app/compare.py): side-by-side comparison logic and “why are these different?” summaries
+- [`briarwood/dash_app/components.py`](/Users/zachanderson/projects/briarwood/briarwood/dash_app/components.py): reusable cards, tables, and tab builders
+
+Run it locally with:
+
+```bash
+./venv/bin/python -m briarwood.dash_app.app
+```
+
+Current workflow:
+
+- choose 1 to 4 sample properties in the sidebar
+- load them into memory through the existing Briarwood engine
+- switch between two top-level modes:
+  - `Single Property`
+  - `Compare`
+- use the shared section tabs in each mode:
+  - `Overview`
+  - `Value`
+  - `Forward`
+  - `Risk`
+  - `Location`
+  - `Income Support`
+  - `Evidence`
+- in `Compare`, each property renders as a vertical swim lane so the same section lines up across columns
+- export a tear sheet for the focused property through the existing HTML report writer
+
+The Dash app is intentionally a thin orchestration layer. It does not recompute BCV, scenarios, or risk logic in the UI.

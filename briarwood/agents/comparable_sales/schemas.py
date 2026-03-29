@@ -11,6 +11,8 @@ class ComparableSale(BaseModel):
     state: str
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = Field(default=None, pattern="^(renovated|updated|maintained|dated|needs_work)$")
+    capex_lane: str | None = Field(default=None, pattern="^(light|moderate|heavy)$")
     sale_price: float = Field(gt=0)
     sale_date: str
     source_name: str | None = None
@@ -37,7 +39,6 @@ class ComparableSale(BaseModel):
     year_built: int | None = Field(default=None, ge=1800, le=2200)
     stories: float | None = Field(default=None, ge=0)
     garage_spaces: int | None = Field(default=None, ge=0)
-    condition_profile: str | None = None
     location_tags: list[str] = Field(default_factory=list)
     micro_location_notes: list[str] = Field(default_factory=list)
 
@@ -49,6 +50,8 @@ class ComparableSalesRequest(BaseModel):
     state: str = Field(min_length=2, max_length=2)
     property_type: str | None = None
     architectural_style: str | None = None
+    condition_profile: str | None = Field(default=None, pattern="^(renovated|updated|maintained|dated|needs_work)$")
+    capex_lane: str | None = Field(default=None, pattern="^(light|moderate|heavy)$")
     beds: int | None = Field(default=None, ge=0)
     baths: float | None = Field(default=None, ge=0)
     sqft: int | None = Field(default=None, ge=0)
@@ -72,6 +75,7 @@ class AdjustedComparable(BaseModel):
     source_ref: str | None = None
     reviewed_at: str | None = None
     comp_status: str | None = None
+    capex_lane: str | None = None
     address_verification_status: str | None = None
     sale_verification_status: str | None = None
     verification_source_type: str | None = None
