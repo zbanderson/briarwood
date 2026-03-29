@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from briarwood.agents.current_value.schemas import CurrentValueOutput
+from briarwood.agents.comparable_sales.schemas import ComparableSalesOutput
 from briarwood.agents.scarcity.schemas import ScarcitySupportScore
 from briarwood.agents.market_history.schemas import MarketValueHistoryOutput
 from briarwood.agents.income.schemas import IncomeAgentOutput
+from briarwood.agents.rental_ease.schemas import RentalEaseOutput
 from briarwood.modules.current_value import get_current_value_payload
+from briarwood.modules.comparable_sales import get_comparable_sales_payload
 from briarwood.agents.town_county.service import TownCountyOutlookResult
 from briarwood.modules.income_support import get_income_support_payload
 from briarwood.modules.market_value_history import get_market_value_history_payload
+from briarwood.modules.rental_ease import get_rental_ease_payload
 from briarwood.modules.scarcity_support import get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import get_town_county_outlook_payload
 from briarwood.schemas import AnalysisReport, ScenarioOutput, ValuationOutput
@@ -22,6 +26,10 @@ def get_valuation_output(report: AnalysisReport) -> ValuationOutput:
 
 def get_current_value(report: AnalysisReport) -> CurrentValueOutput:
     return get_current_value_payload(report.get_module("current_value"))
+
+
+def get_comparable_sales(report: AnalysisReport) -> ComparableSalesOutput:
+    return get_comparable_sales_payload(report.get_module("comparable_sales"))
 
 
 def get_scenario_output(report: AnalysisReport) -> ScenarioOutput:
@@ -45,3 +53,7 @@ def get_market_value_history(report: AnalysisReport) -> MarketValueHistoryOutput
 
 def get_income_support(report: AnalysisReport) -> IncomeAgentOutput:
     return get_income_support_payload(report.get_module("income_support"))
+
+
+def get_rental_ease(report: AnalysisReport) -> RentalEaseOutput:
+    return get_rental_ease_payload(report.get_module("rental_ease"))

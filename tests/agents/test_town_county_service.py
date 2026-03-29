@@ -77,12 +77,28 @@ class StubFredMacroProvider:
 
 class StubTownProfileProvider:
     def get_town_row(self, *, town: str, state: str, county: str | None = None) -> dict[str, object] | None:
+                return {
+                    "name": town,
+                    "coastal_profile_signal": 0.84,
+                    "scarcity_signal": 0.78,
+                    "as_of": "2026-03-01",
+                    "refresh_frequency_days": 90,
+                }
+
+
+class StubSchoolSignalProvider:
+    def get_town_row(self, *, town: str, state: str, county: str | None = None) -> dict[str, object] | None:
         return {
             "name": town,
-            "coastal_profile_signal": 0.84,
-            "scarcity_signal": 0.78,
+            "state": state,
+            "achievement_index": 66,
+            "growth_index": 63,
+            "chronic_absenteeism_pct": 11.0,
+            "student_teacher_ratio": 13.5,
+            "district_coverage": 0.72,
+            "source_review_quality": 0.68,
             "as_of": "2026-03-01",
-            "refresh_frequency_days": 90,
+            "refresh_frequency_days": 365,
         }
 
 
@@ -95,6 +111,7 @@ class TownCountyDataServiceTests(unittest.TestCase):
             liquidity_provider=StubLiquidityProvider(),
             fred_macro_provider=StubFredMacroProvider(),
             town_profile_provider=StubTownProfileProvider(),
+            school_signal_provider=StubSchoolSignalProvider(),
         )
 
         result = service.build_outlook(
@@ -102,23 +119,22 @@ class TownCountyDataServiceTests(unittest.TestCase):
                 town="Belmar",
                 state="NJ",
                 county="Monmouth",
-                school_signal=8.1,
                 scarcity_signal=0.7,
                 days_on_market=19,
                 price_position="supported",
-                source_names={"school_signal": "district_signal_v1"},
             )
         )
 
         self.assertIsInstance(result, TownCountyOutlookResult)
         self.assertAlmostEqual(result.normalized.inputs.town_price_trend or 0.0, 0.0658, places=4)
-        self.assertEqual(result.score.location_thesis_label, "strong")
+        self.assertEqual(result.score.location_thesis_label, "supportive")
         self.assertGreater(result.score.area_sentiment_score, 65.0)
         self.assertLess(result.score.confidence, 0.95)
         self.assertGreater(result.score.confidence, 0.80)
         self.assertFalse(result.normalized.missing_inputs)
         self.assertTrue(result.score.assumptions_used)
         self.assertTrue(any("refreshed about every 90 days" in note for note in result.score.assumptions_used))
+        self.assertTrue(any("School proxy" in note for note in result.score.assumptions_used))
 
     def test_service_handles_missing_provider_data_without_fabricating_values(self) -> None:
         class SparsePriceProvider(StubPriceProvider):
@@ -136,6 +152,7 @@ class TownCountyDataServiceTests(unittest.TestCase):
             liquidity_provider=None,
             fred_macro_provider=None,
             town_profile_provider=None,
+            school_signal_provider=None,
         )
 
         result = service.build_outlook(
@@ -173,6 +190,7 @@ class TownCountyDataServiceTests(unittest.TestCase):
             liquidity_provider=StubLiquidityProvider(),
             fred_macro_provider=StubFredMacroProvider(),
             town_profile_provider=StaleTownProfileProvider(),
+            school_signal_provider=StubSchoolSignalProvider(),
         )
 
         result = service.build_outlook(
@@ -180,10 +198,8 @@ class TownCountyDataServiceTests(unittest.TestCase):
                 town="Belmar",
                 state="NJ",
                 county="Monmouth",
-                school_signal=8.1,
                 days_on_market=19,
                 price_position="supported",
-                source_names={"school_signal": "district_signal_v1"},
             )
         )
 

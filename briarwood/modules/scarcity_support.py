@@ -3,6 +3,7 @@ from __future__ import annotations
 from briarwood.agents.scarcity.scarcity_support import ScarcitySupportScorer
 from briarwood.agents.scarcity.schemas import ScarcitySupportScore
 from briarwood.agents.town_county.service import TownCountyDataService
+from briarwood.evidence import build_section_evidence
 from briarwood.modules.location_context import (
     build_default_town_county_service,
     build_scarcity_inputs,
@@ -41,6 +42,11 @@ class ScarcitySupportModule:
             confidence=float(scarcity.confidence),
             summary=scarcity.summary,
             payload=scarcity,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["scarcity_inputs", "comp_support", "market_history"],
+                notes=["Scarcity remains partly structural and heuristic until anchor-distance and benchmark data are sourced."],
+            ),
         )
 
 

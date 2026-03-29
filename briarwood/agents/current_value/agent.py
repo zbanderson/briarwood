@@ -15,15 +15,23 @@ class CurrentValueAgent:
     """Estimate a defensible Briarwood Current Value for today's market."""
 
     _COMPONENT_BASE_WEIGHTS = {
-        "market_adjusted": 0.50,
-        "backdated_listing": 0.30,
-        "income": 0.20,
+        "comparable_sales": 0.45,
+        "market_adjusted": 0.30,
+        "backdated_listing": 0.15,
+        "income": 0.10,
     }
 
     def run(self, input_data: CurrentValueInput) -> CurrentValueOutput:
         assumptions: list[str] = []
         unsupported_claims: list[str] = []
         warnings: list[str] = []
+
+        comparable_sales_value = input_data.comparable_sales_value
+        comparable_sales_confidence = input_data.comparable_sales_confidence or 0.0
+        if comparable_sales_value is not None:
+            assumptions.append("Comparable-sales value uses file-backed nearby sales and is weighted as the primary property-specific anchor when available.")
+        else:
+            unsupported_claims.append("Comparable-sales value is unavailable because no usable local sale comps were supplied.")
 
         market_adjustment_factor, property_detail_count = self._property_adjustment_factor(input_data)
         if property_detail_count:
@@ -103,11 +111,13 @@ class CurrentValueAgent:
             unsupported_claims.append("Income-supported value is unavailable because rent support is missing.")
 
         weighted_components = {
+            "comparable_sales": self._COMPONENT_BASE_WEIGHTS["comparable_sales"] * comparable_sales_confidence,
             "market_adjusted": self._COMPONENT_BASE_WEIGHTS["market_adjusted"] * market_component_confidence,
             "backdated_listing": self._COMPONENT_BASE_WEIGHTS["backdated_listing"] * backdated_component_confidence,
             "income": self._COMPONENT_BASE_WEIGHTS["income"] * income_component_confidence,
         }
         available_components = {
+            "comparable_sales": comparable_sales_value,
             "market_adjusted": market_adjusted_value,
             "backdated_listing": backdated_listing_value,
             "income": income_supported_value,
@@ -120,13 +130,15 @@ class CurrentValueAgent:
             confidence = 0.1
         else:
             briarwood_current_value = (
-                (market_adjusted_value or 0.0) * weights["market_adjusted"]
+                (comparable_sales_value or 0.0) * weights["comparable_sales"]
+                + (market_adjusted_value or 0.0) * weights["market_adjusted"]
                 + (backdated_listing_value or 0.0) * weights["backdated_listing"]
                 + (income_supported_value or 0.0) * weights["income"]
             )
             confidence = self._overall_confidence(
                 weights=weights,
                 component_confidences={
+                    "comparable_sales": comparable_sales_confidence,
                     "market_adjusted": market_component_confidence,
                     "backdated_listing": backdated_component_confidence,
                     "income": income_component_confidence,
@@ -153,11 +165,13 @@ class CurrentValueAgent:
             mispricing_pct=round(mispricing_pct, 4),
             pricing_view=pricing_view,
             components=CurrentValueComponents(
+                comparable_sales_value=self._round_or_none(comparable_sales_value),
                 market_adjusted_value=self._round_or_none(market_adjusted_value),
                 backdated_listing_value=self._round_or_none(backdated_listing_value),
                 income_supported_value=self._round_or_none(income_supported_value),
             ),
             weights=CurrentValueWeights(
+                comparable_sales_weight=round(weights["comparable_sales"], 4),
                 market_adjusted_weight=round(weights["market_adjusted"], 4),
                 backdated_listing_weight=round(weights["backdated_listing"], 4),
                 income_weight=round(weights["income"], 4),

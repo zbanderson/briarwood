@@ -49,82 +49,70 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     bull_case = ScenarioCase(
         name="Bull Case",
         scenario_value=scenario.bull_case_value,
+        implied_move_text=f"{_ratio(scenario.bull_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
-            "Exit demand stays healthy and the market rewards supportive local conditions.",
-            f"Forward value compounds at about {bull_growth_rate:.1%} over the next 12 months.",
-            f"Historical market appreciation stays near {town_trend:.1%} and location remains {town_score.location_thesis_label}.",
+            "Demand stays firm.",
+            f"12M value change lands near {bull_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"BCV starts around ${bcv_anchor:,.0f} before the upside case adds drift and optionality.",
+            f"BCV starts near ${bcv_anchor:,.0f}.",
+            f"Drift plus optionality add roughly ${max(market_drift + optionality_premium, 0.0):,.0f}.",
             location_driver,
-            f"Optionality adds about ${max(optionality_premium, 0.0):,.0f} when scarcity and redevelopment support are present.",
         ],
         risk_factors=[
-            "Optimistic exit assumptions may not materialize.",
-            "Rate volatility can compress upside.",
+            "Rates or exit demand cap upside.",
+            "Optimistic location support may not stick.",
         ],
         assessment=SectionAssessment(
             score=65.0,
             confidence=0.65,
-            summary=(
-                f"Bull case implies {_ratio(scenario.bull_case_value - ask_price, ask_price):.1%} "
-                "upside from today's ask if operating support and exit sentiment both improve."
-            ),
+            summary="Upside case if demand and exit both hold.",
         ),
     )
     base_case = ScenarioCase(
         name="Base Case",
         scenario_value=scenario.base_case_value,
+        implied_move_text=f"{_ratio(scenario.base_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
-            f"BCV anchor is about ${current_value.briarwood_current_value:,.0f}.",
-            f"Base case compounds at about {base_growth_rate:.1%} over the next 12 months.",
-            f"Location backdrop remains {town_score.location_thesis_label} rather than improving materially.",
+            f"BCV anchor holds near ${current_value.briarwood_current_value:,.0f}.",
+            f"12M value change lands near {base_growth_rate:.1%}.",
         ],
         key_drivers=[
             f"Market drift contributes about ${market_drift:,.0f}.",
             f"Location premium contributes about ${location_premium:,.0f}.",
-            f"Optionality contributes about ${optionality_premium:,.0f}.",
-            location_driver,
+            f"Optionality adds about ${optionality_premium:,.0f}.",
         ],
         risk_factors=[
             f"Risk discount removes about ${risk_discount:,.0f}.",
-            f"Known flagged risks: {risk_flags}.",
             location_risk,
         ],
         assessment=SectionAssessment(
             score=58.0,
             confidence=0.8,
-            summary=(
-                f"Base case implies {_ratio(scenario.base_case_value - ask_price, ask_price):.1%} "
-                "12-month value support versus ask under current assumptions."
-            ),
+            summary="Most likely path if the backdrop mostly holds.",
         ),
     )
     bear_case = ScenarioCase(
         name="Bear Case",
         scenario_value=scenario.bear_case_value,
+        implied_move_text=f"{_ratio(scenario.bear_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
-            "Exit pricing softens and upside assumptions compress.",
-            f"Bear case assumes roughly {bear_growth_rate:.1%} forward value change over the next 12 months.",
-            f"Location support slips below today's {town_score.location_thesis_label} reading.",
+            "Exit pricing softens.",
+            f"12M value change lands near {bear_growth_rate:.1%}.",
         ],
         key_drivers=[
-            "Value support falls back toward BCV with less help from market drift and optionality.",
-            "Lower optimism on exit drives the downside case.",
-            "Operating leverage works against returns.",
+            "Value falls back toward BCV.",
+            "Less help from drift and optionality.",
         ],
         risk_factors=[
-            "Sustained negative cash flow reduces hold flexibility.",
+            "Negative carry reduces flexibility.",
             f"Existing constraints can intensify: {risk_flags}.",
             location_risk,
         ],
         assessment=SectionAssessment(
             score=44.0,
             confidence=0.72,
-            summary=(
-                f"Bear case implies {_ratio(scenario.bear_case_value - ask_price, ask_price):.1%} "
-                "12-month downside if current pressures intensify."
-            ),
+            summary="Downside path if carry or local support weakens.",
         ),
     )
     return BullBaseBearSection(

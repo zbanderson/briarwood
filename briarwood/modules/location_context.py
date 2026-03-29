@@ -10,6 +10,7 @@ from briarwood.agents.town_county.providers import (
     FileBackedLiquidityProvider,
     FileBackedPopulationProvider,
     FileBackedPriceTrendProvider,
+    FileBackedSchoolSignalProvider,
     FileBackedTownProfileProvider,
 )
 from briarwood.agents.town_county.service import TownCountyDataService, TownCountyOutlookResult
@@ -29,6 +30,7 @@ def build_default_town_county_service() -> TownCountyDataService:
         liquidity_provider=FileBackedLiquidityProvider(data_root / "liquidity.json"),
         fred_macro_provider=FileBackedFredMacroProvider(data_root / "fred_macro.json"),
         town_profile_provider=FileBackedTownProfileProvider(data_root / "monmouth_coastal_profiles.json"),
+        school_signal_provider=FileBackedSchoolSignalProvider(data_root / "monmouth_school_signal.json"),
     )
 
 

@@ -16,8 +16,17 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$property_name": escape(tear_sheet.header.property_name),
         "$subtitle": escape(tear_sheet.header.subtitle),
         "$investment_stance": escape(tear_sheet.header.investment_stance),
+        "$verdict": escape(tear_sheet.conclusion.verdict),
+        "$verdict_key_line": escape(tear_sheet.conclusion.key_line),
         "$ask_price": _currency(tear_sheet.conclusion.ask_price),
         "$briarwood_current_value": _currency(tear_sheet.conclusion.briarwood_current_value),
+        "$pricing_gap": _percent_text(tear_sheet.conclusion.premium_discount_to_ask),
+        "$cash_flow_text": escape(tear_sheet.conclusion.cash_flow_text),
+        "$top_risk": escape(tear_sheet.conclusion.top_risk),
+        "$scenario_range": (
+            f"{_currency(tear_sheet.conclusion.bear_value)} to "
+            f"{_currency(tear_sheet.conclusion.bull_value)}"
+        ),
         "$bcv_range": (
             f"{_currency(tear_sheet.conclusion.value_range_low)} - "
             f"{_currency(tear_sheet.conclusion.value_range_high)}"
@@ -26,32 +35,73 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$bull_value": _currency(tear_sheet.conclusion.bull_value),
         "$bear_value": _currency(tear_sheet.conclusion.bear_value),
         "$valuation_method_summary": escape(tear_sheet.conclusion.explanation),
+        "$why_it_matters": _render_list_items(tear_sheet.conclusion.why_it_matters),
+        "$decision_fit": _render_list_items(tear_sheet.conclusion.decision_fit),
         "$thesis_title": escape(tear_sheet.thesis.title),
-        "$thesis_summary": escape(tear_sheet.thesis.assessment.summary),
-        "$thesis_bullets": _render_list_items(tear_sheet.thesis.bullets),
+        "$thesis_deal_type": escape(tear_sheet.thesis.deal_type),
+        "$thesis_must_go_right": _render_list_items(tear_sheet.thesis.must_go_right),
+        "$thesis_what_breaks": _render_list_items(tear_sheet.thesis.what_breaks),
+        "$thesis_so_what": _render_list_items(tear_sheet.thesis.so_what),
         "$chart_title": escape(tear_sheet.scenario_chart.chart_title),
         "$secondary_chart_title": escape(tear_sheet.scenario_chart.secondary_chart_title),
         "$scenario_chart": _render_scenario_chart(chart),
         "$scenario_zoom_chart": _render_secondary_scenario_chart(chart),
         "$distribution_summary": escape(tear_sheet.scenario_chart.caption),
         "$durability_title": escape(tear_sheet.market_durability.title),
-        "$durability_summary": escape(tear_sheet.market_durability.summary),
         "$durability_assessment": escape(tear_sheet.market_durability.assessment.summary),
-        "$durability_takeaway": escape(tear_sheet.market_durability.buyer_takeaway),
         "$durability_supporting_points": _render_list_items(tear_sheet.market_durability.supporting_points),
         "$durability_caveats": _render_list_items(tear_sheet.market_durability.caveats),
+        "$durability_confidence_line": escape(tear_sheet.market_durability.confidence_line),
         "$durability_confidence_notes": _render_case_list_items(tear_sheet.market_durability.confidence_notes),
         "$carry_title": escape(tear_sheet.carry_support.title),
-        "$carry_summary": escape(tear_sheet.carry_support.summary),
-        "$carry_support_label": escape(tear_sheet.carry_support.support_label),
+        "$carry_market_absorption_label": escape(tear_sheet.carry_support.market_absorption_label),
+        "$carry_market_absorption_summary": escape(tear_sheet.carry_support.market_absorption_summary),
+        "$carry_market_absorption_confidence": _confidence(tear_sheet.carry_support.market_absorption_confidence),
+        "$carry_rental_viability_label": escape(tear_sheet.carry_support.rental_viability_label),
+        "$carry_rental_viability_summary": escape(tear_sheet.carry_support.rental_viability_summary),
+        "$carry_rental_viability_confidence": _confidence(tear_sheet.carry_support.rental_viability_confidence),
+        "$carry_rental_ease_score": escape(tear_sheet.carry_support.rental_ease_score_text),
         "$carry_ratio": escape(tear_sheet.carry_support.income_support_ratio_text),
+        "$carry_days_to_rent": escape(tear_sheet.carry_support.estimated_days_to_rent_text),
+        "$carry_days_to_rent_context": escape(tear_sheet.carry_support.estimated_days_to_rent_context),
         "$carry_cash_flow": escape(tear_sheet.carry_support.estimated_cash_flow_text),
         "$carry_assessment": escape(tear_sheet.carry_support.assessment.summary),
-        "$carry_warnings": _render_case_list_items(tear_sheet.carry_support.warnings),
+        "$carry_market_warnings": _render_case_list_items(tear_sheet.carry_support.market_absorption_warnings),
+        "$carry_viability_warnings": _render_case_list_items(tear_sheet.carry_support.rental_viability_warnings),
+        "$carry_assumptions": _render_case_list_items(tear_sheet.carry_support.assumptions),
+        "$carry_unsupported_claims": _render_case_list_items(tear_sheet.carry_support.unsupported_claims),
+        "$comp_title": escape(tear_sheet.comparable_sales.title),
+        "$comp_summary": escape(tear_sheet.comparable_sales.summary),
+        "$comp_value": escape(tear_sheet.comparable_sales.comparable_value_text),
+        "$comp_confidence": escape(tear_sheet.comparable_sales.confidence_text),
+        "$comp_count": escape(tear_sheet.comparable_sales.comp_count_text),
+        "$comp_freshest_sale": escape(tear_sheet.comparable_sales.freshest_sale_text),
+        "$comp_median_sale_age": escape(tear_sheet.comparable_sales.median_sale_age_text),
+        "$comp_screening_summary": escape(tear_sheet.comparable_sales.screening_summary),
+        "$comp_curation_summary": escape(tear_sheet.comparable_sales.curation_summary),
+        "$comp_verification_summary": escape(tear_sheet.comparable_sales.verification_summary),
+        "$comp_assessment": escape(tear_sheet.comparable_sales.assessment.summary),
+        "$comp_methodology_notes": _render_case_list_items(tear_sheet.comparable_sales.methodology_notes),
+        "$comp_warnings": _render_case_list_items(tear_sheet.comparable_sales.warnings),
+        "$comp_cards": _render_comp_cards(tear_sheet.comparable_sales.comps),
         "$case_columns": _render_case_columns(tear_sheet.bull_base_bear),
+        "$evidence_title": escape(tear_sheet.evidence_strip.title),
+        "$evidence_mode": escape(tear_sheet.evidence_strip.evidence_mode_text),
+        "$evidence_overall_confidence": escape(tear_sheet.evidence_strip.overall_report_confidence_text),
+        "$evidence_value_confidence": escape(tear_sheet.evidence_strip.value_confidence_text),
+        "$evidence_location_confidence": escape(tear_sheet.evidence_strip.location_confidence_text),
+        "$evidence_rental_confidence": escape(tear_sheet.evidence_strip.rental_confidence_text),
+        "$evidence_scenario_confidence": escape(tear_sheet.evidence_strip.scenario_confidence_text),
+        "$evidence_coverage": _render_case_list_items(tear_sheet.evidence_strip.source_coverage_highlights),
+        "$evidence_missing": _render_case_list_items(tear_sheet.evidence_strip.major_missing_inputs),
+        "$evidence_estimated": _render_case_list_items(tear_sheet.evidence_strip.estimated_inputs),
+        "$evidence_strongest": _render_case_list_items(tear_sheet.evidence_strip.strongest_evidence),
+        "$evidence_weaker": _render_case_list_items(tear_sheet.evidence_strip.weaker_evidence),
+        "$evidence_heuristic": _render_case_list_items(tear_sheet.evidence_strip.heuristic_flags),
     }
     html = template
-    for key, value in replacements.items():
+    for key in sorted(replacements, key=len, reverse=True):
+        value = replacements[key]
         html = html.replace(key, str(value))
     return html
 
@@ -70,6 +120,15 @@ def _load_text(relative_path: str) -> str:
 
 def _currency(value: float) -> str:
     return f"${value:,.0f}"
+
+
+def _confidence(value: float) -> str:
+    return f"{round(value * 100):d}%"
+
+
+def _percent_text(value: float) -> str:
+    sign = "+" if value >= 0 else ""
+    return f"{sign}{value:.1%}"
 
 
 def _render_list_items(items: list[str]) -> str:
@@ -160,12 +219,13 @@ def _render_case_card(case: ScenarioCase) -> str:
         f"<div class=\"section-label\">{escape(case.name)}</div>"
         f"<h3>{escape(case.name)}</h3>"
         f"<div class=\"case-value\">{_currency(case.scenario_value)}</div>"
+        f"<p class=\"case-move\">{escape(case.implied_move_text)}</p>"
         f"<p class=\"body-copy\">{escape(case.assessment.summary)}</p>"
-        '<div class="case-block-label">Assumptions</div>'
+        '<div class="case-block-label">Works If</div>'
         f"{assumptions}"
-        '<div class="case-block-label">Key Drivers</div>'
+        '<div class="case-block-label">Drivers</div>'
         f"{drivers}"
-        '<div class="case-block-label">Risk Factors</div>'
+        '<div class="case-block-label">Risk</div>'
         f"{risks}"
         "</section>"
     )
@@ -178,3 +238,33 @@ def _render_case_list(items: list[str]) -> str:
 
 def _render_case_list_items(items: list[str]) -> str:
     return "\n".join(f"<li>{escape(item)}</li>" for item in items)
+
+
+def _render_comp_cards(cards: list[object]) -> str:
+    return "\n".join(_render_comp_card(card) for card in cards)
+
+
+def _render_comp_card(card: object) -> str:
+    why_comp = _render_case_list(card.why_comp)
+    cautions = _render_case_list(card.cautions or ["No major fit issue beyond normal adjustment risk."])
+    adjustments = _render_case_list(card.adjustments)
+    micro_location = _render_case_list(card.micro_location_notes or ["No micro-location notes were added to this comp record yet."])
+    return (
+        '<section class="comp-card">'
+        f'<div class="comp-card-top"><div class="comp-address">{escape(card.address)}</div><div class="comp-fit">{escape(card.fit_label)}</div></div>'
+        f'<div class="comp-source">{escape(card.source_text)}</div>'
+        '<div class="metric-grid compact-metrics comp-metrics">'
+        f'<div><span>Sale Price</span><strong>{escape(card.sale_price_text)}</strong></div>'
+        f'<div><span>Adj. Value</span><strong>{escape(card.adjusted_price_text)}</strong></div>'
+        f'<div><span>Sale Date</span><strong>{escape(card.sale_date_text)}</strong></div>'
+        '</div>'
+        '<div class="case-block-label">Why This Is A Comp</div>'
+        f'{why_comp}'
+        '<div class="case-block-label">Adjustments</div>'
+        f'{adjustments}'
+        '<div class="case-block-label">Micro-Location</div>'
+        f'{micro_location}'
+        '<div class="case-block-label">Cautions</div>'
+        f'{cautions}'
+        '</section>'
+    )

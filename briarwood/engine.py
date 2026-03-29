@@ -27,4 +27,5 @@ class AnalysisEngine:
             property_id=property_input.property_id,
             address=property_input.address,
             module_results=module_results,
+            property_input=property_input,
         )

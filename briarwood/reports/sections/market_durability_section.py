@@ -10,11 +10,6 @@ def build_market_durability_section(report: AnalysisReport) -> MarketDurabilityS
     scarcity = get_scarcity_support(report)
     town_score = outlook.score
 
-    buyer_takeaway = (
-        f"{town_score.summary} {scarcity.buyer_takeaway}"
-        if scarcity.buyer_takeaway
-        else town_score.summary
-    )
     supporting_points = list(
         dict.fromkeys(
             town_score.demand_drivers[:2]
@@ -50,14 +45,11 @@ def build_market_durability_section(report: AnalysisReport) -> MarketDurabilityS
     if not caveats:
         caveats = ["No major local durability caveat was surfaced by the current inputs."]
 
-    summary = (
-        "This section explains why buyers may still want the property in a few years, and whether "
-        "that demand looks durable enough to support a cleaner exit."
-    )
+    summary = "Demand durability depends on local support, scarcity, and what still lacks proof."
     return MarketDurabilitySection(
-        title="Why Buyers Will Still Want This",
+        title="Demand Durability",
         summary=summary,
-        buyer_takeaway=buyer_takeaway,
+        confidence_line=f"Confidence: town/county {town_score.confidence:.0%} | scarcity {scarcity.confidence:.0%}.",
         supporting_points=supporting_points,
         caveats=caveats,
         confidence_notes=confidence_notes,
@@ -65,8 +57,7 @@ def build_market_durability_section(report: AnalysisReport) -> MarketDurabilityS
             score=round((town_score.town_county_score + scarcity.scarcity_support_score) / 2, 2),
             confidence=min(town_score.confidence, scarcity.confidence),
             summary=(
-                f"Location demand reads {town_score.location_thesis_label}, while scarcity support reads "
-                f"{scarcity.scarcity_label}."
+                f"Demand reads {town_score.location_thesis_label}; scarcity reads {scarcity.scarcity_label}."
             ),
         ),
     )

@@ -62,7 +62,9 @@ class EngineTests(unittest.TestCase):
         self.assertIn("cost_valuation", report.module_results)
         self.assertIn("market_value_history", report.module_results)
         self.assertIn("current_value", report.module_results)
+        self.assertIn("comparable_sales", report.module_results)
         self.assertIn("income_support", report.module_results)
+        self.assertIn("rental_ease", report.module_results)
         self.assertIn("town_county_outlook", report.module_results)
         self.assertIn("scarcity_support", report.module_results)
 
@@ -78,19 +80,39 @@ class EngineTests(unittest.TestCase):
 
         html = render_report_html(report)
 
-        self.assertIn("Historic Market Context and Forward Value Range", html)
+        self.assertIn("Verdict", html)
+        self.assertIn("Why It Matters", html)
+        self.assertIn("Should This Work For", html)
+        self.assertIn("Thesis", html)
+        self.assertIn("Deal Type", html)
+        self.assertIn("What Must Go Right", html)
+        self.assertIn("What Breaks", html)
+        self.assertIn("Value Range", html)
         self.assertIn("12M Scenario Spread", html)
         self.assertIn("Historic Market Value", html)
         self.assertIn("Plotly.newPlot", html)
         self.assertGreaterEqual(html.count("Plotly.newPlot"), 2)
-        self.assertIn("What this is:", html)
-        self.assertIn("So what:", html)
-        self.assertIn("Why Buyers Will Still Want This", html)
+        self.assertIn("Demand Durability", html)
+        self.assertIn("Demand Holds Because", html)
+        self.assertIn("Demand Weakens If", html)
         self.assertIn("Fallback Rental Support", html)
+        self.assertIn("Comparable Sales", html)
+        self.assertTrue(
+            "Why This Is A Comp" in html or "No usable same-town sale comps were available" in html
+        )
+        self.assertTrue("manual local comp review" in html or "No usable same-town sale comps were available" in html)
+        self.assertIn("Market Absorption", html)
+        self.assertIn("Property-Level Rental Viability", html)
         self.assertIn("Support Ratio", html)
-        self.assertIn("Buyer Takeaway", html)
-        self.assertIn("Why Demand May Hold", html)
-        self.assertIn("What Could Weaken It", html)
+        self.assertIn("Rental Ease Score", html)
+        self.assertIn("Est. Days to Rent", html)
+        self.assertIn("Confidence / Evidence", html)
+        self.assertIn("Evidence Mode", html)
+        self.assertIn("Report Confidence", html)
+        self.assertIn("Coverage Highlights", html)
+        self.assertIn("Major Missing Inputs", html)
+        self.assertIn("Strongest Evidence", html)
+        self.assertIn("Heuristic Flags", html)
 
     def test_belmar_render_surfaces_location_freshness_and_source_notes(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:
@@ -106,6 +128,7 @@ class EngineTests(unittest.TestCase):
 
         self.assertIn("County macro sentiment is sourced from FRED-backed county series", html)
         self.assertIn("refreshed about every 90 days", html)
+        self.assertIn("Listing Assisted", html)
 
     def test_runner_can_build_report_from_listing_text(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:

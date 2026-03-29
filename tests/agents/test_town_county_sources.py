@@ -6,6 +6,7 @@ from briarwood.agents.town_county.sources import (
     FredMacroAdapter,
     LiquidityAdapter,
     LiquiditySlice,
+    SchoolSignalAdapter,
     TownProfileAdapter,
     TownCountyOutlookBuilder,
     TownCountyOutlookRequest,
@@ -105,6 +106,27 @@ class TownCountySourceAdapterTests(unittest.TestCase):
         self.assertEqual(result.as_of, "2026-03-01")
         self.assertEqual(result.refresh_frequency_days, 90)
 
+    def test_school_signal_adapter_parses_briarwood_proxy(self) -> None:
+        row = {
+            "name": "Belmar",
+            "state": "NJ",
+            "achievement_index": 66,
+            "growth_index": 63,
+            "chronic_absenteeism_pct": 11.0,
+            "student_teacher_ratio": 13.5,
+            "district_coverage": 0.72,
+            "source_review_quality": 0.68,
+            "as_of": "2026-03-01",
+            "refresh_frequency_days": 365,
+        }
+
+        result = SchoolSignalAdapter().from_row(row, geography_type="town")
+
+        self.assertEqual(result.geography_name, "Belmar")
+        self.assertGreater(result.school_signal or 0.0, 5.0)
+        self.assertGreater(result.confidence or 0.0, 0.4)
+        self.assertEqual(result.source_name, "briarwood_school_signal_nj_spr_v1")
+
     def test_outlook_builder_assembles_source_record(self) -> None:
         zillow = ZillowTrendAdapter()
         census = CensusPopulationAdapter()
@@ -178,6 +200,21 @@ class TownCountySourceAdapterTests(unittest.TestCase):
             },
             geography_type="town",
         )
+        school_signal = SchoolSignalAdapter().from_row(
+            {
+                "name": "Belmar",
+                "state": "NJ",
+                "achievement_index": 66,
+                "growth_index": 63,
+                "chronic_absenteeism_pct": 11.0,
+                "student_teacher_ratio": 13.5,
+                "district_coverage": 0.72,
+                "source_review_quality": 0.68,
+                "as_of": "2026-03-01",
+                "refresh_frequency_days": 365,
+            },
+            geography_type="town",
+        )
         liquidity = LiquiditySlice(
             geography_name="Belmar",
             geography_type="town",
@@ -196,7 +233,6 @@ class TownCountySourceAdapterTests(unittest.TestCase):
                 scarcity_signal=0.7,
                 days_on_market=19,
                 price_position="supported",
-                source_names={"school_signal": "district_signal_v1"},
             ),
             town_price=town_price,
             county_price=county_price,
@@ -206,6 +242,7 @@ class TownCountySourceAdapterTests(unittest.TestCase):
             liquidity=liquidity,
             fred_macro=fred_macro,
             town_profile=town_profile,
+            school_signal=school_signal,
         )
 
         self.assertEqual(result.town, "Belmar")
@@ -219,6 +256,7 @@ class TownCountySourceAdapterTests(unittest.TestCase):
         self.assertEqual(result.source_names["town_price_trend"], "zillow_zhvi")
         self.assertEqual(result.source_names["county_macro_sentiment"], "fred_macro")
         self.assertEqual(result.source_names["coastal_profile_signal"], "monmouth_coastal_profile_v1")
+        self.assertEqual(result.source_names["school_signal"], "briarwood_school_signal_nj_spr_v1")
         self.assertEqual(result.data_as_of, "2026-03-01")
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from briarwood.evidence import build_section_evidence
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.settings import DEFAULT_RISK_SETTINGS, RiskSettings
 from briarwood.scoring import clamp_score
@@ -52,4 +53,9 @@ class RiskConstraintsModule:
             score=score,
             confidence=0.72,
             summary=summary,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["flood_risk", "taxes", "liquidity_signal"],
+                notes=["Risk constraints are deterministic and should be read as a guardrail layer, not a full risk model."],
+            ),
         )

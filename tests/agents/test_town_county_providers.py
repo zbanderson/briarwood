@@ -6,6 +6,7 @@ from briarwood.agents.town_county.providers import (
     FileBackedLiquidityProvider,
     FileBackedPopulationProvider,
     FileBackedPriceTrendProvider,
+    FileBackedSchoolSignalProvider,
     FileBackedTownProfileProvider,
 )
 
@@ -65,6 +66,16 @@ class TownCountyProviderTests(unittest.TestCase):
         self.assertEqual(row["coastal_profile_signal"], 0.97)
         self.assertEqual(row["scarcity_signal"], 0.94)
         self.assertEqual(row["refresh_frequency_days"], 90)
+
+    def test_file_backed_school_signal_provider_returns_matching_rows(self) -> None:
+        provider = FileBackedSchoolSignalProvider("data/town_county/monmouth_school_signal.json")
+
+        row = provider.get_town_row(town="Belmar", state="NJ", county="Monmouth")
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row["achievement_index"], 55.66)
+        self.assertEqual(row["student_teacher_ratio"], 8.0)
+        self.assertEqual(row["refresh_frequency_days"], 365)
 
 
 if __name__ == "__main__":

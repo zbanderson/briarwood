@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from math import pow
 
+from briarwood.evidence import build_section_evidence
 from briarwood.modules.current_value import CurrentValueModule, get_current_value_payload
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
@@ -49,6 +50,12 @@ class BullBaseBearModule:
                 confidence=0.0,
                 summary="Scenario range could not be calculated because purchase price is missing.",
                 payload=scenario_output,
+                section_evidence=build_section_evidence(
+                    property_input,
+                    categories=["price_ask", "market_history", "comp_support", "scarcity_inputs"],
+                    extra_missing_inputs=["price_ask"],
+                    notes=["Forward scenarios require an ask price anchor."],
+                ),
             )
 
         current_value_result = self.current_value_module.run(property_input)
@@ -82,27 +89,36 @@ class BullBaseBearModule:
         )
 
         base_value = bcv + market_drift + location_premium - risk_discount + optionality_premium
-        base_growth_rate = self._clamp_growth((base_value - price) / price)
-        bull_growth_rate = self._clamp_growth(
-            max(
-                base_growth_rate + self.settings.min_spread_ratio / 2,
-                base_growth_rate
-                + self.settings.bull_upside_buffer
-                + max(location_premium / bcv, 0.0) * 0.35
-                + max(optionality_premium / bcv, 0.0) * 0.35,
-            )
+        bull_spread_rate = max(
+            self.settings.min_spread_ratio / 2,
+            self.settings.bull_upside_buffer
+            + max(location_premium / max(bcv, 1.0), 0.0) * 0.35
+            + max(optionality_premium / max(bcv, 1.0), 0.0) * 0.35,
         )
-        bear_growth_rate = self._clamp_growth(
-            min(
-                base_growth_rate - self.settings.min_spread_ratio / 2,
-                base_growth_rate
-                - self.settings.bear_downside_buffer
-                - max(risk_discount / bcv, 0.0) * 0.5,
-            )
+        bear_spread_rate = max(
+            self.settings.min_spread_ratio / 2,
+            self.settings.bear_downside_buffer
+            + max(risk_discount / max(bcv, 1.0), 0.0) * 0.5,
         )
 
-        bull_value = price * (1 + bull_growth_rate)
-        bear_value = price * (1 + bear_growth_rate)
+        bull_value = max(
+            base_value * (1 + bull_spread_rate),
+            base_value + (price * self.settings.min_spread_ratio / 2),
+        )
+        bear_value = min(
+            base_value * (1 - bear_spread_rate),
+            base_value - (price * self.settings.min_spread_ratio / 2),
+        )
+        bear_value = max(0.0, bear_value)
+
+        if bull_value < base_value:
+            bull_value = base_value
+        if bear_value > base_value:
+            bear_value = base_value
+
+        base_growth_rate = (base_value - price) / price
+        bull_growth_rate = (bull_value - price) / price
+        bear_growth_rate = (bear_value - price) / price
 
         spread = bull_value - bear_value
         score = self.settings.base_score
@@ -158,6 +174,11 @@ class BullBaseBearModule:
             confidence=confidence,
             summary=summary,
             payload=scenario_output,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["price_ask", "market_history", "comp_support", "scarcity_inputs", "liquidity_signal"],
+                notes=["Forward value is still heuristic even when the underlying evidence stack is strong."],
+            ),
         )
 
     def _historical_growth_rate(

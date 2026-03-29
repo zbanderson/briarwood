@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from briarwood.evidence import build_section_evidence
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.scoring import clamp_score
 from briarwood.utils import current_year, safe_divide
@@ -41,4 +42,9 @@ class PropertySnapshotModule:
             score=clamp_score(score),
             confidence=0.9,
             summary=summary,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["address", "beds_baths", "sqft", "lot_size", "price_ask"],
+                notes=["Property snapshot reflects currently assembled facts, which may come from public record, listing text, or manual input depending on evidence mode."],
+            ),
         )

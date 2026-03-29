@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from briarwood.evidence import build_section_evidence
 from briarwood.agents.market_history import (
     FileBackedZillowHistoryProvider,
     MarketValueHistoryAgent,
@@ -48,6 +49,11 @@ class MarketValueHistoryModule:
             confidence=history.confidence,
             summary=history.summary,
             payload=history,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["market_history", "address"],
+                notes=["Market history is a sourced market-level context layer, not property-specific listing evidence."],
+            ),
         )
 
 

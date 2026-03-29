@@ -7,12 +7,14 @@ from briarwood.inputs.property_loader import load_property_from_json, load_prope
 from briarwood.listing_intake.schemas import ListingIntakeResult
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.modules.bull_base_bear import BullBaseBearModule
+from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_context import build_default_town_county_service
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
+from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
@@ -34,8 +36,10 @@ def build_engine(
     risk_settings: RiskSettings | None = None,
 ) -> AnalysisEngine:
     market_value_history_module = MarketValueHistoryModule()
+    comparable_sales_module = ComparableSalesModule(market_value_history_module=market_value_history_module)
     income_support_module = IncomeSupportModule(settings=cost_settings)
     current_value_module = CurrentValueModule(
+        comparable_sales_module=comparable_sales_module,
         market_value_history_module=market_value_history_module,
         income_support_module=income_support_module,
     )
@@ -43,14 +47,21 @@ def build_engine(
     town_county_service = build_default_town_county_service()
     town_county_outlook_module = TownCountyOutlookModule(service=town_county_service)
     scarcity_support_module = ScarcitySupportModule(service=town_county_service)
+    rental_ease_module = RentalEaseModule(
+        income_support_module=income_support_module,
+        town_county_outlook_module=town_county_outlook_module,
+        scarcity_support_module=scarcity_support_module,
+    )
 
     return AnalysisEngine(
         modules=[
             PropertySnapshotModule(),
             market_value_history_module,
+            comparable_sales_module,
             current_value_module,
             CostValuationModule(settings=cost_settings),
             income_support_module,
+            rental_ease_module,
             BullBaseBearModule(
                 settings=bull_base_bear_settings,
                 current_value_module=current_value_module,
@@ -215,6 +226,18 @@ def format_intake_preview(
         "",
         "[warnings]",
         json.dumps(intake_result.warnings, indent=2),
+        "",
+        "[canonical_evidence_mode]",
+        intake_result.normalized_property_data.to_canonical_input().source_metadata.evidence_mode.value,
+        "",
+        "[source_coverage]",
+        json.dumps(
+            {
+                key: value.status.value
+                for key, value in intake_result.normalized_property_data.to_canonical_input().source_metadata.source_coverage.items()
+            },
+            indent=2,
+        ),
     ]
     if include_raw:
         lines.extend(

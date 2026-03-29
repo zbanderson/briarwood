@@ -1,15 +1,17 @@
 import unittest
 
 from briarwood.modules.bull_base_bear import BullBaseBearModule
+from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
+from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
-from briarwood.schemas import PropertyInput, ScenarioOutput, ValuationOutput
+from briarwood.schemas import EvidenceMode, PropertyInput, ScenarioOutput, ValuationOutput
 from briarwood.settings import CostValuationSettings
 
 
@@ -48,9 +50,11 @@ class ModuleTests(unittest.TestCase):
         modules = [
             PropertySnapshotModule(),
             MarketValueHistoryModule(),
+            ComparableSalesModule(),
             CurrentValueModule(),
             CostValuationModule(),
             IncomeSupportModule(),
+            RentalEaseModule(),
             BullBaseBearModule(),
             RiskConstraintsModule(),
             TownCountyOutlookModule(),
@@ -63,6 +67,8 @@ class ModuleTests(unittest.TestCase):
             self.assertIsInstance(result.score, float)
             self.assertIsInstance(result.confidence, float)
             self.assertIsInstance(result.summary, str)
+            self.assertIsNotNone(result.section_evidence)
+            self.assertIn(result.section_evidence.evidence_mode, {EvidenceMode.PUBLIC_RECORD, EvidenceMode.LISTING_ASSISTED, EvidenceMode.MLS_CONNECTED})
 
     def test_cost_valuation_returns_underwriting_metrics(self) -> None:
         result = CostValuationModule().run(sample_property())
@@ -75,6 +81,7 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("annual_noi", result.metrics)
         self.assertIn("cash_on_cash_return", result.metrics)
         self.assertIsInstance(result.payload, ValuationOutput)
+        self.assertIsNotNone(result.metrics["monthly_mortgage_payment"])
         self.assertGreater(result.metrics["monthly_total_cost"], result.metrics["monthly_mortgage_payment"])
         self.assertGreaterEqual(result.score, 0.0)
         self.assertLessEqual(result.score, 100.0)
@@ -97,6 +104,8 @@ class ModuleTests(unittest.TestCase):
 
         self.assertIsInstance(result.payload, ScenarioOutput)
         self.assertIn("base_case_value", result.metrics)
+        self.assertGreaterEqual(result.metrics["bull_case_value"], result.metrics["base_case_value"])
+        self.assertGreaterEqual(result.metrics["base_case_value"], result.metrics["bear_case_value"])
 
     def test_location_modules_return_payloads(self) -> None:
         town_result = TownCountyOutlookModule().run(sample_property())
@@ -119,7 +128,27 @@ class ModuleTests(unittest.TestCase):
 
         self.assertIn("briarwood_current_value", result.metrics)
         self.assertIn("pricing_view", result.metrics)
+        self.assertIn("comparable_sales_value", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
+
+    def test_comparable_sales_module_returns_payload(self) -> None:
+        result = ComparableSalesModule().run(sample_property())
+
+        self.assertIn("comparable_value", result.metrics)
+        self.assertIn("comp_count", result.metrics)
+        self.assertGreater(result.metrics["comp_count"], 0)
+        self.assertGreaterEqual(result.confidence, 0.0)
+
+    def test_current_value_confidence_is_capped_when_rent_missing(self) -> None:
+        property_input = sample_property()
+        property_input.town = "Belmar"
+        property_input.state = "NJ"
+        property_input.county = "Monmouth"
+        property_input.estimated_monthly_rent = None
+
+        result = CurrentValueModule().run(property_input)
+
+        self.assertLessEqual(result.confidence, 0.72)
 
     def test_income_support_module_returns_payload(self) -> None:
         result = IncomeSupportModule().run(sample_property())
@@ -128,6 +157,40 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("price_to_rent", result.metrics)
         self.assertIn("downside_burden", result.metrics)
         self.assertIn("support_label", result.metrics)
+        self.assertIn("rent_source_type", result.metrics)
+        self.assertGreaterEqual(result.confidence, 0.0)
+
+    def test_income_support_missing_financing_marks_support_unverified(self) -> None:
+        property_input = sample_property()
+        property_input.down_payment_percent = None
+        property_input.interest_rate = None
+        property_input.loan_term_years = None
+
+        result = IncomeSupportModule().run(property_input)
+
+        self.assertFalse(result.metrics["financing_complete"])
+        self.assertIsNone(result.metrics["income_support_ratio"])
+        self.assertIn("could not be verified", result.summary.lower())
+
+    def test_income_support_estimates_rent_when_supported_by_prior(self) -> None:
+        property_input = sample_property()
+        property_input.town = "Belmar"
+        property_input.state = "NJ"
+        property_input.county = "Monmouth"
+        property_input.estimated_monthly_rent = None
+
+        result = IncomeSupportModule().run(property_input)
+
+        self.assertEqual(result.metrics["rent_source_type"], "estimated")
+        self.assertIsNotNone(result.metrics["effective_monthly_rent"])
+        self.assertLess(result.confidence, 0.7)
+
+    def test_rental_ease_module_returns_payload(self) -> None:
+        result = RentalEaseModule().run(sample_property())
+
+        self.assertIn("rental_ease_score", result.metrics)
+        self.assertIn("rental_ease_label", result.metrics)
+        self.assertIn("estimated_days_to_rent", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
 
 

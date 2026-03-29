@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from briarwood.agents.rent_context import RentContextAgent, RentContextInput
 from briarwood.agents.income import IncomeAgent, IncomeAgentOutput
 from briarwood.agents.income.schemas import IncomeAgentInput
+from briarwood.evidence import build_section_evidence
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.settings import CostValuationSettings, DEFAULT_COST_VALUATION_SETTINGS
 
@@ -15,9 +17,11 @@ class IncomeSupportModule:
         self,
         *,
         agent: IncomeAgent | None = None,
+        rent_context_agent: RentContextAgent | None = None,
         settings: CostValuationSettings | None = None,
     ) -> None:
         self.agent = agent or IncomeAgent()
+        self.rent_context_agent = rent_context_agent or RentContextAgent()
         self.settings = settings or DEFAULT_COST_VALUATION_SETTINGS
 
     def run(self, property_input: PropertyInput) -> ModuleResult:
@@ -32,41 +36,50 @@ class IncomeSupportModule:
                     "estimated_monthly_cash_flow": None,
                     "support_label": "unavailable",
                 },
+                section_evidence=build_section_evidence(
+                    property_input,
+                    categories=["price_ask", "rent_estimate", "insurance_estimate", "financing_down_payment", "financing_interest_rate"],
+                    extra_missing_inputs=["price_ask"],
+                    notes=["Rental fallback cannot be underwritten without an ask price."],
+                ),
             )
 
         wrapper_warnings: list[str] = []
-        down_payment_pct = property_input.down_payment_percent
-        if down_payment_pct is None:
-            down_payment_pct = 0.0
-            wrapper_warnings.append("Down payment assumption missing; assuming 0.0%.")
-
-        interest_rate = property_input.interest_rate
-        if interest_rate is None:
-            interest_rate = 0.0
-            wrapper_warnings.append("Interest rate assumption missing; assuming 0.0%.")
-
+        if property_input.down_payment_percent is None:
+            wrapper_warnings.append("Down payment missing; rental carry excludes mortgage support verification.")
+        if property_input.interest_rate is None:
+            wrapper_warnings.append("Interest rate missing; rental carry excludes mortgage support verification.")
         loan_term_years = property_input.loan_term_years
         if loan_term_years is None:
-            loan_term_years = self.settings.loan_term_years
-            wrapper_warnings.append(
-                f"Loan term assumption missing; assuming {self.settings.loan_term_years} years."
-            )
+            wrapper_warnings.append("Loan term missing; rental carry excludes mortgage support verification.")
 
         maintenance_pct = self.settings.default_maintenance_reserve_pct
         wrapper_warnings.append(
             f"Maintenance reserve not specified; assuming {maintenance_pct:.1%} annually."
         )
+        rent_context = self.rent_context_agent.run(
+            RentContextInput(
+                town=property_input.town,
+                state=property_input.state,
+                sqft=property_input.sqft,
+                beds=property_input.beds,
+                baths=property_input.baths,
+                explicit_monthly_rent=property_input.estimated_monthly_rent,
+            )
+        )
+        wrapper_warnings.extend(rent_context.warnings)
 
         output = self.agent.run(
             IncomeAgentInput(
                 price=property_input.purchase_price,
-                down_payment_pct=down_payment_pct,
-                interest_rate=interest_rate,
+                down_payment_pct=property_input.down_payment_percent,
+                interest_rate=property_input.interest_rate,
                 loan_term_years=loan_term_years,
                 annual_taxes=property_input.taxes,
                 annual_insurance=property_input.insurance,
                 monthly_hoa=property_input.monthly_hoa,
-                estimated_monthly_rent=property_input.estimated_monthly_rent,
+                estimated_monthly_rent=rent_context.rent_estimate,
+                rent_source_type=rent_context.rent_source_type,
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,
                 market_price_to_rent_benchmark=property_input.market_price_to_rent_benchmark,
@@ -87,20 +100,36 @@ class IncomeSupportModule:
             metrics={
                 "gross_monthly_cost": output.gross_monthly_cost,
                 "total_monthly_cost": output.total_monthly_cost,
+                "operating_monthly_cost": output.operating_monthly_cost,
                 "effective_monthly_rent": output.effective_monthly_rent,
                 "income_support_ratio": output.income_support_ratio,
                 "rent_coverage": output.rent_coverage,
                 "price_to_rent": output.price_to_rent,
                 "estimated_monthly_cash_flow": output.estimated_monthly_cash_flow,
                 "monthly_cash_flow": output.monthly_cash_flow,
+                "operating_monthly_cash_flow": output.operating_monthly_cash_flow,
                 "downside_burden": output.downside_burden,
                 "risk_view": output.risk_view,
                 "support_label": support_label,
+                "rent_source_type": output.rent_source_type,
+                "financing_complete": output.financing_complete,
+                "carrying_cost_complete": output.carrying_cost_complete,
                 "rent_support_classification": output.rent_support_classification,
                 "price_to_rent_classification": output.price_to_rent_classification,
                 "warning_count": len(warnings),
             },
-            payload=output.model_copy(update={"warnings": warnings}),
+            payload=output.model_copy(
+                update={
+                    "warnings": warnings,
+                    "assumptions": output.assumptions + rent_context.assumptions,
+                }
+            ),
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["price_ask", "rent_estimate", "insurance_estimate", "financing_down_payment", "financing_interest_rate", "taxes", "hoa"],
+                extra_estimated_inputs=(["rent_estimate"] if rent_context.rent_source_type == "estimated" else []),
+                notes=["Income support is strongest with sourced rent and complete financing assumptions."],
+            ),
         )
 
     def _score(self, output: IncomeAgentOutput) -> float:

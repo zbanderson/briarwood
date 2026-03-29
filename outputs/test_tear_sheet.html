@@ -79,6 +79,10 @@ h3 {
   line-height: 1.5;
 }
 
+.compact-copy {
+  line-height: 1.4;
+}
+
 .subtitle {
   margin-top: 10px;
   max-width: 700px;
@@ -94,12 +98,16 @@ h3 {
 }
 
 .top-grid {
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.2fr 0.8fr;
   margin-bottom: 20px;
 }
 
 .case-grid {
   grid-template-columns: repeat(3, 1fr);
+  margin-top: 20px;
+}
+
+.scenario-cases {
   margin-top: 20px;
 }
 
@@ -109,6 +117,58 @@ h3 {
   border-radius: 18px;
   padding: 22px;
   box-shadow: 0 10px 30px rgba(43, 46, 52, 0.04);
+}
+
+.verdict-card {
+  margin-bottom: 20px;
+}
+
+.verdict-line {
+  color: #243340;
+  font-size: 18px;
+  line-height: 1.4;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.verdict-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.signal-strip {
+  display: grid;
+  grid-template-columns: 1.4fr 0.6fr;
+  gap: 14px;
+  margin-top: -2px;
+}
+
+.signal-strip div {
+  padding: 12px 14px;
+  border: 1px solid #d9cfbe;
+  border-radius: 14px;
+  background: #f7f2e9;
+}
+
+.signal-strip span {
+  display: block;
+  color: #6b7278;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.signal-strip strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.verdict-metrics strong {
+  font-size: 24px;
 }
 
 .metric-grid {
@@ -153,13 +213,130 @@ h3 {
   margin-top: 20px;
 }
 
+.comp-card-section {
+  margin-top: 20px;
+}
+
+.evidence-card {
+  margin-top: 20px;
+}
+
+.evidence-metrics strong {
+  font-size: 22px;
+}
+
+.carry-subcard {
+  padding: 16px 18px;
+  background: #f7f2e9;
+  border: 1px solid #d9cfbe;
+  border-radius: 14px;
+}
+
+.carry-inline-metrics {
+  margin-top: 12px;
+  margin-bottom: 14px;
+}
+
+.carry-inline-metrics strong {
+  font-size: 22px;
+}
+
+.carry-context-copy {
+  margin-top: 12px;
+  color: #5a646d;
+  font-size: 15px;
+}
+
+.carry-detail-grid {
+  margin-top: 18px;
+}
+
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.comp-card {
+  padding: 16px;
+  background: #f7f2e9;
+  border: 1px solid #d9cfbe;
+  border-radius: 14px;
+}
+
+.comp-source {
+  color: #6b7278;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.comp-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.comp-address {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.comp-fit {
+  padding: 6px 10px;
+  border: 1px solid #cdbfa9;
+  border-radius: 999px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5b5347;
+  background: #fffaf2;
+}
+
+.comp-metrics {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.comp-metrics strong {
+  font-size: 18px;
+}
+
+.thesis-grid {
+  align-items: start;
+}
+
+.thesis-chip {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f4efe5;
+  border: 1px solid #d9cfbe;
+  color: #22313e;
+  font-weight: 600;
+}
+
 .chart {
   margin-top: 16px;
 }
 
+@media (max-width: 980px) {
+  .comp-grid,
+  .case-grid,
+  .top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .chart-grid {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin-top: 16px;
 }
@@ -168,10 +345,15 @@ h3 {
   min-width: 0;
 }
 
+.chart-panel .chart {
+  min-height: 430px;
+}
+
 .durability-assessment {
   margin-top: 12px;
   color: #2d4450;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .durability-takeaway {
@@ -265,6 +447,24 @@ h3 {
   font-size: 13px;
 }
 
+.case-move {
+  margin-top: 6px;
+  color: #2d4450;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .signal-strip,
+  .verdict-grid,
+  .chart-grid,
+  .durability-grid,
+  .top-grid,
+  .case-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .case-card {
   min-height: 100%;
 }
@@ -304,71 +504,121 @@ h3 {
       <div>
         <div class="eyebrow">Briarwood Tear Sheet</div>
         <h1>1205 Jeffrey Street</h1>
-        <p class="subtitle">Cautious stance based on current underwriting, with $23,500 scenario spread.</p>
+        <p class="subtitle">Cautious view | 12M spread $53,629</p>
       </div>
       <div class="stance">Cautious</div>
     </header>
 
-    <section class="top-grid">
-      <section class="card conclusion">
-        <div class="section-label">Conclusion</div>
-        <div class="metric-grid">
-          <div><span>Ask Price</span><strong>$940,000</strong></div>
-          <div><span>Briarwood Current Value</span><strong>$806,400</strong></div>
-          <div><span>BCV Range</span><strong>$675,787 - $937,013</strong></div>
-          <div><span>Pricing View</span><strong>Appears Overpriced</strong></div>
-          <div><span>Bull Value</span><strong>$850,700</strong></div>
-          <div><span>Bear Value</span><strong>$827,200</strong></div>
+    <section class="card verdict-card">
+      <div class="section-label">Verdict</div>
+      <h2>Overpriced with weak carry support</h2>
+      <p class="verdict-line">Ask: $940,000 | BCV: $806,400 | Gap: -14.2% | Cash Flow: Unverified</p>
+      <div class="metric-grid compact-metrics verdict-metrics">
+        <div><span>Ask</span><strong>$940,000</strong></div>
+        <div><span>BCV</span><strong>$806,400</strong></div>
+        <div><span>Gap vs BCV</span><strong>-14.2%</strong></div>
+        <div><span>Cash Flow</span><strong>Unverified</strong></div>
+      </div>
+      <div class="signal-strip">
+        <div><span>Biggest Risk</span><strong>Rental fallback is not verified.</strong></div>
+        <div><span>12M Range</span><strong>$751,838 to $805,467</strong></div>
+      </div>
+      <div class="verdict-grid">
+        <div>
+          <div class="case-block-label">Why It Matters</div>
+          <ul class="bullet-list">
+          <li>Ask is 14.2% above BCV.</li>
+          <li>Rental fallback is unverified.</li>
+          <li>Location reads low-confidence.</li>
+          </ul>
         </div>
-        <p class="body-copy">Briarwood Current Value is anchored at $806,400 with a range of $675,787 to $937,013. That reads as appears overpriced versus the ask, based on market history, property adjustment, listing alignment, and income support when available. The bull, base, and bear figures below are a separate 12-month outlook, not today&#x27;s value.</p>
-      </section>
+        <div>
+          <div class="case-block-label">Should This Work For</div>
+          <ul class="bullet-list">
+          <li>Primary home: depends more on personal use than investment support.</li>
+          <li>Investor: weak under current carry.</li>
+          <li>Hybrid: fallback depends on rental support being verified.</li>
+          <li>Realtor angle: supportive location narrative, but pricing needs discipline.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
+    <section class="top-grid">
       <section class="card thesis">
         <div class="section-label">Thesis</div>
-        <h2>Why This Matters</h2>
-        <p class="body-copy">Briarwood reads this as a thin-support, execution-sensitive case: the numbers matter because they tell us whether the asset is already paying for itself, or whether the return story depends on appreciation, cleaner execution, and future multiple support. BCV is the present-day anchor; the scenario range is the forward view.</p>
-        <ul class="bullet-list">
-          <li>What this is: thin-support, execution-sensitive case</li>
-          <li>Why it matters: the asset is underwriting to 1.9% cap rate with monthly cash flow around $-3,960, so the case depends on future value creation more than present income.</li>
-          <li>What must be true: the location backdrop needs to remain supportive enough that current pressures do not widen.</li>
-          <li>What breaks it: downside grows quickly if negative carry persists, the property&#x27;s age (96 years) leads to surprise spend, or these risks worsen: older_housing_stock It also becomes harder to lean on the location thesis if county-level structural support could not be confirmed.</li>
-          <li>So what: versus today&#x27;s ask, Briarwood Current Value is -14.2% below the ask, which reads as appears overpriced. The bull, base, and bear cases should be read as a forward outlook from that starting point, not as today&#x27;s fair value.</li>
-        </ul>
+        <h2>Thesis</h2>
+        <div class="durability-grid thesis-grid">
+          <div>
+            <div class="case-block-label">Deal Type</div>
+            <p class="thesis-chip">thin-support, execution-sensitive case</p>
+          </div>
+          <div>
+            <div class="case-block-label">So What</div>
+            <ul class="bullet-list">
+          <li>Pricing reads overpriced.</li>
+          <li>Cap rate is 1.9%; Carry runs around $-3,960/mo.</li>
+          <li>Margin for error is limited with BCV -14.2% versus ask.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="durability-grid thesis-grid">
+          <div>
+            <div class="case-block-label">What Must Go Right</div>
+            <ul class="bullet-list">
+          <li>Negative carry does not widen materially.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="case-block-label">What Breaks</div>
+            <ul class="bullet-list">
+          <li>Negative carry persists.</li>
+          <li>Older housing stock leads to surprise spend.</li>
+          <li>Flagged risks worsen: older_housing_stock.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card conclusion">
+        <div class="section-label">Key Numbers</div>
+        <div class="metric-grid compact-metrics">
+          <div><span>BCV Range</span><strong>$675,787 - $937,013</strong></div>
+          <div><span>Pricing</span><strong>Appears Overpriced</strong></div>
+          <div><span>Bull</span><strong>$805,467</strong></div>
+          <div><span>Bear</span><strong>$751,838</strong></div>
+        </div>
+        <p class="body-copy compact-copy">BCV anchors today; scenarios show the 12-month range.</p>
       </section>
     </section>
 
     <section class="card chart-card">
-      <div class="section-label">Historic Market Context and Forward Value Range</div>
+      <div class="section-label">Value Range</div>
+      <p class="body-copy compact-copy">BCV anchors today; the fan shows the 12-month range.</p>
       <div class="chart-grid">
         <div class="chart-panel">
           <div class="case-block-label">Historic Context</div>
           <div class="chart">
 <div>                        <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
-        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.4.0.min.js" integrity="sha256-KEmPoupLpFyGMyGAiOsiNDbKDKAvxXAn/W+oQa0ZAfk=" crossorigin="anonymous"></script>                <div id="2b45f5b3-2289-4215-b8f2-4d26b18bec3d" class="plotly-graph-div" style="height:380px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("2b45f5b3-2289-4215-b8f2-4d26b18bec3d")) {                    Plotly.newPlot(                        "2b45f5b3-2289-4215-b8f2-4d26b18bec3d",                        [{"line":{"color":"#8b7c67","width":3},"marker":{"size":6},"mode":"lines+markers","name":"Historic Market Value","x":["2026-03-28"],"y":[940000],"type":"scatter"},{"hoverinfo":"skip","line":{"color":"rgba(59,127,95,0.0)","width":0},"mode":"lines","name":"Bull Ceiling","showlegend":false,"x":["2026-03-28","2027-03-28"],"y":[940000,850700.0],"type":"scatter"},{"fill":"tonexty","fillcolor":"rgba(47,97,115,0.14)","hoverinfo":"skip","line":{"color":"rgba(177,77,59,0.0)","width":0},"mode":"lines","name":"Forward Range","showlegend":false,"x":["2026-03-28","2027-03-28"],"y":[940000,827200.0],"type":"scatter"},{"line":{"color":"#2f6173","width":4},"marker":{"size":7},"mode":"lines+markers","name":"Base Case","x":["2026-03-28","2027-03-28"],"y":[940000,781967.0287058824],"type":"scatter"},{"line":{"color":"#3b7f5f","dash":"dash","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Bull Case","x":["2026-03-28","2027-03-28"],"y":[940000,850700.0],"type":"scatter"},{"line":{"color":"#b14d3b","dash":"dash","width":3},"marker":{"size":7},"mode":"lines+markers","name":"Bear Case","x":["2026-03-28","2027-03-28"],"y":[940000,827200.0],"type":"scatter"},{"marker":{"color":"#17212b","size":11,"symbol":"diamond"},"mode":"markers","name":"Current Ask","x":["2026-03-28"],"y":[940000],"type":"scatter"},{"marker":{"color":"#c48a3a","size":11,"symbol":"circle"},"mode":"markers","name":"Briarwood Current Value","x":["2026-03-28"],"y":[806400.0],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":20,"b":20},"legend":{"orientation":"h","yanchor":"bottom","y":1.02,"x":0},"xaxis":{"title":{"text":""},"showgrid":false},"yaxis":{"title":{"text":"Value"},"tickprefix":"$","separatethousands":true,"gridcolor":"#e4dbc9","zeroline":false},"height":380,"paper_bgcolor":"#fffdf8","plot_bgcolor":"#fffdf8"},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.4.0.min.js" integrity="sha256-KEmPoupLpFyGMyGAiOsiNDbKDKAvxXAn/W+oQa0ZAfk=" crossorigin="anonymous"></script>                <div id="c05b620c-56df-4987-b997-edcf27c51ac7" class="plotly-graph-div" style="height:430px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("c05b620c-56df-4987-b997-edcf27c51ac7")) {                    Plotly.newPlot(                        "c05b620c-56df-4987-b997-edcf27c51ac7",                        [{"fill":"tozeroy","fillcolor":"rgba(191,197,205,0.24)","hoverinfo":"skip","line":{"color":"rgba(191,197,205,0.0)","width":0},"mode":"lines","name":"Historic Market Context","x":["2026-03-29"],"y":[582800.0],"type":"scatter"},{"line":{"color":"#2a9fe8","width":4},"mode":"lines","name":"Historic Market Value","x":["2026-03-29"],"y":[940000.0],"type":"scatter"},{"fill":"toself","fillcolor":"rgba(137,191,244,0.40)","hoverinfo":"skip","line":{"color":"rgba(110,173,224,0.0)","width":0},"mode":"lines","name":"Forward Fan","showlegend":false,"x":["2026-03-29","2027-03-28","2027-03-28","2026-03-29"],"y":[806400.0,805467.0287058824,751838.2990704498,806400.0],"type":"scatter"},{"line":{"color":"#2b2b2b","width":2.5},"mode":"lines","name":"Base Case","x":["2026-03-29","2027-03-28"],"y":[806400.0,781967.0287058824],"type":"scatter"},{"hoverinfo":"skip","line":{"color":"rgba(67,82,95,0.45)","dash":"dash","width":2},"mode":"lines","name":"Target Range","showlegend":false,"x":["2027-03-28","2027-03-28"],"y":[805467.0287058824,751838.2990704498],"type":"scatter"},{"marker":{"color":"#1f2937","size":10,"symbol":"diamond"},"mode":"markers","name":"Bull Case","x":["2027-03-28"],"y":[805467.0287058824],"type":"scatter"},{"marker":{"color":"#1f2937","size":10,"symbol":"diamond"},"mode":"markers","name":"Base Target","x":["2027-03-28"],"y":[781967.0287058824],"type":"scatter"},{"marker":{"color":"#1f2937","size":10,"symbol":"diamond"},"mode":"markers","name":"Bear Case","x":["2027-03-28"],"y":[751838.2990704498],"type":"scatter"},{"marker":{"color":"#ff5a3c","line":{"color":"#fffdf8","width":3},"size":12,"symbol":"circle"},"mode":"markers","name":"Current BCV","x":["2026-03-29"],"y":[806400.0],"type":"scatter"},{"marker":{"color":"#17212b","size":10,"symbol":"diamond"},"mode":"markers","name":"Current Ask","x":["2026-03-29"],"y":[940000.0],"type":"scatter"},{"marker":{"color":"#8b7c67","size":9,"symbol":"circle"},"mode":"markers","name":"Current Market","x":["2026-03-29"],"y":[940000.0],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"shapes":[{"line":{"color":"#ff5a3c","width":2},"type":"line","x0":"2026-03-29","x1":"2026-03-29","xref":"x","y0":0,"y1":1,"yref":"y domain"}],"margin":{"l":18,"r":50,"t":18,"b":22},"legend":{"orientation":"h","yanchor":"bottom","y":-0.2,"x":0},"xaxis":{"title":{"text":""},"showgrid":false},"yaxis":{"title":{"text":""},"tickprefix":"$","separatethousands":true,"gridcolor":"#e4dbc9","zeroline":false,"range":[616507.4052377688,1109200.0]},"height":430,"paper_bgcolor":"#fffdf8","plot_bgcolor":"#fffdf8","annotations":[{"font":{"color":"#ff5a3c","size":12},"showarrow":false,"text":"Today","x":"2026-03-29","xanchor":"right","xshift":-8,"y":1092562.0,"yanchor":"top"},{"font":{"color":"#ff5a3c","size":15},"showarrow":false,"text":"$806,400","x":"2026-03-29","xanchor":"right","xshift":-10,"y":806400.0,"yanchor":"bottom"},{"font":{"color":"#57534e","size":13},"showarrow":false,"text":"$805,467 (-0.1%)","x":"2027-03-28","xanchor":"left","xshift":12,"y":805467.0287058824,"yanchor":"middle"},{"font":{"color":"#111827","size":13},"showarrow":false,"text":"$781,967 (-3.0%)","x":"2027-03-28","xanchor":"left","xshift":12,"y":781967.0287058824,"yanchor":"middle"},{"font":{"color":"#6b7280","size":13},"showarrow":false,"text":"$751,838 (-6.8%)","x":"2027-03-28","xanchor":"left","xshift":12,"y":751838.2990704498,"yanchor":"middle"},{"font":{"color":"#4b5563","size":12},"showarrow":false,"text":"Prob (\u003e805,467) ~62%","x":"2027-03-28","xanchor":"left","xshift":152,"y":805467.0287058824,"yanchor":"middle"},{"font":{"color":"#374151","size":12},"showarrow":false,"text":"Prob (~781,967) ~81%","x":"2027-03-28","xanchor":"left","xshift":152,"y":781967.0287058824,"yanchor":"middle"},{"font":{"color":"#6b7280","size":12},"showarrow":false,"text":"Prob (\u003c751,838) ~55%","x":"2027-03-28","xanchor":"left","xshift":152,"y":751838.2990704498,"yanchor":"middle"}]},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
           </div>
         </div>
         <div class="chart-panel">
           <div class="case-block-label">12M Scenario Spread</div>
           <div class="chart">
-<div>                            <div id="9a07ffb5-5adb-4f92-8e81-37ff0fdf9be2" class="plotly-graph-div" style="height:380px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("9a07ffb5-5adb-4f92-8e81-37ff0fdf9be2")) {                    Plotly.newPlot(                        "9a07ffb5-5adb-4f92-8e81-37ff0fdf9be2",                        [{"hoverinfo":"skip","line":{"color":"rgba(47,97,115,0.25)","width":3},"mode":"lines","showlegend":false,"x":["BCV","Base","Bull","Base","Bear"],"y":[806400.0,781967.0287058824,850700.0,781967.0287058824,827200.0],"type":"scatter"},{"marker":{"color":["#8b7c67","#17212b","#c48a3a","#b14d3b","#2f6173","#3b7f5f"],"line":{"color":"#fffdf8","width":2},"size":14},"mode":"markers+text","name":"Scenario Spread","showlegend":false,"text":["$940,000","$940,000","$806,400","$827,200","$781,967","$850,700"],"textposition":"top center","x":["Current Market","Ask","BCV","Bear","Base","Bull"],"y":[940000,940000,806400.0,827200.0,781967.0287058824,850700.0],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":20,"r":20,"t":20,"b":20},"xaxis":{"title":{"text":""},"showgrid":false},"yaxis":{"title":{"text":"Value"},"tickprefix":"$","separatethousands":true,"gridcolor":"#e4dbc9","zeroline":false},"height":380,"paper_bgcolor":"#fffdf8","plot_bgcolor":"#fffdf8"},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
+<div>                            <div id="dc5df19d-4ec1-450c-a5cf-74b7fabcf6c8" class="plotly-graph-div" style="height:430px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("dc5df19d-4ec1-450c-a5cf-74b7fabcf6c8")) {                    Plotly.newPlot(                        "dc5df19d-4ec1-450c-a5cf-74b7fabcf6c8",                        [{"fill":"toself","fillcolor":"rgba(137,191,244,0.50)","hoverinfo":"skip","line":{"color":"rgba(137,191,244,0.0)","width":0},"mode":"lines","showlegend":false,"x":["Today","12M","12M","Today"],"y":[806400.0,805467.0287058824,751838.2990704498,806400.0],"type":"scatter"},{"hoverinfo":"skip","line":{"color":"#2b2b2b","width":2.5},"mode":"lines","showlegend":false,"x":["Today","12M"],"y":[806400.0,781967.0287058824],"type":"scatter"},{"hoverinfo":"skip","line":{"color":"rgba(67,82,95,0.50)","dash":"dash","width":2},"mode":"lines","showlegend":false,"x":["12M","12M"],"y":[805467.0287058824,751838.2990704498],"type":"scatter"},{"marker":{"color":"#ff5a3c","line":{"color":"#fffdf8","width":3},"size":12,"symbol":"circle"},"mode":"markers","name":"Current BCV","x":["Today"],"y":[806400.0],"type":"scatter"},{"marker":{"color":"#1f2937","size":10,"symbol":"diamond"},"mode":"markers","name":"Price Target","showlegend":false,"x":["12M","12M","12M"],"y":[805467.0287058824,781967.0287058824,751838.2990704498],"type":"scatter"}],                        {"template":{"data":{"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"white","showlakes":true,"showland":true,"subunitcolor":"#C8D4E3"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"bgcolor":"white","radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","gridwidth":2,"linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"bgcolor":"white","caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","zerolinewidth":2}}},"margin":{"l":18,"r":34,"t":18,"b":22},"xaxis":{"title":{"text":""},"showgrid":false},"yaxis":{"title":{"text":""},"tickprefix":"$","separatethousands":true,"gridcolor":"#e4dbc9","zeroline":false,"range":[616507.4052377688,1109200.0]},"height":430,"paper_bgcolor":"#fffdf8","plot_bgcolor":"#fffdf8","annotations":[{"font":{"color":"#ff5a3c","size":15},"showarrow":false,"text":"$806,400","x":"Today","xanchor":"left","xshift":6,"y":806400.0},{"font":{"color":"#ff5a3c","size":12},"showarrow":false,"text":"Today","x":"Today","xanchor":"center","y":1092562.0,"yanchor":"top"},{"font":{"color":"#57534e","size":13},"showarrow":false,"text":"Bull $805,467 (-0.1%)","x":"12M","xanchor":"left","xshift":10,"y":805467.0287058824},{"font":{"color":"#111827","size":13},"showarrow":false,"text":"Base $781,967 (-3.0%)","x":"12M","xanchor":"left","xshift":10,"y":781967.0287058824},{"font":{"color":"#6b7280","size":13},"showarrow":false,"text":"Bear $751,838 (-6.8%)","x":"12M","xanchor":"left","xshift":10,"y":751838.2990704498},{"font":{"color":"#111827","size":12},"showarrow":false,"text":"Ask $940,000","x":"Today","xanchor":"right","xshift":-10,"y":940000.0},{"font":{"color":"#8b7c67","size":12},"showarrow":false,"text":"Market $940,000","x":"Today","xanchor":"right","xshift":-10,"y":940000.0}],"shapes":[{"line":{"color":"#ff5a3c","width":2},"type":"line","x0":"Today","x1":"Today","xref":"x","y0":0,"y1":1,"yref":"paper"}]},                        {"displayModeBar": false, "responsive": true}                    )                };            </script>        </div>
           </div>
         </div>
       </div>
-      <p class="body-copy">The left chart uses 0 historical Zillow-style market value points to anchor the current picture, plots Briarwood Current Value beside today&#x27;s ask and market reference, then extends into a 12-month forward fan. The right chart zooms in on the present-day anchor and the bull, base, and bear spread so the scenario range is easier to read. BCV is the present-day Briarwood estimate; the fan is the forward scenario range. The historical series is market-level context, not a property-specific Zestimate history.</p>
     </section>
 
     <section class="card durability-card">
-      <div class="section-label">Market Durability</div>
-      <h2>Why Buyers Will Still Want This</h2>
-      <p class="body-copy">This section explains why buyers may still want the property in a few years, and whether that demand looks durable enough to support a cleaner exit.</p>
-      <p class="durability-assessment">Location demand reads low-confidence, while scarcity support reads low-confidence.</p>
-      <div class="durability-takeaway">
-        <div class="case-block-label">Buyer Takeaway</div>
-        <p class="body-copy">Asb, NJ has insufficient core location data for a reliable investment thesis; the current view should be treated as descriptive only. Current evidence confidence is low. Briarwood cannot confidently say scarcity is protecting this property yet. Treat any scarcity story here as tentative until better local evidence is available.</p>
-      </div>
+      <div class="section-label">Demand</div>
+      <h2>Demand Durability</h2>
+      <p class="durability-assessment">Demand reads low-confidence; scarcity reads low-confidence.</p>
       <div class="durability-grid">
         <div>
-          <div class="case-block-label">Why Demand May Hold</div>
+          <div class="case-block-label">Demand Holds Because</div>
           <ul class="bullet-list">
           <li>Available signals suggest some continuing buyer demand, but not a standout pattern.</li>
           <li>Available anchor and substitute data suggest some location scarcity support.</li>
@@ -376,7 +626,7 @@ h3 {
           </ul>
         </div>
         <div>
-          <div class="case-block-label">What Could Weaken It</div>
+          <div class="case-block-label">Demand Weakens If</div>
           <ul class="bullet-list">
           <li>Core location inputs are incomplete, reducing confidence in the thesis.</li>
           <li>County-level structural support could not be confirmed.</li>
@@ -386,7 +636,8 @@ h3 {
           </ul>
         </div>
       </div>
-      <div class="case-block-label">Confidence Notes</div>
+      <p class="body-copy carry-context-copy">Confidence: town/county 7% | scarcity 22%.</p>
+      <div class="case-block-label">Evidence Notes</div>
       <ul class="case-list">
 <li>Town/county confidence: 0.07.</li>
 <li>Scarcity confidence: 0.22.</li>
@@ -396,25 +647,172 @@ h3 {
     <section class="card carry-card">
       <div class="section-label">Resilience</div>
       <h2>Fallback Rental Support</h2>
-      <p class="body-copy">The property is not supported by rental economics and would require roughly $3,960/month in subsidy. The price-to-rent ratio is 23.3, which reads as expensive for an income-support lens. Confidence is 0.76; this is a conservative downside view, not a return projection. Price-to-rent is 23.3 (expensive).</p>
-      <div class="metric-grid compact-metrics">
-        <div><span>Fallback View</span><strong>Weak Support</strong></div>
-        <div><span>Support Ratio</span><strong>0.46x</strong></div>
-        <div><span>Est. Cash Flow</span><strong>$-3,960/mo</strong></div>
-        <div><span>Assessment</span><strong>Fallback rent covers about 46% of monthly carrying cost.</strong></div>
+      <p class="durability-assessment">Demand looks mixed, and property-level fallback support could not be verified.</p>
+      <div class="durability-grid carry-split-grid">
+        <div class="carry-subcard">
+          <div class="case-block-label">Market Absorption</div>
+          <div class="metric-grid compact-metrics carry-inline-metrics">
+            <div><span>Demand</span><strong>Fragile Rental Profile</strong></div>
+            <div><span>Confidence</span><strong>48%</strong></div>
+            <div><span>Rental Ease Score</span><strong>46/100</strong></div>
+            <div><span>Est. Days to Rent</span><strong>Unavailable</strong></div>
+          </div>
+          <p class="body-copy compact-copy">Town-level rental demand looks relatively fragile. This still leans partly on priors and indirect market context.</p>
+          <p class="body-copy carry-context-copy">No days-to-rent estimate is available because current rental absorption evidence is too thin.</p>
+        </div>
+        <div class="carry-subcard">
+          <div class="case-block-label">Property-Level Rental Viability</div>
+          <div class="metric-grid compact-metrics carry-inline-metrics">
+            <div><span>Support</span><strong>Unverified Rental Fallback</strong></div>
+            <div><span>Confidence</span><strong>52%</strong></div>
+            <div><span>Support Ratio</span><strong>Unverified</strong></div>
+            <div><span>Cash Flow</span><strong>Pre-debt $1,527/mo</strong></div>
+          </div>
+          <p class="body-copy compact-copy">Full rental fallback is still unverified because financing inputs are incomplete, but pre-debt operating cash flow looks to be about $1,527/mo.</p>
+        </div>
       </div>
-      <div class="case-block-label">Warnings</div>
-      <ul class="case-list">
-<li>Loan term assumption missing; assuming 30 years.</li>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Market Absorption Warnings</div>
+          <ul class="case-list">
+<li>Estimated days to rent is unavailable because no town prior exists for this market.</li>
+<li>Financing inputs are incomplete, so rental viability is only partly verified.</li>
+<li>Rental ease confidence is low because the current view relies on partial evidence and priors.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Property Viability Warnings</div>
+          <ul class="case-list">
+<li>Loan term missing; rental carry excludes mortgage support verification.</li>
 <li>Maintenance reserve not specified; assuming 1.0% annually.</li>
+<li>Loan term was not provided; mortgage payment was not computed.</li>
+<li>Financing inputs are incomplete, so rental support ratio and cash flow were not computed.</li>
+<li>Rental downside analysis could not verify financing because key financing inputs are missing.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Assumptions</div>
+          <ul class="case-list">
+<li>No Monmouth County rental-ease prior was available for this town, so Briarwood relied on general fallback scoring.</li>
+<li>Demand depth uses a generic fallback because no town prior was available.</li>
+<li>HOA was not provided and was treated as $0/month.</li>
+<li>Rent is a provided estimate and may differ from achieved lease income.</li>
+<li>No market price-to-rent benchmark was available; heuristic price-to-rent thresholds were used.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Unsupported Claims</div>
+          <ul class="case-list">
+<li>Town-specific rental ease priors are currently only defined for Briarwood&#x27;s Monmouth County shore-town scope.</li>
+<li>Rental downside analysis could not verify financing because key financing inputs are missing.</li>
 <li>Price-to-rent classification is heuristic because no market benchmark was supplied.</li>
-      </ul>
+          </ul>
+        </div>
+      </div>
     </section>
 
-    <section class="case-grid">
-      <section class="card case-card"><div class="section-label">Bull Case</div><h3>Bull Case</h3><div class="case-value">$850,700</div><p class="body-copy">Bull case implies -9.5% upside from today&#x27;s ask if operating support and exit sentiment both improve.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Exit demand stays healthy and the market rewards supportive local conditions.</li><li>Forward value compounds at about -9.5% over the next 12 months.</li><li>Historical market appreciation stays near 0.0% and location remains low-confidence.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>BCV starts around $806,400 before the upside case adds drift and optionality.</li><li>Location demand remains orderly but not especially strong.</li><li>Optionality adds about $0 when scarcity and redevelopment support are present.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Optimistic exit assumptions may not materialize.</li><li>Rate volatility can compress upside.</li></ul></section>
-<section class="card case-card"><div class="section-label">Base Case</div><h3>Base Case</h3><div class="case-value">$781,967</div><p class="body-copy">Base case implies -16.8% 12-month value support versus ask under current assumptions.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>BCV anchor is about $806,400.</li><li>Base case compounds at about -12.0% over the next 12 months.</li><li>Location backdrop remains low-confidence rather than improving materially.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Market drift contributes about $0.</li><li>Location premium contributes about $-18,741.</li><li>Optionality contributes about $0.</li><li>Location demand remains orderly but not especially strong.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Risk discount removes about $5,692.</li><li>Known flagged risks: older_housing_stock.</li><li>Core location inputs are incomplete, reducing confidence in the thesis.</li></ul></section>
-<section class="card case-card"><div class="section-label">Bear Case</div><h3>Bear Case</h3><div class="case-value">$827,200</div><p class="body-copy">Bear case implies -12.0% 12-month downside if current pressures intensify.</p><div class="case-block-label">Assumptions</div><ul class="case-list"><li>Exit pricing softens and upside assumptions compress.</li><li>Bear case assumes roughly -12.0% forward value change over the next 12 months.</li><li>Location support slips below today&#x27;s low-confidence reading.</li></ul><div class="case-block-label">Key Drivers</div><ul class="case-list"><li>Value support falls back toward BCV with less help from market drift and optionality.</li><li>Lower optimism on exit drives the downside case.</li><li>Operating leverage works against returns.</li></ul><div class="case-block-label">Risk Factors</div><ul class="case-list"><li>Sustained negative cash flow reduces hold flexibility.</li><li>Existing constraints can intensify: older_housing_stock.</li><li>Core location inputs are incomplete, reducing confidence in the thesis.</li></ul></section>
+    <section class="card comp-card-section">
+      <div class="section-label">Comparable Sales</div>
+      <h2>Comparable Sales</h2>
+      <p class="durability-assessment">BCV is leaning more heavily on non-comp anchors because the comparable-sale set is thin.</p>
+      <div class="metric-grid compact-metrics">
+        <div><span>Comp Value</span><strong>Unavailable</strong></div>
+        <div><span>Confidence</span><strong>0%</strong></div>
+        <div><span>Used</span><strong>0 kept | 0 screened out</strong></div>
+        <div><span>Freshest Sale</span><strong>Unavailable</strong></div>
+        <div><span>Median Sale Age</span><strong>Unavailable</strong></div>
+        <div><span>Screening</span><strong>The current comp set cleared Briarwood&#x27;s relevance filters without obvious mismatches.</strong></div>
+        <div><span>Curation</span><strong>Unavailable</strong></div>
+        <div><span>Verification</span><strong>Unavailable</strong></div>
+      </div>
+      <p class="body-copy compact-copy">No usable same-town sale comps were available for this property yet.</p>
+      <div class="comp-grid">
+
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Methodology Notes</div>
+          <ul class="case-list">
+
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Warnings</div>
+          <ul class="case-list">
+<li>No file-backed comparable sales were available for this town.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="scenario-cases">
+      <div class="section-label">Scenarios</div>
+      <section class="case-grid">
+        <section class="card case-card"><div class="section-label">Bull Case</div><h3>Bull Case</h3><div class="case-value">$805,467</div><p class="case-move">-14.3% vs ask</p><p class="body-copy">Upside case if demand and exit both hold.</p><div class="case-block-label">Works If</div><ul class="case-list"><li>Demand stays firm.</li><li>12M value change lands near -14.3%.</li></ul><div class="case-block-label">Drivers</div><ul class="case-list"><li>BCV starts near $806,400.</li><li>Drift plus optionality add roughly $0.</li><li>Location demand remains orderly but not especially strong.</li></ul><div class="case-block-label">Risk</div><ul class="case-list"><li>Rates or exit demand cap upside.</li><li>Optimistic location support may not stick.</li></ul></section>
+<section class="card case-card"><div class="section-label">Base Case</div><h3>Base Case</h3><div class="case-value">$781,967</div><p class="case-move">-16.8% vs ask</p><p class="body-copy">Most likely path if the backdrop mostly holds.</p><div class="case-block-label">Works If</div><ul class="case-list"><li>BCV anchor holds near $806,400.</li><li>12M value change lands near -16.8%.</li></ul><div class="case-block-label">Drivers</div><ul class="case-list"><li>Market drift contributes about $0.</li><li>Location premium contributes about $-18,741.</li><li>Optionality adds about $0.</li></ul><div class="case-block-label">Risk</div><ul class="case-list"><li>Risk discount removes about $5,692.</li><li>Core location inputs are incomplete, reducing confidence in the thesis.</li></ul></section>
+<section class="card case-card"><div class="section-label">Bear Case</div><h3>Bear Case</h3><div class="case-value">$751,838</div><p class="case-move">-20.0% vs ask</p><p class="body-copy">Downside path if carry or local support weakens.</p><div class="case-block-label">Works If</div><ul class="case-list"><li>Exit pricing softens.</li><li>12M value change lands near -20.0%.</li></ul><div class="case-block-label">Drivers</div><ul class="case-list"><li>Value falls back toward BCV.</li><li>Less help from drift and optionality.</li></ul><div class="case-block-label">Risk</div><ul class="case-list"><li>Negative carry reduces flexibility.</li><li>Existing constraints can intensify: older_housing_stock.</li><li>Core location inputs are incomplete, reducing confidence in the thesis.</li></ul></section>
+      </section>
+    </section>
+
+    <section class="card evidence-card">
+      <div class="section-label">Confidence / Evidence</div>
+      <div class="metric-grid compact-metrics evidence-metrics">
+        <div><span>Evidence Mode</span><strong>Listing Assisted</strong></div>
+        <div><span>Report Confidence</span><strong>42%</strong></div>
+        <div><span>Value</span><strong>43%</strong></div>
+        <div><span>Location</span><strong>7%</strong></div>
+        <div><span>Rental</span><strong>48%</strong></div>
+        <div><span>Scenario</span><strong>29% | heuristic</strong></div>
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Coverage Highlights</div>
+          <ul class="case-list">
+<li>Address: sourced</li>
+<li>Price Ask: sourced</li>
+<li>Beds Baths: sourced</li>
+<li>Sqft: sourced</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Strongest Evidence</div>
+          <ul class="case-list">
+<li>Value model confidence: 43%.</li>
+<li>Town/county sentiment uses source-backed local data.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Thinner Evidence</div>
+          <ul class="case-list">
+<li>County-level structural support could not be confirmed.</li>
+<li>Scarcity support is still thin and should be treated cautiously.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Major Missing Inputs</div>
+          <ul class="case-list">
+<li>scarcity inputs</li>
+<li>comp support</li>
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Estimated Inputs</div>
+          <ul class="case-list">
+
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="case-block-label">Heuristic Flags</div>
+        <ul class="case-list">
+<li>12M bull/base/bear remains a heuristic outlook.</li>
+<li>Rental absorption still leans partly on Monmouth coastal priors.</li>
+        </ul>
+      </div>
     </section>
   </main>
 </body>

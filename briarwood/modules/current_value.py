@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from briarwood.agents.current_value import CurrentValueAgent, CurrentValueInput, CurrentValueOutput
+from briarwood.evidence import build_section_evidence
+from briarwood.modules.comparable_sales import ComparableSalesModule, get_comparable_sales_payload
 from briarwood.modules.income_support import IncomeSupportModule, get_income_support_payload
 from briarwood.modules.market_value_history import (
     MarketValueHistoryModule,
@@ -19,11 +21,13 @@ class CurrentValueModule:
         self,
         *,
         agent: CurrentValueAgent | None = None,
+        comparable_sales_module: ComparableSalesModule | None = None,
         market_value_history_module: MarketValueHistoryModule | None = None,
         income_support_module: IncomeSupportModule | None = None,
         settings: CurrentValueSettings | None = None,
     ) -> None:
         self.agent = agent or CurrentValueAgent()
+        self.comparable_sales_module = comparable_sales_module or ComparableSalesModule()
         self.market_value_history_module = market_value_history_module or MarketValueHistoryModule()
         self.income_support_module = income_support_module or IncomeSupportModule()
         self.settings = settings or DEFAULT_CURRENT_VALUE_SETTINGS
@@ -40,16 +44,26 @@ class CurrentValueModule:
                     "mispricing_pct": None,
                     "pricing_view": "unavailable",
                 },
+                section_evidence=build_section_evidence(
+                    property_input,
+                    categories=["price_ask", "market_history", "comp_support", "rent_estimate"],
+                    extra_missing_inputs=["price_ask"],
+                    notes=["BCV needs an ask price to compare current support against the market ask."],
+                ),
             )
 
+        comparable_result = self.comparable_sales_module.run(property_input)
         history_result = self.market_value_history_module.run(property_input)
         income_result = self.income_support_module.run(property_input)
+        comparable_sales = get_comparable_sales_payload(comparable_result)
         history = get_market_value_history_payload(history_result)
         income = get_income_support_payload(income_result)
 
         output = self.agent.run(
             CurrentValueInput(
                 ask_price=property_input.purchase_price,
+                comparable_sales_value=comparable_sales.comparable_value,
+                comparable_sales_confidence=comparable_sales.confidence,
                 market_value_today=history.current_value,
                 market_history_points=history.points,
                 beds=property_input.beds,
@@ -66,6 +80,7 @@ class CurrentValueModule:
                 cap_rate_assumption=self.settings.income_cap_rate_assumption,
             )
         )
+        output = self._apply_input_confidence_caps(output=output, income=income)
 
         summary = (
             f"Briarwood Current Value is about ${output.briarwood_current_value:,.0f}, "
@@ -82,9 +97,11 @@ class CurrentValueModule:
                 "mispricing_amount": round(output.mispricing_amount, 2),
                 "mispricing_pct": round(output.mispricing_pct, 4),
                 "pricing_view": output.pricing_view,
+                "comparable_sales_value": output.components.comparable_sales_value,
                 "market_adjusted_value": output.components.market_adjusted_value,
                 "backdated_listing_value": output.components.backdated_listing_value,
                 "income_supported_value": output.components.income_supported_value,
+                "comparable_sales_weight": round(output.weights.comparable_sales_weight, 4),
                 "market_adjusted_weight": round(output.weights.market_adjusted_weight, 4),
                 "backdated_listing_weight": round(output.weights.backdated_listing_weight, 4),
                 "income_weight": round(output.weights.income_weight, 4),
@@ -93,7 +110,40 @@ class CurrentValueModule:
             confidence=output.confidence,
             summary=summary,
             payload=output,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["price_ask", "market_history", "comp_support", "rent_estimate", "listing_history"],
+                extra_estimated_inputs=(["rent_estimate"] if getattr(income, "rent_source_type", "missing") == "estimated" else []),
+                notes=["BCV blends sourced market context with comp support and any income-backed check that is available."],
+            ),
         )
+
+    def _apply_input_confidence_caps(
+        self,
+        *,
+        output: CurrentValueOutput,
+        income: object,
+    ) -> CurrentValueOutput:
+        warnings = list(output.warnings)
+        confidence = output.confidence
+
+        if getattr(income, "rent_source_type", "missing") == "missing":
+            confidence = min(confidence, 0.6)
+            warnings.append("Current value confidence is capped because rent is missing and the income-backed value check is unavailable.")
+        elif getattr(income, "rent_source_type", "missing") == "estimated":
+            confidence = min(confidence, 0.72)
+            warnings.append("Current value confidence is capped because rent support uses an estimated rent input.")
+
+        if not getattr(income, "financing_complete", False):
+            confidence = min(confidence, 0.65)
+            warnings.append("Current value confidence is capped because financing inputs are incomplete.")
+
+        if "annual_insurance" in getattr(income, "missing_inputs", []):
+            confidence = min(confidence, 0.62)
+
+        if confidence == output.confidence and warnings == output.warnings:
+            return output
+        return output.model_copy(update={"confidence": round(confidence, 2), "warnings": warnings})
 
 
 def get_current_value_payload(result: ModuleResult) -> CurrentValueOutput:

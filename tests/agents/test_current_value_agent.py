@@ -34,12 +34,51 @@ class CurrentValueAgentTests(unittest.TestCase):
         self.assertIsNotNone(result.components.market_adjusted_value)
         self.assertIsNotNone(result.components.backdated_listing_value)
         self.assertIsNotNone(result.components.income_supported_value)
+        self.assertEqual(result.weights.comparable_sales_weight, 0.0)
+        self.assertAlmostEqual(
+            result.weights.comparable_sales_weight
+            + result.weights.market_adjusted_weight
+            + result.weights.backdated_listing_weight
+            + result.weights.income_weight,
+            1.0,
+            places=3,
+        )
+
+    def test_comparable_sales_can_anchor_value(self) -> None:
+        result = CurrentValueAgent().run(
+            CurrentValueInput(
+                ask_price=950000,
+                comparable_sales_value=925000,
+                comparable_sales_confidence=0.82,
+                market_value_today=1000000,
+                market_history_points=sample_history(),
+                beds=4,
+                baths=2.5,
+                lot_size=0.14,
+                property_type="Single Family",
+                year_built=1995,
+                listing_date="2025-12-01",
+                effective_annual_rent=54000,
+                cap_rate_assumption=0.05,
+            )
+        )
+
+        self.assertIsNotNone(result.components.comparable_sales_value)
+        self.assertGreater(result.weights.comparable_sales_weight, 0.0)
+        self.assertAlmostEqual(
+            result.weights.comparable_sales_weight
+            + result.weights.market_adjusted_weight
+            + result.weights.backdated_listing_weight
+            + result.weights.income_weight,
+            1.0,
+            places=3,
+        )
         self.assertAlmostEqual(
             result.weights.market_adjusted_weight
             + result.weights.backdated_listing_weight
             + result.weights.income_weight,
-            1.0,
-            places=4,
+            1.0 - result.weights.comparable_sales_weight,
+            places=3,
         )
 
     def test_missing_rent_zeroes_income_weight(self) -> None:
@@ -105,6 +144,7 @@ class CurrentValueAgentTests(unittest.TestCase):
         self.assertEqual(result.weights.backdated_listing_weight, 0.0)
         self.assertEqual(result.weights.income_weight, 0.0)
         self.assertEqual(result.weights.market_adjusted_weight, 1.0)
+        self.assertEqual(result.weights.comparable_sales_weight, 0.0)
 
     def test_mispricing_calculation(self) -> None:
         result = CurrentValueAgent().run(

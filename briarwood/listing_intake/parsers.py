@@ -72,7 +72,10 @@ class ZillowTextParser(ListingParser):
             sqft=_extract_sqft(text),
             lot_sqft=_extract_lot_sqft(text),
             property_type=_extract_property_type(text),
+            architectural_style=_extract_architectural_style(text),
             year_built=_extract_year_built(text),
+            stories=_extract_stories(text),
+            garage_spaces=_extract_garage_spaces(text),
             days_on_market=_extract_days_on_market(text),
             hoa_monthly=_extract_hoa(text),
             taxes_annual=_extract_annual_taxes(text),
@@ -215,6 +218,41 @@ def _extract_year_built(text: str) -> int | None:
     patterns = [
         r"Built in (\d{4})",
         r"Year built:\s*(\d{4})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _extract_architectural_style(text: str) -> str | None:
+    patterns = [
+        r"Architectural style:\s*([^\n]+)",
+        r"Style:\s*([^\n]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1).strip().title()
+    lowered = text.lower()
+    for style in ("ranch", "colonial", "cape", "victorian", "contemporary", "craftsman", "bungalow"):
+        if f"{style} style" in lowered:
+            return style.title()
+    return None
+
+
+def _extract_stories(text: str) -> float | None:
+    match = re.search(r"Stories:\s*(\d+(?:\.\d+)?)", text, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    return None
+
+
+def _extract_garage_spaces(text: str) -> int | None:
+    patterns = [
+        r"Attached garage spaces:\s*(\d+)",
+        r"Garage spaces:\s*(\d+)",
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)

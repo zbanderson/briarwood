@@ -1,0 +1,54 @@
+{
+  "towns": [
+    {
+      "name": "Avon by the Sea",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["avon boro school district"],
+      "school_tokens": ["avon elementary school", "avon elementary"],
+      "min_match_count": 1
+    },
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["belmar elementary school district"],
+      "school_tokens": ["belmar elementary"],
+      "exclude_tokens": ["west belmar"],
+      "min_match_count": 1
+    },
+    {
+      "name": "Bradley Beach",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["bradley beach school district"],
+      "school_tokens": ["bradley beach elementary"],
+      "min_match_count": 1
+    },
+    {
+      "name": "Manasquan",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["manasquan school district"],
+      "school_tokens": ["manasquan elementary", "manasquan high"],
+      "min_match_count": 2
+    },
+    {
+      "name": "Sea Girt",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["sea girt borough school district"],
+      "school_tokens": ["sea girt elementary"],
+      "min_match_count": 1
+    },
+    {
+      "name": "Spring Lake",
+      "state": "NJ",
+      "county": "Monmouth",
+      "district_tokens": ["spring lake borough"],
+      "school_tokens": ["h w mountz elementary school", "hw mountz elementary school"],
+      "exclude_tokens": ["spring lake heights"],
+      "min_match_count": 1
+    }
+  ]
+}

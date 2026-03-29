@@ -16,6 +16,8 @@ from briarwood.agents.town_county.sources import (
     FredMacroSlice,
     LiquidityAdapter,
     LiquiditySlice,
+    SchoolSignalAdapter,
+    SchoolSignalSlice,
     TownProfileAdapter,
     TownProfileSlice,
     TownCountyOutlookBuilder,
@@ -81,6 +83,13 @@ class TownProfileProvider(Protocol):
         ...
 
 
+class SchoolSignalProvider(Protocol):
+    """Provide Briarwood school proxy rows for supported towns."""
+
+    def get_town_row(self, *, town: str, state: str, county: str | None = None) -> dict[str, object] | None:
+        ...
+
+
 class TownCountyDataService:
     """Orchestrate source providers, normalization, and scoring for location outlook."""
 
@@ -106,12 +115,14 @@ class TownCountyDataService:
         liquidity_provider: LiquidityProvider | None = None,
         fred_macro_provider: FredMacroProvider | None = None,
         town_profile_provider: TownProfileProvider | None = None,
+        school_signal_provider: SchoolSignalProvider | None = None,
         price_adapter: ZillowTrendAdapter | None = None,
         population_adapter: CensusPopulationAdapter | None = None,
         flood_adapter: FemaFloodAdapter | None = None,
         liquidity_adapter: LiquidityAdapter | None = None,
         fred_macro_adapter: FredMacroAdapter | None = None,
         town_profile_adapter: TownProfileAdapter | None = None,
+        school_signal_adapter: SchoolSignalAdapter | None = None,
         builder: TownCountyOutlookBuilder | None = None,
         bridge: TownCountySourceBridge | None = None,
         scorer: TownCountyScorer | None = None,
@@ -122,12 +133,14 @@ class TownCountyDataService:
         self.liquidity_provider = liquidity_provider
         self.fred_macro_provider = fred_macro_provider
         self.town_profile_provider = town_profile_provider
+        self.school_signal_provider = school_signal_provider
         self.price_adapter = price_adapter or ZillowTrendAdapter()
         self.population_adapter = population_adapter or CensusPopulationAdapter()
         self.flood_adapter = flood_adapter or FemaFloodAdapter()
         self.liquidity_adapter = liquidity_adapter or LiquidityAdapter()
         self.fred_macro_adapter = fred_macro_adapter or FredMacroAdapter()
         self.town_profile_adapter = town_profile_adapter or TownProfileAdapter()
+        self.school_signal_adapter = school_signal_adapter or SchoolSignalAdapter()
         self.builder = builder or TownCountyOutlookBuilder()
         self.bridge = bridge or TownCountySourceBridge()
         self.scorer = scorer or TownCountyScorer()
@@ -141,6 +154,7 @@ class TownCountyDataService:
         liquidity: LiquiditySlice | None = None
         fred_macro: FredMacroSlice | None = None
         town_profile: TownProfileSlice | None = None
+        school_signal: SchoolSignalSlice | None = None
 
         if self.price_provider is not None:
             town_row = self.price_provider.get_town_row(town=request.town, state=request.state)
@@ -186,6 +200,15 @@ class TownCountyDataService:
             if profile_row is not None:
                 town_profile = self.town_profile_adapter.from_row(profile_row, geography_type="town")
 
+        if self.school_signal_provider is not None:
+            school_row = self.school_signal_provider.get_town_row(
+                town=request.town,
+                state=request.state,
+                county=request.county,
+            )
+            if school_row is not None:
+                school_signal = self.school_signal_adapter.from_row(school_row, geography_type="town")
+
         source_record = self.builder.build(
             request,
             town_price=town_price,
@@ -196,6 +219,7 @@ class TownCountyDataService:
             liquidity=liquidity,
             fred_macro=fred_macro,
             town_profile=town_profile,
+            school_signal=school_signal,
         )
         normalized = self.bridge.normalize(source_record)
         raw_score = self.scorer.score(normalized.inputs)
@@ -208,6 +232,7 @@ class TownCountyDataService:
         freshness_notes, freshness_claims, freshness_confidence_cap = self._freshness_adjustments(
             fred_macro=fred_macro,
             town_profile=town_profile,
+            school_signal=school_signal,
         )
         assumptions_used.extend(note for note in freshness_notes if note not in assumptions_used)
         unsupported_claims.extend(claim for claim in freshness_claims if claim not in unsupported_claims)
@@ -251,6 +276,7 @@ class TownCountyDataService:
             "fred_macro": 1.00,
             "monmouth_coastal_profile_v1": 0.70,
             "district_signal_v1": 0.75,
+            "briarwood_school_signal_nj_spr_v1": 0.78,
             "greatschools": 0.75,
             "market_liquidity_v1": 0.70,
             "manual_briarwood_note": 0.55,
@@ -277,7 +303,11 @@ class TownCountyDataService:
     def _source_notes(self, normalized: TownCountyNormalizedRecord) -> list[str]:
         notes: list[str] = []
         for status in normalized.field_status:
-            if status.source_name in {"unknown_school_source", "greatschools"}:
+            if status.source_name == "briarwood_school_signal_nj_spr_v1":
+                notes.append(
+                    "School signal currently uses Briarwood's Monmouth-targeted proxy built from official NJ School Performance Reports data."
+                )
+            elif status.source_name in {"unknown_school_source", "greatschools"}:
                 notes.append("School signal is present, but currently comes from a non-official or placeholder source.")
             elif status.source_name in {"unknown_liquidity_source", "market_liquidity_v1"}:
                 notes.append("Liquidity signal is currently model-derived rather than sourced from a dedicated market-activity dataset.")
@@ -303,6 +333,7 @@ class TownCountyDataService:
         *,
         fred_macro: FredMacroSlice | None,
         town_profile: TownProfileSlice | None,
+        school_signal: SchoolSignalSlice | None,
     ) -> tuple[list[str], list[str], float]:
         notes: list[str] = []
         claims: list[str] = []
@@ -311,28 +342,58 @@ class TownCountyDataService:
         if fred_macro is not None and fred_macro.as_of is not None:
             notes.append(f"County macro sentiment is based on data current through {fred_macro.as_of}.")
 
-        if town_profile is None:
-            return notes, claims, confidence_cap
-
-        refresh_days = town_profile.refresh_frequency_days or 90
-        if town_profile.as_of is None:
-            claims.append("Town coastal profile is missing an as-of date, so its structured sentiment should be treated cautiously.")
-            return notes, claims, min(confidence_cap, 0.78)
-
-        try:
-            profile_date = date.fromisoformat(town_profile.as_of)
-        except ValueError:
-            claims.append("Town coastal profile has an invalid as-of date and may need review.")
-            return notes, claims, min(confidence_cap, 0.78)
-
-        age_days = (date.today() - profile_date).days
-        notes.append(
-            f"Town coastal profile was last reviewed on {town_profile.as_of} and should be refreshed about every {refresh_days} days."
+        confidence_cap = self._apply_refresh_window(
+            notes=notes,
+            claims=claims,
+            confidence_cap=confidence_cap,
+            label="Town coastal profile",
+            as_of=town_profile.as_of if town_profile else None,
+            refresh_days=town_profile.refresh_frequency_days if town_profile else None,
+            stale_cap=0.72,
+            missing_cap=0.78,
         )
-        if age_days > refresh_days:
-            claims.append(
-                f"Town coastal profile is {age_days} days old and is past its {refresh_days}-day refresh window."
-            )
-            confidence_cap = min(confidence_cap, 0.72)
+        confidence_cap = self._apply_refresh_window(
+            notes=notes,
+            claims=claims,
+            confidence_cap=confidence_cap,
+            label="School proxy",
+            as_of=school_signal.as_of if school_signal else None,
+            refresh_days=school_signal.refresh_frequency_days if school_signal else None,
+            stale_cap=0.76,
+            missing_cap=0.80,
+        )
 
         return notes, claims, confidence_cap
+
+    def _apply_refresh_window(
+        self,
+        *,
+        notes: list[str],
+        claims: list[str],
+        confidence_cap: float,
+        label: str,
+        as_of: str | None,
+        refresh_days: int | None,
+        stale_cap: float,
+        missing_cap: float,
+    ) -> float:
+        if as_of is None and refresh_days is None:
+            return confidence_cap
+
+        refresh_window = refresh_days or 365
+        if as_of is None:
+            claims.append(f"{label} is missing an as-of date, so it should be treated cautiously.")
+            return min(confidence_cap, missing_cap)
+
+        try:
+            profile_date = date.fromisoformat(as_of)
+        except ValueError:
+            claims.append(f"{label} has an invalid as-of date and may need review.")
+            return min(confidence_cap, missing_cap)
+
+        age_days = (date.today() - profile_date).days
+        notes.append(f"{label} was last reviewed on {as_of} and should be refreshed about every {refresh_window} days.")
+        if age_days > refresh_window:
+            claims.append(f"{label} is {age_days} days old and is past its {refresh_window}-day refresh window.")
+            return min(confidence_cap, stale_cap)
+        return confidence_cap

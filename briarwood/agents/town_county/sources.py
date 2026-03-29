@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from briarwood.agents.school_signal import SchoolSignalAgent
 from briarwood.agents.town_county.schemas import TownCountySourceRecord
 
 
@@ -81,6 +82,19 @@ class TownProfileSlice:
     as_of: str | None = None
     refresh_frequency_days: int | None = None
     source_name: str = "monmouth_coastal_profile_v1"
+
+
+@dataclass(slots=True)
+class SchoolSignalSlice:
+    """Town-level Briarwood school proxy derived from public education inputs."""
+
+    geography_name: str
+    geography_type: str
+    school_signal: float | None
+    confidence: float | None = None
+    as_of: str | None = None
+    refresh_frequency_days: int | None = None
+    source_name: str = "briarwood_school_signal_nj_spr_v1"
 
 
 @dataclass(slots=True)
@@ -438,6 +452,69 @@ class TownProfileAdapter:
         return str(value)
 
 
+class SchoolSignalAdapter:
+    """Turn a file-backed Monmouth/NJ school row into a Briarwood school signal slice."""
+
+    def __init__(self, *, agent: SchoolSignalAgent | None = None) -> None:
+        self.agent = agent or SchoolSignalAgent()
+
+    def from_row(
+        self,
+        row: dict[str, object],
+        *,
+        geography_name_key: str = "name",
+        state_key: str = "state",
+        as_of_key: str = "as_of",
+        refresh_frequency_days_key: str = "refresh_frequency_days",
+        geography_type: str,
+    ) -> SchoolSignalSlice:
+        result = self.agent.evaluate(
+            {
+                "geography_name": str(row.get(geography_name_key, "")),
+                "state": str(row.get(state_key, "")),
+                "achievement_index": self._to_float(row.get("achievement_index")),
+                "growth_index": self._to_float(row.get("growth_index")),
+                "readiness_index": self._to_float(row.get("readiness_index")),
+                "chronic_absenteeism_pct": self._to_float(row.get("chronic_absenteeism_pct")),
+                "student_teacher_ratio": self._to_float(row.get("student_teacher_ratio")),
+                "district_coverage": self._to_float(row.get("district_coverage")),
+                "source_review_quality": self._to_float(row.get("source_review_quality")),
+                "as_of": self._to_str(row.get(as_of_key)),
+                "refresh_frequency_days": self._to_int(row.get(refresh_frequency_days_key)),
+            }
+        )
+        return SchoolSignalSlice(
+            geography_name=str(row.get(geography_name_key, "")),
+            geography_type=geography_type,
+            school_signal=result.school_signal,
+            confidence=result.confidence,
+            as_of=self._to_str(row.get(as_of_key)),
+            refresh_frequency_days=self._to_int(row.get(refresh_frequency_days_key)),
+            source_name=result.source_name,
+        )
+
+    def _to_float(self, value: object) -> float | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        return float(str(value))
+
+    def _to_int(self, value: object) -> int | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        return int(str(value))
+
+    def _to_str(self, value: object) -> str | None:
+        if value in (None, ""):
+            return None
+        return str(value)
+
+
 class TownCountyOutlookBuilder:
     """Assemble source slices into a source record for the normalization bridge."""
 
@@ -453,6 +530,7 @@ class TownCountyOutlookBuilder:
         liquidity: LiquiditySlice | None = None,
         fred_macro: FredMacroSlice | None = None,
         town_profile: TownProfileSlice | None = None,
+        school_signal: SchoolSignalSlice | None = None,
     ) -> TownCountySourceRecord:
         source_names = dict(request.source_names)
 
@@ -468,7 +546,9 @@ class TownCountyOutlookBuilder:
             source_names.setdefault("county_macro_sentiment", fred_macro.source_name)
         if town_profile is not None and town_profile.coastal_profile_signal is not None:
             source_names.setdefault("coastal_profile_signal", town_profile.source_name)
-        if request.school_signal is not None:
+        if school_signal is not None and school_signal.school_signal is not None:
+            source_names.setdefault("school_signal", school_signal.source_name)
+        elif request.school_signal is not None:
             source_names.setdefault("school_signal", "unknown_school_source")
         if flood is not None:
             source_names.setdefault("flood_risk", flood.source_name)
@@ -492,6 +572,7 @@ class TownCountyOutlookBuilder:
             liquidity.as_of if liquidity else None,
             fred_macro.as_of if fred_macro else None,
             town_profile.as_of if town_profile else None,
+            school_signal.as_of if school_signal else None,
         )
 
         return TownCountySourceRecord(
@@ -508,7 +589,11 @@ class TownCountyOutlookBuilder:
             county_population_prior=county_population.prior_population if county_population else None,
             county_macro_sentiment=FredMacroAdapter().derive_sentiment(fred_macro),
             coastal_profile_signal=town_profile.coastal_profile_signal if town_profile else None,
-            school_signal=request.school_signal,
+            school_signal=(
+                school_signal.school_signal
+                if school_signal is not None and school_signal.school_signal is not None
+                else request.school_signal
+            ),
             flood_risk=flood.flood_risk if flood else None,
             liquidity_signal=LiquidityAdapter().derive_signal(liquidity),
             scarcity_signal=request.scarcity_signal

@@ -17,10 +17,9 @@ def build_header_section(report: AnalysisReport) -> HeaderSection:
 
     spread = scenario.spread
     subtitle = (
-        f"{stance} stance based on current underwriting, with "
-        f"${spread:,.0f} scenario spread."
+        f"{stance} view | 12M spread ${spread:,.0f}"
         if spread
-        else f"{stance} stance based on current underwriting."
+        else f"{stance} view"
     )
     return HeaderSection(
         property_name=report.address,

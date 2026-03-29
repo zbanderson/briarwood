@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.town_county.service import TownCountyDataService, TownCountyOutlookResult
+from briarwood.evidence import build_section_evidence
 from briarwood.modules.location_context import (
     build_default_town_county_service,
     build_town_county_request,
@@ -34,6 +35,11 @@ class TownCountyOutlookModule:
             confidence=float(score.confidence),
             summary=score.summary,
             payload=outlook,
+            section_evidence=build_section_evidence(
+                property_input,
+                categories=["school_signal", "flood_risk", "liquidity_signal", "market_history"],
+                notes=["Town/county outlook is mostly market/location evidence, not listing-grade property evidence."],
+            ),
         )
 
 

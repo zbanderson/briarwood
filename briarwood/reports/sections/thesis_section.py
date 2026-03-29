@@ -22,40 +22,35 @@ def build_thesis_section(report: AnalysisReport) -> ThesisSection:
 
     cap_rate = valuation.cap_rate
     cash_flow = valuation.monthly_cash_flow
-    base_case_value = float(scenario.metrics.get("base_case_value", valuation.purchase_price))
-    ask_price = valuation.purchase_price
     property_age = snapshot.metrics.get("property_age")
     risk_flags = str(risk.metrics.get("risk_flags", "none"))
     town_score = outlook.score
     one_year_change = history.one_year_change_pct
     premium_discount = current_value.mispricing_pct
     thesis_label = _classify_thesis(cash_flow, premium_discount)
-    must_be_true = _must_be_true(town_score, one_year_change)
-    breaks_it = _breaks_it(
+    must_go_right = _must_go_right(town_score, one_year_change, cash_flow)
+    what_breaks = _what_breaks(
         property_age=property_age,
         risk_flags=risk_flags,
         unsupported_claims=town_score.unsupported_claims,
+        cash_flow=cash_flow,
     )
-
-    bullets = [
-        f"What this is: {thesis_label}",
-        f"Why it matters: the asset is underwriting to {_percent_or_na(cap_rate)} cap rate with monthly cash flow around ${_number(cash_flow):,.0f}, so the case depends on {'current income support' if _number(cash_flow) >= 0 else 'future value creation more than present income'}.",
-        f"What must be true: {must_be_true}",
-        f"What breaks it: {breaks_it}",
-        f"So what: versus today's ask, Briarwood Current Value is {_percent_or_na(premium_discount)} {'above' if premium_discount >= 0 else 'below'} the ask, which reads as {current_value.pricing_view}. The bull, base, and bear cases should be read as a forward outlook from that starting point, not as today's fair value.",
-    ]
-    summary = (
-        f"Briarwood reads this as a {thesis_label.lower()}: the numbers matter because they tell us whether "
-        "the asset is already paying for itself, or whether the return story depends on appreciation, cleaner execution, and future multiple support. "
-        "BCV is the present-day anchor; the scenario range is the forward view."
+    so_what = _so_what(
+        cap_rate=cap_rate,
+        cash_flow=cash_flow,
+        premium_discount=premium_discount,
+        pricing_view=current_value.pricing_view,
     )
     return ThesisSection(
-        title="Why This Matters",
-        bullets=bullets,
+        title="Thesis",
+        deal_type=thesis_label,
+        must_go_right=must_go_right,
+        what_breaks=what_breaks,
+        so_what=so_what,
         assessment=SectionAssessment(
             score=valuation_module.score,
             confidence=min(valuation_module.confidence, risk.confidence, town_score.confidence),
-            summary=summary,
+            summary="Decision comes down to valuation cushion, carry, and whether location support offsets execution risk.",
         ),
     )
 
@@ -89,34 +84,58 @@ def _classify_thesis(cash_flow: object, premium_discount: float) -> str:
     return "thin-support, execution-sensitive case"
 
 
-def _must_be_true(town_score: object, one_year_change: float | None) -> str:
+def _must_go_right(town_score: object, one_year_change: float | None, cash_flow: object) -> list[str]:
+    bullets: list[str] = []
     if town_score.demand_drivers:
-        primary_driver = town_score.demand_drivers[0].rstrip(".").lower()
-        if one_year_change is not None:
-            return (
-                f"the location thesis needs to stay {town_score.location_thesis_label}, with {primary_driver} "
-                f"and historical market momentum holding near {_percent_or_na(one_year_change)}."
-            )
-        return f"the location thesis needs to stay {town_score.location_thesis_label}, with {primary_driver}."
+        bullets.append(town_score.demand_drivers[0].rstrip("."))
     if one_year_change is not None:
-        return f"historical market momentum needs to stay near {_percent_or_na(one_year_change)} and execution cannot add materially more drag."
-    return "the location backdrop needs to remain supportive enough that current pressures do not widen."
+        bullets.append(f"Market drift holds near {_percent_or_na(one_year_change)}.")
+    if _number(cash_flow) < 0:
+        bullets.append("Negative carry does not widen materially.")
+    else:
+        bullets.append("Income support stays intact.")
+    return bullets[:3]
 
 
-def _breaks_it(
+def _what_breaks(
     *,
     property_age: object,
     risk_flags: str,
     unsupported_claims: list[str],
-) -> str:
-    evidence_gap = unsupported_claims[0].rstrip(".").lower() if unsupported_claims else None
-    if isinstance(property_age, (int, float)):
-        base = (
-            f"downside grows quickly if negative carry persists, the property's age ({int(property_age)} years) "
-            f"leads to surprise spend, or these risks worsen: {risk_flags}."
-        )
-    else:
-        base = f"downside grows quickly if carry remains weak or these risks worsen: {risk_flags}."
-    if evidence_gap:
-        return f"{base[:-1]} It also becomes harder to lean on the location thesis if {evidence_gap}."
-    return base
+    cash_flow: object,
+) -> list[str]:
+    bullets: list[str] = []
+    if _number(cash_flow) < 0:
+        bullets.append("Negative carry persists.")
+    if isinstance(property_age, (int, float)) and property_age >= 30:
+        bullets.append("Older housing stock leads to surprise spend.")
+    if risk_flags != "none":
+        bullets.append(f"Flagged risks worsen: {risk_flags}.")
+    if unsupported_claims:
+        bullets.append(unsupported_claims[0].rstrip("."))
+    if not bullets:
+        bullets.append("Location support softens before value catches up.")
+    return bullets[:3]
+
+
+def _so_what(
+    *,
+    cap_rate: float | None,
+    cash_flow: object,
+    premium_discount: float,
+    pricing_view: str,
+) -> list[str]:
+    carry_text = (
+        f"Carry runs around ${_number(cash_flow):,.0f}/mo."
+        if isinstance(cash_flow, (int, float))
+        else "Carry is not fully verified."
+    )
+    return [
+        f"Pricing reads {pricing_view.replace('appears ', '')}.",
+        f"Cap rate is {_percent_or_na(cap_rate)}; {carry_text}",
+        (
+            f"Margin for error is limited with BCV {_percent_or_na(premium_discount)} versus ask."
+            if premium_discount < 0
+            else f"BCV shows {_percent_or_na(premium_discount)} support versus ask."
+        ),
+    ]

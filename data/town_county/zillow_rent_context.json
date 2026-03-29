@@ -1,0 +1,39 @@
+{
+  "towns": [
+    {
+      "geography_name": "Belmar",
+      "state": "NJ",
+      "geography_type": "town",
+      "zori_current": 3085.0,
+      "zori_prior_year": 2940.0,
+      "zordi_score": 77.0,
+      "zorf_one_year": 0.028,
+      "as_of": "2026-02-28",
+      "source_name": "zillow_rent_research"
+    },
+    {
+      "geography_name": "Manasquan",
+      "state": "NJ",
+      "geography_type": "town",
+      "zori_current": 3360.0,
+      "zori_prior_year": 3210.0,
+      "zordi_score": 79.0,
+      "zorf_one_year": 0.026,
+      "as_of": "2026-02-28",
+      "source_name": "zillow_rent_research"
+    }
+  ],
+  "counties": [
+    {
+      "geography_name": "Monmouth",
+      "state": "NJ",
+      "geography_type": "county",
+      "zori_current": 2965.0,
+      "zori_prior_year": 2840.0,
+      "zordi_score": 74.0,
+      "zorf_one_year": 0.024,
+      "as_of": "2026-02-28",
+      "source_name": "zillow_rent_research"
+    }
+  ]
+}

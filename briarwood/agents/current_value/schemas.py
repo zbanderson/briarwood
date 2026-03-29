@@ -10,6 +10,7 @@ class CurrentValueComponents(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    comparable_sales_value: float | None = None
     market_adjusted_value: float | None = None
     backdated_listing_value: float | None = None
     income_supported_value: float | None = None
@@ -20,6 +21,7 @@ class CurrentValueWeights(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    comparable_sales_weight: float = Field(ge=0)
     market_adjusted_weight: float = Field(ge=0)
     backdated_listing_weight: float = Field(ge=0)
     income_weight: float = Field(ge=0)
@@ -31,6 +33,8 @@ class CurrentValueInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ask_price: float = Field(gt=0)
+    comparable_sales_value: float | None = Field(default=None, gt=0)
+    comparable_sales_confidence: float | None = Field(default=None, ge=0, le=1)
     market_value_today: float | None = Field(default=None, gt=0)
     market_history_points: list[HistoricalValuePoint] = Field(default_factory=list)
     beds: int | None = Field(default=None, ge=0)
