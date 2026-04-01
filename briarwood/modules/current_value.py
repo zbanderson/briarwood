@@ -140,19 +140,20 @@ class CurrentValueModule:
         warnings = list(output.warnings)
         confidence = output.confidence
 
+        s = self.settings
         if getattr(income, "rent_source_type", "missing") == "missing":
-            confidence = min(confidence, 0.6)
+            confidence = min(confidence, s.confidence_cap_rent_missing)
             warnings.append("Current value confidence is capped because rent is missing and the income-backed value check is unavailable.")
         elif getattr(income, "rent_source_type", "missing") == "estimated":
-            confidence = min(confidence, 0.72)
+            confidence = min(confidence, s.confidence_cap_rent_estimated)
             warnings.append("Current value confidence is capped because rent support uses an estimated rent input.")
 
         if not getattr(income, "financing_complete", False):
-            confidence = min(confidence, 0.65)
+            confidence = min(confidence, s.confidence_cap_financing_incomplete)
             warnings.append("Current value confidence is capped because financing inputs are incomplete.")
 
         if "annual_insurance" in getattr(income, "missing_inputs", []):
-            confidence = min(confidence, 0.62)
+            confidence = min(confidence, s.confidence_cap_insurance_missing)
 
         if confidence == output.confidence and warnings == output.warnings:
             return output
@@ -160,8 +161,6 @@ class CurrentValueModule:
 
 
 def get_current_value_payload(result: ModuleResult) -> CurrentValueOutput:
-    """Extract the typed current-value payload from a module result."""
-
     if not isinstance(result.payload, CurrentValueOutput):
         raise TypeError("current_value module payload is not a CurrentValueOutput")
     return result.payload

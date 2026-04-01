@@ -65,7 +65,7 @@ class RiskConstraintsModule:
         score = clamp_score(s.base_score - total_penalty + total_credit)
 
         # Confidence scales with how many of the 5 dimensions have real data.
-        confidence = _data_completeness_confidence(data_present)
+        confidence = _data_completeness_confidence(data_present, s)
 
         risk_flag_names = list(penalties.keys())
         metrics = {
@@ -134,10 +134,9 @@ def _lerp(value: float, lo: float, hi: float, out_lo: float, out_hi: float) -> f
     return out_lo + t * (out_hi - out_lo)
 
 
-def _data_completeness_confidence(data_present: int) -> float:
-    """Confidence scales with how many of the 5 risk dimensions have real data."""
+def _data_completeness_confidence(data_present: int, s: RiskSettings) -> float:
     if data_present >= 5:
-        return 0.85
+        return s.confidence_tier_full
     if data_present >= 3:
-        return 0.72
-    return 0.55
+        return s.confidence_tier_medium
+    return s.confidence_tier_low

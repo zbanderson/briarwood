@@ -63,6 +63,7 @@ class MarketValueHistoryAgent:
                 current_value=None,
                 one_year_change_pct=None,
                 three_year_change_pct=None,
+                five_year_change_pct=None,
                 confidence=0.0,
                 warnings=warnings,
                 summary=(
@@ -74,6 +75,7 @@ class MarketValueHistoryAgent:
         current_value = points[-1].value if points else None
         one_year_change_pct = self._change_pct(points, years_back=1)
         three_year_change_pct = self._change_pct(points, years_back=3)
+        five_year_change_pct = self._change_pct(points, years_back=5)
         confidence = 1.0 if geography_type == "town" else 0.8
 
         warnings.append(
@@ -94,6 +96,7 @@ class MarketValueHistoryAgent:
             current_value=current_value,
             one_year_change_pct=one_year_change_pct,
             three_year_change_pct=three_year_change_pct,
+            five_year_change_pct=five_year_change_pct,
             confidence=confidence,
             warnings=warnings,
             summary=summary,

@@ -46,6 +46,20 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         else "Location support weakens if the current demand backdrop loses momentum."
     )
 
+    bull_market_drift = _number(scenario_module.metrics.get("bull_market_drift_pct"))
+    bull_location = _number(scenario_module.metrics.get("bull_location_pct"))
+    bull_risk = _number(scenario_module.metrics.get("bull_risk_pct"))
+    bull_optionality = _number(scenario_module.metrics.get("bull_optionality_pct"))
+    base_market_drift = _number(scenario_module.metrics.get("base_market_drift_pct"))
+    base_location = _number(scenario_module.metrics.get("base_location_pct"))
+    base_risk = _number(scenario_module.metrics.get("base_risk_pct"))
+    base_optionality = _number(scenario_module.metrics.get("base_optionality_pct"))
+    bear_market_drift = _number(scenario_module.metrics.get("bear_market_drift_pct"))
+    bear_location = _number(scenario_module.metrics.get("bear_location_pct"))
+    bear_risk = _number(scenario_module.metrics.get("bear_risk_pct"))
+    trailing_1yr = _number(scenario_module.metrics.get("inputs_trailing_1yr"))
+    town_score_val = _number(scenario_module.metrics.get("inputs_town_score"))
+
     bull_case = ScenarioCase(
         name="Bull Case",
         scenario_value=scenario.bull_case_value,
@@ -55,8 +69,8 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"12M value change lands near {bull_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"BCV starts near ${bcv_anchor:,.0f}.",
-            f"Drift plus optionality add roughly ${max(market_drift + optionality_premium, 0.0):,.0f}.",
+            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Market drift: {bull_market_drift:+.1%}  |  Location: {bull_location:+.1%}  |  Risk: {bull_risk:+.1%}  |  Optionality: {bull_optionality:+.1%}",
             location_driver,
         ],
         risk_factors=[
@@ -78,9 +92,9 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"12M value change lands near {base_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"Market drift contributes about ${market_drift:,.0f}.",
-            f"Location premium contributes about ${location_premium:,.0f}.",
-            f"Optionality adds about ${optionality_premium:,.0f}.",
+            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Market drift: {base_market_drift:+.1%}  |  Location: {base_location:+.1%}  |  Risk: {base_risk:+.1%}  |  Optionality: {base_optionality:+.1%}",
+            f"ZHVI trailing 1yr: {trailing_1yr:+.1%}  |  Town score: {town_score_val:.0f}/100",
         ],
         risk_factors=[
             f"Risk discount removes about ${risk_discount:,.0f}.",
@@ -101,8 +115,9 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"12M value change lands near {bear_growth_rate:.1%}.",
         ],
         key_drivers=[
-            "Value falls back toward BCV.",
-            "Less help from drift and optionality.",
+            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Market drift: {bear_market_drift:+.1%}  |  Location: {bear_location:+.1%}  |  Risk: {bear_risk:+.1%}",
+            "Risk penalties and location discounts fully materialize in the downside scenario.",
         ],
         risk_factors=[
             "Negative carry reduces flexibility.",

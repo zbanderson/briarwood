@@ -141,8 +141,6 @@ class IncomeSupportModule:
 
 
 def get_income_support_payload(result: ModuleResult) -> IncomeAgentOutput:
-    """Extract the typed income-support payload from a module result."""
-
     if not isinstance(result.payload, IncomeAgentOutput):
         raise TypeError("income_support module payload is not an IncomeAgentOutput")
     return result.payload

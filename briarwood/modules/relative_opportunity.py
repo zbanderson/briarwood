@@ -8,12 +8,16 @@ from briarwood.schemas import (
     RelativeOpportunityOutput,
     RelativeOpportunityProperty,
 )
+from briarwood.settings import DEFAULT_RELATIVE_OPPORTUNITY_SETTINGS, RelativeOpportunitySettings
 
 
 class RelativeOpportunityModule:
     """Compare multiple analyzed properties for directional forward opportunity."""
 
     name = "relative_opportunity"
+
+    def __init__(self, settings: RelativeOpportunitySettings | None = None) -> None:
+        self.settings = settings or DEFAULT_RELATIVE_OPPORTUNITY_SETTINGS
 
     def compare(self, reports: list[AnalysisReport]) -> RelativeOpportunityOutput:
         if len(reports) < 2:
@@ -86,12 +90,9 @@ class RelativeOpportunityModule:
             current_value_confidence=current_value_result.confidence if current_value_result else 0.0,
             location_confidence=location_result.confidence if location_result else 0.0,
             local_confidence=local_result.confidence if local_result else 0.0,
-            has_premium_funnel=("premium_funnel" in report.module_results),
         )
 
         notes = []
-        if "premium_funnel" not in report.module_results:
-            notes.append("Implied PPSF currently falls back to BCV because premium_funnel is not yet active.")
         if local_result is None:
             notes.append("Town momentum currently lacks local document support.")
         elif local_result.confidence < 0.5:
@@ -147,17 +148,15 @@ class RelativeOpportunityModule:
         reports: list[AnalysisReport],
         properties: list[RelativeOpportunityProperty],
     ) -> RelativeOpportunityConfidence:
+        s = self.settings
         notes: list[str] = []
         confidence = sum(item.confidence for item in properties) / len(properties)
-        if any("premium_funnel" not in report.module_results for report in reports):
-            notes.append("Relative opportunity still uses BCV-implied PPSF because premium_funnel is not yet implemented.")
-            confidence = min(confidence, 0.72)
         if any(report.module_results.get("local_intelligence") is None for report in reports):
             notes.append("Some properties are missing local document intelligence, so town momentum is only partially supported.")
-            confidence = min(confidence, 0.65)
+            confidence = min(confidence, s.confidence_cap_no_local_intel)
         if any(item.capex is None for item in properties):
             notes.append("Some value-creation paths rely on capex heuristics rather than explicit budgets.")
-            confidence = min(confidence, 0.68)
+            confidence = min(confidence, s.confidence_cap_capex_heuristics)
         return RelativeOpportunityConfidence(score=round(confidence, 2), notes=notes)
 
 
@@ -260,17 +259,13 @@ def _property_confidence(
     current_value_confidence: float,
     location_confidence: float,
     local_confidence: float,
-    has_premium_funnel: bool,
 ) -> float:
     values = [current_value_confidence]
     if location_confidence:
         values.append(location_confidence)
     if local_confidence:
         values.append(local_confidence)
-    confidence = sum(values) / len(values)
-    if not has_premium_funnel:
-        confidence = min(confidence, 0.74)
-    return confidence
+    return sum(values) / len(values)
 
 
 def _round_or_none(value: float | None, digits: int) -> float | None:

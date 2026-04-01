@@ -11,6 +11,7 @@ from briarwood.reports.sections.market_durability_section import build_market_du
 from briarwood.reports.sections.scenario_chart_section import build_scenario_chart_section
 from briarwood.reports.sections.signal_metrics_section import build_signal_metrics_section
 from briarwood.reports.sections.thesis_section import build_thesis_section
+from briarwood.reports.sections.investment_scenarios_section import build_investment_scenarios_section
 from briarwood.schemas import AnalysisReport
 
 
@@ -27,4 +28,5 @@ def build_tear_sheet(report: AnalysisReport) -> TearSheet:
         scenario_chart=build_scenario_chart_section(report),
         bull_base_bear=build_bull_base_bear_section(report),
         evidence_strip=build_evidence_strip_section(report),
+        investment_scenarios=build_investment_scenarios_section(report),
     )

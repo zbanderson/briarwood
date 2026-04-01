@@ -200,6 +200,8 @@ class PropertyInput:
     landmark_points: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     zone_flags: dict[str, bool | None] = field(default_factory=dict)
     local_documents: list[dict[str, Any]] = field(default_factory=list)
+    renovation_scenario: dict[str, Any] | None = None
+    teardown_scenario: dict[str, Any] | None = None
     facts: PropertyFacts | None = None
     market_signals: MarketLocationSignals | None = None
     user_assumptions: UserAssumptions | None = None

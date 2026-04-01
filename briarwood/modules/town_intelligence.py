@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+# TODO: consider removing — TownIntelligenceModule is not registered in the engine (runner.py)
+# and is not imported anywhere outside this file. It may be a leftover from an earlier design.
+# Keeping for now in case it is needed for future standalone/CLI use.
+
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.scoring import clamp_score
 

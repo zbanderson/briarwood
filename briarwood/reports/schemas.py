@@ -210,6 +210,77 @@ class SignalMetricsSection:
 
 
 @dataclass(slots=True)
+class RenovationScenarioSummary:
+    renovation_budget: float
+    current_bcv: float
+    renovated_bcv: float
+    gross_value_creation: float
+    net_value_creation: float
+    roi_pct: float
+    cost_per_dollar_of_value: float | None
+    condition_change: str
+    sqft_change: str | None
+    summary: str
+    confidence: float
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class TeardownPhase1Summary:
+    hold_years: int
+    total_gross_rent: float
+    total_net_cash_flow: float
+    burn_down_pct: float
+    effective_cost_basis: float
+    equity_at_teardown: float
+    mortgage_balance_at_teardown: float
+    estimated_property_value_at_teardown: float
+    narrative: str
+    year_by_year: list[dict] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class TeardownPhase2Summary:
+    demolition_cost: float
+    construction_cost: float
+    lost_rent_during_construction: float
+    total_phase2_cost: float
+    estimated_new_construction_value: float
+    comp_basis: str
+    narrative: str
+
+
+@dataclass(slots=True)
+class TeardownProjectTotals:
+    total_cash_invested: float
+    total_rental_income: float
+    final_property_value: float
+    final_mortgage_balance: float
+    net_equity_position: float
+    total_profit: float
+    total_roi_pct: float
+    annualized_roi_pct: float
+    total_timeline_years: float
+    narrative: str
+
+
+@dataclass(slots=True)
+class TeardownScenarioSummary:
+    hold_years: int
+    phase1: TeardownPhase1Summary
+    phase2: TeardownPhase2Summary
+    project_totals: TeardownProjectTotals
+    confidence: float
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class InvestmentScenariosSection:
+    renovation: RenovationScenarioSummary | None = None
+    teardown: TeardownScenarioSummary | None = None
+
+
+@dataclass(slots=True)
 class TearSheet:
     property_id: str
     header: HeaderSection
@@ -222,3 +293,4 @@ class TearSheet:
     scenario_chart: ScenarioChartSection
     bull_base_bear: BullBaseBearSection
     evidence_strip: EvidenceStripSection
+    investment_scenarios: InvestmentScenariosSection | None = None

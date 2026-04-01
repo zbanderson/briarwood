@@ -41,6 +41,7 @@ SECTION_TABS = [
     ("income", "Income Support"),
     ("evidence", "Evidence"),
     ("data_quality", "Data Quality"),
+    ("scenarios", "Scenarios"),
 ]
 
 CONDITION_OPTIONS = [

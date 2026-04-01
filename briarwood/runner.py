@@ -15,6 +15,8 @@ from briarwood.modules.location_context import build_default_town_county_service
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
 from briarwood.modules.local_intelligence import LocalIntelligenceModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
+from briarwood.modules.renovation_scenario import RenovationScenarioModule
+from briarwood.modules.teardown_scenario import TeardownScenarioModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
@@ -51,6 +53,15 @@ def build_engine(
     scarcity_support_module = ScarcitySupportModule(service=town_county_service)
     location_intelligence_module = LocationIntelligenceModule()
     local_intelligence_module = LocalIntelligenceModule()
+    renovation_scenario_module = RenovationScenarioModule(
+        comparable_sales_module=comparable_sales_module,
+        current_value_module=current_value_module,
+    )
+    teardown_scenario_module = TeardownScenarioModule(
+        comparable_sales_module=comparable_sales_module,
+        current_value_module=current_value_module,
+        income_support_module=income_support_module,
+    )
     rental_ease_module = RentalEaseModule(
         income_support_module=income_support_module,
         town_county_outlook_module=town_county_outlook_module,
@@ -79,6 +90,8 @@ def build_engine(
             scarcity_support_module,
             location_intelligence_module,
             local_intelligence_module,
+            renovation_scenario_module,
+            teardown_scenario_module,
         ]
     )
 

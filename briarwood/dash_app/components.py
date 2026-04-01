@@ -479,6 +479,9 @@ def render_single_section(section: str, view: PropertyAnalysisView, report: Anal
     if section == "data_quality":
         from briarwood.dash_app.data_quality import render_data_quality_section  # lazy to avoid circular import
         return render_data_quality_section(report)
+    if section == "scenarios":
+        from briarwood.dash_app.scenarios import render_scenarios_section  # lazy import
+        return render_scenarios_section(report)
     return mapping[section](view, compact=False)
 
 
@@ -613,6 +616,9 @@ def render_compare_section(section: str, views: list[PropertyAnalysisView], repo
         elif section == "data_quality":
             from briarwood.dash_app.data_quality import render_data_quality_section  # lazy to avoid circular import
             body = render_data_quality_section(report)
+        elif section == "scenarios":
+            from briarwood.dash_app.scenarios import render_scenarios_section  # lazy import
+            body = render_scenarios_section(report)
         else:
             body = lane_renderer[section](view, compact=True)
         lanes.append(

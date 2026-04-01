@@ -34,6 +34,7 @@ class MarketValueHistoryOutput(BaseModel):
     current_value: float | None
     one_year_change_pct: float | None
     three_year_change_pct: float | None
+    five_year_change_pct: float | None
     confidence: float
     warnings: list[str]
     summary: str

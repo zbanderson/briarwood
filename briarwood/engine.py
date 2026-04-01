@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from briarwood.schemas import AnalysisModule, AnalysisReport, ModuleResult, PropertyInput
 
 
@@ -19,10 +21,16 @@ class AnalysisEngine:
         return module.run(property_input)
 
     def run_all(self, property_input: PropertyInput) -> AnalysisReport:
-        module_results = {
-            name: module.run(property_input)
-            for name, module in self._modules.items()
-        }
+        prior_results: dict[str, ModuleResult] = {}
+        module_results: dict[str, ModuleResult] = {}
+        for name, module in self._modules.items():
+            sig = inspect.signature(module.run)
+            if "prior_results" in sig.parameters:
+                result = module.run(property_input, prior_results=prior_results)
+            else:
+                result = module.run(property_input)
+            prior_results[name] = result
+            module_results[name] = result
         return AnalysisReport(
             property_id=property_input.property_id,
             address=property_input.address,

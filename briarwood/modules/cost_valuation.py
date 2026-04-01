@@ -208,14 +208,15 @@ class CostValuationModule:
             + (populated / len(required_values)) * self.settings.confidence_range,
             2,
         )
+        s = self.settings
         if rent_source_type == "missing":
-            confidence = min(confidence, 0.48)
+            confidence = min(confidence, s.confidence_cap_rent_missing)
         elif rent_source_type == "estimated":
-            confidence = min(confidence, 0.64)
+            confidence = min(confidence, s.confidence_cap_rent_estimated)
         if not financing_complete:
-            confidence = min(confidence, 0.58)
+            confidence = min(confidence, s.confidence_cap_financing_incomplete)
         if property_input.insurance is None:
-            confidence = min(confidence, 0.62)
+            confidence = min(confidence, s.confidence_cap_insurance_missing)
         return confidence
 
     def _build_summary(

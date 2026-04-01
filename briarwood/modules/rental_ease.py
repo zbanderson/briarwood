@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from briarwood.agents.rental_ease import RentalEaseAgent, RentalEaseInput, RentalEaseOutput
 from briarwood.agents.rental_ease.context import FileBackedZillowRentContextProvider
 from briarwood.evidence import build_section_evidence
@@ -7,7 +9,6 @@ from briarwood.modules.income_support import IncomeSupportModule, get_income_sup
 from briarwood.modules.scarcity_support import ScarcitySupportModule, get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule, get_town_county_outlook_payload
 from briarwood.schemas import ModuleResult, PropertyInput
-from pathlib import Path
 
 
 class RentalEaseModule:
@@ -112,8 +113,6 @@ class RentalEaseModule:
 
 
 def get_rental_ease_payload(result: ModuleResult) -> RentalEaseOutput:
-    """Extract the typed rental-ease payload from a module result."""
-
     if not isinstance(result.payload, RentalEaseOutput):
         raise TypeError("rental_ease module payload is not a RentalEaseOutput")
     return result.payload

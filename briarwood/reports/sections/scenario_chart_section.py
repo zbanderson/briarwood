@@ -48,6 +48,7 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
         bear_value=bear_value,
         base_value=base_value,
         bull_value=bull_value,
+        stress_value=scenario.stress_case_value,
     )
 
     history_years = len(history.points)
@@ -347,14 +348,18 @@ def _build_plotly_scenario_zoom_chart(
     bear_value: float,
     base_value: float,
     bull_value: float,
+    stress_value: float | None = None,
 ) -> str:
     current_label = "Today"
     future_label = "12M"
     bull_pct_vs_bcv = _pct_change(bull_value, current_value)
     base_pct_vs_bcv = _pct_change(base_value, current_value)
     bear_pct_vs_bcv = _pct_change(bear_value, current_value)
-    y_min = min(current_ask, current_value, market_reference_value, bear_value, base_value, bull_value) * 0.82
-    y_max = max(current_ask, current_value, market_reference_value, bear_value, base_value, bull_value) * 1.18
+    values = [current_ask, current_value, market_reference_value, bear_value, base_value, bull_value]
+    if stress_value:
+        values.append(stress_value)
+    y_min = min(values) * 0.82
+    y_max = max(values) * 1.18
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -407,6 +412,95 @@ def _build_plotly_scenario_zoom_chart(
             showlegend=False,
         )
     )
+    if stress_value is not None:
+        stress_pct = _pct_change(stress_value, current_value)
+        fig.add_trace(
+            go.Scatter(
+                x=[future_label],
+                y=[stress_value],
+                mode="markers",
+                marker={"size": 10, "symbol": "x", "color": "#dc2626"},
+                name="Stress",
+                showlegend=False,
+            )
+        )
+    zoom_annotations = [
+        {
+            "x": current_label,
+            "y": current_value,
+            "text": f"${current_value:,.0f}",
+            "showarrow": False,
+            "font": {"color": "#ff5a3c", "size": 15},
+            "xanchor": "left",
+            "xshift": 6,
+        },
+        {
+            "x": current_label,
+            "y": y_max * 0.985,
+            "text": "Today",
+            "showarrow": False,
+            "font": {"color": "#ff5a3c", "size": 12},
+            "xanchor": "center",
+            "yanchor": "top",
+        },
+        {
+            "x": future_label,
+            "y": bull_value,
+            "text": f"Bull ${bull_value:,.0f} ({bull_pct_vs_bcv:+.1%})",
+            "showarrow": False,
+            "xanchor": "left",
+            "xshift": 10,
+            "font": {"size": 13, "color": "#57534e"},
+        },
+        {
+            "x": future_label,
+            "y": base_value,
+            "text": f"Base ${base_value:,.0f} ({base_pct_vs_bcv:+.1%})",
+            "showarrow": False,
+            "xanchor": "left",
+            "xshift": 10,
+            "font": {"size": 13, "color": "#111827"},
+        },
+        {
+            "x": future_label,
+            "y": bear_value,
+            "text": f"Bear ${bear_value:,.0f} ({bear_pct_vs_bcv:+.1%})",
+            "showarrow": False,
+            "xanchor": "left",
+            "xshift": 10,
+            "font": {"size": 13, "color": "#6b7280"},
+        },
+        {
+            "x": current_label,
+            "y": current_ask,
+            "text": f"Ask ${current_ask:,.0f}",
+            "showarrow": False,
+            "xanchor": "right",
+            "xshift": -10,
+            "font": {"size": 12, "color": "#111827"},
+        },
+        {
+            "x": current_label,
+            "y": market_reference_value,
+            "text": f"Market ${market_reference_value:,.0f}",
+            "showarrow": False,
+            "xanchor": "right",
+            "xshift": -10,
+            "font": {"size": 12, "color": "#8b7c67"},
+        },
+    ]
+    if stress_value is not None:
+        zoom_annotations.append(
+            {
+                "x": future_label,
+                "y": stress_value,
+                "text": f"Stress ${stress_value:,.0f} ({stress_pct:+.1%})",
+                "showarrow": False,
+                "xanchor": "left",
+                "xshift": 10,
+                "font": {"size": 12, "color": "#dc2626"},
+            }
+        )
     fig.update_layout(
         template="plotly_white",
         margin={"l": 18, "r": 34, "t": 18, "b": 22},
@@ -422,71 +516,7 @@ def _build_plotly_scenario_zoom_chart(
             "zeroline": False,
             "range": [y_min, y_max],
         },
-        annotations=[
-            {
-                "x": current_label,
-                "y": current_value,
-                "text": f"${current_value:,.0f}",
-                "showarrow": False,
-                "font": {"color": "#ff5a3c", "size": 15},
-                "xanchor": "left",
-                "xshift": 6,
-            },
-            {
-                "x": current_label,
-                "y": y_max * 0.985,
-                "text": "Today",
-                "showarrow": False,
-                "font": {"color": "#ff5a3c", "size": 12},
-                "xanchor": "center",
-                "yanchor": "top",
-            },
-            {
-                "x": future_label,
-                "y": bull_value,
-                "text": f"Bull ${bull_value:,.0f} ({bull_pct_vs_bcv:+.1%})",
-                "showarrow": False,
-                "xanchor": "left",
-                "xshift": 10,
-                "font": {"size": 13, "color": "#57534e"},
-            },
-            {
-                "x": future_label,
-                "y": base_value,
-                "text": f"Base ${base_value:,.0f} ({base_pct_vs_bcv:+.1%})",
-                "showarrow": False,
-                "xanchor": "left",
-                "xshift": 10,
-                "font": {"size": 13, "color": "#111827"},
-            },
-            {
-                "x": future_label,
-                "y": bear_value,
-                "text": f"Bear ${bear_value:,.0f} ({bear_pct_vs_bcv:+.1%})",
-                "showarrow": False,
-                "xanchor": "left",
-                "xshift": 10,
-                "font": {"size": 13, "color": "#6b7280"},
-            },
-            {
-                "x": current_label,
-                "y": current_ask,
-                "text": f"Ask ${current_ask:,.0f}",
-                "showarrow": False,
-                "xanchor": "right",
-                "xshift": -10,
-                "font": {"size": 12, "color": "#111827"},
-            },
-            {
-                "x": current_label,
-                "y": market_reference_value,
-                "text": f"Market ${market_reference_value:,.0f}",
-                "showarrow": False,
-                "xanchor": "right",
-                "xshift": -10,
-                "font": {"size": 12, "color": "#8b7c67"},
-            },
-        ],
+        annotations=zoom_annotations,
         shapes=[
             {
                 "type": "line",

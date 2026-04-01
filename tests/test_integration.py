@@ -160,13 +160,17 @@ class FullPipelinePropertyTwoTests(unittest.TestCase):
             bbb.metrics.get("stress_case_value", 0),
         )
 
-    def test_stress_case_is_20pct_below_base(self) -> None:
+    def test_stress_case_is_below_bear(self) -> None:
         bbb = self.report.get_module("bull_base_bear")
-        base = bbb.metrics.get("base_case_value")
+        bear = bbb.metrics.get("bear_case_value")
         stress = bbb.metrics.get("stress_case_value")
-        if base is not None and stress is not None:
-            expected = base * 0.80
-            self.assertAlmostEqual(stress, expected, delta=1.0)
+        if bear is not None and stress is not None:
+            self.assertLess(stress, bear, "Stress case must be lower than bear case")
+        bcv = bbb.metrics.get("bcv_anchor")
+        shock = bbb.metrics.get("stress_macro_shock_pct")
+        if bcv is not None and shock is not None and stress is not None:
+            expected = bcv * (1.0 - shock)
+            self.assertAlmostEqual(stress, expected, delta=1.0, msg="Stress should be BCV × (1 - drawdown)")
 
     def test_risk_graduated_flood_scores_correctly(self) -> None:
         """Regression: high flood should score lower than medium flood."""
