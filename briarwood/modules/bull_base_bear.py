@@ -125,12 +125,18 @@ class BullBaseBearModule:
         spread_ratio = spread / price
         score += spread_ratio * self.settings.spread_weight
 
+        # Stress case: historical peak-to-trough macro-shock overlay (not a forecast).
+        stress_case_value: float | None = None
+        if self.settings.bear_tail_risk_enabled:
+            stress_case_value = base_value * (1 - self.settings.bear_macro_shock_pct)
+
         scenario_output = ScenarioOutput(
             ask_price=float(price),
             bull_case_value=float(bull_value),
             base_case_value=float(base_value),
             bear_case_value=float(bear_value),
             spread=float(spread),
+            stress_case_value=float(stress_case_value) if stress_case_value is not None else None,
         )
         confidence = round(
             (
@@ -152,10 +158,14 @@ class BullBaseBearModule:
             f"{summary} This forward range is still heuristic and should be treated as an outlook, "
             "not a sourced current-value estimate."
         )
+        stress_growth_rate = (stress_case_value - price) / price if stress_case_value is not None else None
+
         return ModuleResult(
             module_name=self.name,
             metrics={
                 **scenario_output.to_metrics(),
+                "stress_growth_rate": round(stress_growth_rate, 4) if stress_growth_rate is not None else None,
+                "stress_macro_shock_pct": self.settings.bear_macro_shock_pct if self.settings.bear_tail_risk_enabled else None,
                 "bcv_anchor": round(bcv, 2),
                 "historical_growth_rate": round(historical_growth, 4),
                 "market_drift": round(market_drift, 2),

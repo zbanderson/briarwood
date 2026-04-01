@@ -292,6 +292,12 @@ class ComparableSalesAgent:
         sale_age_days = max((date.today() - self._parse_date(sale.sale_date)).days, 0)
         if sale_age_days > 1460:
             return False, "sale_too_old"
+
+        if request.market_value_today and request.market_value_today > 0 and sale.sale_price:
+            price_ratio = sale.sale_price / request.market_value_today
+            if price_ratio < 0.35 or price_ratio > 2.50:
+                return False, "price_range_too_far"
+
         return True, None
 
     def _similarity_profile(

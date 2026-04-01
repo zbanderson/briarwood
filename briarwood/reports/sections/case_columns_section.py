@@ -115,10 +115,42 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             summary="Downside path if carry or local support weakens.",
         ),
     )
+    stress_case_value = _number(scenario_module.metrics.get("stress_case_value"))
+    stress_growth_rate = _number(scenario_module.metrics.get("stress_growth_rate"))
+    macro_shock_pct = _number(scenario_module.metrics.get("stress_macro_shock_pct"))
+    stress_case: ScenarioCase | None = None
+    if stress_case_value > 0:
+        stress_case = ScenarioCase(
+            name="Stress Case",
+            scenario_value=stress_case_value,
+            implied_move_text=f"{_ratio(stress_case_value - ask_price, ask_price):+.1%} vs ask",
+            assumptions=[
+                f"Macro shock of -{macro_shock_pct:.0%} from base (historical coastal correction).",
+                "Not a forecast — models peak-to-trough scenarios like NJ 2008–2011.",
+            ],
+            key_drivers=[
+                "Demand collapses following a macro shock (rates spike, recession, or similar).",
+                "Exit pricing falls sharply below BCV.",
+            ],
+            risk_factors=[
+                "Negative carry accelerates losses.",
+                "Illiquidity worsens — longer hold times at distressed prices.",
+            ],
+            assessment=SectionAssessment(
+                score=25.0,
+                confidence=0.55,
+                summary=(
+                    f"Stress case reflects historical peak-to-trough corrections in coastal NJ markets (2008–2011). "
+                    "It is not a probabilistic forecast — use it as a capital-preservation floor."
+                ),
+            ),
+        )
+
     return BullBaseBearSection(
         bull_case=bull_case,
         base_case=base_case,
         bear_case=bear_case,
+        stress_case=stress_case,
     )
 
 

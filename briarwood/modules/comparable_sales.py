@@ -53,10 +53,7 @@ class ComparableSalesModule:
                 market_value_today=history.current_value,
                 market_history_points=[point.model_dump() for point in history.points],
                 manual_sales=list(property_input.manual_comp_inputs),
-                manual_comp_only=(
-                    property_input.source_metadata is not None
-                    and "manual_subject_entry" in property_input.source_metadata.provenance
-                ),
+                manual_comp_only=False,
             )
         )
         return ModuleResult(

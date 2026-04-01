@@ -17,6 +17,7 @@ from briarwood.dash_app.data import (
     export_preset_tear_sheet,
     list_presets,
     list_saved_properties,
+    load_report_for_preset,
     load_reports,
     register_manual_analysis,
 )
@@ -39,6 +40,7 @@ SECTION_TABS = [
     ("location", "Location"),
     ("income", "Income Support"),
     ("evidence", "Evidence"),
+    ("data_quality", "Data Quality"),
 ]
 
 CONDITION_OPTIONS = [

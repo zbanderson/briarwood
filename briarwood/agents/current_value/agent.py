@@ -48,19 +48,21 @@ class CurrentValueAgent:
         market_component_confidence = 0.0
         if input_data.market_value_today is not None and input_data.market_history_points:
             raw_market_value = input_data.market_value_today * (1 + market_adjustment_factor)
-            market_adjusted_value, was_bounded = self._bounded_market_value(
-                raw_market_value=raw_market_value,
-                ask_price=input_data.ask_price,
-                property_detail_count=property_detail_count,
-            )
+            market_adjusted_value = raw_market_value
+            # Confidence scales with data quality; detail count modulates weight rather than bounding value.
             market_component_confidence = self._market_component_confidence(
                 history_points=len(input_data.market_history_points),
                 property_detail_count=property_detail_count,
             )
-            if was_bounded:
-                warnings.append(
-                    "Market-adjusted value was bounded against the ask because the market baseline is geography-level context, not a property-specific comp set."
-                )
+            # Warn when market signal diverges materially from ask — the number is now fully visible in BCV.
+            if input_data.ask_price > 0:
+                market_divergence_pct = (raw_market_value - input_data.ask_price) / input_data.ask_price
+                if abs(market_divergence_pct) > 0.15:
+                    direction = "above" if raw_market_value > input_data.ask_price else "below"
+                    warnings.append(
+                        f"Independent market data (ZHVI-based) is {abs(market_divergence_pct):.0%} {direction} ask. "
+                        "This signal is included fully in BCV and may cause BCV to diverge from ask."
+                    )
         else:
             unsupported_claims.append("Market-adjusted value is unavailable because market history is missing.")
 
@@ -231,19 +233,6 @@ class CurrentValueAgent:
         history_quality = min(history_points / 12, 1.0)
         property_quality = property_detail_count / 5
         return min(0.92, 0.50 + history_quality * 0.25 + property_quality * 0.17)
-
-    def _bounded_market_value(
-        self,
-        *,
-        raw_market_value: float,
-        ask_price: float,
-        property_detail_count: int,
-    ) -> tuple[float, bool]:
-        band_pct = 0.08 + min(property_detail_count, 5) * 0.02
-        lower_bound = ask_price * (1 - band_pct)
-        upper_bound = ask_price * (1 + band_pct)
-        bounded_value = min(max(raw_market_value, lower_bound), upper_bound)
-        return bounded_value, bounded_value != raw_market_value
 
     def _resolve_listing_date(self, input_data: CurrentValueInput) -> tuple[date | None, str | None]:
         if parsed_date := self._parse_date(input_data.listing_date):

@@ -101,6 +101,7 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$evidence_strongest": _render_case_list_items(tear_sheet.evidence_strip.strongest_evidence),
         "$evidence_weaker": _render_case_list_items(tear_sheet.evidence_strip.weaker_evidence),
         "$evidence_heuristic": _render_case_list_items(tear_sheet.evidence_strip.heuristic_flags),
+        "$signal_metrics": _render_signal_metrics(tear_sheet.signal_metrics),
     }
     html = template
     for key in sorted(replacements, key=len, reverse=True):
@@ -210,7 +211,10 @@ def _render_case_columns(section: object) -> str:
         section.base_case,
         section.bear_case,
     ]
-    return "\n".join(_render_case_card(case) for case in cases)
+    html = "\n".join(_render_case_card(case) for case in cases)
+    if getattr(section, "stress_case", None) is not None:
+        html += "\n" + _render_stress_case_card(section.stress_case)
+    return html
 
 
 def _render_case_card(case: ScenarioCase) -> str:
@@ -229,6 +233,69 @@ def _render_case_card(case: ScenarioCase) -> str:
         '<div class="case-block-label">Drivers</div>'
         f"{drivers}"
         '<div class="case-block-label">Risk</div>'
+        f"{risks}"
+        "</section>"
+    )
+
+
+def _render_signal_metrics(section: object) -> str:
+    metrics = [
+        section.price_to_rent,
+        section.scarcity,
+        section.forward_gap,
+        section.liquidity,
+        section.optionality,
+    ]
+    cards = "".join(_render_signal_metric_card(m) for m in metrics if m is not None)
+    return f'<div class="signal-metrics-strip">{cards}</div>'
+
+
+def _render_signal_metric_card(metric: object) -> str:
+    return (
+        '<div class="signal-metric-card">'
+        f'<div class="signal-metric-label">{escape(metric.label)}</div>'
+        f'<div class="signal-metric-value">{escape(metric.value_text)}</div>'
+        f'<div class="signal-metric-class {_signal_class_css(metric.classification)}">{escape(metric.classification)}</div>'
+        f'<div class="signal-metric-context">{escape(metric.context)}</div>'
+        "</div>"
+    )
+
+
+def _signal_class_css(classification: str) -> str:
+    mapping = {
+        "positive": "sig-positive",
+        "fast": "sig-positive",
+        "strong value": "sig-positive",
+        "meaningful": "sig-moderate",
+        "moderate": "sig-moderate",
+        "normal": "sig-moderate",
+        "fair": "sig-moderate",
+        "limited": "sig-caution",
+        "slow": "sig-caution",
+        "fully valued": "sig-caution",
+        "negative": "sig-negative",
+        "stale": "sig-negative",
+        "weak": "sig-negative",
+        "expensive": "sig-negative",
+        "overpriced": "sig-negative",
+        "unavailable": "sig-muted",
+    }
+    return mapping.get(classification.strip().lower(), "sig-muted")
+
+
+def _render_stress_case_card(case: ScenarioCase) -> str:
+    assumptions = _render_case_list(case.assumptions)
+    risks = _render_case_list(case.risk_factors)
+    return (
+        '<section class="card case-card stress-case-card">'
+        '<div class="section-label stress-label">⚠ Tail Risk</div>'
+        f"<h3>{escape(case.name)}</h3>"
+        f"<div class=\"case-value stress-value\">{_currency(case.scenario_value)}</div>"
+        f"<p class=\"case-move\">{escape(case.implied_move_text)}</p>"
+        f"<p class=\"body-copy stress-disclaimer\">{escape(case.assessment.summary)}</p>"
+        '<div class="case-block-label">Shock Scenario</div>'
+        f"{assumptions}"
+        '<div class="case-block-label">Capital Risk</div>'
         f"{risks}"
         "</section>"
     )

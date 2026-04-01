@@ -26,11 +26,13 @@ def _build_rows(views: list[PropertyAnalysisView]) -> list[CompareMetricRow]:
         ("BCV Delta vs Ask", "bcv_delta"),
         ("BCV Range", "bcv_range"),
         ("Forward Base", "forward_base_case"),
+        ("Forward Gap", "forward_gap_pct"),
         ("Lot Size", "lot_size"),
         ("Sqft", "sqft"),
         ("Taxes", "taxes"),
         ("DOM", "dom"),
         ("Income Support", "income_support_ratio"),
+        ("Price-to-Rent", "price_to_rent"),
         ("Risk Score", "risk_score"),
         ("Town/County", "town_county_score"),
         ("Scarcity", "scarcity_score"),
@@ -51,10 +53,11 @@ def _format_compare_value(value: object, key: str) -> str:
             sign = "+" if value >= 0 else "-"
             return f"{sign}${abs(value):,.0f}"
         return f"${value:,.0f}"
-    if key == "income_support_ratio" and isinstance(value, (int, float)):
-        return f"{value:.2f}x"
-    if key == "confidence" and isinstance(value, (int, float)):
-        return f"{value:.0%}"
+    if key in {"income_support_ratio", "price_to_rent"} and isinstance(value, (int, float)):
+        return f"{value:.1f}x"
+    if key in {"confidence", "forward_gap_pct"} and isinstance(value, (int, float)):
+        sign = "+" if value >= 0 else ""
+        return f"{sign}{value:.1%}"
     if key in {"lot_size"} and isinstance(value, (int, float)):
         return f"{value:.2f} ac"
     if isinstance(value, float):

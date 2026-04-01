@@ -11,6 +11,9 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
     income = get_income_support(report)
     outlook = report.get_module("town_county_outlook")
     scenario = get_scenario_output(report)
+    scarcity_module = report.get_module("scarcity_support")
+    bbb_module = report.get_module("bull_base_bear")
+    income_module = report.get_module("income_support")
     ask_price = current_value.ask_price
     briarwood_current_value = current_value.briarwood_current_value
     bull_value = scenario.bull_case_value
@@ -21,10 +24,20 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
     cash_flow = income.monthly_cash_flow
     location_label = str(outlook.metrics.get("location_thesis_label", "mixed")).replace("_", " ")
 
+    # Signature metric inputs for richer verdict logic
+    price_to_rent = income_module.metrics.get("price_to_rent")
+    ptr_classification = str(income_module.metrics.get("price_to_rent_classification", ""))
+    forward_gap = _ratio(scenario.base_case_value - ask_price, ask_price) if ask_price else 0.0
+    scarcity_score = scarcity_module.metrics.get("scarcity_support_score")
+    scarcity_label = str(scarcity_module.metrics.get("scarcity_label", ""))
+
     verdict = _build_verdict(
         pricing_view=current_value.pricing_view,
         cash_flow=cash_flow,
         location_label=location_label,
+        ptr_classification=ptr_classification,
+        forward_gap=forward_gap,
+        scarcity_label=scarcity_label,
     )
     key_line = (
         f"Ask: {_currency(ask_price)} | BCV: {_currency(briarwood_current_value)} | "
@@ -103,13 +116,49 @@ def _cash_flow_text(value: float | None) -> str:
     return f"{value:+,.0f}/mo".replace("+", "$").replace("-", "-$")
 
 
-def _build_verdict(*, pricing_view: str, cash_flow: float | None, location_label: str) -> str:
-    if pricing_view == "appears overpriced" and (cash_flow is None or cash_flow < 0):
-        return f"Overpriced with weak carry support"
-    if pricing_view == "appears fairly priced" and cash_flow is not None and cash_flow >= 0:
-        return "Fairly priced with usable income support"
-    if pricing_view == "appears undervalued" and location_label == "supportive":
-        return "Valuation support with constructive location backdrop"
+def _build_verdict(
+    *,
+    pricing_view: str,
+    cash_flow: float | None,
+    location_label: str,
+    ptr_classification: str = "",
+    forward_gap: float = 0.0,
+    scarcity_label: str = "",
+) -> str:
+    ptr_expensive = ptr_classification.lower() in ("expensive", "very expensive")
+    ptr_value = ptr_classification.lower() in ("strong value", "fair")
+    forward_negative_large = forward_gap < -0.08  # base case is >8% below ask
+    high_scarcity = scarcity_label.lower() in ("high scarcity support", "meaningful scarcity support")
+
+    # Overpriced with compounding signals
+    if pricing_view == "appears overpriced":
+        if ptr_expensive and forward_negative_large:
+            return "Overpriced on valuation, income, and forward trajectory"
+        if cash_flow is None or cash_flow < 0:
+            return "Overpriced with weak carry support"
+        return "Overpriced — carry is workable but entry price needs discipline"
+
+    # Fairly priced
+    if pricing_view == "appears fairly priced":
+        if cash_flow is not None and cash_flow >= 0 and high_scarcity:
+            return "Fairly priced with income support and scarce location"
+        if cash_flow is not None and cash_flow >= 0:
+            return "Fairly priced with usable income support"
+        if forward_negative_large:
+            return "Fairly priced today, but forward trajectory is under pressure"
+        return "Fairly priced — execution risk rather than valuation stress"
+
+    # Undervalued
+    if pricing_view == "appears undervalued":
+        if location_label == "supportive" and high_scarcity:
+            return "Valuation upside with scarce location and constructive demand"
+        if location_label == "supportive":
+            return "Valuation support with constructive location backdrop"
+        if ptr_value:
+            return "Below-market valuation with income support — monitor location risk"
+        return "Undervalued on BCV — location and carry quality determine conviction"
+
+    # Fully valued
     return f"{pricing_view.replace('appears ', '').capitalize()} with {location_label} location support"
 
 

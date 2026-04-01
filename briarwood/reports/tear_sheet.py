@@ -9,6 +9,7 @@ from briarwood.reports.sections.evidence_strip_section import build_evidence_str
 from briarwood.reports.sections.header_section import build_header_section
 from briarwood.reports.sections.market_durability_section import build_market_durability_section
 from briarwood.reports.sections.scenario_chart_section import build_scenario_chart_section
+from briarwood.reports.sections.signal_metrics_section import build_signal_metrics_section
 from briarwood.reports.sections.thesis_section import build_thesis_section
 from briarwood.schemas import AnalysisReport
 
@@ -18,6 +19,7 @@ def build_tear_sheet(report: AnalysisReport) -> TearSheet:
         property_id=report.property_id,
         header=build_header_section(report),
         conclusion=build_conclusion_section(report),
+        signal_metrics=build_signal_metrics_section(report),
         thesis=build_thesis_section(report),
         market_durability=build_market_durability_section(report),
         carry_support=build_carry_support_section(report),

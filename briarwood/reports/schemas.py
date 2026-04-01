@@ -170,6 +170,7 @@ class BullBaseBearSection:
     bull_case: ScenarioCase
     base_case: ScenarioCase
     bear_case: ScenarioCase
+    stress_case: ScenarioCase | None = None  # Tail-risk historical shock overlay; shown as a warning, not a forecast
 
 
 @dataclass(slots=True)
@@ -192,10 +193,28 @@ class EvidenceStripSection:
 
 
 @dataclass(slots=True)
+class SignalMetric:
+    label: str
+    value_text: str          # Formatted for display (e.g., "22.4", "$48K (+6.9%)")
+    classification: str      # One-word context (e.g., "Expensive", "Meaningful", "Positive")
+    context: str             # One sentence explaining what it means
+
+
+@dataclass(slots=True)
+class SignalMetricsSection:
+    price_to_rent: SignalMetric | None
+    scarcity: SignalMetric | None
+    forward_gap: SignalMetric | None
+    liquidity: SignalMetric | None
+    optionality: SignalMetric | None
+
+
+@dataclass(slots=True)
 class TearSheet:
     property_id: str
     header: HeaderSection
     conclusion: ConclusionSection
+    signal_metrics: SignalMetricsSection
     thesis: ThesisSection
     market_durability: MarketDurabilitySection
     carry_support: CarrySupportSection

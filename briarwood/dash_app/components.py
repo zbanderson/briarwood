@@ -142,20 +142,29 @@ def ask_bcv_base_chart(view: PropertyAnalysisView, *, compact: bool = False) -> 
 
 
 def forward_chart(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph:
+    x_labels = ["Bear Case", "Base Case", "Bull Case"]
+    y_values = [view.bear_case or 0, view.base_case or 0, view.bull_case or 0]
+    texts = [view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text]
+    colors = ["#d97b7b", "#8fa7bf", "#3aaf85"]
+    if view.stress_case is not None:
+        x_labels = ["Stress", "Bear Case", "Base Case", "Bull Case"]
+        y_values = [view.stress_case, view.bear_case or 0, view.base_case or 0, view.bull_case or 0]
+        texts = [view.forward.stress_case_value_text, view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text]
+        colors = ["#8b2020", "#d97b7b", "#8fa7bf", "#3aaf85"]
     figure = go.Figure()
     figure.add_trace(
         go.Scatter(
-            x=["Bear", "Base", "Bull"],
-            y=[view.bear_case or 0, view.base_case or 0, view.bull_case or 0],
+            x=x_labels,
+            y=y_values,
             mode="lines+markers+text",
             line={"color": "#1f4e79", "width": 3},
-            marker={"size": 10, "color": ["#d97b7b", "#8fa7bf", "#3aaf85"]},
-            text=[view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text],
+            marker={"size": 10, "color": colors},
+            text=texts,
             textposition="top center",
             name="Scenario Range",
         )
     )
-    figure.add_hline(y=view.ask_price or 0, line_dash="dash", line_color="#17324d")
+    figure.add_hline(y=view.ask_price or 0, line_dash="dash", line_color="#17324d", annotation_text="Ask", annotation_position="right")
     figure.update_layout(
         margin={"l": 20, "r": 20, "t": 20, "b": 20},
         height=220 if compact else 260,
@@ -168,6 +177,13 @@ def forward_chart(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.G
 
 
 def summary_strip(view: PropertyAnalysisView) -> html.Div:
+    gap_tone = "positive" if (view.mispricing_pct or 0) >= 0 else "negative"
+    risk_tone = "neutral" if view.risk_location.risk_score >= 70 else "warning" if view.risk_location.risk_score >= 50 else "negative"
+    gap_text = _fmt_value(view.ask_price)
+    if view.mispricing_pct is not None:
+        pct = view.mispricing_pct * 100
+        sign = "+" if pct >= 0 else ""
+        gap_text = f"{sign}{pct:.1f}%"
     return html.Div(
         [
             html.Div(
@@ -186,7 +202,8 @@ def summary_strip(view: PropertyAnalysisView) -> html.Div:
                     ),
                     metric_card("Ask", _fmt_value(view.ask_price)),
                     metric_card("BCV", _fmt_value(view.bcv)),
-                    metric_card("Biggest Risk", view.biggest_risk, subtitle="", tone="negative"),
+                    metric_card("Gap vs BCV", gap_text, subtitle=view.pricing_view.title(), tone=gap_tone),
+                    metric_card("Biggest Risk", view.biggest_risk, tone=risk_tone),
                     metric_card("Base Case", _fmt_value(view.base_case)),
                 ],
                 style=RESPONSIVE_GRID_3,
@@ -303,25 +320,41 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
 
 def render_forward_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
     metric_rows = [
-        {"Metric": "Bear", "Value": view.forward.bear_value_text},
-        {"Metric": "Base", "Value": view.forward.base_value_text},
-        {"Metric": "Bull", "Value": view.forward.bull_value_text},
-        {"Metric": "Market Drift", "Value": view.forward.market_drift_text},
-        {"Metric": "Location Premium", "Value": view.forward.location_premium_text},
-        {"Metric": "Risk Discount", "Value": view.forward.risk_discount_text},
-        {"Metric": "Optionality Premium", "Value": view.forward.optionality_premium_text},
+        {"Metric": "Bear Case", "Value": view.forward.bear_value_text, "vs Ask": view.forward.downside_pct_text},
+        {"Metric": "Base Case", "Value": view.forward.base_value_text, "vs Ask": "—"},
+        {"Metric": "Bull Case", "Value": view.forward.bull_value_text, "vs Ask": view.forward.upside_pct_text},
+        {"Metric": "Market Drift", "Value": view.forward.market_drift_text, "vs Ask": ""},
+        {"Metric": "Location Premium", "Value": view.forward.location_premium_text, "vs Ask": ""},
+        {"Metric": "Risk Discount", "Value": view.forward.risk_discount_text, "vs Ask": ""},
+        {"Metric": "Optionality Premium", "Value": view.forward.optionality_premium_text, "vs Ask": ""},
     ]
+    if view.stress_case is not None:
+        metric_rows.insert(0, {"Metric": "Stress Case ⚠", "Value": view.forward.stress_case_value_text, "vs Ask": "Tail risk — not a forecast"})
+    scenario_cards = [
+        metric_card("Bear", view.forward.bear_value_text, subtitle=view.forward.downside_pct_text + " vs ask"),
+        metric_card("Base", view.forward.base_value_text),
+        metric_card("Bull", view.forward.bull_value_text, subtitle=view.forward.upside_pct_text + " vs ask"),
+    ]
+    if view.stress_case is not None:
+        scenario_cards.append(metric_card("Stress ⚠", view.forward.stress_case_value_text, subtitle="Tail risk scenario"))
     blocks = [
         html.Div(
-            [
-                metric_card("Forward Confidence", f"{view.forward.confidence:.0%}"),
-                metric_card("Bear", view.forward.bear_value_text),
-                metric_card("Base", view.forward.base_value_text),
-                metric_card("Bull", view.forward.bull_value_text),
-            ],
+            [metric_card("Forward Confidence", f"{view.forward.confidence:.0%}")] + scenario_cards,
             style=RESPONSIVE_GRID_4,
         ),
-        html.Div([html.H3("12-Month Scenario Range"), forward_chart(view, compact=compact)], style=CARD_STYLE),
+        html.Div(
+            [
+                html.H3("12-Month Scenario Range"),
+                forward_chart(view, compact=compact),
+                html.P(
+                    "Scenarios represent a 12-month range of outcomes, not a forecast. "
+                    + ("Stress case models a historical coastal correction (NJ 2008–2011 analog). " if view.stress_case is not None else "")
+                    + "Bear and Bull reflect market and location risk/upside.",
+                    style={"fontSize": "12px", "color": "#6b7b8d", "marginTop": "8px"},
+                ),
+            ],
+            style=CARD_STYLE,
+        ),
         html.Div([html.H3("Scenario Drivers"), simple_table(metric_rows, page_size=10)], style=CARD_STYLE),
     ]
     if not compact:
@@ -347,10 +380,9 @@ def render_risk_section(view: PropertyAnalysisView, *, compact: bool = False) ->
 
 def render_location_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
     metric_rows = [
-        {"Metric": "Town / County", "Value": f"{view.risk_location.town_score:.1f} ({view.risk_location.town_label})"},
-        {"Metric": "Scarcity", "Value": f"{view.risk_location.scarcity_score:.1f}"},
-        {"Metric": "Flood", "Value": view.risk_location.flood_risk.title()},
-        {"Metric": "Liquidity", "Value": view.risk_location.liquidity_view.title()},
+        {"Metric": "Town / County Score", "Value": f"{view.risk_location.town_score:.1f}"},
+        {"Metric": "Location Thesis", "Value": view.risk_location.town_label.replace("_", " ").title()},
+        {"Metric": "Scarcity Score", "Value": f"{view.risk_location.scarcity_score:.1f}"},
     ]
     blocks = [
         html.Div([html.H3("Location Snapshot"), simple_table(metric_rows, page_size=8)], style=CARD_STYLE),
@@ -367,22 +399,24 @@ def render_location_section(view: PropertyAnalysisView, *, compact: bool = False
 
 def render_income_support_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
     metric_rows = [
-        {"Metric": "Rental Ease", "Value": view.income_support.rental_ease_label},
-        {"Metric": "Days to Rent", "Value": view.income_support.estimated_days_to_rent_text},
-        {"Metric": "Income Support", "Value": view.income_support.income_support_ratio_text},
-        {"Metric": "All-in Cash Flow", "Value": view.income_support.monthly_cash_flow_text},
-        {"Metric": "Operating Cash Flow", "Value": view.income_support.operating_cash_flow_text},
-        {"Metric": "Rent Source", "Value": view.income_support.rent_source_type},
-        {"Metric": "Risk View", "Value": view.income_support.risk_view},
+        {"Metric": "Price-to-Rent", "Value": view.income_support.price_to_rent_text, "Read": view.income_support.ptr_classification},
+        {"Metric": "Rental Ease", "Value": view.income_support.rental_ease_label, "Read": ""},
+        {"Metric": "Days to Rent", "Value": view.income_support.estimated_days_to_rent_text, "Read": ""},
+        {"Metric": "Income Support", "Value": view.income_support.income_support_ratio_text, "Read": ""},
+        {"Metric": "All-in Cash Flow", "Value": view.income_support.monthly_cash_flow_text, "Read": ""},
+        {"Metric": "Operating Cash Flow", "Value": view.income_support.operating_cash_flow_text, "Read": ""},
+        {"Metric": "Rent Source", "Value": view.income_support.rent_source_type, "Read": ""},
+        {"Metric": "Risk View", "Value": view.income_support.risk_view, "Read": ""},
     ]
     blocks = [
         html.Div(
             [
                 metric_card("Income Confidence", f"{view.income_support.confidence:.0%}"),
+                metric_card("Price-to-Rent", view.income_support.price_to_rent_text, subtitle=view.income_support.ptr_classification),
                 metric_card("Rental Ease", view.income_support.rental_ease_label),
                 metric_card("Income Support", view.income_support.income_support_ratio_text),
             ],
-            style=RESPONSIVE_GRID_3,
+            style=RESPONSIVE_GRID_4,
         ),
         html.Div([html.H3("Carry and Rent Support"), simple_table(metric_rows, page_size=10)], style=CARD_STYLE),
         html.Div([html.H3("Summary"), html.P(view.income_support.summary)], style=CARD_STYLE),
@@ -442,17 +476,36 @@ def render_single_section(section: str, view: PropertyAnalysisView, report: Anal
     }
     if section == "evidence":
         return render_evidence_section(report, view, compact=False)
+    if section == "data_quality":
+        from briarwood.dash_app.data_quality import render_data_quality_section  # lazy to avoid circular import
+        return render_data_quality_section(report)
     return mapping[section](view, compact=False)
 
 
+_COMPARE_SECTION_METRICS: dict[str, set[str]] = {
+    "overview": {"Ask", "BCV", "BCV Delta vs Ask", "Forward Base", "Confidence"},
+    "value": {"Ask", "BCV", "BCV Delta vs Ask", "BCV Range", "Lot Size", "Sqft", "Taxes", "Confidence"},
+    "forward": {"Forward Base", "BCV Delta vs Ask", "Forward Gap", "Confidence"},
+    "risk": {"Risk Score", "DOM", "Taxes"},
+    "location": {"Town/County", "Scarcity"},
+    "income": {"Income Support", "Price-to-Rent"},
+    "evidence": {"Confidence"},
+}
+
+
 def render_compare_summary(section: str, summary: CompareSummary) -> html.Div | None:
-    if section != "value":
+    if len(summary.rows) == 0:
         return None
-    rows = [{"Metric": row.metric, **row.values} for row in summary.rows if row.metric in {"Ask", "BCV", "BCV Delta vs Ask", "Lot Size", "Taxes", "Confidence"}]
+    metric_filter = _COMPARE_SECTION_METRICS.get(section, set())
+    rows = [{"Metric": row.metric, **row.values} for row in summary.rows if row.metric in metric_filter]
+    if not rows:
+        return None
+    title = {"value": "Value Compare", "forward": "Forward Compare", "risk": "Risk Compare",
+             "location": "Location Compare", "income": "Income Compare", "overview": "Summary Compare", "evidence": "Evidence Compare"}.get(section, "Compare")
     return html.Div(
         [
             html.Div([html.H3("Key Differences"), html.Ul([html.Li(item) for item in summary.why_different[:6]])], style=CARD_STYLE),
-            html.Div([html.H3("Value Compare Snapshot"), simple_table(rows, page_size=8)], style=CARD_STYLE),
+            html.Div([html.H3(title), simple_table(rows, page_size=8)], style=CARD_STYLE),
         ],
         style={**RESPONSIVE_GRID_2, "marginBottom": "16px"},
     )
@@ -557,6 +610,9 @@ def render_compare_section(section: str, views: list[PropertyAnalysisView], repo
     for view, report in zip(views, reports):
         if section == "evidence":
             body = render_evidence_section(report, view, compact=True)
+        elif section == "data_quality":
+            from briarwood.dash_app.data_quality import render_data_quality_section  # lazy to avoid circular import
+            body = render_data_quality_section(report)
         else:
             body = lane_renderer[section](view, compact=True)
         lanes.append(

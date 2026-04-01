@@ -359,6 +359,7 @@ class ScenarioOutput:
     base_case_value: float
     bear_case_value: float
     spread: float
+    stress_case_value: float | None = None  # Historical peak-to-trough overlay; not a forecast
 
     def to_metrics(self) -> dict[str, MetricValue]:
         return {
@@ -367,6 +368,7 @@ class ScenarioOutput:
             "base_case_value": round(self.base_case_value, 0),
             "bear_case_value": round(self.bear_case_value, 0),
             "spread": round(self.spread, 0),
+            "stress_case_value": round(self.stress_case_value, 0) if self.stress_case_value is not None else None,
         }
 
 

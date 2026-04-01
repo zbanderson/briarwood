@@ -125,6 +125,9 @@ class ForwardViewModel:
     bull_value_text: str
     base_value_text: str
     bear_value_text: str
+    stress_case_value_text: str
+    upside_pct_text: str
+    downside_pct_text: str
     market_drift_text: str
     location_premium_text: str
     risk_discount_text: str
@@ -142,6 +145,8 @@ class IncomeSupportViewModel:
     operating_cash_flow_text: str
     rent_source_type: str
     risk_view: str
+    price_to_rent_text: str
+    ptr_classification: str
     warnings: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
@@ -199,6 +204,7 @@ class PropertyAnalysisView:
     base_case: float | None
     bull_case: float | None
     bear_case: float | None
+    stress_case: float | None
     mispricing_amount: float | None
     mispricing_pct: float | None
     pricing_view: str
@@ -359,8 +365,14 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     positives = [item for item in positives if item][:3]
     risks = [item for item in risks if item][:3]
 
+    ask_price_val = current_value.ask_price
+    forward_gap_pct = (
+        (scenario.base_case_value - ask_price_val) / ask_price_val
+        if ask_price_val
+        else None
+    )
     compare_metrics = {
-        "ask_price": current_value.ask_price,
+        "ask_price": ask_price_val,
         "bcv": current_value.briarwood_current_value,
         "bcv_delta": current_value.mispricing_amount,
         "bcv_range": f"{current_value.value_low:,.0f}-{current_value.value_high:,.0f}",
@@ -370,6 +382,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "taxes": property_input.taxes if property_input else None,
         "dom": property_input.days_on_market if property_input else None,
         "income_support_ratio": income.income_support_ratio,
+        "price_to_rent": income.price_to_rent,
+        "forward_gap_pct": forward_gap_pct,
         "risk_score": risk.score,
         "town_county_score": town_county.score.town_county_score,
         "scarcity_score": scarcity.scarcity_support_score,
@@ -385,13 +399,14 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         condition_profile=((property_input.condition_profile or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
         capex_lane=((property_input.capex_lane or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
         overall_confidence=overall_confidence,
-        ask_price=current_value.ask_price,
+        ask_price=ask_price_val,
         bcv=current_value.briarwood_current_value,
         value_low=current_value.value_low,
         value_high=current_value.value_high,
         base_case=scenario.base_case_value,
         bull_case=scenario.bull_case_value,
         bear_case=scenario.bear_case_value,
+        stress_case=scenario.stress_case_value,
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
         pricing_view=current_value.pricing_view,
@@ -404,7 +419,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         top_positives=positives,
         top_risks=risks,
         metric_chips=_metric_chips(
-            ask_price=current_value.ask_price,
+            ask_price=ask_price_val,
             bcv=current_value.briarwood_current_value,
             value_low=current_value.value_low,
             value_high=current_value.value_high,
@@ -440,6 +455,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             bull_value_text=_fmt_currency(scenario.bull_case_value),
             base_value_text=_fmt_currency(scenario.base_case_value),
             bear_value_text=_fmt_currency(scenario.bear_case_value),
+            stress_case_value_text=_fmt_currency(scenario.stress_case_value),
+            upside_pct_text=_fmt_pct((scenario.bull_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
+            downside_pct_text=_fmt_pct((scenario.bear_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
             market_drift_text=_fmt_currency(forward_module.metrics.get("market_drift")),
             location_premium_text=_fmt_currency(forward_module.metrics.get("location_premium")),
             risk_discount_text=_fmt_currency(forward_module.metrics.get("risk_discount")),
@@ -455,6 +473,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             operating_cash_flow_text=_fmt_currency(income.operating_monthly_cash_flow),
             rent_source_type=income.rent_source_type.replace("_", " ").title(),
             risk_view=income.risk_view.replace("_", " ").title(),
+            price_to_rent_text=_fmt_number(income.price_to_rent, "x"),
+            ptr_classification=income.price_to_rent_classification or "Unavailable",
             warnings=list(income.warnings),
             assumptions=list(income.assumptions),
             unsupported_claims=list(income.unsupported_claims),
