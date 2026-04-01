@@ -13,19 +13,21 @@ from briarwood.schemas import AnalysisReport
 
 
 SIDEBAR_STYLE = {
-    "width": "300px",
-    "padding": "20px",
+    "width": "clamp(280px, 28vw, 360px)",
+    "padding": "clamp(16px, 2vw, 24px)",
     "borderRight": "1px solid #d9e1ea",
     "backgroundColor": "#f7f9fb",
     "display": "flex",
     "flexDirection": "column",
     "gap": "16px",
+    "flexShrink": "0",
 }
 
 PAGE_STYLE = {
     "fontFamily": "Avenir Next, Helvetica Neue, sans-serif",
     "color": "#17324d",
     "backgroundColor": "#fbfcfe",
+    "minHeight": "100vh",
 }
 
 CARD_STYLE = {
@@ -44,6 +46,10 @@ LANE_HEADER_STYLE = {
     "paddingBottom": "8px",
 }
 
+RESPONSIVE_GRID_2 = {"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "14px"}
+RESPONSIVE_GRID_3 = {"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(200px, 1fr))", "gap": "14px"}
+RESPONSIVE_GRID_4 = {"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "14px"}
+
 
 def metric_card(label: str, value: str, *, subtitle: str = "", tone: str = "neutral") -> html.Div:
     accent = {"positive": "#0b7a5d", "negative": "#a23d3d"}.get(tone, "#17324d")
@@ -55,6 +61,12 @@ def metric_card(label: str, value: str, *, subtitle: str = "", tone: str = "neut
         ],
         style=CARD_STYLE,
     )
+
+
+def _fmt_value(value: float | None) -> str:
+    if value is None:
+        return "Unavailable"
+    return f"${value:,.0f}"
 
 
 def confidence_badge(confidence: float) -> html.Span:
@@ -130,16 +142,18 @@ def ask_bcv_base_chart(view: PropertyAnalysisView, *, compact: bool = False) -> 
 
 
 def forward_chart(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph:
-    figure = go.Figure(
-        data=[
-            go.Bar(
-                x=["Bear", "Base", "Bull"],
-                y=[view.bear_case or 0, view.base_case or 0, view.bull_case or 0],
-                marker_color=["#d97b7b", "#8fa7bf", "#3aaf85"],
-                text=[view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text],
-                textposition="outside",
-            )
-        ]
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter(
+            x=["Bear", "Base", "Bull"],
+            y=[view.bear_case or 0, view.base_case or 0, view.bull_case or 0],
+            mode="lines+markers+text",
+            line={"color": "#1f4e79", "width": 3},
+            marker={"size": 10, "color": ["#d97b7b", "#8fa7bf", "#3aaf85"]},
+            text=[view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text],
+            textposition="top center",
+            name="Scenario Range",
+        )
     )
     figure.add_hline(y=view.ask_price or 0, line_dash="dash", line_color="#17324d")
     figure.update_layout(
@@ -160,8 +174,9 @@ def summary_strip(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Div("Focus Property", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
-                            html.H1(view.address, style={"margin": "6px 0"}),
+                            html.Div("Investment Memo", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
+                            html.H1(view.memo_verdict, style={"margin": "6px 0"}),
+                            html.Div(view.address, style={"color": "#5f7286", "fontSize": "14px"}),
                             html.Div(
                                 [html.Span(view.evidence_mode), html.Span(" | "), confidence_badge(view.overall_confidence)],
                                 style={"display": "flex", "gap": "8px", "alignItems": "center"},
@@ -169,35 +184,73 @@ def summary_strip(view: PropertyAnalysisView) -> html.Div:
                         ],
                         style={**CARD_STYLE, "gridColumn": "span 2"},
                     ),
-                    *[metric_card(chip.label, chip.value, tone=chip.tone) for chip in view.metric_chips[:4]],
+                    metric_card("Ask", _fmt_value(view.ask_price)),
+                    metric_card("BCV", _fmt_value(view.bcv)),
+                    metric_card("Biggest Risk", view.biggest_risk, subtitle="", tone="negative"),
+                    metric_card("Base Case", _fmt_value(view.base_case)),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+                style=RESPONSIVE_GRID_3,
             ),
         ]
     )
 
 
 def render_overview_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
+    if compact:
+        return html.Div(
+            [
+                html.Div(
+                    [
+                        html.H3(view.memo_verdict, style={"margin": "0 0 6px 0"}),
+                        html.P(view.memo_summary, style={"margin": "0 0 10px 0", "color": "#30485f"}),
+                        html.Div(
+                            [
+                                compact_badge("Ask", _fmt_value(view.ask_price)),
+                                compact_badge("BCV", _fmt_value(view.bcv)),
+                                compact_badge("Base", _fmt_value(view.base_case)),
+                                compact_badge("Risk", view.biggest_risk, tone="negative"),
+                            ],
+                            style={"display": "flex", "flexWrap": "wrap", "gap": "8px", "marginBottom": "10px"},
+                        ),
+                        html.Div([html.H3("Top Reasons"), html.Ul([html.Li(item) for item in view.top_reasons[:3]])], style={"marginBottom": "10px"}),
+                        html.Div([html.H3("Buyer Fit"), html.Ul([html.Li(item) for item in view.buyer_fit[:3]])], style={"marginBottom": "10px"}),
+                        html.Div([html.H3("What Changes The Call"), html.Ul([html.Li(item) for item in view.what_changes_call[:3]])]),
+                    ],
+                    style=CARD_STYLE,
+                )
+            ],
+            style={"display": "grid", "gap": "14px"},
+        )
+
     intro = html.Div(
         [
-            html.H2(view.address if not compact else view.label, style={"margin": "0 0 6px 0", "fontSize": "26px" if not compact else "20px"}),
+            html.H2(view.memo_verdict if not compact else view.memo_verdict, style={"margin": "0 0 6px 0", "fontSize": "26px" if not compact else "20px"}),
+            html.Div(view.address, style={"color": "#5f7286", "marginBottom": "6px"}),
             html.Div(
                 [html.Span(view.evidence_mode), html.Span(" | "), confidence_badge(view.overall_confidence)],
                 style={"display": "flex", "gap": "8px", "alignItems": "center", "flexWrap": "wrap"},
             ),
+            html.P(view.memo_summary, style={"margin": "12px 0 0 0", "color": "#30485f"}),
         ],
         style=CARD_STYLE,
     )
     cards = html.Div(
-        [metric_card(chip.label, chip.value, subtitle=chip.subtitle, tone=chip.tone) for chip in view.metric_chips],
-        style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+        [
+            metric_card("Decision", view.pricing_view.title()),
+            metric_card("Ask", _fmt_value(view.ask_price)),
+            metric_card("BCV", _fmt_value(view.bcv)),
+            metric_card("Base Case", _fmt_value(view.base_case)),
+        ],
+        style=RESPONSIVE_GRID_3,
     )
     bullets = html.Div(
         [
-            html.Div([html.H3("Top Positives"), html.Ul([html.Li(item) for item in view.top_positives])], style=CARD_STYLE),
-            html.Div([html.H3("Top Risks"), html.Ul([html.Li(item) for item in view.top_risks])], style=CARD_STYLE),
+            html.Div([html.H3("Top Reasons"), html.Ul([html.Li(item) for item in view.top_reasons])], style=CARD_STYLE),
+            html.Div([html.H3("Buyer Fit"), html.Ul([html.Li(item) for item in view.buyer_fit])], style=CARD_STYLE),
+            html.Div([html.H3("Biggest Risk"), html.P(view.biggest_risk)], style=CARD_STYLE),
+            html.Div([html.H3("What Changes The Call"), html.Ul([html.Li(item) for item in view.what_changes_call])], style=CARD_STYLE),
         ],
-        style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+        style=RESPONSIVE_GRID_2,
     )
     chart = html.Div([html.H3("Ask vs BCV vs Base"), ask_bcv_base_chart(view, compact=compact)], style=CARD_STYLE)
     return html.Div([intro, cards, bullets, chart], style={"display": "grid", "gap": "14px"})
@@ -222,7 +275,7 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
                 metric_card("BCV Confidence", f"{view.value.confidence:.0%}"),
                 metric_card("Comparable Value", view.comps.comparable_value_text),
             ],
-            style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+            style=RESPONSIVE_GRID_3,
         ),
         html.Div([html.H3("BCV Components"), simple_table(component_rows, page_size=8)], style=CARD_STYLE),
         html.Div(
@@ -230,7 +283,7 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
                 html.Div([html.H3("Comp Verification"), html.P(view.comps.verification_summary), html.P(view.comps.curation_summary)], style=CARD_STYLE),
                 html.Div([html.H3("Comp Screening"), html.P(view.comps.screening_summary), html.P(f"Dataset: {view.comps.dataset_name}")], style=CARD_STYLE),
             ],
-            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+            style=RESPONSIVE_GRID_2,
         ),
         html.Div([html.H3("Active Comps"), simple_table(comp_rows or [{"Address": "No active comps", "Adjusted": "", "Fit": "", "Verification": "", "Condition": ""}], page_size=6)], style=CARD_STYLE),
     ]
@@ -242,7 +295,7 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
                     html.Div([html.H3("Warnings"), html.Ul([html.Li(item) for item in view.value.warnings[:8]])], style=CARD_STYLE),
                     html.Div([html.H3("Unsupported Claims"), html.Ul([html.Li(item) for item in view.value.unsupported_claims[:8]])], style=CARD_STYLE),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+                style=RESPONSIVE_GRID_3,
             )
         )
     return html.Div(blocks, style={"display": "grid", "gap": "14px"})
@@ -266,7 +319,7 @@ def render_forward_section(view: PropertyAnalysisView, *, compact: bool = False)
                 metric_card("Base", view.forward.base_value_text),
                 metric_card("Bull", view.forward.bull_value_text),
             ],
-            style={"display": "grid", "gridTemplateColumns": "repeat(4, minmax(0, 1fr))", "gap": "14px"},
+            style=RESPONSIVE_GRID_4,
         ),
         html.Div([html.H3("12-Month Scenario Range"), forward_chart(view, compact=compact)], style=CARD_STYLE),
         html.Div([html.H3("Scenario Drivers"), simple_table(metric_rows, page_size=10)], style=CARD_STYLE),
@@ -306,7 +359,7 @@ def render_location_section(view: PropertyAnalysisView, *, compact: bool = False
                 html.Div([html.H3("Demand Drivers"), html.Ul([html.Li(item) for item in view.risk_location.drivers[:8]])], style=CARD_STYLE),
                 html.Div([html.H3("Location Risks"), html.Ul([html.Li(item) for item in view.risk_location.risks[:8]])], style=CARD_STYLE),
             ],
-            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "14px"},
+            style=RESPONSIVE_GRID_2,
         ),
     ]
     return html.Div(blocks, style={"display": "grid", "gap": "14px"})
@@ -329,7 +382,7 @@ def render_income_support_section(view: PropertyAnalysisView, *, compact: bool =
                 metric_card("Rental Ease", view.income_support.rental_ease_label),
                 metric_card("Income Support", view.income_support.income_support_ratio_text),
             ],
-            style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+            style=RESPONSIVE_GRID_3,
         ),
         html.Div([html.H3("Carry and Rent Support"), simple_table(metric_rows, page_size=10)], style=CARD_STYLE),
         html.Div([html.H3("Summary"), html.P(view.income_support.summary)], style=CARD_STYLE),
@@ -342,7 +395,7 @@ def render_income_support_section(view: PropertyAnalysisView, *, compact: bool =
                     html.Div([html.H3("Assumptions"), html.Ul([html.Li(item) for item in view.income_support.assumptions[:8]])], style=CARD_STYLE),
                     html.Div([html.H3("Unsupported Claims"), html.Ul([html.Li(item) for item in view.income_support.unsupported_claims[:8]])], style=CARD_STYLE),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+                style=RESPONSIVE_GRID_3,
             )
         )
     return html.Div(blocks, style={"display": "grid", "gap": "14px"})
@@ -359,7 +412,7 @@ def render_evidence_section(report: AnalysisReport, view: PropertyAnalysisView, 
                 metric_card("Estimated Inputs", str(len(view.evidence.estimated_inputs)), tone="negative" if view.evidence.estimated_inputs else "neutral"),
                 metric_card("Missing Inputs", str(len(view.evidence.missing_inputs)), tone="negative" if view.evidence.missing_inputs else "neutral"),
             ],
-            style={"display": "grid", "gridTemplateColumns": "repeat(4, minmax(0, 1fr))", "gap": "14px"},
+            style=RESPONSIVE_GRID_4,
         ),
         html.Div([html.H3("Source Coverage"), simple_table(evidence_rows, page_size=12)], style=CARD_STYLE),
         html.Div([html.H3("Section Confidence"), simple_table(section_rows, page_size=12)], style=CARD_STYLE),
@@ -372,7 +425,7 @@ def render_evidence_section(report: AnalysisReport, view: PropertyAnalysisView, 
                     html.Div([html.H3("Missing Inputs"), html.Ul([html.Li(item) for item in view.evidence.missing_inputs[:10]])], style=CARD_STYLE),
                     html.Div([html.H3("Unsupported Claims"), html.Ul([html.Li(item) for item in view.evidence.unsupported_claims[:10]])], style=CARD_STYLE),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "14px"},
+                style=RESPONSIVE_GRID_3,
             )
         )
     return html.Div(blocks, style={"display": "grid", "gap": "14px"})
@@ -401,7 +454,7 @@ def render_compare_summary(section: str, summary: CompareSummary) -> html.Div | 
             html.Div([html.H3("Key Differences"), html.Ul([html.Li(item) for item in summary.why_different[:6]])], style=CARD_STYLE),
             html.Div([html.H3("Value Compare Snapshot"), simple_table(rows, page_size=8)], style=CARD_STYLE),
         ],
-        style={"display": "grid", "gridTemplateColumns": "1.2fr 1fr", "gap": "14px", "marginBottom": "16px"},
+        style={**RESPONSIVE_GRID_2, "marginBottom": "16px"},
     )
 
 
@@ -436,7 +489,7 @@ def _lane_header(view: PropertyAnalysisView, *, show_export_button: bool = False
                     if show_export_button
                     else None,
                 ],
-                style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "start"},
+                style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "start", "flexWrap": "wrap"},
             ),
             html.Div([confidence_badge(view.overall_confidence)], style={"marginTop": "6px"}),
             html.Div(
@@ -514,6 +567,13 @@ def render_compare_section(section: str, views: list[PropertyAnalysisView], repo
         )
     grid = html.Div(
         lanes,
-        style={"display": "grid", "gridTemplateColumns": f"repeat({max(len(lanes),1)}, minmax(0, 1fr))", "gap": "16px", "alignItems": "start"},
+        style={
+            "display": "grid",
+            "gridTemplateColumns": f"repeat({max(len(lanes),1)}, minmax(280px, 1fr))",
+            "gap": "16px",
+            "alignItems": "start",
+            "overflowX": "auto",
+        },
+        className="compare-lanes-grid",
     )
     return html.Div(([summary_block] if summary_block else []) + [grid])

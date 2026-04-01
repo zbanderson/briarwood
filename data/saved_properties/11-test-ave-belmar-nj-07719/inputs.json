@@ -1,0 +1,99 @@
+{
+  "property_id": "11-test-ave-belmar-nj-07719",
+  "facts": {
+    "address": "11 Test Ave, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1200,
+    "lot_size": null,
+    "property_type": null,
+    "condition_profile": null,
+    "capex_lane": null,
+    "year_built": null,
+    "garage_spaces": null,
+    "garage_type": null,
+    "has_detached_garage": null,
+    "has_back_house": null,
+    "adu_type": null,
+    "adu_sqft": null,
+    "has_basement": null,
+    "basement_finished": null,
+    "has_pool": null,
+    "parking_spaces": null,
+    "corner_lot": null,
+    "driveway_off_street": null,
+    "purchase_price": 700000.0,
+    "taxes": null,
+    "monthly_hoa": null,
+    "days_on_market": null,
+    "listing_description": null
+  },
+  "market_signals": {},
+  "user_assumptions": {
+    "estimated_monthly_rent": null,
+    "back_house_monthly_rent": null,
+    "seasonal_monthly_rent": null,
+    "insurance": null,
+    "monthly_maintenance_reserve_override": null,
+    "manual_comp_inputs": []
+  },
+  "source_metadata": {
+    "evidence_mode": "public_record",
+    "provenance": [
+      "manual_subject_entry"
+    ],
+    "source_coverage": {
+      "address": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "price_ask": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "beds_baths": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "sqft": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "lot_size": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "taxes": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "hoa": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "listing_history": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "rent_estimate": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "insurance_estimate": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "comp_support": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "scarcity_inputs": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      }
+    }
+  }
+}

@@ -36,6 +36,7 @@ class ConclusionSection:
     assessment: SectionAssessment
     why_it_matters: list[str] = field(default_factory=list)
     decision_fit: list[str] = field(default_factory=list)
+    what_changes_call: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -183,6 +184,8 @@ class EvidenceStripSection:
     source_coverage_highlights: list[str] = field(default_factory=list)
     major_missing_inputs: list[str] = field(default_factory=list)
     estimated_inputs: list[str] = field(default_factory=list)
+    modeled_fields: list[str] = field(default_factory=list)
+    non_modeled_fields: list[str] = field(default_factory=list)
     strongest_evidence: list[str] = field(default_factory=list)
     weaker_evidence: list[str] = field(default_factory=list)
     heuristic_flags: list[str] = field(default_factory=list)

@@ -98,6 +98,8 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         state=str(facts_payload.get("state") or data.get("state") or "Unknown"),
         county=_optional_str(facts_payload.get("county", data.get("county"))),
         zip_code=_optional_str(facts_payload.get("zip_code")),
+        latitude=_optional_float(facts_payload.get("latitude", data.get("latitude"))),
+        longitude=_optional_float(facts_payload.get("longitude", data.get("longitude"))),
         beds=_optional_int(facts_payload.get("beds", data.get("beds"))),
         baths=_optional_float(facts_payload.get("baths", data.get("baths"))),
         sqft=_optional_int(facts_payload.get("sqft", data.get("sqft"))),
@@ -109,6 +111,17 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         year_built=_optional_int(facts_payload.get("year_built", data.get("year_built"))),
         stories=_optional_float(facts_payload.get("stories", data.get("stories"))),
         garage_spaces=_optional_int(facts_payload.get("garage_spaces", data.get("garage_spaces"))),
+        garage_type=_optional_str(facts_payload.get("garage_type", data.get("garage_type"))),
+        has_detached_garage=_optional_bool(facts_payload.get("has_detached_garage", data.get("has_detached_garage"))),
+        has_back_house=_optional_bool(facts_payload.get("has_back_house", data.get("has_back_house"))),
+        adu_type=_optional_str(facts_payload.get("adu_type", data.get("adu_type"))),
+        adu_sqft=_optional_int(facts_payload.get("adu_sqft", data.get("adu_sqft"))),
+        has_basement=_optional_bool(facts_payload.get("has_basement", data.get("has_basement"))),
+        basement_finished=_optional_bool(facts_payload.get("basement_finished", data.get("basement_finished"))),
+        has_pool=_optional_bool(facts_payload.get("has_pool", data.get("has_pool"))),
+        parking_spaces=_optional_int(facts_payload.get("parking_spaces", data.get("parking_spaces"))),
+        corner_lot=_optional_bool(facts_payload.get("corner_lot", data.get("corner_lot"))),
+        driveway_off_street=_optional_bool(facts_payload.get("driveway_off_street", data.get("driveway_off_street"))),
         purchase_price=_optional_float(facts_payload.get("purchase_price", data.get("purchase_price"))),
         taxes=_optional_float(facts_payload.get("taxes", data.get("taxes"))),
         monthly_hoa=_optional_float(facts_payload.get("monthly_hoa", data.get("monthly_hoa"))),
@@ -124,12 +137,18 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         town_price_trend=_optional_float(market_payload.get("town_price_trend", data.get("town_price_trend"))),
         school_rating=_optional_float(market_payload.get("school_rating", data.get("school_rating"))),
         flood_risk=_optional_str(market_payload.get("flood_risk", data.get("flood_risk"))),
+        town_population=_optional_int(market_payload.get("town_population", data.get("town_population"))),
         market_price_to_rent_benchmark=_optional_float(
             market_payload.get("market_price_to_rent_benchmark", data.get("market_price_to_rent_benchmark"))
         ),
+        landmark_points=_coerce_landmark_points(market_payload.get("landmark_points", data.get("landmark_points"))),
+        zone_flags=_coerce_zone_flags(market_payload.get("zone_flags", data.get("zone_flags"))),
+        local_documents=_coerce_document_list(market_payload.get("local_documents", data.get("local_documents"))),
     )
     user_assumptions = UserAssumptions(
         estimated_monthly_rent=_optional_float(assumptions_payload.get("estimated_monthly_rent", data.get("estimated_monthly_rent"))),
+        back_house_monthly_rent=_optional_float(assumptions_payload.get("back_house_monthly_rent", data.get("back_house_monthly_rent"))),
+        seasonal_monthly_rent=_optional_float(assumptions_payload.get("seasonal_monthly_rent", data.get("seasonal_monthly_rent"))),
         insurance=_optional_float(assumptions_payload.get("insurance", data.get("insurance"))),
         down_payment_percent=_optional_float(
             assumptions_payload.get("down_payment_percent", data.get("down_payment_percent"))
@@ -137,9 +156,13 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         interest_rate=_optional_float(assumptions_payload.get("interest_rate", data.get("interest_rate"))),
         loan_term_years=_optional_int(assumptions_payload.get("loan_term_years", data.get("loan_term_years"))),
         vacancy_rate=_optional_float(assumptions_payload.get("vacancy_rate", data.get("vacancy_rate"))),
+        monthly_maintenance_reserve_override=_optional_float(
+            assumptions_payload.get("monthly_maintenance_reserve_override", data.get("monthly_maintenance_reserve_override"))
+        ),
         condition_profile_override=_optional_str(assumptions_payload.get("condition_profile_override")),
         capex_lane_override=_optional_str(assumptions_payload.get("capex_lane_override")),
         repair_capex_budget=_optional_float(assumptions_payload.get("repair_capex_budget", data.get("repair_capex_budget"))),
+        manual_comp_inputs=list(assumptions_payload.get("manual_comp_inputs", data.get("manual_comp_inputs", [])) or []),
     )
     raw_mode = str(metadata_payload.get("evidence_mode") or "public_record")
     evidence_mode = (
@@ -191,3 +214,46 @@ def _optional_float(value: object) -> float | None:
     if value in (None, ""):
         return None
     return float(value)
+
+
+def _optional_bool(value: object) -> bool | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y"}:
+        return True
+    if text in {"false", "0", "no", "n"}:
+        return False
+    return None
+
+
+def _coerce_landmark_points(value: object) -> dict[str, list[dict[str, object]]]:
+    if not isinstance(value, dict):
+        return {}
+    coerced: dict[str, list[dict[str, object]]] = {}
+    for key, points in value.items():
+        if not isinstance(key, str) or not isinstance(points, list):
+            continue
+        valid_points = [point for point in points if isinstance(point, dict)]
+        if valid_points:
+            coerced[key] = valid_points
+    return coerced
+
+
+def _coerce_zone_flags(value: object) -> dict[str, bool | None]:
+    if not isinstance(value, dict):
+        return {}
+    coerced: dict[str, bool | None] = {}
+    for key, raw in value.items():
+        if not isinstance(key, str):
+            continue
+        coerced[key] = _optional_bool(raw)
+    return coerced
+
+
+def _coerce_document_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]

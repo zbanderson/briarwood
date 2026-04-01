@@ -5,6 +5,8 @@ from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.income_support import IncomeSupportModule
+from briarwood.modules.location_intelligence import LocationIntelligenceModule
+from briarwood.modules.local_intelligence import LocalIntelligenceModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.rental_ease import RentalEaseModule
@@ -59,6 +61,8 @@ class ModuleTests(unittest.TestCase):
             RiskConstraintsModule(),
             TownCountyOutlookModule(),
             ScarcitySupportModule(),
+            LocationIntelligenceModule(),
+            LocalIntelligenceModule(),
         ]
 
         for module in modules:
@@ -110,11 +114,16 @@ class ModuleTests(unittest.TestCase):
     def test_location_modules_return_payloads(self) -> None:
         town_result = TownCountyOutlookModule().run(sample_property())
         scarcity_result = ScarcitySupportModule().run(sample_property())
+        location_result = LocationIntelligenceModule().run(sample_property())
+        local_result = LocalIntelligenceModule().run(sample_property())
 
         self.assertIn("town_county_score", town_result.metrics)
         self.assertGreaterEqual(town_result.confidence, 0.0)
         self.assertIn("scarcity_support_score", scarcity_result.metrics)
         self.assertIn("buyer_takeaway", scarcity_result.metrics)
+        self.assertIn("location_score", location_result.metrics)
+        self.assertIn("geo_peer_comp_count", location_result.metrics)
+        self.assertIn("development_activity_score", local_result.metrics)
 
     def test_market_value_history_module_returns_payload(self) -> None:
         result = MarketValueHistoryModule().run(sample_property())
@@ -184,6 +193,17 @@ class ModuleTests(unittest.TestCase):
         self.assertEqual(result.metrics["rent_source_type"], "estimated")
         self.assertIsNotNone(result.metrics["effective_monthly_rent"])
         self.assertLess(result.confidence, 0.7)
+
+    def test_income_support_uses_back_house_rent_when_provided(self) -> None:
+        baseline_input = sample_property()
+        baseline_result = IncomeSupportModule().run(baseline_input)
+
+        property_input = sample_property()
+        property_input.back_house_monthly_rent = 1000
+        result = IncomeSupportModule().run(property_input)
+
+        self.assertGreater(result.metrics["effective_monthly_rent"], baseline_result.metrics["effective_monthly_rent"])
+        self.assertGreater(result.metrics["income_support_ratio"], baseline_result.metrics["income_support_ratio"])
 
     def test_rental_ease_module_returns_payload(self) -> None:
         result = RentalEaseModule().run(sample_property())

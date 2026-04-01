@@ -102,6 +102,7 @@ class IncomeAgent:
         )
 
         effective_monthly_rent: float | None = None
+        gross_monthly_rent_before_vacancy: float | None = None
         annual_rent: float | None = None
         income_support_ratio: float | None = None
         price_to_rent: float | None = None
@@ -119,7 +120,13 @@ class IncomeAgent:
                 warnings.append("Rent support uses an estimated rent input rather than a provided rent figure.")
             else:
                 assumptions.append("Rent is a provided estimate and may differ from achieved lease income.")
-            effective_monthly_rent = income_input.estimated_monthly_rent * (1 - vacancy_pct)
+            gross_monthly_rent_before_vacancy = income_input.estimated_monthly_rent
+            if income_input.back_house_monthly_rent:
+                gross_monthly_rent_before_vacancy += income_input.back_house_monthly_rent
+                assumptions.append(
+                    f"Back-house/ADU rent of ${income_input.back_house_monthly_rent:,.0f}/mo was included in support."
+                )
+            effective_monthly_rent = gross_monthly_rent_before_vacancy * (1 - vacancy_pct)
             annual_rent = effective_monthly_rent * 12
             if carrying_cost_complete and gross_monthly_cost > 0:
                 income_support_ratio = effective_monthly_rent / gross_monthly_cost
@@ -182,6 +189,11 @@ class IncomeAgent:
             carrying_cost_complete=carrying_cost_complete,
             financing_complete=financing_complete,
             effective_monthly_rent=round(effective_monthly_rent, 2) if effective_monthly_rent is not None else None,
+            gross_monthly_rent_before_vacancy=(
+                round(gross_monthly_rent_before_vacancy, 2)
+                if gross_monthly_rent_before_vacancy is not None
+                else None
+            ),
             annual_rent=round(annual_rent, 2) if annual_rent is not None else None,
             rent_source_type=rent_source_type,
             income_support_ratio=round(income_support_ratio, 4) if income_support_ratio is not None else None,

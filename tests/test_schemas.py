@@ -13,12 +13,18 @@ class SchemaTests(unittest.TestCase):
             beds=3,
             baths=2.0,
             sqft=1500,
+            garage_type="detached",
+            has_back_house=True,
+            seasonal_monthly_rent=2800.0,
         )
 
         data = property_input.to_dict()
 
         self.assertEqual(data["address"], "1 Main St")
         self.assertEqual(data["beds"], 3)
+        self.assertEqual(data["garage_type"], "detached")
+        self.assertTrue(data["has_back_house"])
+        self.assertEqual(data["seasonal_monthly_rent"], 2800.0)
 
     def test_module_result_defaults_are_stable(self) -> None:
         result = ModuleResult(module_name="example")

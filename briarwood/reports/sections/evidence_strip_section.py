@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.evidence import infer_overall_report_confidence
+from briarwood.field_audit import audit_property_fields
 from briarwood.reports.section_helpers import (
     get_current_value,
     get_income_support,
@@ -70,6 +71,7 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
             if item.status == InputCoverageStatus.ESTIMATED
         ]
         overall_report_confidence_text = f"{infer_overall_report_confidence(property_input, [module.confidence for module in report.module_results.values()]):.0%}"
+    modeled_fields, non_modeled_fields = audit_property_fields(property_input) if property_input else ([], [])
     if report.get_module("market_value_history").confidence > 0:
         coverage_highlights.append("Market history: sourced")
     comparable_sales_module = report.get_module("comparable_sales")
@@ -96,6 +98,8 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
         source_coverage_highlights=_dedupe(coverage_highlights)[:6],
         major_missing_inputs=_dedupe(major_missing_inputs)[:5],
         estimated_inputs=_dedupe(estimated_inputs)[:5],
+        modeled_fields=[field.replace("_", " ") for field in modeled_fields[:10]],
+        non_modeled_fields=[field.replace("_", " ") for field in non_modeled_fields[:10]],
         strongest_evidence=_dedupe(strongest_evidence)[:4],
         weaker_evidence=_dedupe(weaker_evidence)[:4],
         heuristic_flags=_dedupe(heuristic_flags)[:4],

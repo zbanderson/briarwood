@@ -12,6 +12,8 @@ from briarwood.reports.section_helpers import (
     get_scenario_output,
     get_town_county_outlook,
 )
+from briarwood.reports.sections.conclusion_section import build_conclusion_section
+from briarwood.reports.sections.thesis_section import build_thesis_section
 from briarwood.schemas import AnalysisReport, InputCoverageStatus, PropertyInput, SectionEvidence
 
 
@@ -200,6 +202,12 @@ class PropertyAnalysisView:
     mispricing_amount: float | None
     mispricing_pct: float | None
     pricing_view: str
+    memo_verdict: str
+    biggest_risk: str
+    buyer_fit: list[str]
+    top_reasons: list[str]
+    what_changes_call: list[str]
+    memo_summary: str
     top_positives: list[str]
     top_risks: list[str]
     metric_chips: list[MetricChip]
@@ -341,6 +349,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     scarcity = get_scarcity_support(report)
     risk = report.get_module("risk_constraints")
     forward_module = report.get_module("bull_base_bear")
+    conclusion = build_conclusion_section(report)
+    thesis = build_thesis_section(report)
     sourced, user_supplied, estimated, missing = _coverage_lists(property_input)
     overall_confidence = _overall_confidence(report)
 
@@ -385,6 +395,12 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
         pricing_view=current_value.pricing_view,
+        memo_verdict=conclusion.verdict,
+        biggest_risk=conclusion.top_risk,
+        buyer_fit=list(conclusion.decision_fit),
+        top_reasons=list(conclusion.why_it_matters),
+        what_changes_call=list(conclusion.what_changes_call),
+        memo_summary=thesis.assessment.summary,
         top_positives=positives,
         top_risks=risks,
         metric_chips=_metric_chips(

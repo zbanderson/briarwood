@@ -20,7 +20,8 @@ __CSS__
     </header>
 
     <section class="card verdict-card">
-      <div class="section-label">Verdict</div>
+      <div class="section-label">Investment Memo</div>
+      <div class="case-block-label">Verdict</div>
       <h2>$verdict</h2>
       <p class="verdict-line">$verdict_key_line</p>
       <div class="metric-grid compact-metrics verdict-metrics">
@@ -46,12 +47,18 @@ $why_it_matters
 $decision_fit
           </ul>
         </div>
+        <div>
+          <div class="case-block-label">What Changes The Call</div>
+          <ul class="bullet-list">
+$what_changes_call
+          </ul>
+        </div>
       </div>
     </section>
 
     <section class="top-grid">
       <section class="card thesis">
-        <div class="section-label">Thesis</div>
+        <div class="section-label">Decision Logic</div>
         <h2>$thesis_title</h2>
         <div class="durability-grid thesis-grid">
           <div>
@@ -82,7 +89,7 @@ $thesis_what_breaks
       </section>
 
       <section class="card conclusion">
-        <div class="section-label">Key Numbers</div>
+        <div class="section-label">Secondary Metrics</div>
         <div class="metric-grid compact-metrics">
           <div><span>BCV Range</span><strong>$bcv_range</strong></div>
           <div><span>Pricing</span><strong>$pricing_view</strong></div>
@@ -276,6 +283,20 @@ $evidence_missing
           <div class="case-block-label">Estimated Inputs</div>
           <ul class="case-list">
 $evidence_estimated
+          </ul>
+        </div>
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
+          <div class="case-block-label">Fields Impacting Valuation</div>
+          <ul class="case-list">
+$evidence_modeled_fields
+          </ul>
+        </div>
+        <div>
+          <div class="case-block-label">Additional Descriptive Fields</div>
+          <ul class="case-list">
+$evidence_non_modeled_fields
           </ul>
         </div>
       </div>

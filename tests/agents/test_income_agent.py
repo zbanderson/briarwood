@@ -133,6 +133,17 @@ class IncomeAgentTests(unittest.TestCase):
         self.assertTrue(any("estimated" in item.lower() for item in result.assumptions))
         self.assertTrue(any("estimated rent input" in item.lower() for item in result.warnings))
 
+    def test_back_house_rent_increases_effective_rent_support(self) -> None:
+        payload = sample_payload()
+        payload["back_house_monthly_rent"] = 900.0
+
+        result = IncomeAgent().run(IncomeAgentInput.model_validate(payload))
+
+        self.assertEqual(result.gross_monthly_rent_before_vacancy, 4500.0)
+        self.assertAlmostEqual(result.effective_monthly_rent, 4275.0, places=2)
+        self.assertGreater(result.income_support_ratio or 0.0, 1.0)
+        self.assertTrue(any("back-house" in item.lower() or "adu" in item.lower() for item in result.assumptions))
+
     def test_price_to_rent_uses_benchmark_when_available(self) -> None:
         payload = sample_payload()
         payload["market_price_to_rent_benchmark"] = 13.0

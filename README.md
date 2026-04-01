@@ -547,8 +547,10 @@ Run it locally with:
 
 Current workflow:
 
-- choose 1 to 4 sample properties in the sidebar
-- load them into memory through the existing Briarwood engine
+- use the top header to:
+  - add a new property
+  - select a saved/analyzed property
+  - load multiple properties for comparison
 - switch between two top-level modes:
   - `Single Property`
   - `Compare`
@@ -562,5 +564,26 @@ Current workflow:
   - `Evidence`
 - in `Compare`, each property renders as a vertical swim lane so the same section lines up across columns
 - export a tear sheet for the focused property through the existing HTML report writer
+- reopen saved properties without recomputing analysis when a persisted report is available
 
 The Dash app is intentionally a thin orchestration layer. It does not recompute BCV, scenarios, or risk logic in the UI.
+
+### Manual Subject + Comp Entry
+
+The workspace now supports a first-pass internal Add Property workflow:
+
+- enter a subject property directly from the `Add Property` button
+- capture core facts, physical differentiators, and income/support inputs
+- optionally add up to 10 manual comps
+- run analysis without needing pasted listing text
+- persist the full saved property bundle into:
+  - `data/saved_properties/<property_id>/inputs.json`
+  - `data/saved_properties/<property_id>/report.pkl`
+  - `data/saved_properties/<property_id>/summary.json`
+  - `data/saved_properties/<property_id>/tear_sheet.html`
+
+Manual comps are intentionally optional:
+
+- if no comps are entered, the report still runs
+- if comps are entered, Briarwood routes them through the existing comparable-sales path
+- comp confidence stays explicit and weak evidence still lowers support

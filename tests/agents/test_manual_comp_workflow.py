@@ -1,0 +1,181 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from briarwood.agents.comparable_sales import ComparableSalesAgent, ComparableSalesRequest, FileBackedComparableSalesProvider
+from briarwood.dash_app import data as dash_data
+
+
+class ManualCompWorkflowTests(unittest.TestCase):
+    def test_manual_comp_only_without_comps_returns_limited_support(self) -> None:
+        agent = ComparableSalesAgent(FileBackedComparableSalesProvider(Path("does-not-exist.json")))
+        result = agent.run(
+            ComparableSalesRequest(
+                town="Belmar",
+                state="NJ",
+                manual_comp_only=True,
+                manual_sales=[],
+            )
+        )
+
+        self.assertEqual(result.comp_count, 0)
+        self.assertIn("not yet supported by manually entered comparable sales", result.unsupported_claims[0].lower())
+        self.assertIn("no manual comps were entered", result.summary.lower())
+
+    def test_manual_comp_only_with_comps_uses_manual_support(self) -> None:
+        agent = ComparableSalesAgent(FileBackedComparableSalesProvider(Path("does-not-exist.json")))
+        result = agent.run(
+            ComparableSalesRequest(
+                town="Belmar",
+                state="NJ",
+                property_type="Single Family Residence",
+                beds=3,
+                baths=2.0,
+                sqft=1400,
+                manual_comp_only=True,
+                manual_sales=[
+                    {
+                        "address": "10 A St",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "sale_price": 700000,
+                        "sale_date": "2025-06-01",
+                        "beds": 3,
+                        "baths": 2.0,
+                        "sqft": 1380,
+                        "property_type": "Single Family Residence",
+                        "address_verification_status": "verified",
+                        "sale_verification_status": "seeded",
+                        "verification_source_type": "manual_review",
+                    },
+                    {
+                        "address": "12 A St",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "sale_price": 715000,
+                        "sale_date": "2025-07-01",
+                        "beds": 3,
+                        "baths": 2.0,
+                        "sqft": 1420,
+                        "property_type": "Single Family Residence",
+                        "address_verification_status": "verified",
+                        "sale_verification_status": "seeded",
+                        "verification_source_type": "manual_review",
+                    },
+                    {
+                        "address": "14 A St",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "sale_price": 720000,
+                        "sale_date": "2025-08-01",
+                        "beds": 3,
+                        "baths": 2.0,
+                        "sqft": 1450,
+                        "property_type": "Single Family Residence",
+                        "address_verification_status": "verified",
+                        "sale_verification_status": "seeded",
+                        "verification_source_type": "manual_review",
+                    },
+                ],
+            )
+        )
+
+        self.assertGreaterEqual(result.comp_count, 3)
+        self.assertIsNotNone(result.comparable_value)
+        self.assertIn("manually entered comparable sales", result.summary.lower())
+        self.assertGreater(result.confidence, 0)
+
+    def test_register_manual_analysis_persists_json_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "1 Test Lane, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "purchase_price": 650000,
+                        "beds": 3,
+                    },
+                    [
+                        {
+                            "address": "2 Test Lane",
+                            "town": "Belmar",
+                            "state": "NJ",
+                            "sale_price": 640000,
+                            "sale_date": "2025-05-01",
+                            "address_verification_status": "verified",
+                            "sale_verification_status": "seeded",
+                            "verification_source_type": "manual_review",
+                        }
+                    ],
+                )
+                self.assertTrue(output_path.exists())
+                self.assertTrue(property_id)
+                saved_dir = dash_data.SAVED_PROPERTY_DIR / property_id
+                self.assertTrue((saved_dir / "inputs.json").exists())
+                self.assertTrue((saved_dir / "report.pkl").exists())
+                self.assertTrue((saved_dir / "summary.json").exists())
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+    def test_load_reports_includes_registered_manual_analysis(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, _output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "1302 L Street, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "purchase_price": 625000,
+                        "beds": 3,
+                        "baths": 2.0,
+                    },
+                    [],
+                )
+
+                reports = dash_data.load_reports([property_id])
+
+                self.assertIn(property_id, reports)
+                self.assertEqual(reports[property_id].property_id, property_id)
+                self.assertEqual(reports[property_id].address, "1302 L Street, Belmar, NJ 07719")
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+    def test_saved_property_summary_lists_recent_manual_analysis(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, _output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "9 Ocean Ave, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "purchase_price": 710000,
+                        "beds": 3,
+                        "garage_spaces": 1,
+                        "has_pool": False,
+                        "monthly_hoa": 150,
+                    },
+                    [],
+                )
+
+                summaries = dash_data.list_saved_properties()
+
+                self.assertEqual(len(summaries), 1)
+                self.assertEqual(summaries[0].property_id, property_id)
+                self.assertIn("Ocean Ave", summaries[0].address)
+                self.assertTrue(summaries[0].tear_sheet_path.exists())
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+
+if __name__ == "__main__":
+    unittest.main()

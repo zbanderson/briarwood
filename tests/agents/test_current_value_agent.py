@@ -43,6 +43,8 @@ class CurrentValueAgentTests(unittest.TestCase):
             1.0,
             places=3,
         )
+        self.assertTrue(result.value_drivers)
+        self.assertTrue(any(item.component == "Market-adjusted anchor" for item in result.value_drivers))
 
     def test_comparable_sales_can_anchor_value(self) -> None:
         result = CurrentValueAgent().run(
@@ -80,6 +82,8 @@ class CurrentValueAgentTests(unittest.TestCase):
             1.0 - result.weights.comparable_sales_weight,
             places=3,
         )
+        comp_driver = next(item for item in result.value_drivers if item.component == "Comparable sales")
+        self.assertGreater(comp_driver.normalized_weight, 0.0)
 
     def test_missing_rent_zeroes_income_weight(self) -> None:
         result = CurrentValueAgent().run(

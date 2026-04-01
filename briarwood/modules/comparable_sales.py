@@ -52,6 +52,11 @@ class ComparableSalesModule:
                 listing_description=property_input.listing_description,
                 market_value_today=history.current_value,
                 market_history_points=[point.model_dump() for point in history.points],
+                manual_sales=list(property_input.manual_comp_inputs),
+                manual_comp_only=(
+                    property_input.source_metadata is not None
+                    and "manual_subject_entry" in property_input.source_metadata.provenance
+                ),
             )
         )
         return ModuleResult(
@@ -59,6 +64,7 @@ class ComparableSalesModule:
             metrics={
                 "comparable_value": output.comparable_value,
                 "comp_count": output.comp_count,
+                "comp_confidence": round(output.confidence, 2),
             },
             score=(output.comparable_value is not None) * min(output.confidence * 100, 100.0),
             confidence=output.confidence,

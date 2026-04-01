@@ -43,6 +43,12 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
         location_label=location_label,
         rent_verified=income.rent_coverage is not None,
     )
+    what_changes_call = _build_what_changes_call(
+        premium_discount_to_ask=premium_discount_to_ask,
+        cash_flow=cash_flow,
+        location_label=location_label,
+        rent_verified=income.rent_coverage is not None,
+    )
     return ConclusionSection(
         verdict=verdict,
         key_line=key_line,
@@ -62,6 +68,7 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
         ),
         why_it_matters=why_it_matters,
         decision_fit=decision_fit,
+        what_changes_call=what_changes_call,
         explanation="BCV anchors today; scenarios show the 12-month range.",
         assessment=SectionAssessment(
             score=current_value_module.score,
@@ -181,3 +188,32 @@ def _build_top_risk(
     if location_label != "supportive":
         return f"Location support reads only {location_label}."
     return "Main risk is execution rather than obvious carry stress."
+
+
+def _build_what_changes_call(
+    *,
+    premium_discount_to_ask: float,
+    cash_flow: float | None,
+    location_label: str,
+    rent_verified: bool,
+) -> list[str]:
+    bullets: list[str] = []
+    if premium_discount_to_ask < 0:
+        bullets.append(f"Ask moves closer to BCV by roughly {abs(premium_discount_to_ask):.1%}.")
+    else:
+        bullets.append("BCV support remains intact instead of fading.")
+
+    if cash_flow is None:
+        bullets.append("Rental fallback gets verified with real rent and financing inputs.")
+    elif cash_flow < 0:
+        bullets.append("Carry improves toward breakeven or better.")
+    else:
+        bullets.append("Current carry support holds.")
+
+    if location_label != "supportive":
+        bullets.append("Location and demand signals improve.")
+    elif not rent_verified:
+        bullets.append("Rent and comp evidence deepen beyond directional support.")
+    else:
+        bullets.append("Evidence quality improves through stronger comps or direct rent support.")
+    return bullets[:3]

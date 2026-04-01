@@ -58,13 +58,23 @@ class ComparableSalesAgent:
         assumptions: list[str] = []
         warnings: list[str] = []
         unsupported_claims: list[str] = []
-
-        raw_sales = self.provider.get_sales(town=request.town, state=request.state)
+        provider_sales = [] if request.manual_comp_only else self.provider.get_sales(town=request.town, state=request.state)
+        manual_sales = [ComparableSale.model_validate(item) for item in request.manual_sales]
+        raw_sales = manual_sales + provider_sales
         if not raw_sales:
             return self._empty_output(
                 town=request.town,
                 state=request.state,
-                unsupported_claims=["No file-backed comparable sales were available for this town."],
+                summary_override=(
+                    f"Briarwood could not form a comparable-sales value for {request.town}, {request.state} because no manual comps were entered."
+                    if request.manual_comp_only
+                    else None
+                ),
+                unsupported_claims=[
+                    "This view is not yet supported by manually entered comparable sales."
+                    if request.manual_comp_only
+                    else "No file-backed comparable sales were available for this town."
+                ],
             )
 
         history_points = self._parse_history_points(request.market_history_points)
@@ -119,12 +129,14 @@ class ComparableSalesAgent:
                     sale_price=round(sale.sale_price, 2),
                     time_adjusted_price=round(time_adjusted_price, 2),
                     adjusted_price=round(adjusted_price, 2),
+                    comp_confidence_weight=round(self._confidence_weight_for_sale(sale), 3),
                     similarity_score=round(similarity_score, 3),
                     fit_label=fit_label,
                     bedrooms=sale.beds,
                     bathrooms=sale.baths,
                     sqft=sale.sqft,
                     lot_size=sale.lot_size,
+                    distance_to_subject_miles=sale.distance_to_subject_miles,
                     year_built=sale.year_built,
                     stories=sale.stories,
                     garage_spaces=sale.garage_spaces,
@@ -175,6 +187,8 @@ class ComparableSalesAgent:
             assumptions.append(
                 f"Comp set is currently sourced from the {dataset_name} dataset{f' (reviewed {dataset_as_of})' if dataset_as_of else ''}."
             )
+        if manual_sales:
+            assumptions.append(f"{len(manual_sales)} manually entered comps were included in the active comp set.")
         if request.sqft is None or request.sqft <= 0:
             warnings.append(
                 "Subject square footage is missing, so comp matching leans more heavily on beds, baths, lot size, and sale recency."
@@ -189,11 +203,19 @@ class ComparableSalesAgent:
             warnings.append(
                 "Active comps have not yet been tied to a public-record or MLS-verified sale record, so the comp database should still be treated as a reviewed seed set."
             )
+        support_note = self._support_note(comps_used)
+        if support_note:
+            warnings.append(support_note)
 
         summary = (
             f"Briarwood formed a comparable-sales value around ${weighted_value:,.0f} using {len(comps_used)} "
             f"same-town sale comps that best matched the subject on type, size, recency, and overall fit."
         )
+        if manual_sales:
+            summary = (
+                f"This valuation is supported by {len(comps_used)} manually entered comparable sales. "
+                f"{summary}"
+            )
         return ComparableSalesOutput(
             comparable_value=round(weighted_value, 2),
             comp_count=len(comps_used),
@@ -220,6 +242,7 @@ class ComparableSalesAgent:
         state: str,
         rejected_count: int = 0,
         rejection_reasons: dict[str, int] | None = None,
+        summary_override: str | None = None,
         unsupported_claims: list[str],
     ) -> ComparableSalesOutput:
         return ComparableSalesOutput(
@@ -238,7 +261,7 @@ class ComparableSalesAgent:
             assumptions=[],
             unsupported_claims=unsupported_claims,
             warnings=[],
-            summary=f"Briarwood could not form a comparable-sales value for {town}, {state}.",
+            summary=summary_override or f"Briarwood could not form a comparable-sales value for {town}, {state}.",
         )
 
     def _passes_gate(self, request: ComparableSalesRequest, sale: ComparableSale) -> tuple[bool, str | None]:
@@ -343,6 +366,14 @@ class ComparableSalesAgent:
                 why_comp.append("Lot profile is reasonably similar.")
             elif lot_gap > 0.5:
                 cautions.append("Lot profile differs meaningfully from subject.")
+
+        if sale.distance_to_subject_miles is not None:
+            if sale.distance_to_subject_miles <= 0.5:
+                score += 0.02
+                why_comp.append("Very close to the subject geographically.")
+            elif sale.distance_to_subject_miles > 2.0:
+                score -= 0.03
+                cautions.append("Comp is farther from the subject.")
 
         if request.year_built and sale.year_built:
             year_gap = abs(request.year_built - sale.year_built)
@@ -536,6 +567,7 @@ class ComparableSalesAgent:
         avg_similarity = sum(comp.similarity_score for comp in comps) / len(comps)
         avg_curation_weight = sum(self._curation_weight(comp.comp_status) for comp in comps) / len(comps)
         avg_sale_verification_weight = sum(self._sale_verification_weight(comp.sale_verification_status) for comp in comps) / len(comps)
+        avg_comp_confidence_weight = sum(comp.comp_confidence_weight for comp in comps) / len(comps)
         subject_completeness = sum(
             value is not None and value != 0
             for value in (request.beds, request.baths, request.sqft, request.lot_size, request.year_built)
@@ -551,6 +583,7 @@ class ComparableSalesAgent:
                 + avg_similarity * 0.24
                 + avg_curation_weight * 0.10
                 + avg_sale_verification_weight * 0.10
+                + avg_comp_confidence_weight * 0.08
                 + subject_completeness * 0.14
                 + strong_bonus
                 + history_bonus,
@@ -560,6 +593,8 @@ class ComparableSalesAgent:
             confidence = min(confidence, 0.62)
         if not any(comp.sale_verification_status in {"public_record_matched", "public_record_verified", "mls_verified"} for comp in comps):
             confidence = min(confidence, 0.56)
+        completeness = sum(self._comp_field_completeness(comp) for comp in comps) / len(comps)
+        confidence *= 0.75 + (completeness * 0.25)
         return confidence
 
     def _fit_label(self, similarity_score: float) -> str:
@@ -622,6 +657,28 @@ class ComparableSalesAgent:
         elif sale.reviewed_at:
             parts.append(f"reviewed {sale.reviewed_at}")
         return " | ".join(parts) if parts else None
+
+    def _comp_field_completeness(self, comp: AdjustedComparable) -> float:
+        fields = [comp.bedrooms, comp.bathrooms, comp.sqft, comp.lot_size, comp.year_built, comp.sale_date]
+        present = sum(value not in (None, "", 0) for value in fields)
+        return present / len(fields)
+
+    def _support_note(self, comps: list[AdjustedComparable]) -> str | None:
+        count = len(comps)
+        avg_completeness = sum(self._comp_field_completeness(comp) for comp in comps) / len(comps) if comps else 0.0
+        if count == 0:
+            return "No comp support."
+        if count <= 2:
+            return "Comp confidence is very limited because the active comp set is small."
+        if count <= 4:
+            return (
+                "Comp confidence is moderate, but still sensitive to missing detail."
+                if avg_completeness < 0.8
+                else "Comp confidence is moderate based on the current comp count."
+            )
+        if avg_completeness < 0.75:
+            return "Comp count is stronger, but confidence is still reduced because several comps are incomplete."
+        return "This valuation is supported by a stronger comp sample."
 
     def _condition_adjustment_pct(self, subject_condition: str, comp_condition: str) -> float:
         rank = {
@@ -700,9 +757,16 @@ class ComparableSalesAgent:
     def _effective_weight(self, comp: AdjustedComparable) -> float:
         return (
             comp.similarity_score
+            * comp.comp_confidence_weight
             * self._curation_weight(comp.comp_status)
             * self._sale_verification_weight(comp.sale_verification_status)
         )
+
+    def _confidence_weight_for_sale(self, sale: ComparableSale) -> float:
+        verification_weight = self._simple_verification_weight(sale.verification_status)
+        completeness = self._sale_field_completeness(sale)
+        recency = self._recency_weight(sale.sale_date)
+        return max(0.35, min((0.45 * verification_weight) + (0.30 * recency) + (0.25 * completeness), 1.0))
 
     def _curation_weight(self, status: str | None) -> float:
         return {
@@ -719,6 +783,41 @@ class ComparableSalesAgent:
             "seeded": 0.72,
             "questioned": 0.0,
         }.get(status or "", 0.68)
+
+    def _simple_verification_weight(self, status: str | None) -> float:
+        return {
+            "broker_verified": 1.0,
+            "public_record": 0.94,
+            "manual": 0.78,
+            "estimated": 0.55,
+        }.get(status or "", 0.7)
+
+    def _recency_weight(self, sale_date: str) -> float:
+        sale_age_days = max((date.today() - self._parse_date(sale_date)).days, 0)
+        if sale_age_days <= 180:
+            return 1.0
+        if sale_age_days <= 365:
+            return 0.94
+        if sale_age_days <= 730:
+            return 0.82
+        if sale_age_days <= 1095:
+            return 0.68
+        return 0.5
+
+    def _sale_field_completeness(self, sale: ComparableSale) -> float:
+        fields = [
+            sale.sale_price,
+            sale.sale_date,
+            sale.sqft,
+            sale.beds,
+            sale.baths,
+            sale.lot_size,
+            sale.year_built,
+            sale.latitude,
+            sale.longitude,
+        ]
+        present = sum(value not in (None, "", 0) for value in fields)
+        return present / len(fields)
 
     def _description_tags(self, description: str | None) -> set[str]:
         if not description:

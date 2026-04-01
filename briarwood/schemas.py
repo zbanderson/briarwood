@@ -46,6 +46,8 @@ class PropertyFacts:
     state: str
     county: str | None = None
     zip_code: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     beds: int | None = None
     baths: float | None = None
     sqft: int | None = None
@@ -57,6 +59,17 @@ class PropertyFacts:
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
+    garage_type: str | None = None
+    has_detached_garage: bool | None = None
+    has_back_house: bool | None = None
+    adu_type: str | None = None
+    adu_sqft: int | None = None
+    has_basement: bool | None = None
+    basement_finished: bool | None = None
+    has_pool: bool | None = None
+    parking_spaces: int | None = None
+    corner_lot: bool | None = None
+    driveway_off_street: bool | None = None
     purchase_price: float | None = None
     taxes: float | None = None
     monthly_hoa: float | None = None
@@ -85,17 +98,24 @@ class MarketLocationSignals:
     market_history_as_of: str | None = None
     school_rating: float | None = None
     flood_risk: str | None = None
+    town_population: int | None = None
     market_price_to_rent_benchmark: float | None = None
+    landmark_points: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    zone_flags: dict[str, bool | None] = field(default_factory=dict)
+    local_documents: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)
 class UserAssumptions:
     estimated_monthly_rent: float | None = None
+    back_house_monthly_rent: float | None = None
+    seasonal_monthly_rent: float | None = None
     insurance: float | None = None
     down_payment_percent: float | None = None
     interest_rate: float | None = None
     loan_term_years: int | None = None
     vacancy_rate: float | None = None
+    monthly_maintenance_reserve_override: float | None = None
     condition_profile_override: str | None = None
     capex_lane_override: str | None = None
     repair_capex_budget: float | None = None
@@ -131,6 +151,8 @@ class PropertyInput:
     baths: float
     sqft: int
     county: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     property_type: str | None = None
     architectural_style: str | None = None
     condition_profile: str | None = None
@@ -139,11 +161,24 @@ class PropertyInput:
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
+    garage_type: str | None = None
+    has_detached_garage: bool | None = None
+    has_back_house: bool | None = None
+    adu_type: str | None = None
+    adu_sqft: int | None = None
+    has_basement: bool | None = None
+    basement_finished: bool | None = None
+    has_pool: bool | None = None
+    parking_spaces: int | None = None
+    corner_lot: bool | None = None
+    driveway_off_street: bool | None = None
     purchase_price: float | None = None
     taxes: float | None = None
     insurance: float | None = None
     monthly_hoa: float | None = None
     estimated_monthly_rent: float | None = None
+    back_house_monthly_rent: float | None = None
+    seasonal_monthly_rent: float | None = None
     down_payment_percent: float | None = None
     interest_rate: float | None = None
     loan_term_years: int | None = None
@@ -153,12 +188,18 @@ class PropertyInput:
     source_url: str | None = None
     price_history: list[dict[str, Any]] = field(default_factory=list)
     vacancy_rate: float | None = None
+    monthly_maintenance_reserve_override: float | None = None
     repair_capex_budget: float | None = None
+    manual_comp_inputs: list[dict[str, Any]] = field(default_factory=list)
     town_population_trend: float | None = None
     town_price_trend: float | None = None
     school_rating: float | None = None
     flood_risk: str | None = None
+    town_population: int | None = None
     market_price_to_rent_benchmark: float | None = None
+    landmark_points: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    zone_flags: dict[str, bool | None] = field(default_factory=dict)
+    local_documents: list[dict[str, Any]] = field(default_factory=list)
     facts: PropertyFacts | None = None
     market_signals: MarketLocationSignals | None = None
     user_assumptions: UserAssumptions | None = None
@@ -181,6 +222,8 @@ class PropertyInput:
             baths=facts.baths or 0.0,
             sqft=facts.sqft or 0,
             county=facts.county,
+            latitude=facts.latitude,
+            longitude=facts.longitude,
             property_type=facts.property_type,
             architectural_style=facts.architectural_style,
             condition_profile=assumptions.condition_profile_override or facts.condition_profile,
@@ -189,11 +232,24 @@ class PropertyInput:
             year_built=facts.year_built,
             stories=facts.stories,
             garage_spaces=facts.garage_spaces,
+            garage_type=facts.garage_type,
+            has_detached_garage=facts.has_detached_garage,
+            has_back_house=facts.has_back_house,
+            adu_type=facts.adu_type,
+            adu_sqft=facts.adu_sqft,
+            has_basement=facts.has_basement,
+            basement_finished=facts.basement_finished,
+            has_pool=facts.has_pool,
+            parking_spaces=facts.parking_spaces,
+            corner_lot=facts.corner_lot,
+            driveway_off_street=facts.driveway_off_street,
             purchase_price=facts.purchase_price,
             taxes=facts.taxes,
             insurance=assumptions.insurance,
             monthly_hoa=facts.monthly_hoa,
             estimated_monthly_rent=assumptions.estimated_monthly_rent,
+            back_house_monthly_rent=assumptions.back_house_monthly_rent,
+            seasonal_monthly_rent=assumptions.seasonal_monthly_rent,
             down_payment_percent=assumptions.down_payment_percent,
             interest_rate=assumptions.interest_rate,
             loan_term_years=assumptions.loan_term_years,
@@ -203,12 +259,18 @@ class PropertyInput:
             source_url=facts.source_url,
             price_history=facts.price_history,
             vacancy_rate=assumptions.vacancy_rate,
+            monthly_maintenance_reserve_override=assumptions.monthly_maintenance_reserve_override,
             repair_capex_budget=assumptions.repair_capex_budget,
+            manual_comp_inputs=assumptions.manual_comp_inputs,
             town_population_trend=market.town_population_trend,
             town_price_trend=market.town_price_trend,
             school_rating=market.school_rating,
             flood_risk=market.flood_risk,
+            town_population=market.town_population,
             market_price_to_rent_benchmark=market.market_price_to_rent_benchmark,
+            landmark_points=market.landmark_points,
+            zone_flags=market.zone_flags,
+            local_documents=market.local_documents,
             facts=facts,
             market_signals=market,
             user_assumptions=assumptions,
@@ -317,6 +379,131 @@ class AnalysisReport:
 
     def get_module(self, module_name: str) -> ModuleResult:
         return self.module_results[module_name]
+
+
+@dataclass(slots=True)
+class LocationBucketBenchmark:
+    bucket_label: str
+    median_ppsf: float | None = None
+    median_price: float | None = None
+    median_dom: float | None = None
+    comp_count: int = 0
+
+
+@dataclass(slots=True)
+class LocationCategoryIntelligence:
+    category: str
+    subject_distance_miles: float | None = None
+    subject_bucket: str | None = None
+    peer_bucket_stats: LocationBucketBenchmark | None = None
+    all_bucket_stats: list[LocationBucketBenchmark] = field(default_factory=list)
+    town_median_ppsf: float | None = None
+    town_median_price: float | None = None
+    town_median_dom: float | None = None
+    town_comp_count: int = 0
+    location_premium_pct: float | None = None
+    subject_relative_premium_pct: float | None = None
+
+
+@dataclass(slots=True)
+class LocationIntelligenceOutput:
+    subject_ppsf: float | None
+    location_score: float
+    scarcity_score: float
+    confidence: float
+    primary_category: str | None = None
+    location_premium_pct: float | None = None
+    subject_relative_premium_pct: float | None = None
+    narratives: list[str] = field(default_factory=list)
+    confidence_notes: list[str] = field(default_factory=list)
+    missing_inputs: list[str] = field(default_factory=list)
+    zone_flags: dict[str, bool | None] = field(default_factory=dict)
+    category_results: list[LocationCategoryIntelligence] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class LocalIntelligenceProject:
+    name: str
+    type: str | None = None
+    units: int | None = None
+    status: str | None = None
+    location: str | None = None
+    notes: str | None = None
+    confidence: float = 0.0
+
+
+@dataclass(slots=True)
+class LocalIntelligenceSummary:
+    total_projects: int = 0
+    total_units: int = 0
+    approved_projects: int = 0
+    rejected_projects: int = 0
+    pending_projects: int = 0
+
+
+@dataclass(slots=True)
+class LocalIntelligenceScores:
+    development_activity_score: float = 0.0
+    supply_pipeline_score: float = 0.0
+    regulatory_trend_score: float = 0.0
+    sentiment_score: float = 0.0
+
+
+@dataclass(slots=True)
+class LocalIntelligenceConfidence:
+    score: float = 0.0
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class LocalIntelligenceOutput:
+    projects: list[LocalIntelligenceProject] = field(default_factory=list)
+    summary: LocalIntelligenceSummary = field(default_factory=LocalIntelligenceSummary)
+    scores: LocalIntelligenceScores = field(default_factory=LocalIntelligenceScores)
+    narrative: list[str] = field(default_factory=list)
+    confidence: LocalIntelligenceConfidence = field(default_factory=LocalIntelligenceConfidence)
+
+
+@dataclass(slots=True)
+class RelativeOpportunityProperty:
+    property_id: str
+    label: str
+    subject_ppsf: float | None = None
+    implied_ppsf: float | None = None
+    relative_to_model_pct: float | None = None
+    purchase_price: float | None = None
+    capex: float | None = None
+    post_reno_value: float | None = None
+    town_momentum_score: float | None = None
+    town_momentum_adjustment_pct: float | None = None
+    forward_value: float | None = None
+    expected_return_pct: float | None = None
+    convergence_score: float | None = None
+    confidence: float = 0.0
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class RelativeOpportunityComparison:
+    best_value_creation: str | None = None
+    best_location: str | None = None
+    best_forward_return: str | None = None
+    highest_convergence: str | None = None
+
+
+@dataclass(slots=True)
+class RelativeOpportunityConfidence:
+    score: float = 0.0
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class RelativeOpportunityOutput:
+    properties: list[RelativeOpportunityProperty] = field(default_factory=list)
+    comparison: RelativeOpportunityComparison = field(default_factory=RelativeOpportunityComparison)
+    winner: str | None = None
+    reasoning: list[str] = field(default_factory=list)
+    confidence: RelativeOpportunityConfidence = field(default_factory=RelativeOpportunityConfidence)
 
 
 class AnalysisModule(Protocol):

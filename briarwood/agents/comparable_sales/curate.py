@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from briarwood.agents.comparable_sales.schemas import ComparableSale
+from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
 
 
 DEFAULT_TEMPLATE = {
@@ -50,12 +51,8 @@ def write_template(output_path: str | Path) -> None:
 def append_comp(*, comps_path: str | Path, input_path: str | Path) -> ComparableSale:
     payload = json.loads(Path(input_path).read_text())
     comp = ComparableSale.model_validate(payload)
-    dataset = json.loads(Path(comps_path).read_text())
-    sales = dataset.get("sales")
-    if not isinstance(sales, list):
-        raise ValueError("Comparable-sales dataset is missing a sales list.")
-    sales.append(comp.model_dump(exclude_none=True))
-    Path(comps_path).write_text(json.dumps(dataset, indent=2) + "\n")
+    store = JsonComparableSalesStore(comps_path)
+    store.append(comp)
     return comp
 
 

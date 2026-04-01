@@ -79,6 +79,7 @@ class IncomeSupportModule:
                 annual_insurance=property_input.insurance,
                 monthly_hoa=property_input.monthly_hoa,
                 estimated_monthly_rent=rent_context.rent_estimate,
+                back_house_monthly_rent=property_input.back_house_monthly_rent,
                 rent_source_type=rent_context.rent_source_type,
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,

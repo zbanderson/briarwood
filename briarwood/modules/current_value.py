@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.current_value import CurrentValueAgent, CurrentValueInput, CurrentValueOutput
+from briarwood.field_audit import audit_property_fields
 from briarwood.evidence import build_section_evidence
 from briarwood.modules.comparable_sales import ComparableSalesModule, get_comparable_sales_payload
 from briarwood.modules.income_support import IncomeSupportModule, get_income_support_payload
@@ -80,6 +81,13 @@ class CurrentValueModule:
                 cap_rate_assumption=self.settings.income_cap_rate_assumption,
             )
         )
+        modeled_fields, non_modeled_fields = audit_property_fields(property_input)
+        output = output.model_copy(
+            update={
+                "modeled_fields": modeled_fields,
+                "non_modeled_fields": non_modeled_fields,
+            }
+        )
         output = self._apply_input_confidence_caps(output=output, income=income)
 
         summary = (
@@ -101,6 +109,11 @@ class CurrentValueModule:
                 "market_adjusted_value": output.components.market_adjusted_value,
                 "backdated_listing_value": output.components.backdated_listing_value,
                 "income_supported_value": output.components.income_supported_value,
+                "value_drivers": ", ".join(
+                    f"{item.component} {item.normalized_weight:.0%}"
+                    for item in output.value_drivers
+                    if item.normalized_weight > 0
+                ),
                 "comparable_sales_weight": round(output.weights.comparable_sales_weight, 4),
                 "market_adjusted_weight": round(output.weights.market_adjusted_weight, 4),
                 "backdated_listing_weight": round(output.weights.backdated_listing_weight, 4),

@@ -6,6 +6,7 @@ from briarwood.agents.current_value.schemas import (
     CurrentValueComponents,
     CurrentValueInput,
     CurrentValueOutput,
+    CurrentValueTraceItem,
     CurrentValueWeights,
 )
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
@@ -176,7 +177,19 @@ class CurrentValueAgent:
                 backdated_listing_weight=round(weights["backdated_listing"], 4),
                 income_weight=round(weights["income"], 4),
             ),
+            value_drivers=self._value_drivers(
+                component_values=available_components,
+                weights=weights,
+                component_confidences={
+                    "comparable_sales": comparable_sales_confidence,
+                    "market_adjusted": market_component_confidence,
+                    "backdated_listing": backdated_component_confidence,
+                    "income": income_component_confidence,
+                },
+            ),
             confidence=round(confidence, 2),
+            modeled_fields=[],
+            non_modeled_fields=[],
             assumptions=assumptions,
             unsupported_claims=unsupported_claims,
             warnings=warnings,
@@ -360,3 +373,39 @@ class CurrentValueAgent:
         if value is None:
             return None
         return round(value, 2)
+
+    def _value_drivers(
+        self,
+        *,
+        component_values: dict[str, float | None],
+        weights: dict[str, float],
+        component_confidences: dict[str, float],
+    ) -> list[CurrentValueTraceItem]:
+        labels = {
+            "comparable_sales": "Comparable sales",
+            "market_adjusted": "Market-adjusted anchor",
+            "backdated_listing": "Backdated listing anchor",
+            "income": "Income-supported anchor",
+        }
+        notes = {
+            "comparable_sales": "Most property-specific value input when verified comps exist.",
+            "market_adjusted": "Town-level market history adjusted by basic property facts.",
+            "backdated_listing": "Ask anchored to listing date and market drift.",
+            "income": "Generic cap-rate conversion from effective rent support.",
+        }
+        drivers: list[CurrentValueTraceItem] = []
+        for key in ("comparable_sales", "market_adjusted", "backdated_listing", "income"):
+            value = component_values.get(key)
+            weight = weights.get(key, 0.0)
+            confidence = component_confidences.get(key, 0.0)
+            drivers.append(
+                CurrentValueTraceItem(
+                    component=labels[key],
+                    value=round(value, 2) if value is not None else None,
+                    normalized_weight=round(weight, 4),
+                    confidence=round(confidence, 2),
+                    contribution_value=round(value * weight, 2) if value is not None and weight > 0 else None,
+                    note=notes[key],
+                )
+            )
+        return drivers

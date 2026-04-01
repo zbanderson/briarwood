@@ -27,6 +27,17 @@ class CurrentValueWeights(BaseModel):
     income_weight: float = Field(ge=0)
 
 
+class CurrentValueTraceItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component: str
+    value: float | None = None
+    normalized_weight: float = Field(ge=0)
+    confidence: float = Field(ge=0, le=1)
+    contribution_value: float | None = None
+    note: str | None = None
+
+
 class CurrentValueInput(BaseModel):
     """Inputs required to estimate Briarwood Current Value."""
 
@@ -63,6 +74,9 @@ class CurrentValueOutput(BaseModel):
     pricing_view: str
     components: CurrentValueComponents
     weights: CurrentValueWeights
+    value_drivers: list[CurrentValueTraceItem] = Field(default_factory=list)
+    modeled_fields: list[str] = Field(default_factory=list)
+    non_modeled_fields: list[str] = Field(default_factory=list)
     confidence: float
     assumptions: list[str]
     unsupported_claims: list[str]

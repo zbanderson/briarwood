@@ -51,6 +51,7 @@ class ComparableSalesAgentTests(unittest.TestCase):
         self.assertTrue(any("property-type family" in note.lower() for note in top_comp.why_comp))
         self.assertTrue(any("style" in note.lower() or "setting traits" in note.lower() for note in top_comp.why_comp))
         self.assertIn(top_comp.fit_label, {"strong", "usable", "stretch"})
+        self.assertGreater(top_comp.comp_confidence_weight, 0)
         self.assertTrue(top_comp.adjustments_summary)
         self.assertTrue(top_comp.comp_status)
         self.assertIn(top_comp.capex_lane, {"light", "moderate", "heavy", None})

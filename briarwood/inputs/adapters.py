@@ -29,6 +29,8 @@ class PublicRecordAdapter:
             town=str(payload.get("town") or "Unknown"),
             state=str(payload.get("state") or "Unknown"),
             county=_optional_str(payload.get("county")),
+            latitude=_optional_float(payload.get("latitude")),
+            longitude=_optional_float(payload.get("longitude")),
             beds=_optional_int(payload.get("beds")),
             baths=_optional_float(payload.get("baths")),
             sqft=_optional_int(payload.get("sqft")),
@@ -53,7 +55,11 @@ class PublicRecordAdapter:
             town_price_trend=_optional_float(payload.get("town_price_trend")),
             school_rating=_optional_float(payload.get("school_rating")),
             flood_risk=_optional_str(payload.get("flood_risk")),
+            town_population=_optional_int(payload.get("town_population")),
             market_price_to_rent_benchmark=_optional_float(payload.get("market_price_to_rent_benchmark")),
+            landmark_points=_coerce_landmark_points(payload.get("landmark_points")),
+            zone_flags=_coerce_zone_flags(payload.get("zone_flags")),
+            local_documents=_coerce_document_list(payload.get("local_documents")),
         )
         assumptions = UserAssumptions(
             estimated_monthly_rent=_optional_float(payload.get("estimated_monthly_rent")),
@@ -241,3 +247,45 @@ def _coalesce_float(left: object, right: float | None) -> float | None:
 
 def _coalesce_int(left: object, right: int | None) -> int | None:
     return _optional_int(left) if left is not None else right
+
+
+def _coerce_landmark_points(value: object) -> dict[str, list[dict[str, object]]]:
+    if not isinstance(value, dict):
+        return {}
+    coerced: dict[str, list[dict[str, object]]] = {}
+    for key, points in value.items():
+        if not isinstance(key, str) or not isinstance(points, list):
+            continue
+        valid_points = [point for point in points if isinstance(point, dict)]
+        if valid_points:
+            coerced[key] = valid_points
+    return coerced
+
+
+def _coerce_zone_flags(value: object) -> dict[str, bool | None]:
+    if not isinstance(value, dict):
+        return {}
+    coerced: dict[str, bool | None] = {}
+    for key, raw in value.items():
+        if not isinstance(key, str):
+            continue
+        if isinstance(raw, bool):
+            coerced[key] = raw
+            continue
+        if raw in {None, ""}:
+            coerced[key] = None
+            continue
+        text = str(raw).strip().lower()
+        if text in {"true", "1", "yes", "y"}:
+            coerced[key] = True
+        elif text in {"false", "0", "no", "n"}:
+            coerced[key] = False
+        else:
+            coerced[key] = None
+    return coerced
+
+
+def _coerce_document_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]

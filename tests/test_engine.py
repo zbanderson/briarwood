@@ -67,6 +67,8 @@ class EngineTests(unittest.TestCase):
         self.assertIn("rental_ease", report.module_results)
         self.assertIn("town_county_outlook", report.module_results)
         self.assertIn("scarcity_support", report.module_results)
+        self.assertIn("location_intelligence", report.module_results)
+        self.assertIn("local_intelligence", report.module_results)
 
     def test_runner_can_write_tear_sheet_html(self) -> None:
         report = run_report("data/sample_property.json")
@@ -111,6 +113,8 @@ class EngineTests(unittest.TestCase):
         self.assertIn("Report Confidence", html)
         self.assertIn("Coverage Highlights", html)
         self.assertIn("Major Missing Inputs", html)
+        self.assertIn("Fields Impacting Valuation", html)
+        self.assertIn("Additional Descriptive Fields", html)
         self.assertIn("Strongest Evidence", html)
         self.assertIn("Heuristic Flags", html)
 

@@ -16,6 +16,7 @@ class IncomeAgentInput(BaseModel):
     annual_insurance: float | None = Field(default=None, ge=0)
     monthly_hoa: float | None = Field(default=None, ge=0)
     estimated_monthly_rent: float | None = Field(default=None, ge=0)
+    back_house_monthly_rent: float | None = Field(default=None, ge=0)
     rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|missing)$")
     vacancy_pct: float | None = Field(default=None, ge=0, le=1)
     maintenance_pct: float | None = Field(default=None, ge=0, le=1)
@@ -46,6 +47,7 @@ class IncomeAgentOutput(BaseModel):
     carrying_cost_complete: bool
     financing_complete: bool
     effective_monthly_rent: float | None
+    gross_monthly_rent_before_vacancy: float | None = None
     annual_rent: float | None
     rent_source_type: str = Field(pattern="^(provided|estimated|missing)$")
     income_support_ratio: float | None

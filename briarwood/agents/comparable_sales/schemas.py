@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ComparableSale(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     address: str
     town: str
@@ -13,8 +13,14 @@ class ComparableSale(BaseModel):
     architectural_style: str | None = None
     condition_profile: str | None = Field(default=None, pattern="^(renovated|updated|maintained|dated|needs_work)$")
     capex_lane: str | None = Field(default=None, pattern="^(light|moderate|heavy)$")
+    list_price: float | None = Field(default=None, gt=0)
+    listing_status: str | None = Field(default=None, pattern="^(for_sale|sold|pending|coming_soon|active)$")
     sale_price: float = Field(gt=0)
     sale_date: str
+    verification_status: str | None = Field(
+        default=None,
+        pattern="^(manual|broker_verified|public_record|estimated)$",
+    )
     source_name: str | None = None
     source_quality: str | None = None
     source_ref: str | None = None
@@ -36,6 +42,10 @@ class ComparableSale(BaseModel):
     baths: float | None = Field(default=None, ge=0)
     sqft: int | None = Field(default=None, ge=0)
     lot_size: float | None = Field(default=None, ge=0)
+    latitude: float | None = Field(default=None, validation_alias=AliasChoices("latitude", "lat"))
+    longitude: float | None = Field(default=None, validation_alias=AliasChoices("longitude", "lon", "lng"))
+    days_on_market: int | None = Field(default=None, ge=0)
+    distance_to_subject_miles: float | None = Field(default=None, ge=0)
     year_built: int | None = Field(default=None, ge=1800, le=2200)
     stories: float | None = Field(default=None, ge=0)
     garage_spaces: int | None = Field(default=None, ge=0)
@@ -62,6 +72,8 @@ class ComparableSalesRequest(BaseModel):
     listing_description: str | None = None
     market_value_today: float | None = Field(default=None, gt=0)
     market_history_points: list[dict[str, object]] = Field(default_factory=list)
+    manual_sales: list[dict[str, object]] = Field(default_factory=list)
+    manual_comp_only: bool = False
 
 
 class AdjustedComparable(BaseModel):
@@ -87,12 +99,14 @@ class AdjustedComparable(BaseModel):
     sale_price: float
     time_adjusted_price: float
     adjusted_price: float
+    comp_confidence_weight: float = Field(ge=0, le=1)
     similarity_score: float = Field(ge=0, le=1)
     fit_label: str = Field(pattern="^(strong|usable|stretch)$")
     bedrooms: int | None = Field(default=None, ge=0)
     bathrooms: float | None = Field(default=None, ge=0)
     sqft: int | None = Field(default=None, ge=0)
     lot_size: float | None = Field(default=None, ge=0)
+    distance_to_subject_miles: float | None = Field(default=None, ge=0)
     year_built: int | None = Field(default=None, ge=1800, le=2200)
     stories: float | None = Field(default=None, ge=0)
     garage_spaces: int | None = Field(default=None, ge=0)
@@ -127,3 +141,30 @@ class ComparableSalesOutput(BaseModel):
     unsupported_claims: list[str]
     warnings: list[str]
     summary: str
+
+
+class ActiveListingRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    address: str
+    town: str
+    state: str
+    list_price: float = Field(gt=0)
+    listing_status: str = Field(pattern="^(for_sale|pending|coming_soon|active)$")
+    property_type: str | None = None
+    architectural_style: str | None = None
+    condition_profile: str | None = Field(default=None, pattern="^(renovated|updated|maintained|dated|needs_work)$")
+    capex_lane: str | None = Field(default=None, pattern="^(light|moderate|heavy)$")
+    source_name: str | None = None
+    source_ref: str | None = None
+    source_notes: str | None = None
+    days_on_market: int | None = Field(default=None, ge=0)
+    beds: int | None = Field(default=None, ge=0)
+    baths: float | None = Field(default=None, ge=0)
+    sqft: int | None = Field(default=None, ge=0)
+    lot_size: float | None = Field(default=None, ge=0)
+    year_built: int | None = Field(default=None, ge=1800, le=2200)
+    garage_spaces: int | None = Field(default=None, ge=0)
+    latitude: float | None = Field(default=None, validation_alias=AliasChoices("latitude", "lat"))
+    longitude: float | None = Field(default=None, validation_alias=AliasChoices("longitude", "lon", "lng"))
+    notes: str | None = None
