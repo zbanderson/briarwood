@@ -165,7 +165,7 @@ def _module_confidence(report: AnalysisReport, module_name: str) -> float | None
 def _rent_confidence_component(report: AnalysisReport, property_input: PropertyInput | None) -> ConfidenceComponent:
     income = report.get_module("income_support").payload
     rent_source_type = getattr(income, "rent_source_type", "missing")
-    rent_confidence_override = (property_input.rent_confidence_override or "").lower() if property_input else ""
+    rent_confidence_override = (getattr(property_input, "rent_confidence_override", None) or "").lower() if property_input else ""
     unit_breakdown = getattr(income, "unit_breakdown", []) or []
 
     if rent_source_type == "manual_input":
@@ -210,8 +210,8 @@ def _capex_confidence_component(property_input: PropertyInput | None) -> Confide
         )
 
     explicit_budget = property_input.repair_capex_budget
-    condition_confirmed = bool(property_input.condition_confirmed)
-    capex_confirmed = bool(property_input.capex_confirmed)
+    condition_confirmed = bool(getattr(property_input, "condition_confirmed", False))
+    capex_confirmed = bool(getattr(property_input, "capex_confirmed", False))
     condition_profile = (property_input.condition_profile or "").lower()
     capex_lane = (property_input.capex_lane or "").lower()
 
@@ -558,17 +558,20 @@ def _capex_load_status(property_input: PropertyInput) -> MetricInputStatus:
     assumptions_used: list[str] = []
     missing_inputs: list[str] = []
 
+    capex_confirmed = getattr(property_input, "capex_confirmed", False)
+    condition_confirmed = getattr(property_input, "condition_confirmed", False)
+
     if property_input.repair_capex_budget is not None:
         user_inputs_used.append("repair budget")
-        if property_input.capex_confirmed or property_input.condition_confirmed:
+        if capex_confirmed or condition_confirmed:
             user_inputs_used.append("confirmed condition/capex")
     elif property_input.capex_lane:
-        if property_input.capex_confirmed:
+        if capex_confirmed:
             user_inputs_used.append("confirmed capex lane")
         else:
             assumptions_used.append("capex lane heuristic")
     elif property_input.condition_profile:
-        if property_input.condition_confirmed:
+        if condition_confirmed:
             user_inputs_used.append("confirmed condition")
         else:
             assumptions_used.append("condition-based capex inference")
@@ -659,9 +662,9 @@ def _optionality_status(property_input: PropertyInput, report: AnalysisReport) -
         value = getattr(property_input, field_name)
         if value not in (None, False, "", 0):
             facts_used.append(label)
-    if property_input.strategy_intent:
+    if getattr(property_input, "strategy_intent", None):
         user_inputs_used.append("strategy intent")
-    if property_input.hold_period_years is not None:
+    if getattr(property_input, "hold_period_years", None) is not None:
         user_inputs_used.append("hold period")
 
     if not facts_used:

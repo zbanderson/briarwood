@@ -36,8 +36,7 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIsNotNone(view.all_in_basis)
         optionality = view.category_scores.get("optionality") if view.category_scores else None
         self.assertIsNotNone(optionality)
-        self.assertIn("physical_optionality", optionality.component_scores)
-        self.assertIn("strategic_optionality", optionality.component_scores)
+        self.assertGreater(len(optionality.sub_factors), 0)
         self.assertEqual(
             [item.key for item in view.evidence.confidence_components],
             ["rent", "capex", "market", "liquidity"],

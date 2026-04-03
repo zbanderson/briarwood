@@ -372,12 +372,16 @@ class PropertyAnalysisView:
     risk_location: RiskLocationViewModel
     evidence: EvidenceViewModel
     compare_metrics: dict[str, Any] = field(default_factory=dict)
+    # Defaults transparency
+    defaults_applied: dict[str, str] = field(default_factory=dict)
+    geocoded: bool = False
     # Scoring layer
     final_score: float | None = None
     recommendation_tier: str | None = None
     recommendation_action: str | None = None
     score_narrative: str | None = None
     category_scores: Any | None = None  # dict[str, CategoryScore] from engine
+    lens_scores: Any | None = None  # LensScores from decision_model
 
 
 def _coverage_lists(property_input: PropertyInput | None) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -581,9 +585,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "ask_price": ask_price_val,
         "bcv": current_value.briarwood_current_value,
         "bcv_delta": current_value.mispricing_amount,
-        "all_in_basis": current_value.all_in_basis,
-        "net_opportunity_delta_value": current_value.net_opportunity_delta_value,
-        "net_opportunity_delta_pct": current_value.net_opportunity_delta_pct,
+        "all_in_basis": getattr(current_value, "all_in_basis", None),
+        "net_opportunity_delta_value": getattr(current_value, "net_opportunity_delta_value", None),
+        "net_opportunity_delta_pct": getattr(current_value, "net_opportunity_delta_pct", None),
         "bcv_range": f"{current_value.value_low:,.0f}-{current_value.value_high:,.0f}",
         "forward_base_case": scenario.base_case_value,
         "lot_size": property_input.lot_size if property_input else None,
@@ -622,11 +626,11 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         stress_case=_scenario_stress_value(scenario),
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
-        all_in_basis=current_value.all_in_basis,
-        capex_basis_used=current_value.capex_basis_used,
-        capex_basis_source=(current_value.capex_basis_source or "unknown"),
-        net_opportunity_delta_value=current_value.net_opportunity_delta_value,
-        net_opportunity_delta_pct=current_value.net_opportunity_delta_pct,
+        all_in_basis=getattr(current_value, "all_in_basis", None),
+        capex_basis_used=getattr(current_value, "capex_basis_used", None),
+        capex_basis_source=getattr(current_value, "capex_basis_source", None) or "unknown",
+        net_opportunity_delta_value=getattr(current_value, "net_opportunity_delta_value", None),
+        net_opportunity_delta_pct=getattr(current_value, "net_opportunity_delta_pct", None),
         pricing_view=current_value.pricing_view,
         memo_verdict=conclusion.verdict,
         biggest_risk=conclusion.top_risk,
@@ -774,6 +778,11 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         confidence_components=view.evidence.confidence_components,
     )
 
+    # Defaults transparency
+    if property_input is not None:
+        view.defaults_applied = getattr(property_input, "defaults_applied", {}) or {}
+        view.geocoded = getattr(property_input, "geocoded", False)
+
     # Scoring layer — gracefully degrade if scoring fails
     try:
         from briarwood.decision_model.scoring import calculate_final_score
@@ -783,6 +792,13 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         view.recommendation_action = fs.action
         view.score_narrative = fs.narrative
         view.category_scores = fs.category_scores
+    except Exception:
+        pass
+
+    # Lens scoring — multi-perspective evaluation
+    try:
+        from briarwood.decision_model.lens_scoring import calculate_lens_scores
+        view.lens_scores = calculate_lens_scores(report, view.category_scores)
     except Exception:
         pass
 
@@ -873,7 +889,7 @@ def _assumption_transparency_items(
     if capex_value:
         capex_override = bool(
             (assumptions and assumptions.capex_lane_override)
-            or property_input.capex_confirmed
+            or getattr(property_input, "capex_confirmed", False)
             or property_input.repair_capex_budget is not None
         )
         source_kind = "confirmed" if capex_override else "inferred"
@@ -890,7 +906,7 @@ def _assumption_transparency_items(
         )
 
     if property_input.condition_profile:
-        condition_override = bool((assumptions and assumptions.condition_profile_override) or property_input.condition_confirmed)
+        condition_override = bool((assumptions and assumptions.condition_profile_override) or getattr(property_input, "condition_confirmed", False))
         source_kind = "confirmed" if condition_override else "inferred"
         source_label = "User Confirmed" if source_kind == "confirmed" else "Model Inferred"
         items.append(
@@ -932,11 +948,11 @@ def _assumption_transparency_items(
         )
 
     preference_parts: list[str] = []
-    if property_input.strategy_intent:
+    if getattr(property_input, "strategy_intent", None):
         preference_parts.append(property_input.strategy_intent.replace("_", " ").title())
-    if property_input.hold_period_years is not None:
+    if getattr(property_input, "hold_period_years", None) is not None:
         preference_parts.append(f"{property_input.hold_period_years}y hold")
-    if property_input.risk_tolerance:
+    if getattr(property_input, "risk_tolerance", None):
         preference_parts.append(f"{property_input.risk_tolerance.title()} risk")
     if preference_parts:
         items.append(

@@ -175,10 +175,22 @@ def _saved_property_presets() -> list[PropertyPreset]:
                 preset_id=summary.property_id,
                 label=summary.label,
                 description=f"Saved analysis from {summary.timestamp[:16].replace('T', ' ')}.",
-                loader=lambda property_id=summary.property_id: load_report_for_preset(property_id),
+                loader=lambda property_id=summary.property_id: _reanalyze_saved_property(property_id),
             )
         )
     return presets
+
+
+def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
+    """Re-run analysis from saved inputs.json when pickle is missing or stale."""
+    inputs_path = _saved_property_path(property_id) / "inputs.json"
+    if not inputs_path.exists():
+        raise KeyError(f"No inputs.json for saved property: {property_id}")
+    report = run_report(inputs_path)
+    property_dir = _saved_property_path(property_id)
+    _write_saved_report(property_dir / "report.pkl", report)
+    _write_saved_summary(property_dir, report)
+    return report
 
 
 def _legacy_manual_presets() -> list[PropertyPreset]:

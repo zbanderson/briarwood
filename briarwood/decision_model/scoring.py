@@ -47,6 +47,8 @@ class CategoryScore:
     sub_factors: list[SubFactorScore] = field(default_factory=list)
     component_scores: dict[str, float] = field(default_factory=dict)
     component_notes: dict[str, str] = field(default_factory=dict)
+    unscored_factors: list[str] = field(default_factory=list)
+    weight_redistributed: bool = False
 
 
 @dataclass(slots=True)
@@ -255,8 +257,10 @@ def _lerp_score(value: float, lo: float, hi: float, score_at_lo: float, score_at
     return score_at_lo + t * (score_at_hi - score_at_lo)
 
 
-def _sf(name: str, score: float, evidence: str, data_source: str, raw: float | str | None, weight: float) -> SubFactorScore:
-    """Build a SubFactorScore with auto-clamping and contribution calculation."""
+def _sf(name: str, score: float | None, evidence: str, data_source: str, raw: float | str | None, weight: float) -> SubFactorScore | None:
+    """Build a SubFactorScore. Returns None if score is None (unscorable)."""
+    if score is None:
+        return None
     clamped = _clamp(score)
     return SubFactorScore(
         name=name,
@@ -267,6 +271,45 @@ def _sf(name: str, score: float, evidence: str, data_source: str, raw: float | s
         evidence=evidence,
         data_source=data_source,
         raw_value=raw,
+    )
+
+
+def _aggregate_category(
+    category_name: str,
+    category_key: str,
+    scored: list[SubFactorScore | None],
+    unscorable_names: list[str],
+) -> CategoryScore:
+    """Aggregate sub-factors into a category score with weight redistribution.
+
+    If any sub-factor returned None (unscorable), its weight is redistributed
+    proportionally to the scored sub-factors.
+    """
+    active = [s for s in scored if s is not None]
+    if not active:
+        cw = CATEGORY_WEIGHTS[category_key]
+        return CategoryScore(
+            category_name=category_name, score=NEUTRAL_SCORE, weight=cw,
+            contribution=round(NEUTRAL_SCORE * cw, 4),
+            unscored_factors=unscorable_names, weight_redistributed=True,
+        )
+
+    total_active_weight = sum(s.weight for s in active)
+    if total_active_weight <= 0:
+        total_active_weight = 1.0
+
+    # Redistribute: scale weights so active weights sum to 1.0
+    redistribution = 1.0 / total_active_weight
+    for s in active:
+        s.weight = round(s.weight * redistribution, 4)
+        s.contribution = round(s.score * s.weight, 4)
+
+    cat_score = _clamp(sum(s.contribution for s in active))
+    cw = CATEGORY_WEIGHTS[category_key]
+    return CategoryScore(
+        category_name=category_name, score=round(cat_score, 2), weight=cw,
+        contribution=round(cat_score * cw, 4), sub_factors=active,
+        unscored_factors=unscorable_names, weight_redistributed=len(unscorable_names) > 0,
     )
 
 
@@ -373,20 +416,27 @@ def _score_scarcity_premium(m: dict) -> tuple[float, str, float | None]:
     return 1.0, f"Scarcity score {scarcity:.0f} — abundant supply, no scarcity premium", scarcity
 
 
+def _build_category(category_name: str, category_key: str, factors: list[tuple[str, object, str]], m: dict) -> CategoryScore:
+    """Generic category builder with weight redistribution."""
+    w = SUB_FACTOR_WEIGHTS[category_key]
+    scored: list[SubFactorScore | None] = []
+    unscorable: list[str] = []
+    for name, fn, src in factors:
+        score, evidence, raw = fn(m)
+        sf = _sf(name, score, evidence, src, raw, w[name])
+        if sf is None:
+            unscorable.append(name)
+        scored.append(sf)
+    return _aggregate_category(category_name, category_key, scored, unscorable)
+
+
 def _calculate_price_context(m: dict) -> CategoryScore:
-    w = SUB_FACTOR_WEIGHTS["price_context"]
-    subs = []
-    for name, fn, src in [
+    return _build_category("Price Context", "price_context", [
         ("price_vs_comps", _score_price_vs_comps, "current_value.mispricing_pct"),
         ("ppsf_positioning", _score_ppsf_positioning, "current_value.bcv / sqft"),
         ("historical_pricing", _score_historical_pricing, "market_value_history / bull_base_bear"),
         ("scarcity_premium", _score_scarcity_premium, "scarcity_support.scarcity_support_score"),
-    ]:
-        score, evidence, raw = fn(m)
-        subs.append(_sf(name, score, evidence, src, raw, w[name]))
-    cat_score = _clamp(sum(s.contribution for s in subs))
-    cw = CATEGORY_WEIGHTS["price_context"]
-    return CategoryScore("Price Context", round(cat_score, 2), cw, round(cat_score * cw, 4), subs)
+    ], m)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -394,35 +444,39 @@ def _calculate_price_context(m: dict) -> CategoryScore:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _score_rent_support(m: dict) -> tuple[float, str, float | None]:
-    """Income support ratio: rent / total monthly cost."""
+def _score_rent_support(m: dict) -> tuple[float | None, str, float | None]:
+    """Income support ratio: rent / total monthly cost. Continuous interpolation for NJ coastal range."""
     ratio = m.get("income_support_ratio")
     if ratio is None:
-        return NEUTRAL_SCORE, "Income support ratio unavailable", None
+        return None, "Income support ratio unavailable — no financing or rent data", None
+    # Continuous scoring — avoids all-same-bucket at 0.45-0.60 ISR range
     if ratio >= 1.3:
         return 5.0, f"ISR {ratio:.2f}x — strong positive cash flow", ratio
-    if ratio >= 1.1:
-        return 4.0, f"ISR {ratio:.2f}x — positive cash flow after all costs", ratio
+    if ratio >= 1.0:
+        return _lerp_score(ratio, 1.0, 1.3, 4.0, 5.0), f"ISR {ratio:.2f}x — positive cash flow", ratio
     if ratio >= 0.85:
-        return 3.0, f"ISR {ratio:.2f}x — near break-even carry", ratio
+        return _lerp_score(ratio, 0.85, 1.0, 3.0, 4.0), f"ISR {ratio:.2f}x — near break-even", ratio
     if ratio >= 0.6:
-        return 2.0, f"ISR {ratio:.2f}x — meaningful negative carry", ratio
-    return 1.0, f"ISR {ratio:.2f}x — heavy negative carry", ratio
+        return _lerp_score(ratio, 0.6, 0.85, 2.0, 3.0), f"ISR {ratio:.2f}x — negative carry", ratio
+    if ratio >= 0.4:
+        return _lerp_score(ratio, 0.4, 0.6, 1.0, 2.0), f"ISR {ratio:.2f}x — heavy negative carry", ratio
+    return 1.0, f"ISR {ratio:.2f}x — severe negative carry", ratio
 
 
-def _score_carry_efficiency(m: dict) -> tuple[float, str, float | None]:
-    """Price-to-rent ratio as carry efficiency signal."""
+def _score_carry_efficiency(m: dict) -> tuple[float | None, str, float | None]:
+    """Price-to-rent ratio as carry efficiency. Uses continuous interpolation for NJ coastal range."""
     ptr = m.get("price_to_rent")
     if ptr is None:
-        return NEUTRAL_SCORE, "Price-to-rent unavailable", None
+        return None, "Price-to-rent unavailable — no rent or price data", None
+    # Continuous scoring via interpolation — avoids bucket collapse at NJ coastal PTR levels
     if ptr <= 12:
         return 5.0, f"PTR {ptr:.1f}x — exceptional rent yield", ptr
     if ptr <= 16:
-        return 4.0, f"PTR {ptr:.1f}x — strong rent support", ptr
+        return _lerp_score(ptr, 12, 16, 5.0, 4.0), f"PTR {ptr:.1f}x — strong rent support", ptr
     if ptr <= 20:
-        return 3.0, f"PTR {ptr:.1f}x — typical for coastal NJ", ptr
+        return _lerp_score(ptr, 16, 20, 4.0, 3.0), f"PTR {ptr:.1f}x — typical for coastal NJ", ptr
     if ptr <= 25:
-        return 2.0, f"PTR {ptr:.1f}x — rent doesn't justify price", ptr
+        return _lerp_score(ptr, 20, 25, 3.0, 1.5), f"PTR {ptr:.1f}x — rent doesn't justify price", ptr
     return 1.0, f"PTR {ptr:.1f}x — pure appreciation play, no rent support", ptr
 
 
@@ -467,19 +521,12 @@ def _score_replacement_cost(m: dict) -> tuple[float, str, float | None]:
 
 
 def _calculate_economic_support(m: dict) -> CategoryScore:
-    w = SUB_FACTOR_WEIGHTS["economic_support"]
-    subs = []
-    for name, fn, src in [
+    return _build_category("Economic Support", "economic_support", [
         ("rent_support", _score_rent_support, "income_support.income_support_ratio"),
         ("carry_efficiency", _score_carry_efficiency, "income_support.price_to_rent"),
         ("downside_protection", _score_downside_protection, "current_value.bcv vs ask"),
         ("replacement_cost", _score_replacement_cost, "property_input.sqft, purchase_price"),
-    ]:
-        score, evidence, raw = fn(m)
-        subs.append(_sf(name, score, evidence, src, raw, w[name]))
-    cat_score = _clamp(sum(s.contribution for s in subs))
-    cw = CATEGORY_WEIGHTS["economic_support"]
-    return CategoryScore("Economic Support", round(cat_score, 2), cw, round(cat_score * cw, 4), subs)
+    ], m)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -487,37 +534,55 @@ def _calculate_economic_support(m: dict) -> CategoryScore:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _score_adu_expansion(m: dict) -> tuple[float, str, str | None]:
-    """Physical capacity for ADU or expansion."""
+def _score_adu_expansion(m: dict) -> tuple[float | None, str, str | None]:
+    """Physical capacity for ADU or expansion. Uses lot sqft with coastal-appropriate thresholds."""
     has_bh = m.get("has_back_house")
     adu_type = m.get("adu_type")
-    lot_size = m.get("lot_size")
+    lot_size = m.get("lot_size")  # acres
+    sqft = m.get("sqft") or 0
     has_basement = m.get("has_basement")
     garage = m.get("garage_spaces") or 0
 
+    # Convert lot to sqft for finer scoring
+    lot_sqft = (lot_size * 43560) if lot_size else None
+
     signals = 0
-    notes = []
+    notes: list[str] = []
     if has_bh:
         signals += 2
-        notes.append(f"existing back house/ADU ({adu_type or 'untyped'})")
+        notes.append(f"existing ADU ({adu_type or 'untyped'})")
     if has_basement:
         signals += 1
-        notes.append("basement exists")
-    if garage >= 2:
+        notes.append("basement (conversion potential)")
+    if garage >= 1:
         signals += 1
-        notes.append(f"{garage} garage spaces — conversion potential")
-    if lot_size and lot_size >= 0.2:
-        signals += 1
-        notes.append(f"{lot_size:.2f} acre lot — room for addition")
+        notes.append(f"{garage} garage space(s)")
+    # Lot scoring with NJ coastal thresholds (smaller lots than suburban)
+    if lot_sqft is not None:
+        remaining = lot_sqft - sqft if sqft else lot_sqft
+        if remaining >= 3000:
+            signals += 2
+            notes.append(f"{lot_sqft:,.0f}sf lot, ~{remaining:,.0f}sf remaining")
+        elif remaining >= 1500:
+            signals += 1
+            notes.append(f"{lot_sqft:,.0f}sf lot, ~{remaining:,.0f}sf remaining")
+        else:
+            notes.append(f"{lot_sqft:,.0f}sf lot, tight")
 
-    detail = "; ".join(notes) if notes else "no expansion signals detected"
+    # If we have zero data about features AND no lot, unscorable
+    if lot_sqft is None and has_bh is None and has_basement is None and garage == 0:
+        return None, "ADU potential unknown — no feature or lot data", None
+
+    detail = "; ".join(notes) if notes else "no expansion signals"
+    if signals >= 4:
+        return 5.0, f"Strong expansion potential: {detail}", detail
     if signals >= 3:
-        return 5.0, f"Strong expansion optionality: {detail}", detail
-    if signals == 2:
         return 4.0, f"Good expansion potential: {detail}", detail
-    if signals == 1:
-        return 3.0, f"Some expansion potential: {detail}", detail
-    return 2.0, "Limited physical expansion options", detail
+    if signals >= 2:
+        return 3.5, f"Some expansion potential: {detail}", detail
+    if signals >= 1:
+        return 2.5, f"Limited expansion: {detail}", detail
+    return 1.5, f"Minimal expansion options: {detail}", detail
 
 
 def _score_renovation_upside(m: dict) -> tuple[float, str, float | None]:
@@ -572,42 +637,50 @@ def _score_strategy_flexibility(m: dict) -> tuple[float, str, float | None]:
     return score, f"{options} viable strategies: {detail}", options
 
 
-def _score_zoning_optionality(m: dict) -> tuple[float, str, str | None]:
-    """Zoning, lot config, and regulatory environment for future development."""
+def _score_zoning_optionality(m: dict) -> tuple[float | None, str, str | None]:
+    """Zoning, lot config, and regulatory environment. Returns None when no real zoning data exists."""
+    # Only use regulatory_trend_score if local_intelligence actually had documents
+    # (score of exactly 50.0 with 0 confidence = no real data, default from empty module)
+    dev_activity = m.get("development_activity_score")
     reg_score = m.get("regulatory_trend_score")
+    has_real_local_data = dev_activity is not None and dev_activity > 0
+
     lot = m.get("lot_size")
     corner = m.get("corner_lot")
     prop_type = (m.get("property_type") or "").lower()
 
     signals = 0
-    notes = []
+    notes: list[str] = []
 
-    if reg_score is not None and reg_score >= 60:
-        signals += 1
-        notes.append(f"permissive regulatory trend ({reg_score:.0f})")
-    elif reg_score is not None and reg_score < 40:
-        notes.append(f"restrictive regulatory environment ({reg_score:.0f})")
+    if has_real_local_data and reg_score is not None:
+        if reg_score >= 60:
+            signals += 1
+            notes.append(f"permissive regulatory trend ({reg_score:.0f})")
+        elif reg_score < 40:
+            notes.append(f"restrictive environment ({reg_score:.0f})")
 
     if lot and lot >= 0.25:
         signals += 1
         notes.append(f"{lot:.2f} acre lot — subdivision potential")
     if corner:
         signals += 1
-        notes.append("corner lot — better development geometry")
+        notes.append("corner lot")
     if "multi" in prop_type or "duplex" in prop_type:
         signals += 1
-        notes.append(f"already {prop_type} — zoning likely permissive")
+        notes.append(f"zoned {prop_type}")
 
-    detail = "; ".join(notes) if notes else "no zoning signals available"
+    # If we have no real data at all, return None → weight redistribution
+    if signals == 0 and not has_real_local_data and not corner:
+        return None, "No zoning data available — weight redistributed", None
+
+    detail = "; ".join(notes) if notes else "standard residential"
     if signals >= 3:
         return 5.0, f"Strong zoning optionality: {detail}", detail
     if signals == 2:
         return 4.0, f"Good zoning potential: {detail}", detail
     if signals == 1:
-        return 3.0, f"Some zoning flexibility: {detail}", detail
-    if reg_score is not None and reg_score < 40:
-        return 2.0, f"Restrictive environment: {detail}", detail
-    return NEUTRAL_SCORE, f"Insufficient zoning data: {detail}", detail
+        return 3.0, f"Some flexibility: {detail}", detail
+    return 2.0, f"Standard residential zoning: {detail}", detail
 
 
 def _weighted_component_average(subs: list[SubFactorScore], names: set[str]) -> float | None:
@@ -633,37 +706,12 @@ def _component_note(subs: list[SubFactorScore], names: set[str]) -> str:
 
 
 def _calculate_optionality(m: dict) -> CategoryScore:
-    w = SUB_FACTOR_WEIGHTS["optionality"]
-    subs = []
-    for name, fn, src in [
+    return _build_category("Optionality", "optionality", [
         ("adu_expansion", _score_adu_expansion, "property_input (ADU, basement, lot, garage)"),
         ("renovation_upside", _score_renovation_upside, "renovation_scenario / condition_profile"),
         ("strategy_flexibility", _score_strategy_flexibility, "multi-module synthesis"),
         ("zoning_optionality", _score_zoning_optionality, "local_intelligence.regulatory_trend_score"),
-    ]:
-        score, evidence, raw = fn(m)
-        subs.append(_sf(name, score, evidence, src, raw, w[name]))
-    cat_score = _clamp(sum(s.contribution for s in subs))
-    cw = CATEGORY_WEIGHTS["optionality"]
-    physical_names = {"adu_expansion", "renovation_upside", "zoning_optionality"}
-    strategic_names = {"strategy_flexibility"}
-    component_scores = {
-        "physical_optionality": _weighted_component_average(subs, physical_names) or NEUTRAL_SCORE,
-        "strategic_optionality": _weighted_component_average(subs, strategic_names) or NEUTRAL_SCORE,
-    }
-    component_notes = {
-        "physical_optionality": _component_note(subs, physical_names),
-        "strategic_optionality": _component_note(subs, strategic_names),
-    }
-    return CategoryScore(
-        "Optionality",
-        round(cat_score, 2),
-        cw,
-        round(cat_score * cw, 4),
-        subs,
-        component_scores=component_scores,
-        component_notes=component_notes,
-    )
+    ], m)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -687,29 +735,22 @@ def _score_dom_signal(m: dict) -> tuple[float, str, float | None]:
     return 1.0, f"{dom} DOM — stale listing, demand concerns", dom
 
 
-def _score_inventory_tightness(m: dict) -> tuple[float, str, float | None]:
-    """Supply pipeline and scarcity signals."""
-    supply = m.get("supply_pipeline_score")
+def _score_inventory_tightness(m: dict) -> tuple[float | None, str, float | None]:
+    """Supply tightness from scarcity score. Ignores supply_pipeline_score (broken when local_intelligence has no data)."""
     scarcity = m.get("scarcity_support_score") or m.get("location_scarcity_score")
-    if scarcity is None and supply is None:
-        return NEUTRAL_SCORE, "No inventory data available", None
+    dom = m.get("days_on_market")
 
-    # supply_pipeline_score: higher = more supply coming = less tight
-    # scarcity_support_score: higher = more scarce = tighter
-    if supply is not None:
-        tightness = 100.0 - supply  # invert: low supply pipeline = tight
-    else:
-        tightness = scarcity or 50.0
+    # Primary: scarcity score (reliable, from town/county data)
+    if scarcity is not None:
+        score = _lerp_score(scarcity, 25, 80, 1.5, 5.0)
+        return score, f"Inventory tightness from scarcity ({scarcity:.0f}/100)", scarcity
 
-    if tightness >= 75:
-        return 5.0, f"Very tight inventory (supply tightness {tightness:.0f})", tightness
-    if tightness >= 60:
-        return 4.0, f"Tight inventory ({tightness:.0f})", tightness
-    if tightness >= 40:
-        return 3.0, f"Moderate inventory ({tightness:.0f})", tightness
-    if tightness >= 25:
-        return 2.0, f"Loose inventory ({tightness:.0f})", tightness
-    return 1.0, f"Oversupplied market ({tightness:.0f})", tightness
+    # Secondary: infer from DOM
+    if dom is not None:
+        score = _lerp_score(dom, 120, 7, 1.5, 5.0)
+        return score, f"Inventory tightness inferred from {dom} DOM", dom
+
+    return None, "Inventory tightness unknown — no scarcity or DOM data", None
 
 
 def _score_buyer_seller_balance(m: dict) -> tuple[float, str, float | None]:
@@ -788,19 +829,12 @@ def _score_location_momentum(m: dict) -> tuple[float, str, float | None]:
 
 
 def _calculate_market_position(m: dict) -> CategoryScore:
-    w = SUB_FACTOR_WEIGHTS["market_position"]
-    subs = []
-    for name, fn, src in [
+    return _build_category("Market Position", "market_position", [
         ("dom_signal", _score_dom_signal, "property_input.days_on_market"),
         ("inventory_tightness", _score_inventory_tightness, "scarcity_support / local_intelligence"),
         ("buyer_seller_balance", _score_buyer_seller_balance, "town_county + DOM + ZHVI"),
         ("location_momentum", _score_location_momentum, "town_county_outlook + local_intelligence"),
-    ]:
-        score, evidence, raw = fn(m)
-        subs.append(_sf(name, score, evidence, src, raw, w[name]))
-    cat_score = _clamp(sum(s.contribution for s in subs))
-    cw = CATEGORY_WEIGHTS["market_position"]
-    return CategoryScore("Market Position", round(cat_score, 2), cw, round(cat_score * cw, 4), subs)
+    ], m)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -909,58 +943,47 @@ def _score_capex_risk(m: dict) -> tuple[float, str, str | None]:
 
 
 def _score_income_stability(m: dict) -> tuple[float, str, float | None]:
-    """How reliable and sustainable is the income stream?"""
-    source = (m.get("rent_source_type") or "").lower()
-    ease_label = (m.get("rental_ease_label") or "").lower()
+    """How reliable and sustainable is the income stream? Uses numeric scores, not label matching."""
+    rental_ease_score = m.get("rental_ease_score")  # 0-100 numeric
+    demand_depth = m.get("demand_depth_score")  # 0-100 numeric
     burden = m.get("downside_burden")
     risk_view = (m.get("risk_view") or "").lower()
-    rent_confidence = (m.get("rent_confidence_override") or "").lower()
+    isr = m.get("income_support_ratio")
 
-    score = NEUTRAL_SCORE
-    notes = []
+    # Start from rental ease as a 1-5 scale (most direct stability signal)
+    if rental_ease_score is not None:
+        base = _lerp_score(rental_ease_score, 20, 80, 1.5, 4.5)
+    elif isr is not None:
+        # Fallback: ISR as stability proxy
+        base = _lerp_score(isr, 0.3, 1.3, 1.0, 4.5)
+    else:
+        base = NEUTRAL_SCORE
 
-    # Rent source quality
-    if "sourced" in source:
-        score += 0.5
-        notes.append("sourced rent data")
-    elif "estimated" in source:
-        notes.append("estimated rent")
-    elif "missing" in source:
-        score -= 0.5
-        notes.append("no rent data")
+    notes: list[str] = []
+    adj = 0.0
 
-    # Rental ease
-    if ease_label in ("very_easy", "easy"):
-        score += 0.5
-        notes.append(f"rental ease: {ease_label}")
-    elif ease_label in ("difficult", "very_difficult"):
-        score -= 0.5
-        notes.append(f"rental ease: {ease_label}")
-
-    # Downside burden
+    # Downside burden adjustment
     if burden is not None:
-        if burden <= 0.6:
-            score += 0.5
-            notes.append(f"low downside burden ({burden:.0%})")
-        elif burden >= 0.9:
-            score -= 0.5
-            notes.append(f"high downside burden ({burden:.0%})")
+        if burden <= 200:
+            adj += 0.3
+            notes.append(f"low burden (${burden:,.0f}/mo)")
+        elif burden >= 2000:
+            adj -= 0.4
+            notes.append(f"high burden (${burden:,.0f}/mo)")
+        elif burden >= 1000:
+            adj -= 0.2
+            notes.append(f"moderate burden (${burden:,.0f}/mo)")
 
-    # Risk view
+    # Risk view from income module
     if "strong" in risk_view:
-        score += 0.3
-    elif "negative" in risk_view:
-        score -= 0.5
+        adj += 0.2
+    elif "negative" in risk_view or "weak" in risk_view:
+        adj -= 0.2
 
-    if rent_confidence == "high":
-        score += 0.25
-        notes.append("user-confirmed high rent confidence")
-    elif rent_confidence == "low":
-        score -= 0.4
-        notes.append("user-marked low rent confidence")
-
-    detail = "; ".join(notes) if notes else "limited income data"
-    return _clamp(score), f"Income stability: {detail}", score
+    score = _clamp(base + adj)
+    detail = "; ".join(notes) if notes else ""
+    ease_text = f"ease {rental_ease_score:.0f}/100" if rental_ease_score is not None else ""
+    return score, f"Income stability ({ease_text}{'; ' if ease_text and detail else ''}{detail})", score
 
 
 def _score_macro_regulatory(m: dict) -> tuple[float, str, str | None]:
@@ -1004,45 +1027,12 @@ def _score_macro_regulatory(m: dict) -> tuple[float, str, str | None]:
 
 
 def _calculate_risk_layer(m: dict) -> CategoryScore:
-    w = SUB_FACTOR_WEIGHTS["risk_layer"]
-    subs = []
-    for name, fn, src in [
+    return _build_category("Risk Layer", "risk_layer", [
         ("liquidity_risk", _score_liquidity_risk, "rental_ease.liquidity_score"),
         ("capex_risk", _score_capex_risk, "property_input (condition, capex, year)"),
         ("income_stability", _score_income_stability, "income_support + rental_ease"),
         ("macro_regulatory", _score_macro_regulatory, "risk_constraints + local_intelligence"),
-    ]:
-        score, evidence, raw = fn(m)
-        subs.append(_sf(name, score, evidence, src, raw, w[name]))
-    cat_score = _clamp(sum(s.contribution for s in subs))
-    cw = CATEGORY_WEIGHTS["risk_layer"]
-    liquidity_sub = next((sub for sub in subs if sub.name == "liquidity_risk"), None)
-    capex_sub = next((sub for sub in subs if sub.name == "capex_risk"), None)
-    macro_sub = next((sub for sub in subs if sub.name == "macro_regulatory"), None)
-    income_sub = next((sub for sub in subs if sub.name == "income_stability"), None)
-    component_scores = {}
-    component_notes = {}
-    if liquidity_sub is not None:
-        component_scores["exit_liquidity"] = round(liquidity_sub.score, 2)
-        component_notes["exit_liquidity"] = liquidity_sub.evidence
-    if capex_sub is not None:
-        component_scores["capex_execution"] = round(capex_sub.score, 2)
-        component_notes["capex_execution"] = capex_sub.evidence
-    if macro_sub is not None:
-        component_scores["macro_regulatory"] = round(macro_sub.score, 2)
-        component_notes["macro_regulatory"] = macro_sub.evidence
-    if income_sub is not None:
-        component_scores["income_stability"] = round(income_sub.score, 2)
-        component_notes["income_stability"] = income_sub.evidence
-    return CategoryScore(
-        "Risk Layer",
-        round(cat_score, 2),
-        cw,
-        round(cat_score * cw, 4),
-        subs,
-        component_scores=component_scores,
-        component_notes=component_notes,
-    )
+    ], m)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

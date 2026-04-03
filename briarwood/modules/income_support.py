@@ -95,7 +95,7 @@ class IncomeSupportModule:
                 back_house_monthly_rent=property_input.back_house_monthly_rent,
                 unit_rents=manual_unit_rents,
                 rent_source_type=rent_source_type,
-                rent_confidence_override=property_input.rent_confidence_override,
+                rent_confidence_override=getattr(property_input, "rent_confidence_override", None),
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,
                 market_price_to_rent_benchmark=property_input.market_price_to_rent_benchmark,
@@ -103,7 +103,7 @@ class IncomeSupportModule:
         )
         warnings = wrapper_warnings + output.warnings
         assumptions = output.assumptions + rent_context_assumptions
-        if property_input.rent_confidence_override:
+        if getattr(property_input, "rent_confidence_override", None):
             assumptions.append(
                 f"User marked rent confidence as {property_input.rent_confidence_override.lower()}."
             )

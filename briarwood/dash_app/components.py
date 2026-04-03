@@ -22,7 +22,7 @@ from briarwood.dash_app.theme import (
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
-    TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
+    TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_BG, TONE_WARNING_TEXT,
     VALUE_STYLE_LARGE, VALUE_STYLE_MEDIUM,
     score_color, tone_badge_style, tone_color,
 )
@@ -198,6 +198,76 @@ def _all_compare_scores(view: PropertyAnalysisView) -> dict[str, float | None]:
     for key, _label in _COMPARE_CATEGORY_ORDER:
         scores[key] = _compare_category_score(view, key)
     return scores
+
+
+def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
+    """Multi-perspective score display: Risk | Investor | Owner | Developer."""
+    ls = view.lens_scores
+    if ls is None:
+        return html.Div()
+
+    def _lens_card(label: str, score: float | None, narrative: str, *, recommended: bool = False) -> html.Div:
+        if score is None:
+            return html.Div()
+        sc = score_color(score)
+        border = f"2px solid {sc}" if recommended else f"1px solid {BORDER}"
+        return html.Div(
+            [
+                html.Div(label, style={"fontSize": "9px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
+                html.Div(
+                    [
+                        html.Span(f"{score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": sc}),
+                        html.Span("/5", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                    ],
+                    style={"marginBottom": "4px"},
+                ),
+                html.Div(narrative[:80] + ("…" if len(narrative) > 80 else ""), style={"fontSize": "10px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
+                html.Div("★ BEST FIT", style={"fontSize": "8px", "fontWeight": "700", "color": sc, "marginTop": "4px"}) if recommended else None,
+            ],
+            style={**CARD_STYLE, "border": border, "textAlign": "center", "padding": "10px 8px"},
+        )
+
+    # Risk uses inverted display: lower score = safer = green
+    risk_display_color = score_color(6.0 - ls.risk_score)
+
+    cards = [
+        html.Div(
+            [
+                html.Div("RISK", style={"fontSize": "9px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
+                html.Div(
+                    [
+                        html.Span(f"{ls.risk_score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": risk_display_color}),
+                        html.Span("/5", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                    ],
+                    style={"marginBottom": "4px"},
+                ),
+                html.Div(ls.risk_narrative[:60], style={"fontSize": "10px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
+            ],
+            style={**CARD_STYLE, "textAlign": "center", "padding": "10px 8px"},
+        ),
+        _lens_card("Investor", ls.investor_score, ls.investor_narrative, recommended=ls.recommended_lens == "investor"),
+        _lens_card("Owner-Occupant", ls.owner_score, ls.owner_narrative, recommended=ls.recommended_lens == "owner"),
+        _lens_card("Developer", ls.developer_score, ls.developer_narrative, recommended=ls.recommended_lens == "developer"),
+    ]
+
+    return html.Div(
+        [
+            html.Div(
+                [html.Span("PERSPECTIVE SCORES", style=SECTION_HEADER_STYLE)],
+                style={"marginBottom": "6px"},
+            ),
+            html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "8px"}),
+            # Recommendation banner
+            html.Div(
+                [
+                    html.Span("Best fit: ", style={"fontWeight": "600", "fontSize": "11px", "color": ACCENT_BLUE}),
+                    html.Span(ls.recommendation_reason, style={"fontSize": "11px", "color": TEXT_SECONDARY}),
+                ],
+                style={"marginTop": "8px", "padding": "8px 10px", "borderLeft": f"3px solid {ACCENT_BLUE}", "backgroundColor": BG_SURFACE_2, "borderRadius": "0 4px 4px 0"},
+            ),
+        ],
+        style={"marginBottom": "16px"},
+    )
 
 
 def render_score_header(view: PropertyAnalysisView) -> html.Div:
@@ -1319,6 +1389,8 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
     return html.Div(
         [
             summary_strip(view),
+            # Lens selector (multi-perspective scores)
+            render_lens_selector(view),
             # Executive summary (always visible)
             render_executive_summary(view),
             render_score_header(view),
@@ -1532,8 +1604,56 @@ def _render_evidence_footer(view: PropertyAnalysisView, report: AnalysisReport) 
                 ],
                 style={"display": "flex", "gap": "12px", "marginTop": "6px"},
             ) if (missing > 0 or estimated > 0) else None,
+            # Defaults transparency
+            _render_defaults_applied(view),
         ],
         style={"marginTop": "24px", "paddingTop": "12px", "borderTop": f"1px solid {BORDER}"},
+    )
+
+
+def _render_defaults_applied(view: PropertyAnalysisView) -> html.Div | None:
+    """Show which smart defaults were applied to this property."""
+    if not view.defaults_applied:
+        return None
+
+    rows = []
+    for field_name, description in view.defaults_applied.items():
+        label = field_name.replace("_", " ").title()
+        rows.append(
+            html.Div(
+                [
+                    html.Span(f"{label}: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "10px"}),
+                    html.Span(description, style={"color": TEXT_MUTED, "fontSize": "10px"}),
+                ],
+                style={"marginBottom": "2px"},
+            )
+        )
+
+    geocode_note = None
+    if view.geocoded:
+        geocode_note = html.Div(
+            [
+                html.Span("Geocoded: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "10px"}),
+                html.Span("lat/lon populated from address via Nominatim", style={"color": TEXT_MUTED, "fontSize": "10px"}),
+            ],
+            style={"marginBottom": "2px"},
+        )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("SMART DEFAULTS APPLIED", style={**SECTION_HEADER_STYLE, "color": TONE_WARNING_TEXT}),
+                    html.Div(
+                        f"{len(view.defaults_applied)} fields auto-filled. Override in Add Property form if you have actual values.",
+                        style={"fontSize": "10px", "color": TEXT_MUTED, "marginBottom": "6px"},
+                    ),
+                ],
+            ),
+            *rows,
+            geocode_note,
+        ],
+        style={**CARD_STYLE, "padding": "8px 10px", "marginTop": "8px", "borderColor": TONE_WARNING_BG},
     )
 
 

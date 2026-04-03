@@ -216,6 +216,8 @@ class PropertyInput:
     local_documents: list[dict[str, Any]] = field(default_factory=list)
     renovation_scenario: dict[str, Any] | None = None
     teardown_scenario: dict[str, Any] | None = None
+    defaults_applied: dict[str, str] = field(default_factory=dict)
+    geocoded: bool = False
     facts: PropertyFacts | None = None
     market_signals: MarketLocationSignals | None = None
     user_assumptions: UserAssumptions | None = None

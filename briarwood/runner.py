@@ -110,6 +110,23 @@ def build_engine(
     )
 
 
+def _prepare_property_input(property_input: PropertyInput) -> None:
+    """Apply smart defaults and geocoding to a PropertyInput before analysis."""
+    from briarwood.defaults import apply_smart_defaults
+    from briarwood.geocoder import apply_geocoding
+
+    # Apply smart defaults for missing financing, costs, and condition
+    defaults_result = apply_smart_defaults(property_input)
+    property_input.defaults_applied = defaults_result.fields
+
+    # Geocode address if lat/lon missing (enables location_intelligence module)
+    try:
+        if apply_geocoding(property_input):
+            property_input.geocoded = True
+    except Exception:
+        pass  # Geocoding is best-effort; don't block analysis
+
+
 def run_report(
     property_path: str | Path,
     *,
@@ -119,6 +136,7 @@ def run_report(
 ) -> AnalysisReport:
     property_input = load_property_from_json(property_path)
     validate_property_input(property_input)
+    _prepare_property_input(property_input)
     engine = build_engine(
         cost_settings=cost_settings,
         bull_base_bear_settings=bull_base_bear_settings,
@@ -142,6 +160,7 @@ def run_report_from_listing_text(
         source_url=source_url,
     )
     validate_property_input(property_input)
+    _prepare_property_input(property_input)
     engine = build_engine(
         cost_settings=cost_settings,
         bull_base_bear_settings=bull_base_bear_settings,
