@@ -1,0 +1,12 @@
+{
+  "property_id": "briarwood-rd-belmar",
+  "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+  "label": "1223 Briarwood Rd",
+  "ask_price": 674200.0,
+  "bcv": 817170.34,
+  "pricing_view": "appears undervalued",
+  "confidence": 0.67,
+  "comp_trust": "Seed / Review Only",
+  "missing_input_count": 7,
+  "timestamp": "2026-04-03T17:51:05"
+}

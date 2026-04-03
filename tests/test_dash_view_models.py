@@ -67,6 +67,10 @@ class DashViewModelTests(unittest.TestCase):
         report = self.reports["briarwood-rd-belmar"]
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
+        self.assertIn("DECISION SUMMARY", _flatten_text(body))
+        self.assertIn("Is This a Good Price?", _flatten_text(body))
+        self.assertIn("Can I Afford to Hold It?", _flatten_text(body))
+        self.assertIn("What Could Go Wrong?", _flatten_text(body))
         self.assertIn("Current Competition", _flatten_text(body))
         self.assertIn("Confidence Drivers", _flatten_text(body))
         self.assertIn("Metric Basis & Gaps", _flatten_text(body))

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import pickle
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
 from briarwood.dash_app.view_models import build_property_analysis_view
+from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
 from briarwood.runner import run_report, run_report_from_listing_text, write_report_html
 from briarwood.schemas import AnalysisReport
 
@@ -17,6 +19,7 @@ DATA_DIR = ROOT / "data"
 OUTPUT_DIR = ROOT / "outputs"
 SAVED_PROPERTY_DIR = DATA_DIR / "saved_properties"
 LEGACY_MANUAL_ENTRY_DIR = DATA_DIR / "manual_entries"
+SALES_COMPS_PATH = DATA_DIR / "comps" / "sales_comps.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,7 +92,10 @@ _REPORT_CACHE: dict[str, AnalysisReport] = {}
 
 
 def list_presets() -> list[PropertyPreset]:
-    return list(PRESETS) + _saved_property_presets() + _legacy_manual_presets()
+    ordered: dict[str, PropertyPreset] = {}
+    for preset in list(PRESETS) + _saved_property_presets() + _saved_property_directory_presets() + _comp_database_presets() + _legacy_manual_presets():
+        ordered[preset.preset_id] = preset
+    return list(ordered.values())
 
 
 def list_saved_properties() -> list[SavedPropertySummary]:
@@ -123,6 +129,28 @@ def list_saved_properties() -> list[SavedPropertySummary]:
     return sorted(summaries, key=lambda item: item.timestamp, reverse=True)
 
 
+def list_comp_database_rows() -> list[dict[str, str]]:
+    try:
+        dataset = JsonComparableSalesStore(SALES_COMPS_PATH).load()
+    except Exception:
+        return []
+    rows: list[dict[str, str]] = []
+    for sale in dataset.sales:
+        price = sale.list_price or sale.sale_price
+        rows.append(
+            {
+                "source_ref": sale.source_ref or sale.address,
+                "Address": sale.address,
+                "Town": sale.town,
+                "Price": _fmt_compact_currency(price),
+                "Status": (sale.listing_status or "sold").replace("_", " ").title(),
+                "Type": sale.property_type or "Unknown",
+            }
+        )
+    rows.sort(key=lambda row: (row["Town"], row["Address"]))
+    return rows
+
+
 def load_report_for_preset(preset_id: str) -> AnalysisReport:
     if preset_id not in _REPORT_CACHE:
         saved_report = _load_saved_report(preset_id)
@@ -148,6 +176,136 @@ def export_preset_tear_sheet(preset_id: str) -> Path:
     report = load_report_for_preset(preset_id)
     filename = f"{preset_id}_tear_sheet.html"
     return write_report_html(report, OUTPUT_DIR / filename)
+
+
+def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], list[dict[str, object]]]:
+    inputs_path = _saved_property_path(property_id) / "inputs.json"
+    if inputs_path.exists():
+        try:
+            payload = json.loads(inputs_path.read_text())
+            subject = _subject_from_payload(payload, property_id)
+            comps = payload.get("user_assumptions", {}).get("manual_comp_inputs", [])
+            return subject, comps if isinstance(comps, list) else []
+        except Exception:
+            pass
+
+    report = load_report_for_preset(property_id)
+    property_input = report.property_input
+    assumptions = None if property_input is None else property_input.user_assumptions
+    subject = {
+        "property_id": property_id,
+        "address": getattr(property_input, "address", None),
+        "town": getattr(property_input, "town", None),
+        "state": getattr(property_input, "state", None),
+        "county": getattr(property_input, "county", None),
+        "purchase_price": getattr(property_input, "purchase_price", None),
+        "beds": getattr(property_input, "beds", None),
+        "baths": getattr(property_input, "baths", None),
+        "sqft": getattr(property_input, "sqft", None),
+        "lot_size": getattr(property_input, "lot_size", None),
+        "year_built": getattr(property_input, "year_built", None),
+        "property_type": getattr(property_input, "property_type", None),
+        "taxes": getattr(property_input, "taxes", None),
+        "monthly_hoa": getattr(property_input, "monthly_hoa", None),
+        "days_on_market": getattr(property_input, "days_on_market", None),
+        "garage_spaces": getattr(property_input, "garage_spaces", None),
+        "garage_type": getattr(property_input, "garage_type", None),
+        "has_detached_garage": getattr(property_input, "has_detached_garage", None),
+        "has_back_house": getattr(property_input, "has_back_house", None),
+        "adu_type": getattr(property_input, "adu_type", None),
+        "adu_sqft": getattr(property_input, "adu_sqft", None),
+        "has_basement": getattr(property_input, "has_basement", None),
+        "basement_finished": getattr(property_input, "basement_finished", None),
+        "has_pool": getattr(property_input, "has_pool", None),
+        "parking_spaces": getattr(property_input, "parking_spaces", None),
+        "corner_lot": getattr(property_input, "corner_lot", None),
+        "driveway_off_street": getattr(property_input, "driveway_off_street", None),
+        "estimated_monthly_rent": getattr(property_input, "estimated_monthly_rent", None),
+        "unit_rents": list(getattr(property_input, "unit_rents", []) or []),
+        "back_house_monthly_rent": getattr(property_input, "back_house_monthly_rent", None),
+        "seasonal_monthly_rent": getattr(property_input, "seasonal_monthly_rent", None),
+        "insurance": getattr(property_input, "insurance", None),
+        "monthly_maintenance_reserve_override": getattr(property_input, "monthly_maintenance_reserve_override", None),
+        "condition_profile": getattr(property_input, "condition_profile", None),
+        "capex_lane": getattr(property_input, "capex_lane", None),
+        "notes": getattr(property_input, "listing_description", None),
+    }
+    if assumptions is not None:
+        subject["estimated_monthly_rent"] = getattr(assumptions, "estimated_monthly_rent", subject["estimated_monthly_rent"])
+        subject["unit_rents"] = list(getattr(assumptions, "unit_rents", []) or subject["unit_rents"])
+        subject["back_house_monthly_rent"] = getattr(assumptions, "back_house_monthly_rent", subject["back_house_monthly_rent"])
+        subject["seasonal_monthly_rent"] = getattr(assumptions, "seasonal_monthly_rent", subject["seasonal_monthly_rent"])
+        subject["insurance"] = getattr(assumptions, "insurance", subject["insurance"])
+        subject["monthly_maintenance_reserve_override"] = getattr(assumptions, "monthly_maintenance_reserve_override", subject["monthly_maintenance_reserve_override"])
+        subject["notes"] = subject["notes"] or getattr(assumptions, "listing_description", None)
+    comps = list(getattr(property_input, "manual_comp_inputs", []) or [])
+    return subject, comps
+
+
+def load_comp_form_defaults(source_ref: str) -> tuple[dict[str, object], list[dict[str, object]]]:
+    dataset = JsonComparableSalesStore(SALES_COMPS_PATH).load()
+    target = None
+    for sale in dataset.sales:
+        if (sale.source_ref or sale.address) == source_ref:
+            target = sale
+            break
+    if target is None:
+        raise KeyError(f"Unknown comp database row: {source_ref}")
+    subject = {
+        "property_id": "",
+        "address": target.address,
+        "town": target.town,
+        "state": target.state,
+        "county": "Monmouth",
+        "purchase_price": target.sale_price,
+        "beds": target.beds,
+        "baths": target.baths,
+        "sqft": target.sqft,
+        "lot_size": target.lot_size,
+        "year_built": target.year_built,
+        "property_type": target.property_type,
+        "taxes": None,
+        "monthly_hoa": None,
+        "days_on_market": target.days_on_market,
+        "garage_spaces": target.garage_spaces,
+        "garage_type": None,
+        "has_detached_garage": None,
+        "has_back_house": None,
+        "adu_type": None,
+        "adu_sqft": None,
+        "has_basement": None,
+        "basement_finished": None,
+        "has_pool": None,
+        "parking_spaces": None,
+        "corner_lot": None,
+        "driveway_off_street": None,
+        "estimated_monthly_rent": None,
+        "unit_rents": [],
+        "back_house_monthly_rent": None,
+        "seasonal_monthly_rent": None,
+        "insurance": None,
+        "monthly_maintenance_reserve_override": None,
+        "condition_profile": target.condition_profile,
+        "capex_lane": target.capex_lane,
+        "notes": f"Seeded from comp database ({target.source_ref or target.address}).",
+    }
+    return subject, []
+
+
+def _load_comp_database_report(source_ref: str) -> AnalysisReport:
+    subject, comps = load_comp_form_defaults(source_ref)
+    property_id = _slugify(str(subject.get("address") or source_ref))
+    payload = _manual_payload(property_id=property_id, subject=subject, comps=comps)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, dir="/tmp") as handle:
+        handle.write(json.dumps(payload, indent=2) + "\n")
+        temp_path = Path(handle.name)
+    try:
+        return run_report(temp_path)
+    finally:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, object]]) -> tuple[str, Path]:
@@ -181,6 +339,98 @@ def _saved_property_presets() -> list[PropertyPreset]:
     return presets
 
 
+def _comp_database_presets() -> list[PropertyPreset]:
+    try:
+        dataset = JsonComparableSalesStore(SALES_COMPS_PATH).load()
+    except Exception:
+        return []
+
+    existing_labels = {summary.label.strip().lower() for summary in list_saved_properties()}
+    presets: list[PropertyPreset] = []
+    for sale in dataset.sales:
+        label = sale.address.split(",")[0].strip()
+        preset_id = f"compdb-{_slugify(sale.source_ref or sale.address)}"
+        if label.lower() in existing_labels:
+            continue
+        presets.append(
+            PropertyPreset(
+                preset_id=preset_id,
+                label=f"DB: {label}",
+                description="Comp database property ready to analyze.",
+                loader=lambda source_ref=(sale.source_ref or sale.address): _load_comp_database_report(source_ref),
+            )
+        )
+    return presets
+
+
+def _subject_from_payload(payload: dict[str, object], property_id: str) -> dict[str, object]:
+    facts = payload.get("facts") if isinstance(payload.get("facts"), dict) else {}
+    assumptions = payload.get("user_assumptions") if isinstance(payload.get("user_assumptions"), dict) else {}
+    return {
+        "property_id": payload.get("property_id") or property_id,
+        "address": facts.get("address"),
+        "town": facts.get("town"),
+        "state": facts.get("state"),
+        "county": facts.get("county"),
+        "purchase_price": facts.get("purchase_price"),
+        "beds": facts.get("beds"),
+        "baths": facts.get("baths"),
+        "sqft": facts.get("sqft"),
+        "lot_size": facts.get("lot_size"),
+        "year_built": facts.get("year_built"),
+        "property_type": facts.get("property_type"),
+        "taxes": facts.get("taxes"),
+        "monthly_hoa": facts.get("monthly_hoa"),
+        "days_on_market": facts.get("days_on_market"),
+        "garage_spaces": facts.get("garage_spaces"),
+        "garage_type": facts.get("garage_type"),
+        "has_detached_garage": facts.get("has_detached_garage"),
+        "has_back_house": facts.get("has_back_house"),
+        "adu_type": facts.get("adu_type"),
+        "adu_sqft": facts.get("adu_sqft"),
+        "has_basement": facts.get("has_basement"),
+        "basement_finished": facts.get("basement_finished"),
+        "has_pool": facts.get("has_pool"),
+        "parking_spaces": facts.get("parking_spaces"),
+        "corner_lot": facts.get("corner_lot"),
+        "driveway_off_street": facts.get("driveway_off_street"),
+        "estimated_monthly_rent": assumptions.get("estimated_monthly_rent"),
+        "unit_rents": assumptions.get("unit_rents") or [],
+        "back_house_monthly_rent": assumptions.get("back_house_monthly_rent"),
+        "seasonal_monthly_rent": assumptions.get("seasonal_monthly_rent"),
+        "insurance": assumptions.get("insurance"),
+        "monthly_maintenance_reserve_override": assumptions.get("monthly_maintenance_reserve_override"),
+        "condition_profile": facts.get("condition_profile") or assumptions.get("condition_profile_override"),
+        "capex_lane": facts.get("capex_lane") or assumptions.get("capex_lane_override"),
+        "notes": facts.get("listing_description"),
+    }
+
+
+def _saved_property_directory_presets() -> list[PropertyPreset]:
+    SAVED_PROPERTY_DIR.mkdir(parents=True, exist_ok=True)
+    known_ids = {summary.property_id for summary in list_saved_properties()}
+    presets: list[PropertyPreset] = []
+    for property_dir in sorted(SAVED_PROPERTY_DIR.iterdir(), reverse=True):
+        if not property_dir.is_dir():
+            continue
+        property_id = property_dir.name
+        if property_id in known_ids:
+            continue
+        inputs_path = property_dir / "inputs.json"
+        if not inputs_path.exists():
+            continue
+        label = _saved_property_label_from_inputs(inputs_path, property_id)
+        presets.append(
+            PropertyPreset(
+                preset_id=property_id,
+                label=label,
+                description="Saved analysis discovered from inputs.json.",
+                loader=lambda property_id=property_id: _reanalyze_saved_property(property_id),
+            )
+        )
+    return presets
+
+
 def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
     """Re-run analysis from saved inputs.json when pickle is missing or stale."""
     inputs_path = _saved_property_path(property_id) / "inputs.json"
@@ -191,6 +441,28 @@ def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
     _write_saved_report(property_dir / "report.pkl", report)
     _write_saved_summary(property_dir, report)
     return report
+
+
+def _saved_property_label_from_inputs(path: Path, property_id: str) -> str:
+    try:
+        payload = json.loads(path.read_text())
+    except Exception:
+        return property_id.replace("-", " ").title()
+
+    facts = payload.get("facts")
+    if isinstance(facts, dict):
+        address = facts.get("address")
+        if isinstance(address, str) and address.strip():
+            return address.split(",")[0].strip()
+    return property_id.replace("-", " ").title()
+
+
+def _fmt_compact_currency(value: float | None) -> str:
+    if value is None:
+        return "—"
+    if abs(value) >= 1_000_000:
+        return f"${value / 1_000_000:.2f}M"
+    return f"${value / 1_000:.0f}K"
 
 
 def _legacy_manual_presets() -> list[PropertyPreset]:

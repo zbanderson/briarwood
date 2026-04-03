@@ -3,10 +3,10 @@
   "address": "304 14th Ave",
   "label": "304 14th Ave",
   "ask_price": 1250000.0,
-  "bcv": 1027783.01,
+  "bcv": 1019151.34,
   "pricing_view": "appears overpriced",
-  "confidence": 0.63,
+  "confidence": 0.62,
   "comp_trust": "No Active Comps",
-  "missing_input_count": 1,
-  "timestamp": "2026-04-03T14:11:50"
+  "missing_input_count": 6,
+  "timestamp": "2026-04-03T17:10:53"
 }

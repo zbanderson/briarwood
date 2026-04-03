@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import os
 import traceback
+from datetime import datetime
 
+import dash
 from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no_update
 try:
     import dash_bootstrap_components as dbc
@@ -34,8 +36,11 @@ from briarwood.dash_app.components import (
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
     export_preset_tear_sheet,
+    list_comp_database_rows,
     list_presets,
     list_saved_properties,
+    load_comp_form_defaults,
+    load_property_form_defaults,
     load_report_for_preset,
     load_reports,
     register_manual_analysis,
@@ -296,10 +301,61 @@ def _normalize_property_label(property_type: str | None) -> str:
     return (_engine_property_type(property_type) or "Property").replace("-", " ")
 
 
+def _form_property_type(property_type: str | None) -> str:
+    mapping = {
+        "single family residence": "single_family",
+        "single family": "single_family",
+        "duplex": "duplex",
+        "triplex": "triplex",
+        "fourplex": "fourplex",
+        "multi-family": "multi_family",
+        "multi family": "multi_family",
+    }
+    normalized = (property_type or "").strip().lower()
+    return mapping.get(normalized, "")
+
+
+def _bool_dropdown_value(value: bool | None) -> str:
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    return ""
+
+
+def _highlight_input_style(is_missing: bool) -> dict:
+    style = dict(INPUT_STYLE)
+    if is_missing:
+        style.update(
+            {
+                "border": f"1px solid {TONE_WARNING_TEXT}",
+                "boxShadow": f"0 0 0 1px {TONE_WARNING_TEXT}33 inset",
+                "backgroundColor": BG_SURFACE_2,
+            }
+        )
+    return style
+
+
+def _highlight_dropdown_style(is_missing: bool) -> dict:
+    style = {"fontSize": "13px"}
+    if is_missing:
+        style.update(
+            {
+                "border": f"1px solid {TONE_WARNING_TEXT}",
+                "borderRadius": "6px",
+                "boxShadow": f"0 0 0 1px {TONE_WARNING_TEXT}33 inset",
+                "backgroundColor": BG_SURFACE_2,
+            }
+        )
+    return style
+
+
 # ── Layout builders ────────────────────────────────────────────────────────────
 
 
 def _topbar() -> html.Div:
+    options = _property_options()
+    initial_value = DEFAULT_PRESET_IDS[0] if DEFAULT_PRESET_IDS else (options[0]["value"] if options else None)
     return html.Div(
         [
             # Logo / wordmark
@@ -317,9 +373,12 @@ def _topbar() -> html.Div:
                 [
                     dcc.Dropdown(
                         id="property-selector-dropdown",
+                        options=options,
+                        value=initial_value,
                         clearable=False,
+                        searchable=True,
                         persistence=True,
-                        placeholder="Select property…",
+                        placeholder="Search property…",
                         style={"minWidth": "280px", "fontSize": "13px"},
                     ),
                 ],
@@ -406,7 +465,7 @@ def _required_dot() -> html.Span:
 
 
 def _add_property_drawer() -> html.Div:
-    """Slide-in drawer with two modes: Browse saved properties, or add new."""
+    """Modal property manager with browse + edit/create flows."""
     return html.Div(
         html.Div(
             [
@@ -416,7 +475,8 @@ def _add_property_drawer() -> html.Div:
                         html.Div(
                             [
                                 html.Div("Property Manager", style={"fontWeight": "700", "fontSize": "15px", "color": TEXT_PRIMARY, "letterSpacing": "-0.01em"}),
-                                html.Div("Browse saved or add a new analysis", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                html.Div("Browse saved or add a new analysis", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                                html.Div(id="manual-editing-status", style={"fontSize": "12px", "color": ACCENT_BLUE, "marginTop": "4px"}),
                             ]
                         ),
                         html.Button("✕", id="add-property-close-button", n_clicks=0, style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"}),
@@ -453,6 +513,34 @@ def _add_property_drawer() -> html.Div:
                     ],
                     style=_DRAWER_CARD,
                 ),
+                html.Div(
+                    [
+                        html.Div("Comp Database", style=SECTION_HEADER_STYLE),
+                        dash_table.DataTable(
+                            id="comp-database-table",
+                            columns=[
+                                {"name": "Address", "id": "Address"},
+                                {"name": "Town", "id": "Town"},
+                                {"name": "Price", "id": "Price"},
+                                {"name": "Status", "id": "Status"},
+                                {"name": "Type", "id": "Type"},
+                            ],
+                            data=[],
+                            row_selectable="single",
+                            selected_rows=[],
+                            page_size=6,
+                            style_table={**TABLE_STYLE_TABLE, "maxWidth": "100%"},
+                            style_header=TABLE_STYLE_HEADER,
+                            style_cell={**TABLE_STYLE_CELL, "minWidth": "55px", "maxWidth": "120px", "whiteSpace": "normal", "fontSize": "13px", "padding": "6px 8px"},
+                            style_data_conditional=[
+                                {"if": {"row_index": "odd"}, **TABLE_STYLE_DATA_ODD},
+                                {"if": {"row_index": "even"}, **TABLE_STYLE_DATA_EVEN},
+                            ],
+                        ),
+                        html.Button("Analyze Selected Comp", id="analyze-selected-comp-button", n_clicks=0, style={**BTN_SECONDARY, "marginTop": "4px"}),
+                    ],
+                    style=_DRAWER_CARD,
+                ),
                 # ── Divider ──
                 html.Div(
                     html.Div("New Property Analysis", style={**SECTION_HEADER_STYLE, "margin": "0", "fontSize": "13px", "letterSpacing": "0.10em"}),
@@ -463,16 +551,14 @@ def _add_property_drawer() -> html.Div:
             ],
             style={
                 "backgroundColor": BG_BASE,
-                "borderLeft": f"1px solid {BORDER}",
+                "border": f"1px solid {BORDER}",
+                "borderRadius": "10px",
                 "padding": "20px",
-                "width": _DRAWER_WIDTH,
+                "width": "min(920px, calc(100vw - 48px))",
+                "maxHeight": f"calc(100vh - {TOPBAR_HEIGHT} - 56px)",
                 "overflowY": "auto",
-                "height": f"calc(100vh - {TOPBAR_HEIGHT})",
-                "position": "fixed",
-                "top": TOPBAR_HEIGHT,
-                "right": "0",
-                "zIndex": "150",
-                "boxShadow": "-12px 0 40px rgba(0,0,0,0.5)",
+                "boxShadow": "0 24px 72px rgba(0,0,0,0.55)",
+                "margin": "0 auto",
             },
         ),
         id="add-property-drawer",
@@ -545,9 +631,8 @@ def _add_property_form_body() -> list:
                     [
                         _number_input("manual-garage-spaces", "Garage spaces"),
                         _dropdown("manual-garage-type", GARAGE_TYPE_OPTIONS, "Garage type"),
-                        _dropdown("manual-has-detached-garage", YES_NO_OPTIONS, "Detached"),
                     ],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
                 ),
                 html.Div(
                     [
@@ -656,12 +741,11 @@ def _add_property_form_body() -> list:
         # ── Submit area ──
         html.Div(
             [
-                dbc.Button(
+                html.Button(
                     "Start Analysis",
-                    id="manual-run-analysis-button",
+                    id="manual-run-analysis-trigger",
                     n_clicks=0,
-                    disabled=True,
-                    style=_BTN_ANALYZE_DISABLED,
+                    style=_BTN_ANALYZE_ENABLED,
                 ),
                 dcc.Loading(
                     id="analysis-loading",
@@ -693,8 +777,9 @@ def _compare_controls() -> html.Div:
                     dcc.Dropdown(
                         id="compare-selector-dropdown",
                         multi=True,
+                        searchable=True,
                         persistence=True,
-                        placeholder="Select 2–4 properties to compare…",
+                        placeholder="Search 2–4 properties to compare…",
                         style={"fontSize": "13px"},
                     ),
                     html.Div(
@@ -753,6 +838,9 @@ def _build_layout():
             dcc.Store(id="last-analysis-summary", data=None),
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
+            dcc.Store(id="manual-form-target-property-id", data=None),
+            dcc.Store(id="manual-form-comp-ref", data=None),
+            dcc.Store(id="analysis-form-snapshot", data=None),
             # Tour state (persists in browser localStorage)
             dcc.Store(id="tour-state", storage_type="local", data={"completed": False, "step": 0}),
             # PDF download target
@@ -802,6 +890,7 @@ app.layout = _build_layout()
     Output("compare-selector-dropdown", "options"),
     Output("compare-selector-dropdown", "value"),
     Output("saved-properties-table", "data"),
+    Output("comp-database-table", "data"),
     Input("property-catalog-version", "data"),
     Input("loaded-preset-ids", "data"),
     State("property-selector-dropdown", "value"),
@@ -816,19 +905,21 @@ def refresh_property_controls(
     options = _property_options()
     allowed = {option["value"] for option in options}
     loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
-    property_value = current_property_id if current_property_id in allowed else (loaded_ids[0] if loaded_ids else None)
+    default_value = loaded_ids[0] if loaded_ids else (options[0]["value"] if options else None)
+    property_value = current_property_id if current_property_id in allowed else default_value
     compare_values = [pid for pid in (current_compare_ids or []) if pid in allowed][:4]
-    return options, property_value, options, compare_values, _saved_property_rows()
+    return options, property_value, options, compare_values, _saved_property_rows(), list_comp_database_rows()
 
 
 @app.callback(
     Output("active-property-status", "children"),
     Output("property-header-bar", "children"),
     Output("property-header-bar", "style"),
+    Input("property-catalog-version", "data"),
     Input("property-selector-dropdown", "value"),
     Input("loaded-preset-ids", "data"),
 )
-def render_active_property_status(property_id: str | None, loaded_ids: list[str] | None):
+def render_active_property_status(_catalog_version: int | None, property_id: str | None, loaded_ids: list[str] | None):
     hidden = {"display": "none"}
     if not property_id and loaded_ids:
         property_id = loaded_ids[0]
@@ -912,33 +1003,205 @@ def _header_metric(label: str, value: str, *, color: str = TEXT_PRIMARY) -> html
 
 @app.callback(
     Output("analysis-feedback-banner", "children"),
+    Input("property-catalog-version", "data"),
+    Input("property-selector-dropdown", "value"),
+    Input("loaded-preset-ids", "data"),
     Input("last-analysis-summary", "data"),
 )
-def render_analysis_feedback(summary: dict[str, str] | None):
-    if not summary:
-        return None
-    return html.Div(
-        [
-            html.Div(
+def render_analysis_feedback(
+    _catalog_version: int | None,
+    property_id: str | None,
+    loaded_ids: list[str] | None,
+    summary: dict[str, str] | None,
+):
+    report = _focused_report(loaded_ids, property_id)
+    focused_property_id = report.property_id if report is not None else (property_id or ((loaded_ids or [None])[0]))
+    if summary and summary.get("property_id") == focused_property_id:
+        missing = _core_missing_fields(report) if report is not None else []
+        updated_suffix = f"  ·  Updated {summary.get('updated_at')}" if summary.get("updated_at") else ""
+        summary_line = html.Div(
+            [
+                html.Span(
+                    "Property updated" if summary.get("mode") == "updated" else "Analysis saved",
+                    style={"fontWeight": "700", "color": TONE_POSITIVE_TEXT},
+                ),
+                html.Span(" — ", style={"color": TEXT_MUTED}),
+                html.Span(
+                    f"{summary.get('address', 'Property')}  ·  Ask: {summary.get('ask_price', '—')}  ·  "
+                    f"Comps: {summary.get('comp_count', '0')}  ·  "
+                    f"{'saved back to database' if summary.get('mode') == 'updated' else 'saved as active analysis'}"
+                    f"{updated_suffix}",
+                    style={"color": TEXT_SECONDARY},
+                ),
+            ],
+            style={"fontSize": "13px"},
+        )
+        if missing:
+            return html.Div(
                 [
-                    html.Span("Analysis saved", style={"fontWeight": "700", "color": TONE_POSITIVE_TEXT}),
-                    html.Span(" — ", style={"color": TEXT_MUTED}),
-                    html.Span(
-                        f"{summary.get('address', 'Property')}  ·  Ask: {summary.get('ask_price', '—')}  ·  "
-                        f"Comps: {summary.get('comp_count', '0')}  ·  Evidence: {summary.get('mode', '—')}",
-                        style={"color": TEXT_SECONDARY},
+                    summary_line,
+                    html.Div(
+                        [
+                            html.Span("Still missing core values", style={"fontWeight": "600", "color": TONE_WARNING_TEXT}),
+                            html.Span(" — ", style={"color": TEXT_MUTED}),
+                            html.Span(", ".join(missing[:5]) + ("…" if len(missing) > 5 else ""), style={"color": TEXT_SECONDARY}),
+                            html.Button("Review & Update", id="fix-missing-values-button", n_clicks=0, style={**BTN_SECONDARY, "padding": "6px 10px", "marginLeft": "12px"}),
+                        ],
+                        style={"display": "flex", "alignItems": "center", "gap": "0", "marginTop": "8px", "fontSize": "13px"},
                     ),
                 ],
-                style={"fontSize": "13px"},
-            ),
-        ],
-        style={
-            "backgroundColor": "#1a3a1f",
-            "borderBottom": "1px solid #2d6a35",
-            "padding": "10px 24px",
-            "flexShrink": "0",
-        },
+                style={
+                    "backgroundColor": BG_SURFACE_2,
+                    "borderBottom": f"1px solid {BORDER}",
+                    "padding": "10px 24px",
+                    "flexShrink": "0",
+                },
+            )
+        return html.Div(
+            [summary_line],
+            style={
+                "backgroundColor": "#1a3a1f",
+                "borderBottom": "1px solid #2d6a35",
+                "padding": "10px 24px",
+                "flexShrink": "0",
+            },
+        )
+
+    if report is not None:
+        missing = _core_missing_fields(report)
+        if missing:
+            return html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.Span("Property is missing core values", style={"fontWeight": "700", "color": TONE_WARNING_TEXT}),
+                                    html.Span(" — ", style={"color": TEXT_MUTED}),
+                                    html.Span(
+                                        ", ".join(missing[:5]) + ("…" if len(missing) > 5 else ""),
+                                        style={"color": TEXT_SECONDARY},
+                                    ),
+                                ],
+                                style={"fontSize": "13px"},
+                            ),
+                            html.Button("Review & Update", id="fix-missing-values-button", n_clicks=0, style={**BTN_SECONDARY, "padding": "6px 10px"}),
+                        ],
+                        style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "center"},
+                    ),
+                ],
+                style={
+                    "backgroundColor": BG_SURFACE_2,
+                    "borderBottom": f"1px solid {BORDER}",
+                    "padding": "10px 24px",
+                    "flexShrink": "0",
+                },
+            )
+    return None
+
+
+@app.callback(
+    Output("manual-entry-status", "children", allow_duplicate=True),
+    Output("add-property-open", "data", allow_duplicate=True),
+    Output("manual-form-target-property-id", "data"),
+    Output("manual-form-comp-ref", "data"),
+    Input("add-property-button", "n_clicks"),
+    Input("add-property-close-button", "n_clicks"),
+    Input("fix-missing-values-button", "n_clicks"),
+    State("property-selector-dropdown", "value"),
+    State("loaded-preset-ids", "data"),
+    State("add-property-open", "data"),
+    prevent_initial_call=True,
+)
+def route_property_drawer(
+    _open_clicks: int,
+    _close_clicks: int,
+    _fix_clicks: int,
+    property_id: str | None,
+    loaded_ids: list[str] | None,
+    is_open: bool | None,
+):
+    triggered = ctx.triggered_id
+    if triggered == "add-property-close-button":
+        return "", False, None, None
+    if triggered == "fix-missing-values-button":
+        if not _fix_clicks:
+            return no_update, no_update, no_update, no_update
+        target_property_id = property_id or ((loaded_ids or [None])[0])
+        return "", True, target_property_id, None
+    if triggered == "add-property-button" and not _open_clicks:
+        return no_update, no_update, no_update, no_update
+    return "", (not bool(is_open)), None, None
+
+
+@app.callback(
+    Output("manual-entry-status", "children", allow_duplicate=True),
+    Output("add-property-open", "data", allow_duplicate=True),
+    Output("manual-form-target-property-id", "data", allow_duplicate=True),
+    Output("manual-form-comp-ref", "data", allow_duplicate=True),
+    Input("analyze-selected-comp-button", "n_clicks"),
+    State("comp-database-table", "data"),
+    State("comp-database-table", "selected_rows"),
+    prevent_initial_call=True,
+)
+def analyze_selected_comp(_n_clicks: int, rows: list[dict[str, str]] | None, selected_rows: list[int] | None):
+    if not rows or not selected_rows:
+        return html.Span("Select one comp from the database first.", style={"color": TONE_WARNING_TEXT}), no_update, no_update, no_update
+    index = selected_rows[0]
+    if not isinstance(index, int) or index < 0 or index >= len(rows):
+        return html.Span("Select one comp from the database first.", style={"color": TONE_WARNING_TEXT}), no_update, no_update, no_update
+    source_ref = rows[index].get("source_ref")
+    if not source_ref:
+        return html.Span("Selected comp is missing a database reference.", style={"color": TONE_WARNING_TEXT}), no_update, no_update, no_update
+    return (
+        html.Span(f"Loaded {rows[index].get('Address')} from the comp database into the analysis form.", style={"color": TONE_POSITIVE_TEXT}),
+        True,
+        None,
+        source_ref,
     )
+
+
+def _core_missing_fields(report) -> list[str]:
+    property_input = report.property_input
+    if property_input is None:
+        return []
+    fields: list[tuple[str, object]] = [
+        ("Square footage", property_input.sqft),
+        ("Lot size", property_input.lot_size),
+        ("Condition", property_input.condition_profile),
+        ("CapEx lane", property_input.capex_lane),
+        ("Taxes", property_input.taxes),
+        ("Insurance", property_input.insurance),
+        ("Garage details", property_input.garage_spaces or property_input.garage_type),
+        ("ADU / back house", property_input.has_back_house or property_input.adu_type or property_input.adu_sqft),
+    ]
+    missing = [label for label, value in fields if value in (None, "", [])]
+    status_map = {item.key: item for item in build_property_analysis_view(report).evidence.metric_statuses}
+    for key, label in [
+        ("price_to_rent", "Rent support"),
+        ("net_monthly_cost", "Carry inputs"),
+        ("capex_load", "CapEx budget / condition"),
+    ]:
+        item = status_map.get(key)
+        if item is not None and item.status in {"estimated", "unresolved"} and label not in missing:
+            missing.append(label)
+    return missing
+
+
+def _core_missing_field_flags(report) -> dict[str, bool]:
+    property_input = report.property_input
+    if property_input is None:
+        return {}
+    return {
+        "manual-sqft": property_input.sqft in (None, ""),
+        "manual-lot-size": property_input.lot_size in (None, ""),
+        "manual-condition-profile": property_input.condition_profile in (None, ""),
+        "manual-capex-lane": property_input.capex_lane in (None, ""),
+        "manual-garage-spaces": property_input.garage_spaces in (None, "") and property_input.garage_type in (None, ""),
+        "manual-has-back-house": property_input.has_back_house in (None, "") and property_input.adu_type in (None, ""),
+        "manual-estimated-rent": property_input.estimated_monthly_rent in (None, "") and not list(property_input.unit_rents or []),
+        "manual-insurance": property_input.insurance in (None, ""),
+    }
 
 
 @app.callback(
@@ -1009,10 +1272,11 @@ def compare_selected_saved_properties(
 @app.callback(
     Output("main-tab-content", "children"),
     Input("main-tabs", "value"),
+    Input("property-catalog-version", "data"),
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
 )
-def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None):
+def render_main_tab(tab: str, _catalog_version: int | None, loaded_ids: list[str] | None, focus_id: str | None):
     if tab == "tear_sheet":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
@@ -1120,8 +1384,19 @@ def focus_detail_mode_for_section(_section: str | None, current_mode: str | None
 
 
 @app.callback(
-    Output("manual-run-analysis-button", "disabled"),
-    Output("manual-run-analysis-button", "style"),
+    Output("manual-run-analysis-label", "children"),
+    Input("manual-form-target-property-id", "data"),
+    Input("manual-form-comp-ref", "data"),
+)
+def update_manual_action_label(target_property_id: str | None, comp_ref: str | None):
+    # Label stored in hidden div; the button text stays "Start Analysis"
+    # but the status area shows mode context
+    if target_property_id and not comp_ref:
+        return "edit"
+    return "new"
+
+
+@app.callback(
     Output("form-validation-hint", "children"),
     Input("manual-address", "value"),
     Input("manual-price", "value"),
@@ -1142,7 +1417,6 @@ def validate_form(
     if price in (None, "", 0):
         missing.append("asking price")
 
-    # Beds/baths/sqft are strongly recommended but not blocking
     warnings: list[str] = []
     if beds in (None, ""):
         warnings.append("beds")
@@ -1152,22 +1426,15 @@ def validate_form(
         warnings.append("sqft")
 
     if missing:
-        hint = html.Span(
-            f"Required: {', '.join(missing)}",
-            style={"color": TONE_NEGATIVE_TEXT},
-        )
-        return True, _BTN_ANALYZE_DISABLED, hint
-
+        return html.Span(f"Required: {', '.join(missing)}", style={"color": TONE_NEGATIVE_TEXT})
     if warnings:
-        hint = html.Span(
+        return html.Span(
             [
                 html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT}),
                 html.Span(f"  ·  recommended: {', '.join(warnings)}", style={"color": TONE_WARNING_TEXT}),
             ]
         )
-        return False, _BTN_ANALYZE_ENABLED, hint
-
-    return False, _BTN_ANALYZE_ENABLED, html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT})
+    return html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT})
 
 
 @app.callback(
@@ -1193,27 +1460,291 @@ def toggle_rent_inputs(property_type: str | None):
 
 
 @app.callback(
-    Output("add-property-open", "data"),
-    Input("add-property-button", "n_clicks"),
-    Input("add-property-close-button", "n_clicks"),
-    State("add-property-open", "data"),
-    prevent_initial_call=True,
-)
-def toggle_add_property_drawer(_open_clicks: int, _close_clicks: int, is_open: bool | None):
-    triggered = ctx.triggered_id
-    if triggered == "add-property-close-button":
-        return False
-    return not bool(is_open)
-
-
-@app.callback(
     Output("add-property-drawer", "style"),
     Input("add-property-open", "data"),
 )
 def set_drawer_visibility(is_open: bool | None):
     if is_open:
-        return {"display": "block"}
+        return {
+            "display": "flex",
+            "position": "fixed",
+            "top": TOPBAR_HEIGHT,
+            "left": "0",
+            "right": "0",
+            "bottom": "0",
+            "padding": "24px",
+            "alignItems": "flex-start",
+            "justifyContent": "center",
+            "backgroundColor": "rgba(10, 14, 24, 0.58)",
+            "backdropFilter": "blur(4px)",
+            "zIndex": "150",
+            "overflowY": "auto",
+        }
     return {"display": "none"}
+
+
+@app.callback(
+    Output("manual-property-id", "value"),
+    Output("manual-address", "value"),
+    Output("manual-town", "value"),
+    Output("manual-state", "value"),
+    Output("manual-county", "value"),
+    Output("manual-price", "value"),
+    Output("manual-beds", "value"),
+    Output("manual-baths", "value"),
+    Output("manual-sqft", "value"),
+    Output("manual-lot-size", "value"),
+    Output("manual-year-built", "value"),
+    Output("manual-property-type", "value"),
+    Output("manual-taxes", "value"),
+    Output("manual-hoa", "value"),
+    Output("manual-dom", "value"),
+    Output("manual-garage-spaces", "value"),
+    Output("manual-garage-type", "value"),
+    Output("manual-has-back-house", "value"),
+    Output("manual-adu-type", "value"),
+    Output("manual-adu-sqft", "value"),
+    Output("manual-has-basement", "value"),
+    Output("manual-basement-finished", "value"),
+    Output("manual-has-pool", "value"),
+    Output("manual-parking-spaces", "value"),
+    Output("manual-corner-lot", "value"),
+    Output("manual-driveway-off-street", "value"),
+    Output("manual-estimated-rent", "value"),
+    Output("manual-rent-1", "value"),
+    Output("manual-rent-2", "value"),
+    Output("manual-rent-3", "value"),
+    Output("manual-rent-4", "value"),
+    Output("manual-back-house-rent", "value"),
+    Output("manual-seasonal-rent", "value"),
+    Output("manual-insurance", "value"),
+    Output("manual-maintenance-reserve", "value"),
+    Output("manual-condition-profile", "value"),
+    Output("manual-capex-lane", "value"),
+    Output("manual-notes", "value"),
+    Output("manual-comps-store", "data", allow_duplicate=True),
+    Output("manual-editing-status", "children"),
+    Input("add-property-open", "data"),
+    Input("manual-form-target-property-id", "data"),
+    Input("manual-form-comp-ref", "data"),
+    prevent_initial_call=True,
+)
+def populate_manual_form(is_open: bool | None, target_property_id: str | None, comp_ref: str | None):
+    if not is_open:
+        return (no_update,) * 40
+
+    if comp_ref:
+        subject, comps = load_comp_form_defaults(comp_ref)
+        unit_rents = list(subject.get("unit_rents") or [])
+        return (
+            subject.get("property_id") or "",
+            subject.get("address"),
+            subject.get("town") or "Belmar",
+            subject.get("state") or "NJ",
+            subject.get("county") or "Monmouth",
+            subject.get("purchase_price"),
+            subject.get("beds"),
+            subject.get("baths"),
+            subject.get("sqft"),
+            subject.get("lot_size"),
+            subject.get("year_built"),
+            _form_property_type(subject.get("property_type")),
+            subject.get("taxes"),
+            subject.get("monthly_hoa"),
+            subject.get("days_on_market"),
+            subject.get("garage_spaces"),
+            subject.get("garage_type") or "",
+            _bool_dropdown_value(subject.get("has_back_house")),
+            subject.get("adu_type") or "",
+            subject.get("adu_sqft"),
+            _bool_dropdown_value(subject.get("has_basement")),
+            _bool_dropdown_value(subject.get("basement_finished")),
+            _bool_dropdown_value(subject.get("has_pool")),
+            subject.get("parking_spaces"),
+            _bool_dropdown_value(subject.get("corner_lot")),
+            _bool_dropdown_value(subject.get("driveway_off_street")),
+            subject.get("estimated_monthly_rent"),
+            unit_rents[0] if len(unit_rents) > 0 else None,
+            unit_rents[1] if len(unit_rents) > 1 else None,
+            unit_rents[2] if len(unit_rents) > 2 else None,
+            unit_rents[3] if len(unit_rents) > 3 else None,
+            subject.get("back_house_monthly_rent"),
+            subject.get("seasonal_monthly_rent"),
+            subject.get("insurance"),
+            subject.get("monthly_maintenance_reserve_override"),
+            subject.get("condition_profile") or "",
+            subject.get("capex_lane") or "",
+            subject.get("notes") or "",
+            comps,
+            f"Seeded analysis form from comp database row {comp_ref}",
+        )
+
+    if not target_property_id:
+        return (
+            "",
+            None,
+            "Belmar",
+            "NJ",
+            "Monmouth",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "",
+            None,
+            None,
+            None,
+            None,
+            "",
+            "",
+            "",
+            "",
+            None,
+            "",
+            "",
+            "",
+            None,
+            "",
+            "",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            "",
+            "",
+            "",
+            "",
+            [],
+            "Adding a new property analysis",
+        )
+
+    subject, comps = load_property_form_defaults(target_property_id)
+    unit_rents = list(subject.get("unit_rents") or [])
+    return (
+        subject.get("property_id") or target_property_id,
+        subject.get("address"),
+        subject.get("town") or "Belmar",
+        subject.get("state") or "NJ",
+        subject.get("county") or "Monmouth",
+        subject.get("purchase_price"),
+        subject.get("beds"),
+        subject.get("baths"),
+        subject.get("sqft"),
+        subject.get("lot_size"),
+        subject.get("year_built"),
+        _form_property_type(subject.get("property_type")),
+        subject.get("taxes"),
+        subject.get("monthly_hoa"),
+        subject.get("days_on_market"),
+        subject.get("garage_spaces"),
+        subject.get("garage_type") or "",
+        _bool_dropdown_value(subject.get("has_back_house")),
+        subject.get("adu_type") or "",
+        subject.get("adu_sqft"),
+        _bool_dropdown_value(subject.get("has_basement")),
+        _bool_dropdown_value(subject.get("basement_finished")),
+        _bool_dropdown_value(subject.get("has_pool")),
+        subject.get("parking_spaces"),
+        _bool_dropdown_value(subject.get("corner_lot")),
+        _bool_dropdown_value(subject.get("driveway_off_street")),
+        subject.get("estimated_monthly_rent"),
+        unit_rents[0] if len(unit_rents) > 0 else None,
+        unit_rents[1] if len(unit_rents) > 1 else None,
+        unit_rents[2] if len(unit_rents) > 2 else None,
+        unit_rents[3] if len(unit_rents) > 3 else None,
+        subject.get("back_house_monthly_rent"),
+        subject.get("seasonal_monthly_rent"),
+        subject.get("insurance"),
+        subject.get("monthly_maintenance_reserve_override"),
+        subject.get("condition_profile") or "",
+        subject.get("capex_lane") or "",
+        subject.get("notes") or "",
+        comps,
+        f"Editing saved inputs for {subject.get('address') or target_property_id}",
+    )
+
+
+@app.callback(
+    Output("manual-sqft", "style"),
+    Output("manual-lot-size", "style"),
+    Output("manual-condition-profile", "style"),
+    Output("manual-capex-lane", "style"),
+    Output("manual-garage-spaces", "style"),
+    Output("manual-has-back-house", "style"),
+    Output("manual-estimated-rent", "style"),
+    Output("manual-insurance", "style"),
+    Output("form-validation-hint", "children", allow_duplicate=True),
+    Input("add-property-open", "data"),
+    State("manual-form-target-property-id", "data"),
+    State("manual-form-comp-ref", "data"),
+    prevent_initial_call=True,
+)
+def highlight_missing_manual_fields(is_open: bool | None, target_property_id: str | None, comp_ref: str | None):
+    if not is_open or (not target_property_id and not comp_ref):
+        neutral_input = _highlight_input_style(False)
+        neutral_dropdown = _highlight_dropdown_style(False)
+        return (
+            neutral_input,
+            neutral_input,
+            neutral_dropdown,
+            neutral_dropdown,
+            neutral_input,
+            neutral_dropdown,
+            neutral_input,
+            neutral_input,
+            "Address and asking price are required. Highlighted fields would materially improve the analysis.",
+        )
+
+    if comp_ref:
+        subject, _ = load_comp_form_defaults(comp_ref)
+        missing = [label for label, value in {
+            "Square footage": subject.get("sqft"),
+            "Lot size": subject.get("lot_size"),
+            "Condition": subject.get("condition_profile"),
+            "CapEx lane": subject.get("capex_lane"),
+            "Insurance": subject.get("insurance"),
+            "Rent support": subject.get("estimated_monthly_rent"),
+        }.items() if value in (None, "", [])]
+        flags = {
+            "manual-sqft": subject.get("sqft") in (None, ""),
+            "manual-lot-size": subject.get("lot_size") in (None, ""),
+            "manual-condition-profile": subject.get("condition_profile") in (None, ""),
+            "manual-capex-lane": subject.get("capex_lane") in (None, ""),
+            "manual-garage-spaces": subject.get("garage_spaces") in (None, ""),
+            "manual-has-back-house": subject.get("has_back_house") in (None, ""),
+            "manual-estimated-rent": subject.get("estimated_monthly_rent") in (None, ""),
+            "manual-insurance": subject.get("insurance") in (None, ""),
+        }
+    else:
+        report = load_report_for_preset(target_property_id)
+        flags = _core_missing_field_flags(report)
+        missing = _core_missing_fields(report)
+
+    hint = (
+        html.Span(
+            f"Highlighted fields are currently missing or inferred: {', '.join(missing[:5])}. Update them and click Start Analysis.",
+            style={"color": TONE_WARNING_TEXT},
+        )
+        if missing
+        else html.Span("Ready to analyze — update any fields and click Start Analysis.", style={"color": TONE_POSITIVE_TEXT})
+    )
+    return (
+        _highlight_input_style(flags.get("manual-sqft", False)),
+        _highlight_input_style(flags.get("manual-lot-size", False)),
+        _highlight_dropdown_style(flags.get("manual-condition-profile", False)),
+        _highlight_dropdown_style(flags.get("manual-capex-lane", False)),
+        _highlight_input_style(flags.get("manual-garage-spaces", False)),
+        _highlight_dropdown_style(flags.get("manual-has-back-house", False)),
+        _highlight_input_style(flags.get("manual-estimated-rent", False)),
+        _highlight_input_style(flags.get("manual-insurance", False)),
+        hint,
+    )
 
 
 # ── Export callbacks ───────────────────────────────────────────────────────────
@@ -1421,6 +1952,93 @@ def manage_manual_comps(
 
 
 # ── Manual analysis callback ───────────────────────────────────────────────────
+# Dash's client-side dependency resolver blocks any server callback that has
+# State dependencies on components written to by populate_manual_form, because
+# run_manual_analysis outputs (even indirectly) feed back to add-property-open
+# which triggers populate_manual_form.  The ONLY way to break this is to have
+# ZERO State dependencies on form fields.
+#
+# Solution: a clientside callback reads all form field values from the DOM,
+# packs them into analysis-form-snapshot, and the server callback reads only
+# that store.
+
+app.clientside_callback(
+    """function(n_clicks) {
+        if (!n_clicks) { return window.dash_clientside.no_update; }
+
+        function val(id) {
+            var el = document.getElementById(id);
+            if (!el) return null;
+            var inp = el.querySelector('input[type="text"], input[type="number"]');
+            if (inp) {
+                var v = inp.value;
+                if (v === '' || v === undefined) return null;
+                var n = Number(v);
+                return isNaN(n) ? v : n;
+            }
+            var ta = el.querySelector('textarea');
+            if (ta) return ta.value || null;
+            var hidden = el.querySelector('input[type="hidden"]');
+            if (hidden && hidden.value) return hidden.value;
+            var svl = el.querySelector('.Select-value-label');
+            if (svl && svl.textContent) return svl.textContent;
+            return null;
+        }
+
+        function storeVal(id) {
+            /* dcc.Store renders as a hidden div; Dash keeps its data
+               in the React virtual DOM, not in a regular DOM attribute.
+               But Dash also syncs it to a data attribute or script tag.
+               Simplest: just return null and let the server fill these
+               from its own state. */
+            return null;
+        }
+
+        return {
+            property_id: val('manual-property-id'),
+            address: val('manual-address'),
+            town: val('manual-town'),
+            state: val('manual-state'),
+            county: val('manual-county'),
+            price: val('manual-price'),
+            beds: val('manual-beds'),
+            baths: val('manual-baths'),
+            sqft: val('manual-sqft'),
+            lot_size: val('manual-lot-size'),
+            year_built: val('manual-year-built'),
+            property_type: val('manual-property-type'),
+            taxes: val('manual-taxes'),
+            monthly_hoa: val('manual-hoa'),
+            days_on_market: val('manual-dom'),
+            garage_spaces: val('manual-garage-spaces'),
+            garage_type: val('manual-garage-type'),
+            has_back_house: val('manual-has-back-house'),
+            adu_type: val('manual-adu-type'),
+            adu_sqft: val('manual-adu-sqft'),
+            has_basement: val('manual-has-basement'),
+            basement_finished: val('manual-basement-finished'),
+            has_pool: val('manual-has-pool'),
+            parking_spaces: val('manual-parking-spaces'),
+            corner_lot: val('manual-corner-lot'),
+            driveway_off_street: val('manual-driveway-off-street'),
+            estimated_rent: val('manual-estimated-rent'),
+            rent_1: val('manual-rent-1'),
+            rent_2: val('manual-rent-2'),
+            rent_3: val('manual-rent-3'),
+            rent_4: val('manual-rent-4'),
+            back_house_rent: val('manual-back-house-rent'),
+            seasonal_rent: val('manual-seasonal-rent'),
+            insurance: val('manual-insurance'),
+            maintenance_reserve: val('manual-maintenance-reserve'),
+            condition_profile: val('manual-condition-profile'),
+            capex_lane: val('manual-capex-lane'),
+            notes: val('manual-notes'),
+            _ts: Date.now(),
+        };
+    }""",
+    Output("analysis-form-snapshot", "data"),
+    Input("manual-run-analysis-trigger", "n_clicks"),
+)
 
 
 @app.callback(
@@ -1434,112 +2052,66 @@ def manage_manual_comps(
     Output("add-property-open", "data", allow_duplicate=True),
     Output("last-analysis-summary", "data", allow_duplicate=True),
     Output("main-tabs", "value"),
-    Output("manual-run-analysis-button", "children", allow_duplicate=True),
-    Output("manual-run-analysis-button", "disabled", allow_duplicate=True),
     Output("analysis-loading-target", "children"),
-    Input("manual-run-analysis-button", "n_clicks"),
-    State("property-catalog-version", "data"),
-    State("manual-comps-store", "data"),
-    State("manual-property-id", "value"),
-    State("manual-address", "value"),
-    State("manual-town", "value"),
-    State("manual-state", "value"),
-    State("manual-county", "value"),
-    State("manual-price", "value"),
-    State("manual-beds", "value"),
-    State("manual-baths", "value"),
-    State("manual-sqft", "value"),
-    State("manual-lot-size", "value"),
-    State("manual-year-built", "value"),
-    State("manual-property-type", "value"),
-    State("manual-taxes", "value"),
-    State("manual-hoa", "value"),
-    State("manual-dom", "value"),
-    State("manual-garage-spaces", "value"),
-    State("manual-garage-type", "value"),
-    State("manual-has-detached-garage", "value"),
-    State("manual-has-back-house", "value"),
-    State("manual-adu-type", "value"),
-    State("manual-adu-sqft", "value"),
-    State("manual-has-basement", "value"),
-    State("manual-basement-finished", "value"),
-    State("manual-has-pool", "value"),
-    State("manual-parking-spaces", "value"),
-    State("manual-corner-lot", "value"),
-    State("manual-driveway-off-street", "value"),
-    State("manual-estimated-rent", "value"),
-    State("manual-rent-1", "value"),
-    State("manual-rent-2", "value"),
-    State("manual-rent-3", "value"),
-    State("manual-rent-4", "value"),
-    State("manual-back-house-rent", "value"),
-    State("manual-seasonal-rent", "value"),
-    State("manual-insurance", "value"),
-    State("manual-maintenance-reserve", "value"),
-    State("manual-condition-profile", "value"),
-    State("manual-capex-lane", "value"),
-    State("manual-notes", "value"),
+    Input("analysis-form-snapshot", "data"),
     prevent_initial_call=True,
-    running=[
-        (
-            Output("manual-run-analysis-button", "children"),
-            html.Span(
-                [
-                    dbc.Spinner(size="sm", color="light"),
-                    html.Span("Analyzing...", style={"marginLeft": "8px"}),
-                ],
-                style={"display": "inline-flex", "alignItems": "center"},
-            ),
-            "Start Analysis",
-        ),
-        (Output("manual-run-analysis-button", "disabled"), True, False),
-    ],
 )
-def run_manual_analysis(
-    _n_clicks: int,
-    catalog_version: int | None,
-    comps: list[dict[str, object]] | None,
-    property_id: str | None,
-    address: str | None,
-    town: str | None,
-    state: str | None,
-    county: str | None,
-    price: float | None,
-    beds: float | None,
-    baths: float | None,
-    sqft: float | None,
-    lot_size: float | None,
-    year_built: float | None,
-    property_type: str | None,
-    taxes: float | None,
-    monthly_hoa: float | None,
-    days_on_market: float | None,
-    garage_spaces: float | None,
-    garage_type: str | None,
-    has_detached_garage: str | None,
-    has_back_house: str | None,
-    adu_type: str | None,
-    adu_sqft: float | None,
-    has_basement: str | None,
-    basement_finished: str | None,
-    has_pool: str | None,
-    parking_spaces: float | None,
-    corner_lot: str | None,
-    driveway_off_street: str | None,
-    estimated_rent: float | None,
-    rent_1: float | None,
-    rent_2: float | None,
-    rent_3: float | None,
-    rent_4: float | None,
-    back_house_rent: float | None,
-    seasonal_rent: float | None,
-    insurance: float | None,
-    maintenance_reserve: float | None,
-    condition_profile: str | None,
-    capex_lane: str | None,
-    notes: str | None,
-):
+def run_manual_analysis(form_data):
+    if not isinstance(form_data, dict) or not form_data.get("address"):
+        raise dash.exceptions.PreventUpdate
+
+    catalog_version = 0  # will be bumped
+    property_id = form_data.get("property_id")
+    # In edit mode, property_id is the existing ID; comp data loaded from disk
+    target_property_id = property_id if property_id else None
+    comp_ref = None
+    comps = []
+    if target_property_id:
+        try:
+            _subj, comps = load_property_form_defaults(target_property_id)
+        except Exception:
+            comps = []
+    address = form_data.get("address")
+    town = form_data.get("town")
+    state = form_data.get("state")
+    county = form_data.get("county")
+    price = form_data.get("price")
+    beds = form_data.get("beds")
+    baths = form_data.get("baths")
+    sqft = form_data.get("sqft")
+    lot_size = form_data.get("lot_size")
+    year_built = form_data.get("year_built")
+    property_type = form_data.get("property_type")
+    taxes = form_data.get("taxes")
+    monthly_hoa = form_data.get("monthly_hoa")
+    days_on_market = form_data.get("days_on_market")
+    garage_spaces = form_data.get("garage_spaces")
+    garage_type = form_data.get("garage_type")
+    has_back_house = form_data.get("has_back_house")
+    adu_type = form_data.get("adu_type")
+    adu_sqft = form_data.get("adu_sqft")
+    has_basement = form_data.get("has_basement")
+    basement_finished = form_data.get("basement_finished")
+    has_pool = form_data.get("has_pool")
+    parking_spaces = form_data.get("parking_spaces")
+    corner_lot = form_data.get("corner_lot")
+    driveway_off_street = form_data.get("driveway_off_street")
+    estimated_rent = form_data.get("estimated_rent")
+    rent_1 = form_data.get("rent_1")
+    rent_2 = form_data.get("rent_2")
+    rent_3 = form_data.get("rent_3")
+    rent_4 = form_data.get("rent_4")
+    back_house_rent = form_data.get("back_house_rent")
+    seasonal_rent = form_data.get("seasonal_rent")
+    insurance = form_data.get("insurance")
+    maintenance_reserve = form_data.get("maintenance_reserve")
+    condition_profile = form_data.get("condition_profile")
+    capex_lane = form_data.get("capex_lane")
+    notes = form_data.get("notes")
+
+    print(f"[ANALYSIS] FIRED: target={target_property_id}, address={address!r}, price={price}", flush=True)
     options = _property_options()
+    is_edit_mode = bool(target_property_id and not comp_ref)
     unit_count = _unit_count_for_property_type(property_type)
     unit_rents = [rent for rent in (rent_1, rent_2, rent_3, rent_4) if rent not in (None, "", 0)]
     if not address or price in (None, ""):
@@ -1549,7 +2121,7 @@ def run_manual_analysis(
                 html.Div("Address and asking price are required.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, "Start Analysis", False, ""
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, ""
 
     def _bool(v: str | None) -> bool | None:
         if v == "true":
@@ -1559,7 +2131,7 @@ def run_manual_analysis(
         return None
 
     subject = {
-        "property_id": property_id,
+        "property_id": target_property_id or property_id,
         "address": address,
         "town": town or "Unknown",
         "state": state or "NJ",
@@ -1576,7 +2148,7 @@ def run_manual_analysis(
         "days_on_market": days_on_market,
         "garage_spaces": garage_spaces,
         "garage_type": garage_type or None,
-        "has_detached_garage": _bool(has_detached_garage),
+        "has_detached_garage": True if (garage_type or "").strip().lower() == "detached" else False if garage_spaces not in (None, "", 0) else None,
         "has_back_house": _bool(has_back_house),
         "adu_type": adu_type or None,
         "adu_sqft": adu_sqft,
@@ -1598,7 +2170,9 @@ def run_manual_analysis(
     }
 
     try:
+        print(f"[ANALYSIS] Calling register_manual_analysis for {subject.get('address')}, edit_mode={is_edit_mode}", flush=True)
         new_id, tear_sheet_path = register_manual_analysis(subject, comps or [])
+        print(f"[ANALYSIS] SUCCESS: new_id={new_id}, path={tear_sheet_path}", flush=True)
         options = _property_options()
         inline_notes: list[str] = []
         if unit_count > 1 and not unit_rents:
@@ -1610,15 +2184,21 @@ def run_manual_analysis(
             "address": address,
             "ask_price": f"${price:,.0f}",
             "comp_count": str(len(comps or [])),
-            "mode": "manual",
+            "mode": "updated" if is_edit_mode else "manual",
             "tear_sheet_path": str(tear_sheet_path),
             "unit_rents": len(unit_rents),
+            "updated_at": datetime.now().strftime("%I:%M:%S %p").lstrip("0"),
         }
         new_version = (catalog_version or 0) + 1
         success_msg = html.Div(
             [
-                html.Div("Analysis complete", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
-                html.Div(f"{address} saved and loaded as the active property.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
+                html.Div("Update complete" if is_edit_mode else "Analysis complete", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
+                html.Div(
+                    f"{address} updated in the saved property database and reloaded."
+                    if is_edit_mode else
+                    f"{address} saved and loaded as the active property.",
+                    style={"color": TEXT_SECONDARY, "marginTop": "4px"},
+                ),
                 html.Div(f"Tear sheet: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "13px", "marginTop": "4px"}),
                 html.Ul(
                     [html.Li(note, style={"color": TONE_WARNING_TEXT if "fell back" in note else TEXT_SECONDARY, "fontSize": "13px"}) for note in inline_notes],
@@ -1626,8 +2206,9 @@ def run_manual_analysis(
                 ) if inline_notes else None,
             ]
         )
-        return [new_id], success_msg, new_version, options, new_id, options, [new_id], False, summary, "tear_sheet", "Start Analysis", False, ""
+        return [new_id], success_msg, new_version, options, new_id, options, [new_id], False, summary, "tear_sheet", ""
     except Exception as exc:
+        print(f"[ANALYSIS] EXCEPTION: {type(exc).__name__}: {exc}", flush=True)
         tb = traceback.format_exc(limit=6)
         error_msg = html.Div(
             [
@@ -1641,7 +2222,9 @@ def run_manual_analysis(
                 ),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, "Start Analysis", False, ""
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, ""
+
+
 
 
 # ── Tour callbacks ────────────────────────────────────────────────────────────
