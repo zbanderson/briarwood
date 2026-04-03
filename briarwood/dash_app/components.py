@@ -14,6 +14,7 @@ from briarwood.dash_app.theme import (
     ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED, ACCENT_TEAL, ACCENT_YELLOW,
     BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BODY_TEXT_STYLE, BORDER, BORDER_SUBTLE,
+    BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, CHART_HEIGHT_COMPACT, CHART_HEIGHT_STANDARD,
     FONT_FAMILY, GRID_2, GRID_3, GRID_4,
     LABEL_STYLE, PAGE_STYLE,
@@ -24,14 +25,54 @@ from briarwood.dash_app.theme import (
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_BG, TONE_WARNING_TEXT,
     VALUE_STYLE_LARGE, VALUE_STYLE_MEDIUM,
-    score_color, tone_badge_style, tone_color,
+    score_color, score_label, tone_badge_style, tone_color, verdict_color,
 )
+from briarwood.decision_model.scoring_config import SUB_FACTOR_LABELS
 from briarwood.dash_app.view_models import (
     PropertyAnalysisView,
     build_evidence_rows,
     build_section_evidence_rows,
 )
 from briarwood.schemas import AnalysisReport
+
+# ── Market benchmarks (NJ coastal averages) ──────────────────────────────────
+
+_BENCHMARKS: dict[str, float] = {
+    "ptr": 15.0,           # Price-to-rent ratio
+    "cash_flow": -800.0,   # Monthly cash flow (coastal NJ)
+    "town_score": 70.0,    # Town/county score
+    "scarcity": 65.0,      # Scarcity support score (0-100)
+    "dom": 45.0,           # Days on market
+    "risk_score": 50.0,    # Risk score (0-100)
+    "momentum": 60.0,      # Market momentum (0-100)
+    "liquidity": 65.0,     # Exit liquidity (0-100)
+}
+
+# Whether lower values are "better" for this metric
+_BENCHMARK_LOWER_BETTER: set[str] = {"ptr", "dom", "risk_score"}
+
+
+def _benchmark_context(value: float, key: str) -> str | None:
+    """Return a short benchmark comparison string, or None if no benchmark."""
+    bm = _BENCHMARKS.get(key)
+    if bm is None or value is None:
+        return None
+    if bm == 0:
+        return None
+    delta_pct = ((value - bm) / abs(bm)) * 100
+    if abs(delta_pct) < 3:
+        return f"avg {bm:.0f}"
+    sign = "+" if delta_pct > 0 else ""
+    return f"avg {bm:.0f}, {sign}{delta_pct:.0f}%"
+
+
+def _benchmark_sublabel(value: float, key: str, fmt: str = "{:.0f}") -> str | None:
+    """Return a formatted sublabel with benchmark context for inline_metric_strip."""
+    ctx = _benchmark_context(value, key)
+    if ctx is None:
+        return None
+    return f"(mkt {ctx})"
+
 
 # ── Backwards-compat aliases ───────────────────────────────────────────────────
 
@@ -72,7 +113,7 @@ def metric_card(label: str, value: str, *, subtitle: str = "", tone: str = "neut
         [
             html.Div(label, style=LABEL_STYLE),
             html.Div(value, style={**VALUE_STYLE_MEDIUM, "color": color}),
-            html.Div(subtitle, style={"fontSize": "10px", "color": TEXT_MUTED}) if subtitle else None,
+            html.Div(subtitle, style={"fontSize": "11px", "color": TEXT_MUTED}) if subtitle else None,
         ],
         style=CARD_STYLE,
     )
@@ -85,7 +126,7 @@ def inline_metric_strip(metrics: list[tuple[str, str, str | None]]) -> html.Div:
         if i > 0:
             items.append(html.Span(" | ", style={"margin": "0 10px", "color": BORDER}))
         children = [
-            html.Span(label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginRight": "5px"}),
+            html.Span(label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginRight": "5px"}),
             html.Span(value, style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY}),
         ]
         if sublabel:
@@ -213,7 +254,7 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
         border = f"2px solid {sc}" if recommended else f"1px solid {BORDER}"
         return html.Div(
             [
-                html.Div(label, style={"fontSize": "9px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
+                html.Div(label, style={"fontSize": "11px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
                 html.Div(
                     [
                         html.Span(f"{score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": sc}),
@@ -221,8 +262,8 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
                     ],
                     style={"marginBottom": "4px"},
                 ),
-                html.Div(narrative[:80] + ("…" if len(narrative) > 80 else ""), style={"fontSize": "10px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
-                html.Div("★ BEST FIT", style={"fontSize": "8px", "fontWeight": "700", "color": sc, "marginTop": "4px"}) if recommended else None,
+                html.Div(narrative[:80] + ("…" if len(narrative) > 80 else ""), style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
+                html.Div("★ BEST FIT", style={"fontSize": "9px", "fontWeight": "700", "color": sc, "marginTop": "4px"}) if recommended else None,
             ],
             style={**CARD_STYLE, "border": border, "textAlign": "center", "padding": "10px 8px"},
         )
@@ -233,7 +274,7 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
     cards = [
         html.Div(
             [
-                html.Div("RISK", style={"fontSize": "9px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
+                html.Div("RISK", style={"fontSize": "11px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
                 html.Div(
                     [
                         html.Span(f"{ls.risk_score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": risk_display_color}),
@@ -241,7 +282,7 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
                     ],
                     style={"marginBottom": "4px"},
                 ),
-                html.Div(ls.risk_narrative[:60], style={"fontSize": "10px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
+                html.Div(ls.risk_narrative[:60], style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
             ],
             style={**CARD_STYLE, "textAlign": "center", "padding": "10px 8px"},
         ),
@@ -308,7 +349,7 @@ def render_score_header(view: PropertyAnalysisView) -> html.Div:
             # Narrative
             html.Div(
                 view.score_narrative or "",
-                style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_PRIMARY, "marginBottom": "12px"},
+                style={"fontSize": "13px", "lineHeight": "1.5", "color": TEXT_PRIMARY, "marginBottom": "12px"},
             ) if view.score_narrative else None,
             # Category mini-bars in 2-column grid
             html.Div(
@@ -342,7 +383,7 @@ def _render_category_mini_bars(view: PropertyAnalysisView) -> list:
                         [
                             html.Div(
                                 [
-                                    html.Span(cat.category_name, style={"fontSize": "10px", "color": TEXT_MUTED, "minWidth": "100px", "display": "inline-block"}),
+                                    html.Span(cat.category_name, style={"fontSize": "11px", "color": TEXT_MUTED, "minWidth": "100px", "display": "inline-block"}),
                                     html.Span(f"{cat.score:.1f}", style={"fontSize": "11px", "fontWeight": "600", "color": sc, "minWidth": "28px", "display": "inline-block", "textAlign": "right"}),
                                 ],
                                 style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
@@ -358,7 +399,7 @@ def _render_category_mini_bars(view: PropertyAnalysisView) -> list:
                         [
                             html.Div(
                                 [
-                                    html.Span("What this means", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                                    html.Span("What this means", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase"}),
                                     html.Div(
                                         _category_drill_in_summary(cat.category_name, strongest.evidence if strongest else None, weakest.evidence if weakest else None),
                                         style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "4px"},
@@ -409,8 +450,8 @@ def _render_category_components(cat: object) -> html.Div | None:
                 [
                     html.Div(
                         [
-                            html.Span(label_map.get(key, key.replace("_", " ").title()), style={"fontSize": "10px", "color": TEXT_MUTED}),
-                            html.Span(f"{value:.1f}/5", style={"fontSize": "10px", "fontWeight": "600", "color": sc}),
+                            html.Span(label_map.get(key, key.replace("_", " ").title()), style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            html.Span(f"{value:.1f}/5", style={"fontSize": "11px", "fontWeight": "600", "color": sc}),
                         ],
                         style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
                     ),
@@ -418,7 +459,7 @@ def _render_category_components(cat: object) -> html.Div | None:
                         html.Div(style={"width": f"{pct}%", "height": "100%", "backgroundColor": sc, "borderRadius": "1px"}),
                         style={"height": "3px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "1px", "overflow": "hidden", "marginBottom": "4px"},
                     ),
-                    html.Div(component_notes.get(key, ""), style={"fontSize": "10px", "lineHeight": "1.4", "color": TEXT_MUTED}),
+                    html.Div(component_notes.get(key, ""), style={"fontSize": "11px", "lineHeight": "1.4", "color": TEXT_MUTED}),
                 ],
                 style={"padding": "4px 0", "borderBottom": f"1px solid {BORDER_SUBTLE}"},
             )
@@ -427,7 +468,7 @@ def _render_category_components(cat: object) -> html.Div | None:
         return None
     return html.Div(
         [
-            html.Div("Sub-Components", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
+            html.Div("Sub-Components", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
             html.Div(rows, style={"display": "grid", "gap": "2px"}),
         ],
         style={"marginTop": "8px"},
@@ -447,8 +488,8 @@ def render_sub_factors(sub_factors: list) -> html.Div:
                     html.Span(sf.name.replace("_", " ").title(), style={"fontSize": "11px", "fontWeight": "500", "color": TEXT_PRIMARY, "minWidth": "130px", "display": "inline-block"}),
                     html.Span(dots, style={"fontSize": "11px", "color": sc, "letterSpacing": "1px", "minWidth": "60px", "display": "inline-block"}),
                     html.Span(f"{sf.score:.1f}", style={"fontSize": "11px", "fontWeight": "600", "color": sc, "minWidth": "28px", "display": "inline-block"}),
-                    html.Span(f"({sf.weight:.0%})", style={"fontSize": "10px", "color": TEXT_MUTED, "minWidth": "35px", "display": "inline-block"}),
-                    html.Span(sf.evidence, style={"fontSize": "10px", "color": TEXT_MUTED, "flex": "1"}),
+                    html.Span(f"({sf.weight:.0%})", style={"fontSize": "11px", "color": TEXT_MUTED, "minWidth": "35px", "display": "inline-block"}),
+                    html.Span(sf.evidence, style={"fontSize": "11px", "color": TEXT_MUTED, "flex": "1"}),
                 ],
                 style={"display": "flex", "alignItems": "center", "gap": "6px", "padding": "4px 0", "borderBottom": f"1px solid {BORDER_SUBTLE}"},
             )
@@ -484,14 +525,14 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
             # Thesis narrative
             html.Div(
                 view.score_narrative or view.memo_summary or "",
-                style={"fontSize": "12px", "lineHeight": "1.6", "color": TEXT_PRIMARY, "marginBottom": "12px"},
+                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_PRIMARY, "marginBottom": "12px"},
             ),
             # Strengths vs Risks
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Div("Top Strengths", style={"fontSize": "10px", "fontWeight": "600", "color": TONE_POSITIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
+                            html.Div("Top Strengths", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_POSITIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
                             html.Ul(
                                 [html.Li([html.Span(f"{name}: ", style={"fontWeight": "500"}), html.Span(ev, style={"color": TEXT_MUTED})], style={"fontSize": "11px", "marginBottom": "3px"}) for _, name, ev in top_strengths],
                                 style={"margin": "0", "paddingLeft": "14px"},
@@ -501,7 +542,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Div("Top Risks", style={"fontSize": "10px", "fontWeight": "600", "color": TONE_NEGATIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
+                            html.Div("Top Risks", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_NEGATIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
                             html.Ul(
                                 [html.Li([html.Span(f"{name}: ", style={"fontWeight": "500"}), html.Span(ev, style={"color": TEXT_MUTED})], style={"fontSize": "11px", "marginBottom": "3px"}) for _, name, ev in top_risks],
                                 style={"margin": "0", "paddingLeft": "14px"},
@@ -515,7 +556,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
             # Key metrics as compact table
             html.Div(
                 [
-                    html.Div("Key Metrics", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "marginBottom": "4px", "textTransform": "uppercase"}),
+                    html.Div("Key Metrics", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "marginBottom": "4px", "textTransform": "uppercase"}),
                     html.Table(
                         html.Tbody(
                             [
@@ -525,7 +566,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
                                         html.Td(value, style={"padding": "3px 8px", "fontWeight": "600", "fontSize": "11px", "textAlign": "right", "borderBottom": f"1px solid {BORDER_SUBTLE}"}),
                                         html.Td(
                                             change or "",
-                                            style={"padding": "3px 0 3px 6px", "fontSize": "10px", "textAlign": "right", "borderBottom": f"1px solid {BORDER_SUBTLE}",
+                                            style={"padding": "3px 0 3px 6px", "fontSize": "11px", "textAlign": "right", "borderBottom": f"1px solid {BORDER_SUBTLE}",
                                                    "color": TONE_POSITIVE_TEXT if change and "+" in change else TEXT_MUTED},
                                         ),
                                     ]
@@ -568,7 +609,7 @@ def render_category_section(
                 ),
                 html.Span(
                     f"({cat.weight:.0%})" if cat else "",
-                    style={"fontSize": "10px", "color": TEXT_MUTED, "marginLeft": "6px"},
+                    style={"fontSize": "11px", "color": TEXT_MUTED, "marginLeft": "6px"},
                 ),
                 # Mini score bar inline in header
                 html.Div(
@@ -600,7 +641,7 @@ def render_category_section(
             html.Details(
                 [
                     html.Summary(
-                        html.Span("Sub-Factor Breakdown", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "cursor": "pointer"}),
+                        html.Span("Sub-Factor Breakdown", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "cursor": "pointer"}),
                         style={"listStyle": "none", "padding": "6px 0", "outline": "none"},
                     ),
                     _render_category_components(cat),
@@ -1132,8 +1173,8 @@ def risk_breakdown_bars(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Span(sf.name.replace("_", " ").title(), style={"fontSize": "10px", "color": TEXT_MUTED}),
-                            html.Span(f"{sf.score:.1f}", style={"fontSize": "10px", "fontWeight": "600", "color": sc}),
+                            html.Span(sf.name.replace("_", " ").title(), style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            html.Span(f"{sf.score:.1f}", style={"fontSize": "11px", "fontWeight": "600", "color": sc}),
                         ],
                         style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
                     ),
@@ -1167,8 +1208,8 @@ def confidence_progress_bars(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Span(item.label, style={"fontSize": "10px", "color": TEXT_MUTED}),
-                            html.Span(f"{pct:.0f}%", style={"fontSize": "10px", "fontWeight": "600"}),
+                            html.Span(item.label, style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            html.Span(f"{pct:.0f}%", style={"fontSize": "11px", "fontWeight": "600"}),
                         ],
                         style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
                     ),
@@ -1203,8 +1244,8 @@ def confidence_component_bars(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Span(item.label, style={"fontSize": "10px", "color": TEXT_MUTED}),
-                            html.Span(f"{pct:.0f}%  ·  wt {weight_pct}%", style={"fontSize": "10px", "fontWeight": "600"}),
+                            html.Span(item.label, style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            html.Span(f"{pct:.0f}%  ·  wt {weight_pct}%", style={"fontSize": "11px", "fontWeight": "600"}),
                         ],
                         style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
                     ),
@@ -1212,7 +1253,7 @@ def confidence_component_bars(view: PropertyAnalysisView) -> html.Div:
                         html.Div(style={"width": f"{pct}%", "height": "100%", "backgroundColor": color, "borderRadius": "1px"}),
                         style={"height": "4px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "1px", "overflow": "hidden"},
                     ),
-                    html.Div(item.reason, style={"fontSize": "10px", "color": TEXT_MUTED, "marginTop": "3px", "lineHeight": "1.4"}),
+                    html.Div(item.reason, style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "3px", "lineHeight": "1.4"}),
                 ],
                 style={"marginBottom": "8px"},
             )
@@ -1237,7 +1278,7 @@ def assumptions_transparency_block(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Div(item.label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                            html.Div(item.label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
                             html.Div(item.value, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginTop": "2px"}),
                         ],
                         style={"minWidth": "140px"},
@@ -1245,7 +1286,7 @@ def assumptions_transparency_block(view: PropertyAnalysisView) -> html.Div:
                     html.Div(
                         [
                             _source_badge(item),
-                            html.Div(item.note, style={"fontSize": "10px", "color": TEXT_MUTED, "lineHeight": "1.4", "marginTop": "4px"}),
+                            html.Div(item.note, style={"fontSize": "11px", "color": TEXT_MUTED, "lineHeight": "1.4", "marginTop": "4px"}),
                         ],
                         style={"flex": "1"},
                     ),
@@ -1302,9 +1343,9 @@ def metric_input_status_block(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Div(item.label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                            html.Div(item.label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
                             html.Div(item.confidence_impact, style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4", "marginTop": "3px"}),
-                            html.Div(" | ".join(detail_parts), style={"fontSize": "10px", "color": TEXT_MUTED, "marginTop": "4px", "lineHeight": "1.4"}) if detail_parts else None,
+                            html.Div(" | ".join(detail_parts), style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "4px", "lineHeight": "1.4"}) if detail_parts else None,
                         ]
                     ),
                     html.Div(compact_badge("Status", label, tone=tone), style={"justifySelf": "end"}),
@@ -1347,6 +1388,446 @@ def metric_input_status_block(view: PropertyAnalysisView) -> html.Div:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# V2 COMPONENTS — Decision-first tear sheet layout
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _sub_factor_display_name(name: str) -> str:
+    """Human-readable sub-factor label from the scoring config map."""
+    return SUB_FACTOR_LABELS.get(name, name.replace("_", " ").title())
+
+
+def _extract_diverse_items(view: PropertyAnalysisView, *, best: bool, count: int = 3) -> list[str]:
+    """Pick top strengths or risks ensuring diversity across categories."""
+    if not view.category_scores:
+        return []
+    all_sfs: list[tuple[float, str, str, str]] = []
+    for cat_name, cat in view.category_scores.items():
+        for sf in cat.sub_factors:
+            all_sfs.append((sf.score, sf.name, sf.evidence, cat_name))
+    all_sfs.sort(key=lambda x: x[0], reverse=best)
+    items: list[str] = []
+    seen_cats: set[str] = set()
+    threshold = 3.5 if best else 3.0
+    for score, _name, evidence, cat in all_sfs:
+        if len(items) >= count:
+            break
+        passes = (score >= threshold) if best else (score <= threshold)
+        if cat not in seen_cats and passes:
+            items.append(evidence)
+            seen_cats.add(cat)
+    # Fill remaining from any category
+    for score, _name, evidence, _cat in all_sfs:
+        if len(items) >= count:
+            break
+        if evidence not in items:
+            passes = (score >= 3.0) if best else (score < 3.5)
+            if passes:
+                items.append(evidence)
+    return items[:count]
+
+
+def _verdict_bullet(icon: str, text: str, color: str) -> html.Div:
+    return html.Div(
+        [
+            html.Span(icon, style={"color": color, "marginRight": "8px", "fontSize": "14px", "lineHeight": "1.5"}),
+            html.Div(text, style={"fontSize": "13px", "lineHeight": "1.5", "flex": "1", "color": TEXT_PRIMARY}),
+        ],
+        style={"display": "flex", "alignItems": "flex-start", "marginBottom": "6px"},
+    )
+
+
+def _generate_bottom_line(view: PropertyAnalysisView) -> str:
+    """Generate a one-sentence bottom line from lens + score data."""
+    ls = view.lens_scores
+    best = ls.recommended_lens if ls else ""
+    score = view.final_score or 3.0
+    if best == "owner":
+        if score >= 4.0:
+            return "Excellent lifestyle purchase — location and appreciation outweigh negative carry."
+        if score >= 3.0:
+            return "Solid choice for primary residence, though some compromises on condition or carry."
+        return "Limited lifestyle value at this price — consider alternatives."
+    if best == "investor":
+        if score >= 4.0:
+            return "Strong rental investment with positive cash flow and solid fundamentals."
+        if score >= 3.0:
+            return "Viable rental with acceptable returns, but not a standout opportunity."
+        return "Not recommended for rental income — fundamentals don't support positive cash flow."
+    if best == "developer":
+        if score >= 4.0:
+            return "Excellent value-add opportunity with clear renovation upside and strong exit potential."
+        if score >= 3.0:
+            return "Moderate development potential — consider if you have a specific improvement vision."
+        return "Limited value-add potential — better opportunities likely exist elsewhere."
+    if score >= 4.0:
+        return "Strong opportunity across multiple buyer profiles."
+    if score >= 3.0:
+        return "Solid property with caveats — review detailed analysis for fit."
+    return "Proceed with caution — significant concerns identified."
+
+
+_LENS_DISPLAY = {
+    "owner": ("Primary Residence", "🏠"),
+    "investor": ("Rental Investment", "💰"),
+    "developer": ("Value-Add / Renovation", "🔧"),
+}
+
+
+def render_property_verdict(view: PropertyAnalysisView) -> html.Div:
+    """Property Verdict Card — answers 'Should I buy this?' in 5 seconds."""
+    if view.final_score is None:
+        return html.Div()
+
+    score = view.final_score
+    tier = (view.recommendation_tier or "Hold").upper()
+    sc = score_color(score)
+    vc = verdict_color(view.recommendation_tier or "")
+
+    # Best lens
+    ls = view.lens_scores
+    best_key = ls.recommended_lens if ls else ""
+    lens_name, _icon = _LENS_DISPLAY.get(best_key, (best_key.replace("_", " ").title(), "📊"))
+
+    strengths = _extract_diverse_items(view, best=True, count=3)
+    risks = _extract_diverse_items(view, best=False, count=3)
+    bottom_line = _generate_bottom_line(view)
+
+    return html.Div(
+        [
+            # Header: Verdict + Score
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(tier, style={"fontSize": "20px", "fontWeight": "700", "color": vc, "marginBottom": "4px"}),
+                            html.Div(f"Best suited as: {lens_name}", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                        ],
+                    ),
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.Span(f"{score:.1f}", style={"fontSize": "32px", "fontWeight": "700", "color": sc}),
+                                    html.Span(" / 5", style={"fontSize": "16px", "color": TEXT_MUTED}),
+                                ],
+                                style={"textAlign": "right"},
+                            ),
+                            html.Div(score_label(score), style={"fontSize": "13px", "fontWeight": "600", "color": sc, "textAlign": "right"}),
+                        ],
+                    ),
+                ],
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "16px"},
+            ),
+            # Divider
+            html.Div(style={"height": "1px", "backgroundColor": BORDER, "margin": "0 0 16px"}),
+            # Strengths + Risks
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("STRENGTHS", style={"fontSize": "11px", "fontWeight": "600", "color": ACCENT_GREEN, "marginBottom": "8px", "letterSpacing": "0.5px"}),
+                            html.Div([_verdict_bullet("✓", s, ACCENT_GREEN) for s in strengths]),
+                        ],
+                        style={"flex": "1"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("RISKS", style={"fontSize": "11px", "fontWeight": "600", "color": ACCENT_ORANGE, "marginBottom": "8px", "letterSpacing": "0.5px"}),
+                            html.Div([_verdict_bullet("⚠", r, ACCENT_ORANGE) for r in risks]),
+                        ],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={"display": "flex", "gap": "24px", "marginBottom": "16px"},
+            ) if (strengths or risks) else None,
+            # Bottom line
+            html.Div(
+                [
+                    html.Div("BOTTOM LINE", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "marginBottom": "6px", "letterSpacing": "0.5px"}),
+                    html.Div(bottom_line, style={"fontSize": "13px", "lineHeight": "1.6", "fontStyle": "italic", "color": TEXT_PRIMARY}),
+                ],
+                style={"paddingTop": "12px", "borderTop": f"1px solid {BORDER}"},
+            ),
+        ],
+        style={**CARD_STYLE, "border": f"2px solid {vc}40", "padding": "20px 24px", "marginBottom": "24px"},
+    )
+
+
+def _compact_lens_badge(label: str, score: float | None, *, inverted: bool = False) -> html.Div | None:
+    """Compact lens badge for non-primary lenses."""
+    if score is None:
+        return None
+    display = (6.0 - score) if inverted else score
+    sc = score_color(display)
+    return html.Div(
+        [
+            html.Span(label, style={"color": TEXT_MUTED, "fontSize": "11px"}),
+            html.Span(f"{score:.1f}", style={"fontWeight": "700", "color": sc, "fontSize": "13px"}),
+            html.Span(score_label(display), style={"fontSize": "11px", "color": sc}),
+        ],
+        style={
+            "display": "inline-flex", "alignItems": "center", "gap": "6px",
+            "padding": "6px 12px", "backgroundColor": BG_SURFACE_2,
+            "border": f"1px solid {BORDER}", "borderRadius": "4px",
+        },
+    )
+
+
+def render_perspective_block(view: PropertyAnalysisView) -> html.Div:
+    """Perspective Block — hero card for best lens, compact badges for others."""
+    ls = view.lens_scores
+    if ls is None:
+        return html.Div()
+
+    best_key = ls.recommended_lens
+    lens_name, icon = _LENS_DISPLAY.get(best_key, (best_key.replace("_", " ").title(), "📊"))
+
+    # Get best lens score + narrative
+    score_map = {"owner": (ls.owner_score, ls.owner_narrative), "investor": (ls.investor_score, ls.investor_narrative), "developer": (ls.developer_score, ls.developer_narrative)}
+    best_score, best_narrative = score_map.get(best_key, (view.final_score, ""))
+    if best_score is None:
+        best_score = view.final_score or 3.0
+    sc = score_color(best_score)
+    sl = score_label(best_score)
+
+    # Other lenses as compact badges
+    other_badges = []
+    if best_key != "owner" and ls.owner_score is not None:
+        other_badges.append(_compact_lens_badge("🏠 Owner", ls.owner_score))
+    if best_key != "investor" and ls.investor_score is not None:
+        other_badges.append(_compact_lens_badge("💰 Investor", ls.investor_score))
+    if best_key != "developer" and ls.developer_score is not None:
+        other_badges.append(_compact_lens_badge("🔧 Developer", ls.developer_score))
+    other_badges.append(_compact_lens_badge("🛡 Risk", ls.risk_score, inverted=True))
+
+    # Category mini-bars
+    cat_bars = _render_v2_category_bars(view)
+
+    return html.Div(
+        [
+            html.Div("YOUR PERSPECTIVE", style={**SECTION_HEADER_STYLE, "marginBottom": "8px"}),
+            # Hero lens card
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(
+                                [
+                                    html.Span(icon, style={"fontSize": "16px", "marginRight": "8px"}),
+                                    html.Span(f"BEST FOR: {lens_name.upper()}", style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY}),
+                                ],
+                            ),
+                            html.Div(
+                                [
+                                    html.Span(f"{best_score:.1f}", style={"fontSize": "24px", "fontWeight": "700", "color": sc}),
+                                    html.Span(" / 5", style={"fontSize": "14px", "color": TEXT_MUTED}),
+                                    html.Span(f" — {sl}", style={"fontSize": "13px", "fontWeight": "600", "color": sc, "marginLeft": "8px"}),
+                                ],
+                            ),
+                        ],
+                        style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                    ),
+                    html.Div(best_narrative, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_PRIMARY, "marginBottom": "12px"}) if best_narrative else None,
+                ],
+                style={**CARD_STYLE, "border": f"2px solid {sc}40", "padding": "16px 20px", "marginBottom": "12px"},
+            ),
+            # Other lenses compact row
+            html.Div(
+                [b for b in other_badges if b is not None],
+                style={"display": "flex", "gap": "8px", "flexWrap": "wrap", "marginBottom": "16px"},
+            ),
+            # Category breakdown bars
+            html.Div(
+                [
+                    html.Div("CATEGORY BREAKDOWN", style={**SECTION_HEADER_STYLE, "marginBottom": "8px"}),
+                    cat_bars,
+                ],
+            ),
+        ],
+        style={"marginBottom": "24px"},
+    )
+
+
+def _render_v2_category_bars(view: PropertyAnalysisView) -> html.Div:
+    """Compact horizontal bars for each category with score labels."""
+    if not view.category_scores:
+        return html.Div()
+    cats = [
+        ("Price Context", "price_context"),
+        ("Economic Support", "economic_support"),
+        ("Optionality", "optionality"),
+        ("Market Position", "market_position"),
+        ("Risk Layer", "risk_layer"),
+    ]
+    rows = []
+    for name, key in cats:
+        cat = view.category_scores.get(key)
+        if cat is None:
+            continue
+        sc = score_color(cat.score)
+        pct = (cat.score / 5.0) * 100
+        sl = score_label(cat.score)
+        rows.append(
+            html.Div(
+                [
+                    html.Div(name, style={"width": "130px", "fontSize": "11px", "color": TEXT_MUTED}),
+                    html.Div(
+                        html.Div(style={"width": f"{pct}%", "height": "100%", "backgroundColor": sc, "borderRadius": "2px", "transition": "width 0.3s ease"}),
+                        style={"flex": "1", "height": "8px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "2px", "overflow": "hidden"},
+                    ),
+                    html.Div(
+                        [
+                            html.Span(f"{cat.score:.1f}", style={"fontSize": "13px", "fontWeight": "700", "color": sc}),
+                            html.Span(f" {sl}", style={"fontSize": "11px", "color": sc, "marginLeft": "4px"}),
+                        ],
+                        style={"width": "100px", "textAlign": "right"},
+                    ),
+                ],
+                style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "6px"},
+            )
+        )
+    return html.Div(rows)
+
+
+def _sub_factor_icon(score: float) -> tuple[str, str]:
+    """Return icon and color for a sub-factor score."""
+    if score >= 4.0:
+        return "✓", ACCENT_GREEN
+    if score >= 3.0:
+        return "●", ACCENT_BLUE
+    if score >= 2.5:
+        return "○", ACCENT_YELLOW
+    return "⚠", ACCENT_ORANGE
+
+
+def render_sub_factor_row_v2(sf: object) -> html.Div:
+    """V2 sub-factor row: human-readable question, no dots, no weight, color-coded badge."""
+    question = _sub_factor_display_name(sf.name)
+    sc = score_color(sf.score)
+    sl = score_label(sf.score)
+    icon, icon_color = _sub_factor_icon(sf.score)
+
+    return html.Div(
+        [
+            html.Span(icon, style={"color": icon_color, "fontSize": "14px", "marginRight": "12px", "marginTop": "2px", "flexShrink": "0"}),
+            html.Div(
+                [
+                    html.Div(question, style={"fontSize": "13px", "fontWeight": "600", "marginBottom": "2px", "color": TEXT_PRIMARY}),
+                    html.Div(sf.evidence, style={"fontSize": "11px", "color": TEXT_MUTED, "lineHeight": "1.5"}),
+                ],
+                style={"flex": "1"},
+            ),
+            html.Div(
+                [
+                    html.Span(f"{sf.score:.1f}", style={"fontWeight": "700", "color": sc}),
+                    html.Span(f" {sl}", style={"fontSize": "11px", "color": sc, "marginLeft": "4px"}),
+                ],
+                style={
+                    "padding": "4px 8px", "backgroundColor": BG_SURFACE_2,
+                    "borderRadius": "4px", "fontSize": "11px", "whiteSpace": "nowrap", "flexShrink": "0",
+                },
+            ),
+        ],
+        style={"display": "flex", "alignItems": "flex-start", "padding": "8px 0", "borderBottom": f"1px solid {BORDER_SUBTLE}"},
+    )
+
+
+def render_category_section_v2(
+    title: str,
+    category_key: str,
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    metrics_strip: html.Div | None = None,
+    chart: html.Div | dcc.Graph | None = None,
+    extra_content: html.Div | None = None,
+    default_open: bool = False,
+) -> html.Div:
+    """V2 category section: no weights, human-readable sub-factors, top 2 drivers by default."""
+    cat = view.category_scores.get(category_key) if view.category_scores else None
+    if cat is None:
+        return html.Div()
+    sc = score_color(cat.score)
+    sl = score_label(cat.score)
+
+    # Sort sub-factors: best first when section is strong, worst first when weak
+    sorted_sfs = sorted(cat.sub_factors, key=lambda sf: sf.score, reverse=True) if cat.sub_factors else []
+    top_drivers = sorted_sfs[:2]
+    remaining_sfs = sorted_sfs[2:]
+
+    summary_el = html.Summary(
+        html.Div(
+            [
+                html.Span(title, style={**SECTION_HEADER_STYLE, "marginBottom": "0", "display": "inline", "fontSize": "13px", "letterSpacing": "0.5px"}),
+                html.Span(
+                    f"  {cat.score:.1f} / 5",
+                    style={"fontSize": "15px", "fontWeight": "600", "color": sc, "marginLeft": "10px"},
+                ),
+                html.Span(
+                    sl,
+                    style={"fontSize": "11px", "fontWeight": "600", "color": sc, "marginLeft": "6px",
+                           "padding": "2px 8px", "backgroundColor": BG_SURFACE_2, "borderRadius": "3px",
+                           "border": f"1px solid {sc}40"},
+                ),
+                html.Div(
+                    html.Div(style={"width": f"{(cat.score / 5.0) * 100:.0f}%", "height": "100%", "backgroundColor": sc, "borderRadius": "1px"}),
+                    style={"height": "4px", "width": "60px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "1px", "overflow": "hidden", "marginLeft": "12px", "display": "inline-block", "verticalAlign": "middle"},
+                ),
+            ],
+            style={"display": "flex", "alignItems": "baseline"},
+        ),
+        style={
+            "cursor": "pointer", "padding": "12px 16px",
+            "borderBottom": f"2px solid {BORDER}", "listStyle": "none",
+            "outline": "none", "userSelect": "none",
+        },
+    )
+
+    body_children = []
+    if metrics_strip:
+        body_children.append(metrics_strip)
+    if chart:
+        body_children.append(html.Div(chart, style={"marginTop": "6px"}))
+
+    # Key Drivers section (always visible when expanded)
+    if top_drivers:
+        body_children.append(
+            html.Div(
+                [
+                    html.Div("KEY DRIVERS", style={**SECTION_HEADER_STYLE, "marginBottom": "8px", "marginTop": "12px"}),
+                    html.Div([render_sub_factor_row_v2(sf) for sf in top_drivers]),
+                ],
+            )
+        )
+
+    # "Show all N sub-factors" toggle for remaining
+    if remaining_sfs:
+        body_children.append(
+            html.Details(
+                [
+                    html.Summary(
+                        f"Show all {len(cat.sub_factors)} sub-factors",
+                        style={"fontSize": "11px", "color": ACCENT_BLUE, "cursor": "pointer", "padding": "6px 0", "listStyle": "none", "outline": "none"},
+                    ),
+                    html.Div([render_sub_factor_row_v2(sf) for sf in sorted_sfs], style={"marginTop": "4px"}),
+                ],
+                open=False,
+                style={"marginTop": "8px"},
+            )
+        )
+
+    if extra_content:
+        body_children.append(extra_content)
+
+    return html.Details(
+        [summary_el, html.Div(body_children, style={"padding": "8px 16px 16px"})],
+        open=default_open,
+        style={"marginBottom": "8px", "backgroundColor": BG_SURFACE, "border": f"1px solid {BORDER}", "borderRadius": "4px"},
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SUMMARY STRIP (property header in tear sheet)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1385,26 +1866,22 @@ def summary_strip(view: PropertyAnalysisView) -> html.Div:
 
 
 def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
-    """Full tear sheet: summary-first with collapsible drill-downs."""
+    """V2 tear sheet: verdict-first, progressive disclosure, human-readable labels."""
     return html.Div(
         [
-            summary_strip(view),
-            # Lens selector (multi-perspective scores)
-            render_lens_selector(view),
-            # Executive summary (always visible)
-            render_executive_summary(view),
-            render_score_header(view),
-            # Detailed analysis header
-            html.Div("DETAILED ANALYSIS", style={**SECTION_HEADER_STYLE, "marginTop": "8px", "marginBottom": "8px", "fontSize": "10px", "letterSpacing": "0.12em"}),
-            # Price Context (collapsed by default)
-            render_category_section(
-                "PRICE CONTEXT", "price_context", view,
+            # 1. Property Verdict — THE answer
+            render_property_verdict(view),
+            # 2. Perspective Block — best lens hero + compact others + category bars
+            render_perspective_block(view),
+            # 3. Detailed Analysis
+            html.Div("DETAILED ANALYSIS", style={**SECTION_HEADER_STYLE, "marginTop": "8px", "marginBottom": "12px", "fontSize": "11px", "letterSpacing": "0.12em"}),
+            # Price Context (default OPEN — most important category)
+            render_category_section_v2(
+                "PRICE CONTEXT", "price_context", view, report,
                 metrics_strip=inline_metric_strip([
                     ("Ask", _fmt_compact(view.ask_price), None),
                     ("BCV", _fmt_compact(view.bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
-                    ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct) if view.net_opportunity_delta_pct is not None else None),
-                    ("Comps", view.comps.comparable_value_text, f"{view.comps.comp_count_text} used"),
-                    ("Actives", view.comps.active_listing_count_text, None),
+                    ("Base", _fmt_compact(view.base_case), None),
                     ("Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
                 ]),
                 chart=html.Div(
@@ -1414,31 +1891,28 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                     ],
                     style={"display": "grid", "gap": "8px"},
                 ),
-                narrative=view.forward.summary if view.forward else None,
                 extra_content=html.Div(
                     [block for block in [_net_opportunity_delta_block(view), _active_listing_block(view)] if block is not None],
                     style={"display": "grid", "gap": "8px"},
                 ),
-                default_open=False,
+                default_open=True,
             ),
-            # Economic Support (open by default as example)
-            render_category_section(
-                "ECONOMIC SUPPORT", "economic_support", view,
+            # Economic Support (collapsed)
+            render_category_section_v2(
+                "ECONOMIC SUPPORT", "economic_support", view, report,
                 metrics_strip=inline_metric_strip([
-                    ("Total Rent", view.income_support.total_rent_text, view.income_support.rent_source_type),
-                    ("PTR", view.income_support.price_to_rent_text, view.income_support.ptr_classification),
-                    ("ISR", view.income_support.income_support_ratio_text, None),
-                    ("Cash Flow", view.income_support.monthly_cash_flow_text, None),
+                    ("Rent", view.income_support.total_rent_text, view.income_support.rent_source_type),
+                    ("PTR", view.income_support.price_to_rent_text, _ptr_benchmark_label(view)),
+                    ("Cash Flow", view.income_support.monthly_cash_flow_text, _cash_flow_benchmark_label(view)),
                     ("Rental Ease", view.income_support.rental_ease_label, None),
                 ]),
                 chart=income_carry_waterfall(view, report),
-                narrative=view.income_support.summary,
                 extra_content=_unit_breakdown_block(view),
-                default_open=True,
+                default_open=False,
             ),
             # Optionality (collapsed)
-            render_category_section(
-                "OPTIONALITY", "optionality", view,
+            render_category_section_v2(
+                "OPTIONALITY", "optionality", view, report,
                 metrics_strip=inline_metric_strip([
                     ("Condition", view.condition_profile, None),
                     ("CapEx Lane", view.capex_lane, None),
@@ -1447,13 +1921,13 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                 default_open=False,
             ),
             # Market Position (collapsed)
-            render_category_section(
-                "MARKET POSITION", "market_position", view,
+            render_category_section_v2(
+                "MARKET POSITION", "market_position", view, report,
                 metrics_strip=inline_metric_strip([
-                    ("Town Score", f"{view.risk_location.town_score:.0f}", view.risk_location.town_label.replace("_", " ").title()),
-                    ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label),
-                    ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", None),
-                    ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
+                    ("Town", f"{view.risk_location.town_score:.0f}", _benchmark_sublabel(view.risk_location.town_score, "town_score") or view.risk_location.town_label.replace("_", " ").title()),
+                    ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", _benchmark_sublabel(view.risk_location.market_momentum_score, "momentum") or view.risk_location.market_momentum_label),
+                    ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", _benchmark_sublabel(view.risk_location.scarcity_score, "scarcity")),
+                    ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", _benchmark_sublabel(view.risk_location.liquidity_score, "liquidity") or view.risk_location.liquidity_label),
                 ]),
                 chart=location_metrics_bars(view, report),
                 extra_content=html.Div(
@@ -1466,16 +1940,18 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                 default_open=False,
             ),
             # Risk Layer (collapsed)
-            render_category_section(
-                "RISK LAYER", "risk_layer", view,
+            render_category_section_v2(
+                "RISK LAYER", "risk_layer", view, report,
                 metrics_strip=inline_metric_strip([
-                    ("Risk Score", f"{view.risk_location.risk_score:.0f}", None),
+                    ("Risk Score", f"{view.risk_location.risk_score:.0f}", _benchmark_sublabel(view.risk_location.risk_score, "risk_score")),
                     ("Flood", view.risk_location.flood_risk.title(), None),
                     ("Constraints", view.risk_location.risk_summary[:60] if view.risk_location.risk_summary else "—", None),
                 ]),
                 chart=risk_breakdown_bars(view),
                 default_open=False,
             ),
+            # What-if slider
+            render_what_if_slider(view),
             # Scenario range
             _render_forward_scenarios(view),
             # Evidence footer
@@ -1490,6 +1966,27 @@ def gap_pct_text(view: PropertyAnalysisView) -> str:
         return ""
     sign = "+" if view.mispricing_pct >= 0 else ""
     return f"{sign}{view.mispricing_pct * 100:.1f}%"
+
+
+def _ptr_benchmark_label(view: PropertyAnalysisView) -> str | None:
+    """PTR benchmark sublabel: 'Good (avg 15x)' or 'High (avg 15x, +35%)'."""
+    ptr_raw = view.compare_metrics.get("price_to_rent")
+    if not isinstance(ptr_raw, (int, float)) or ptr_raw <= 0:
+        return view.income_support.ptr_classification
+    ctx = _benchmark_context(ptr_raw, "ptr")
+    if ctx is None:
+        return view.income_support.ptr_classification
+    classification = view.income_support.ptr_classification or ""
+    return f"{classification} (mkt {ctx})" if classification else f"mkt {ctx}"
+
+
+def _cash_flow_benchmark_label(view: PropertyAnalysisView) -> str | None:
+    """Cash flow benchmark sublabel."""
+    cf_raw = _parse_currency_text(view.income_support.monthly_cash_flow_text)
+    if cf_raw is None:
+        return None
+    ctx = _benchmark_context(cf_raw, "cash_flow")
+    return f"mkt {ctx}" if ctx else None
 
 
 def _render_forward_scenarios(view: PropertyAnalysisView) -> html.Div:
@@ -1590,14 +2087,14 @@ def _render_evidence_footer(view: PropertyAnalysisView, report: AnalysisReport) 
                     html.Div(
                         [
                             html.Div("Missing Inputs", style={**LABEL_STYLE, "color": TONE_NEGATIVE_TEXT}),
-                            html.Div(", ".join(view.evidence.missing_inputs[:6]) or "None", style={"fontSize": "10px", "color": TEXT_MUTED}),
+                            html.Div(", ".join(view.evidence.missing_inputs[:6]) or "None", style={"fontSize": "11px", "color": TEXT_MUTED}),
                         ],
                         style={"flex": "1"},
                     ) if missing > 0 else None,
                     html.Div(
                         [
                             html.Div("Estimated Inputs", style={**LABEL_STYLE, "color": TONE_WARNING_TEXT}),
-                            html.Div(", ".join(view.evidence.estimated_inputs[:6]) or "None", style={"fontSize": "10px", "color": TEXT_MUTED}),
+                            html.Div(", ".join(view.evidence.estimated_inputs[:6]) or "None", style={"fontSize": "11px", "color": TEXT_MUTED}),
                         ],
                         style={"flex": "1"},
                     ) if estimated > 0 else None,
@@ -1622,8 +2119,8 @@ def _render_defaults_applied(view: PropertyAnalysisView) -> html.Div | None:
         rows.append(
             html.Div(
                 [
-                    html.Span(f"{label}: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "10px"}),
-                    html.Span(description, style={"color": TEXT_MUTED, "fontSize": "10px"}),
+                    html.Span(f"{label}: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "11px"}),
+                    html.Span(description, style={"color": TEXT_MUTED, "fontSize": "11px"}),
                 ],
                 style={"marginBottom": "2px"},
             )
@@ -1633,8 +2130,8 @@ def _render_defaults_applied(view: PropertyAnalysisView) -> html.Div | None:
     if view.geocoded:
         geocode_note = html.Div(
             [
-                html.Span("Geocoded: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "10px"}),
-                html.Span("lat/lon populated from address via Nominatim", style={"color": TEXT_MUTED, "fontSize": "10px"}),
+                html.Span("Geocoded: ", style={"fontWeight": "500", "color": TEXT_SECONDARY, "fontSize": "11px"}),
+                html.Span("lat/lon populated from address via Nominatim", style={"color": TEXT_MUTED, "fontSize": "11px"}),
             ],
             style={"marginBottom": "2px"},
         )
@@ -1646,7 +2143,7 @@ def _render_defaults_applied(view: PropertyAnalysisView) -> html.Div | None:
                     html.Div("SMART DEFAULTS APPLIED", style={**SECTION_HEADER_STYLE, "color": TONE_WARNING_TEXT}),
                     html.Div(
                         f"{len(view.defaults_applied)} fields auto-filled. Override in Add Property form if you have actual values.",
-                        style={"fontSize": "10px", "color": TEXT_MUTED, "marginBottom": "6px"},
+                        style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "6px"},
                     ),
                 ],
             ),
@@ -1654,6 +2151,356 @@ def _render_defaults_applied(view: PropertyAnalysisView) -> html.Div | None:
             geocode_note,
         ],
         style={**CARD_STYLE, "padding": "8px 10px", "marginTop": "8px", "borderColor": TONE_WARNING_BG},
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIRST-TIME USER TOUR
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_TOUR_STEPS: list[dict[str, str | list[str]]] = [
+    {
+        "title": "Welcome to Briarwood",
+        "lines": [
+            "Briarwood helps you evaluate real estate investments with confidence.",
+            "This quick tour shows you how to read property analyses.",
+            "It takes less than 2 minutes.",
+        ],
+    },
+    {
+        "title": "Property Verdict",
+        "lines": [
+            "Every property starts with a clear verdict: Should you buy it?",
+            "You'll see an overall recommendation (Strong Buy → Avoid),",
+            "top 3 strengths and risks, and a one-sentence bottom line.",
+            "This is THE answer — everything else is supporting detail.",
+        ],
+    },
+    {
+        "title": "Four Perspectives (Lenses)",
+        "lines": [
+            "The same property can be great for one buyer but poor for another.",
+            "Briarwood scores through 4 lenses:",
+            "  Risk Assessment — How safe is this purchase?",
+            "  Investor — Good for rental income?",
+            "  Owner-Occupant — Good for primary residence?",
+            "  Developer — Good for value-add renovation?",
+            "The 'Best For' recommendation shows which lens fits you.",
+        ],
+    },
+    {
+        "title": "Five Categories",
+        "lines": [
+            "Each property is analyzed across 5 categories:",
+            "  Price Context — Is it priced right?",
+            "  Economic Support — Can you afford it?",
+            "  Optionality — Room for improvement?",
+            "  Market Position — Strong location?",
+            "  Risk Layer — What are the risks?",
+            "Click any category to see details, charts, and sub-factors.",
+        ],
+    },
+    {
+        "title": "Sub-Factors (Drivers)",
+        "lines": [
+            "Each category has 3-4 'drivers' — specific factors that affect the score.",
+            "The top 2 drivers are shown by default, phrased as questions:",
+            "  'Priced right vs. recent sales?'",
+            "  'Can you afford monthly payments?'",
+            "Click 'Show all sub-factors' to see the complete breakdown.",
+        ],
+    },
+    {
+        "title": "You're Ready!",
+        "lines": [
+            "That's it! Tips for best results:",
+            "  Start with the Verdict card (top of page)",
+            "  Check which lens is best for you",
+            "  Expand categories you care about",
+            "  Use the What-If slider to test price scenarios",
+            "  Compare multiple properties side-by-side",
+            "Click 'Finish' to start analyzing properties.",
+        ],
+    },
+]
+
+
+def render_tour_overlay(step: int = 0) -> html.Div:
+    """Render the guided tour overlay for first-time users."""
+    total = len(_TOUR_STEPS)
+    step = max(0, min(step, total - 1))
+    data = _TOUR_STEPS[step]
+
+    progress = [
+        html.Div(style={
+            "width": "40px", "height": "4px", "borderRadius": "2px",
+            "backgroundColor": ACCENT_BLUE if i <= step else BORDER,
+        })
+        for i in range(total)
+    ]
+
+    body_lines = [
+        html.P(line, style={"fontSize": "14px", "lineHeight": "1.6", "marginBottom": "6px", "color": TEXT_PRIMARY})
+        for line in data["lines"]
+    ]
+
+    prev_label = "Skip Tour" if step == 0 else "Previous"
+    next_label = "Finish" if step == total - 1 else "Next"
+
+    return html.Div(
+        html.Div(
+            [
+                # Progress dots
+                html.Div(progress, style={"display": "flex", "gap": "8px", "justifyContent": "center", "marginBottom": "24px"}),
+                # Title
+                html.Div(data["title"], style={"fontSize": "24px", "fontWeight": "700", "color": TEXT_PRIMARY, "marginBottom": "16px"}),
+                # Body
+                html.Div(body_lines),
+                # Nav
+                html.Div(
+                    [
+                        html.Button(prev_label, id="tour-prev-btn", n_clicks=0, style={**BTN_SECONDARY, "padding": "8px 16px"}),
+                        html.Div(f"Step {step + 1} of {total}", style={"fontSize": "13px", "color": TEXT_MUTED, "alignSelf": "center"}),
+                        html.Button(next_label, id="tour-next-btn", n_clicks=0, style={**BTN_PRIMARY, "padding": "8px 16px"}),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "marginTop": "24px"},
+                ),
+            ],
+            style={
+                "backgroundColor": BG_SURFACE, "border": f"2px solid {BORDER}",
+                "borderRadius": "8px", "padding": "32px", "maxWidth": "600px", "width": "100%",
+            },
+        ),
+        id="tour-overlay",
+        style={
+            "position": "fixed", "top": "0", "left": "0", "right": "0", "bottom": "0",
+            "backgroundColor": "rgba(0,0,0,0.8)", "zIndex": "9999",
+            "display": "flex", "alignItems": "center", "justifyContent": "center", "padding": "20px",
+        },
+    )
+
+
+def render_tour_trigger_button() -> html.Button:
+    """Floating button to re-launch the tour."""
+    return html.Button(
+        "? Tour", id="tour-trigger-btn", n_clicks=0,
+        style={
+            "position": "fixed", "bottom": "20px", "right": "20px",
+            "padding": "10px 16px", "backgroundColor": ACCENT_BLUE,
+            "border": "none", "borderRadius": "20px", "color": BG_BASE,
+            "cursor": "pointer", "fontSize": "13px", "fontWeight": "600",
+            "boxShadow": "0 2px 8px rgba(0,0,0,0.3)", "zIndex": "1000",
+            "fontFamily": FONT_FAMILY,
+        },
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WHAT-IF ASK PRICE SLIDER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def render_what_if_slider(view: PropertyAnalysisView) -> html.Div:
+    """Interactive what-if slider for ask price scenario modeling."""
+    ask = view.ask_price
+    if ask is None or ask <= 0:
+        return html.Div()
+
+    min_ask = int(ask * 0.80 / 5000) * 5000
+    max_ask = int(ask * 1.20 / 5000) * 5000
+    step = 5000
+
+    marks = {
+        min_ask: {"label": f"${min_ask / 1000:.0f}K", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+        int(ask): {"label": f"${ask / 1000:.0f}K (Ask)", "style": {"color": ACCENT_BLUE, "fontSize": "11px"}},
+        max_ask: {"label": f"${max_ask / 1000:.0f}K", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+    }
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("WHAT-IF SCENARIO", style={**SECTION_HEADER_STYLE, "color": ACCENT_BLUE, "marginBottom": "4px"}),
+                    html.Div("Adjust the ask price to see how the analysis changes", style={"fontSize": "12px", "color": TEXT_MUTED}),
+                ],
+                style={"marginBottom": "16px"},
+            ),
+            dcc.Slider(
+                id="what-if-ask-slider",
+                min=min_ask, max=max_ask, value=int(ask), step=step,
+                marks=marks,
+                tooltip={"placement": "bottom", "always_visible": True},
+            ),
+            html.Div(id="what-if-metrics", style={"marginTop": "16px"}),
+        ],
+        style={
+            **CARD_STYLE, "borderLeft": f"4px solid {ACCENT_BLUE}",
+            "padding": "20px", "marginBottom": "24px",
+        },
+    )
+
+
+def render_what_if_metrics(view: PropertyAnalysisView, adjusted_ask: float) -> html.Div:
+    """Render recalculated metrics for a given adjusted ask price."""
+    original_ask = view.ask_price or adjusted_ask
+    bcv = view.bcv or original_ask
+
+    # BCV gap
+    gap_orig = ((bcv - original_ask) / original_ask * 100) if original_ask > 0 else 0
+    gap_adj = ((bcv - adjusted_ask) / adjusted_ask * 100) if adjusted_ask > 0 else 0
+
+    # PTR
+    rent_raw = _parse_currency_text(view.income_support.total_rent_text)
+    annual_rent = (rent_raw or 0) * 12
+    ptr_orig = (original_ask / annual_rent) if annual_rent > 0 else 0
+    ptr_adj = (adjusted_ask / annual_rent) if annual_rent > 0 else 0
+
+    # Approximate monthly mortgage (20% down, 7% rate, 30yr)
+    loan = adjusted_ask * 0.80
+    r = 0.07 / 12
+    n = 360
+    pmt = (loan * r * (1 + r) ** n / ((1 + r) ** n - 1)) if r > 0 else loan / n
+
+    # Cash flow (rent minus mortgage — rough)
+    cf_adj = (rent_raw or 0) - pmt
+
+    # Price delta from original
+    delta = adjusted_ask - original_ask
+    delta_pct = (delta / original_ask * 100) if original_ask > 0 else 0
+
+    def _card(label: str, value: str, *, tone: str = "neutral") -> html.Div:
+        color = TONE_POSITIVE_TEXT if tone == "positive" else TONE_NEGATIVE_TEXT if tone == "negative" else TEXT_PRIMARY
+        return html.Div(
+            [
+                html.Div(label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "2px"}),
+                html.Div(value, style={"fontSize": "16px", "fontWeight": "700", "color": color}),
+            ],
+            style={"padding": "10px", "backgroundColor": BG_SURFACE_2, "borderRadius": "4px", "border": f"1px solid {BORDER}"},
+        )
+
+    gap_tone = "positive" if gap_adj > gap_orig else "negative" if gap_adj < gap_orig else "neutral"
+    ptr_tone = "positive" if ptr_adj < ptr_orig else "negative" if ptr_adj > ptr_orig else "neutral"
+    cf_tone = "positive" if cf_adj > 0 else "negative"
+
+    return html.Div(
+        [
+            html.Div(
+                f"${adjusted_ask:,.0f}  ({delta_pct:+.1f}% vs ask)",
+                style={"fontSize": "18px", "fontWeight": "700", "textAlign": "center", "marginBottom": "12px", "color": TEXT_PRIMARY},
+            ),
+            html.Div(
+                [
+                    _card("BCV Gap", f"{gap_adj:+.1f}%  (was {gap_orig:+.1f}%)", tone=gap_tone),
+                    _card("PTR", f"{ptr_adj:.1f}x  (was {ptr_orig:.1f}x)", tone=ptr_tone),
+                    _card("Est. Mortgage", f"${pmt:,.0f}/mo"),
+                    _card("Est. Cash Flow", f"${cf_adj:,.0f}/mo", tone=cf_tone),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(2, 1fr)", "gap": "8px"},
+            ),
+        ],
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PORTFOLIO DASHBOARD
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def render_portfolio_dashboard(views: list[PropertyAnalysisView]) -> html.Div:
+    """Portfolio-level aggregate dashboard across all analyzed properties."""
+    if not views:
+        return html.Div("No properties loaded. Add or select properties to view portfolio summary.", style={"padding": "40px", "color": TEXT_MUTED})
+
+    scored = [v for v in views if v.final_score is not None]
+    total = len(views)
+    avg_score = sum(v.final_score for v in scored) / len(scored) if scored else 0
+    total_value = sum(v.ask_price or 0 for v in views)
+    strong_buys = sum(1 for v in scored if (v.final_score or 0) >= 3.75)
+
+    # Summary cards
+    def _stat(icon: str, value: str, label: str) -> html.Div:
+        return html.Div(
+            [
+                html.Div(icon, style={"fontSize": "22px", "marginBottom": "6px"}),
+                html.Div(value, style={"fontSize": "24px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                html.Div(label, style={"fontSize": "12px", "color": TEXT_MUTED}),
+            ],
+            style={**CARD_STYLE, "padding": "16px 20px", "textAlign": "center"},
+        )
+
+    summary_row = html.Div(
+        [
+            _stat("📊", str(total), "Properties"),
+            _stat("⭐", f"{avg_score:.2f}/5", "Avg Score"),
+            _stat("💰", f"${total_value / 1_000_000:.1f}M", "Total Value"),
+            _stat("🎯", str(strong_buys), "Strong Buys"),
+        ],
+        style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "12px", "marginBottom": "24px"},
+    )
+
+    # Rankings table
+    ranked = sorted(scored, key=lambda v: v.final_score or 0, reverse=True)
+    rank_rows = []
+    for i, v in enumerate(ranked):
+        sc = score_color(v.final_score)
+        sl = score_label(v.final_score)
+        ls = v.lens_scores
+        best = ls.recommended_lens if ls else ""
+        lens_name, _icon = _LENS_DISPLAY.get(best, (best.replace("_", " ").title(), ""))
+        vc = verdict_color(v.recommendation_tier or "")
+        rank_rows.append(
+            html.Tr(
+                [
+                    html.Td(f"#{i + 1}", style={"padding": "10px 8px", "fontSize": "13px", "color": TEXT_MUTED}),
+                    html.Td(v.address, style={"padding": "10px 8px", "fontSize": "13px", "fontWeight": "600"}),
+                    html.Td(_fmt_compact(v.ask_price), style={"padding": "10px 8px", "fontSize": "13px"}),
+                    html.Td(
+                        [html.Span(f"{v.final_score:.2f}", style={"fontWeight": "700", "color": sc}), html.Span(f" {sl}", style={"fontSize": "11px", "color": sc, "marginLeft": "4px"})],
+                        style={"padding": "10px 8px"},
+                    ),
+                    html.Td(lens_name, style={"padding": "10px 8px", "fontSize": "13px"}),
+                    html.Td(v.recommendation_tier or "—", style={"padding": "10px 8px", "fontSize": "13px", "fontWeight": "600", "color": vc}),
+                ],
+                style={"borderBottom": f"1px solid {BORDER_SUBTLE}", "backgroundColor": BG_SURFACE if i % 2 == 0 else BG_BASE},
+            )
+        )
+
+    rankings = html.Div(
+        [
+            html.Div("PROPERTY RANKINGS", style=SECTION_HEADER_STYLE),
+            html.Table(
+                [
+                    html.Thead(html.Tr([
+                        html.Th(col, style={"padding": "10px 8px", "fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "textAlign": "left", "borderBottom": f"2px solid {BORDER}"})
+                        for col in ["Rank", "Property", "Ask", "Score", "Best For", "Verdict"]
+                    ])),
+                    html.Tbody(rank_rows),
+                ],
+                style={"width": "100%", "borderCollapse": "collapse"},
+            ),
+        ],
+        style={**CARD_STYLE, "padding": "16px 20px", "marginBottom": "24px"},
+    )
+
+    # Category heatmap (using existing component)
+    heatmap = score_comparison_heatmap(scored) if len(scored) >= 2 else html.Div("Need 2+ scored properties for heatmap.", style={"color": TEXT_MUTED, "fontSize": "13px"})
+
+    heatmap_section = html.Div(
+        [
+            html.Div("CATEGORY SCORES HEATMAP", style=SECTION_HEADER_STYLE),
+            heatmap,
+        ],
+        style={**CARD_STYLE, "padding": "16px 20px"},
+    )
+
+    return html.Div(
+        [
+            html.Div("PORTFOLIO DASHBOARD", style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_PRIMARY, "marginBottom": "20px"}),
+            summary_row,
+            rankings,
+            heatmap_section,
+        ],
+        style={"padding": "20px 24px", "maxWidth": "1200px"},
     )
 
 
@@ -1923,7 +2770,7 @@ def score_comparison_heatmap(views: list[PropertyAnalysisView]) -> dcc.Graph | h
     if not scored_views:
         return html.Div(
             "Score comparison is unavailable because scored properties were not loaded.",
-            style={"fontSize": "12px", "color": TEXT_MUTED, "padding": "12px"},
+            style={"fontSize": "13px", "color": TEXT_MUTED, "padding": "12px"},
         )
 
     x_labels = ["Final Score"] + [label for _, label in _COMPARE_CATEGORY_ORDER]
@@ -1975,7 +2822,7 @@ def category_comparison_radar(view_a: PropertyAnalysisView, view_b: PropertyAnal
     if not view_a.category_scores or not view_b.category_scores:
         return html.Div(
             "Radar comparison is unavailable because category scoring is missing for one or both properties.",
-            style={"fontSize": "12px", "color": TEXT_MUTED, "padding": "12px"},
+            style={"fontSize": "13px", "color": TEXT_MUTED, "padding": "12px"},
         )
 
     labels = [label for _, label in _COMPARE_CATEGORY_ORDER]
@@ -2022,7 +2869,7 @@ def comparison_explainer(view_a: PropertyAnalysisView, view_b: PropertyAnalysisV
     if view_a.final_score is None or view_b.final_score is None:
         return html.Div(
             "Comparison explainer is unavailable because one or both properties are missing a final score.",
-            style={"fontSize": "12px", "color": TEXT_MUTED, "padding": "12px"},
+            style={"fontSize": "13px", "color": TEXT_MUTED, "padding": "12px"},
         )
 
     winner = view_a if view_a.final_score >= view_b.final_score else view_b
@@ -2127,23 +2974,23 @@ def compare_winner_banner(views: list[PropertyAnalysisView]) -> html.Div | None:
                 [
                     html.Div(
                         [
-                            html.Div("Top Ranked", style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
+                            html.Div("Top Ranked", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
                             html.Div(winner.label, style={"fontSize": "18px", "fontWeight": "700", "color": TEXT_PRIMARY}),
-                            html.Div(score_text, style={"fontSize": "12px", "fontWeight": "600", "color": ACCENT_BLUE, "marginTop": "4px"}),
+                            html.Div(score_text, style={"fontSize": "13px", "fontWeight": "600", "color": ACCENT_BLUE, "marginTop": "4px"}),
                         ],
                         style={"flex": "1"},
                     ),
                     html.Div(
                         [
-                            html.Div("Runner Up", style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
-                            html.Div(runner_text, style={"fontSize": "12px", "color": TEXT_SECONDARY, "lineHeight": "1.5"}),
+                            html.Div("Runner Up", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
+                            html.Div(runner_text, style={"fontSize": "13px", "color": TEXT_SECONDARY, "lineHeight": "1.5"}),
                         ],
                         style={"flex": "1"},
                     ),
                     html.Div(
                         [
-                            html.Div("Main Reason", style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
-                            html.Div(main_reason, style={"fontSize": "12px", "color": TEXT_SECONDARY, "lineHeight": "1.5"}),
+                            html.Div("Main Reason", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
+                            html.Div(main_reason, style={"fontSize": "13px", "color": TEXT_SECONDARY, "lineHeight": "1.5"}),
                             html.Div(margin_text, style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
                         ],
                         style={"flex": "1.2"},
@@ -2161,7 +3008,7 @@ def property_ranking_table(views: list[PropertyAnalysisView]) -> dash_table.Data
     if not scored_views:
         return html.Div(
             "Ranking table is unavailable because no scored properties were loaded.",
-            style={"fontSize": "12px", "color": TEXT_MUTED, "padding": "12px"},
+            style={"fontSize": "13px", "color": TEXT_MUTED, "padding": "12px"},
         )
 
     rows: list[dict[str, object]] = []

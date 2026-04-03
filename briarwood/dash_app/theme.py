@@ -18,7 +18,7 @@ BORDER_SUBTLE = "#21262d"
 
 TEXT_PRIMARY = "#e6edf3"
 TEXT_SECONDARY = "#8b949e"
-TEXT_MUTED = "#6e7681"
+TEXT_MUTED = "#848d97"  # 5.5:1 contrast on BG_BASE (WCAG AA)
 TEXT_LINK = "#58a6ff"
 
 ACCENT_BLUE = "#58a6ff"
@@ -68,7 +68,7 @@ PAGE_STYLE: dict = {
     "color": TEXT_PRIMARY,
     "minHeight": "100vh",
     "lineHeight": "1.45",
-    "fontSize": "12px",
+    "fontSize": "13px",
 }
 
 TOPBAR_STYLE: dict = {
@@ -114,7 +114,7 @@ CARD_STYLE_ELEVATED: dict = {
 }
 
 SECTION_HEADER_STYLE: dict = {
-    "fontSize": "10px",
+    "fontSize": "11px",
     "fontWeight": "600",
     "letterSpacing": "0.10em",
     "textTransform": "uppercase",
@@ -123,7 +123,7 @@ SECTION_HEADER_STYLE: dict = {
 }
 
 LABEL_STYLE: dict = {
-    "fontSize": "10px",
+    "fontSize": "11px",
     "fontWeight": "500",
     "textTransform": "uppercase",
     "letterSpacing": "0.06em",
@@ -145,14 +145,14 @@ VALUE_STYLE_MEDIUM: dict = {
 }
 
 BODY_TEXT_STYLE: dict = {
-    "fontSize": "12px",
+    "fontSize": "13px",
     "color": TEXT_SECONDARY,
     "lineHeight": "1.6",
 }
 
 MONO_STYLE: dict = {
     "fontFamily": FONT_MONO,
-    "fontSize": "11px",
+    "fontSize": "12px",
     "color": TEXT_SECONDARY,
 }
 
@@ -164,7 +164,7 @@ BTN_PRIMARY: dict = {
     "border": "none",
     "borderRadius": "4px",
     "padding": "6px 14px",
-    "fontSize": "12px",
+    "fontSize": "13px",
     "fontWeight": "600",
     "cursor": "pointer",
     "fontFamily": FONT_FAMILY,
@@ -177,7 +177,7 @@ BTN_SECONDARY: dict = {
     "border": f"1px solid {BORDER}",
     "borderRadius": "4px",
     "padding": "5px 12px",
-    "fontSize": "12px",
+    "fontSize": "13px",
     "fontWeight": "500",
     "cursor": "pointer",
     "fontFamily": FONT_FAMILY,
@@ -190,7 +190,7 @@ BTN_GHOST: dict = {
     "border": "none",
     "borderRadius": "4px",
     "padding": "4px 10px",
-    "fontSize": "11px",
+    "fontSize": "12px",
     "fontWeight": "500",
     "cursor": "pointer",
     "fontFamily": FONT_FAMILY,
@@ -204,7 +204,7 @@ INPUT_STYLE: dict = {
     "border": f"1px solid {BORDER}",
     "borderRadius": "4px",
     "padding": "6px 8px",
-    "fontSize": "12px",
+    "fontSize": "13px",
     "fontFamily": FONT_FAMILY,
     "width": "100%",
     "boxSizing": "border-box",
@@ -223,13 +223,13 @@ GRID_5: dict = {"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minm
 PLOTLY_LAYOUT: dict = {
     "paper_bgcolor": BG_SURFACE,
     "plot_bgcolor": BG_SURFACE_2,
-    "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 11},
+    "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 12},
     "margin": {"l": 44, "r": 16, "t": 24, "b": 36},
     "xaxis": {
         "gridcolor": BORDER_SUBTLE,
         "linecolor": BORDER,
         "tickcolor": TEXT_MUTED,
-        "tickfont": {"color": TEXT_MUTED, "size": 10},
+        "tickfont": {"color": TEXT_MUTED, "size": 11},
         "showgrid": True,
         "zeroline": False,
     },
@@ -237,19 +237,19 @@ PLOTLY_LAYOUT: dict = {
         "gridcolor": BORDER_SUBTLE,
         "linecolor": BORDER,
         "tickcolor": TEXT_MUTED,
-        "tickfont": {"color": TEXT_MUTED, "size": 10},
+        "tickfont": {"color": TEXT_MUTED, "size": 11},
         "showgrid": True,
         "zeroline": False,
     },
     "legend": {
         "bgcolor": "rgba(0,0,0,0)",
         "bordercolor": BORDER,
-        "font": {"color": TEXT_SECONDARY, "size": 10},
+        "font": {"color": TEXT_SECONDARY, "size": 11},
     },
     "hoverlabel": {
         "bgcolor": BG_SURFACE_2,
         "bordercolor": BORDER,
-        "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 11},
+        "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 12},
     },
 }
 
@@ -266,7 +266,7 @@ TABLE_STYLE_CELL: dict = {
     "border": f"1px solid {BORDER_SUBTLE}",
     "padding": "6px 10px",
     "fontFamily": FONT_FAMILY,
-    "fontSize": "12px",
+    "fontSize": "13px",
     "textAlign": "left",
 }
 
@@ -274,7 +274,7 @@ TABLE_STYLE_HEADER: dict = {
     "backgroundColor": BG_SURFACE_3,
     "color": TEXT_SECONDARY,
     "fontWeight": "600",
-    "fontSize": "10px",
+    "fontSize": "11px",
     "textTransform": "uppercase",
     "letterSpacing": "0.06em",
     "border": f"1px solid {BORDER}",
@@ -319,6 +319,31 @@ def score_color(score: float) -> str:
     return ACCENT_RED
 
 
+def score_label(score: float) -> str:
+    """Return human-readable label for a 1-5 score value."""
+    if score >= 4.5:
+        return "Excellent"
+    if score >= 4.0:
+        return "Strong"
+    if score >= 3.0:
+        return "Fair"
+    if score >= 2.0:
+        return "Weak"
+    return "Poor"
+
+
+def verdict_color(verdict: str) -> str:
+    """Return accent color for a recommendation tier string."""
+    v = (verdict or "").upper()
+    if "HIGH CONVICTION" in v or "ATTRACTIVE" in v:
+        return ACCENT_GREEN
+    if "NEUTRAL" in v:
+        return ACCENT_BLUE
+    if "CAUTION" in v:
+        return ACCENT_ORANGE
+    return ACCENT_RED
+
+
 def tone_badge_style(tone: str) -> dict:
     """Return inline style for a pill/badge for a given tone."""
     styles = {
@@ -330,7 +355,7 @@ def tone_badge_style(tone: str) -> dict:
     base = {
         "padding": "2px 6px",
         "borderRadius": "3px",
-        "fontSize": "10px",
+        "fontSize": "11px",
         "fontWeight": "600",
         "display": "inline-block",
         "whiteSpace": "nowrap",

@@ -18,14 +18,18 @@ except ImportError:  # pragma: no cover - lightweight fallback for local v1 usag
 
         @staticmethod
         def Spinner(children=None, **kwargs):
-            return html.Span("●", style={"fontSize": "10px", "lineHeight": "1", "display": "inline-block"})
+            return html.Span("●", style={"fontSize": "11px", "lineHeight": "1", "display": "inline-block"})
 
     dbc = _DBCShim()
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.components import (
     render_compare_decision_mode,
+    render_portfolio_dashboard,
     render_tear_sheet_body,
+    render_tour_overlay,
+    render_tour_trigger_button,
+    render_what_if_metrics,
 )
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
@@ -65,6 +69,7 @@ MAIN_TABS = [
     ("tear_sheet", "Tear Sheet"),
     ("scenarios", "Scenarios"),
     ("compare", "Compare"),
+    ("portfolio", "Portfolio"),
     ("data_quality", "Diagnostics"),
 ]
 
@@ -301,7 +306,7 @@ def _topbar() -> html.Div:
             html.Div(
                 [
                     html.Span("Briarwood", style={"fontWeight": "700", "fontSize": "16px", "color": TEXT_PRIMARY, "letterSpacing": "-0.02em"}),
-                    html.Span("Research Platform", style={"fontSize": "11px", "color": TEXT_MUTED, "marginLeft": "8px"}),
+                    html.Span("Research Platform", style={"fontSize": "13px", "color": TEXT_MUTED, "marginLeft": "8px"}),
                 ],
                 style={"display": "flex", "alignItems": "baseline", "gap": "0", "flexShrink": "0"},
             ),
@@ -326,14 +331,14 @@ def _topbar() -> html.Div:
             html.Div(
                 [
                     html.Button("Export Tear Sheet", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
-                    html.Div(id="export-status", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                    html.Div(id="export-status", style={"fontSize": "13px", "color": TEXT_MUTED}),
                 ],
                 style={"display": "flex", "alignItems": "center", "gap": "8px"},
             ),
             # Spacer
             html.Div(style={"flex": "1"}),
             # Active property status
-            html.Div(id="active-property-status", style={"fontSize": "11px", "color": TEXT_MUTED, "flexShrink": "0"}),
+            html.Div(id="active-property-status", style={"fontSize": "13px", "color": TEXT_MUTED, "flexShrink": "0"}),
         ],
         style=TOPBAR_STYLE,
     )
@@ -411,7 +416,7 @@ def _add_property_drawer() -> html.Div:
                         html.Div(
                             [
                                 html.Div("Property Manager", style={"fontWeight": "700", "fontSize": "15px", "color": TEXT_PRIMARY, "letterSpacing": "-0.01em"}),
-                                html.Div("Browse saved or add a new analysis", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                                html.Div("Browse saved or add a new analysis", style={"fontSize": "13px", "color": TEXT_MUTED}),
                             ]
                         ),
                         html.Button("✕", id="add-property-close-button", n_clicks=0, style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"}),
@@ -438,7 +443,7 @@ def _add_property_drawer() -> html.Div:
                             page_size=5,
                             style_table={**TABLE_STYLE_TABLE, "maxWidth": "100%"},
                             style_header=TABLE_STYLE_HEADER,
-                            style_cell={**TABLE_STYLE_CELL, "minWidth": "55px", "maxWidth": "110px", "whiteSpace": "normal", "fontSize": "11px", "padding": "6px 8px"},
+                            style_cell={**TABLE_STYLE_CELL, "minWidth": "55px", "maxWidth": "110px", "whiteSpace": "normal", "fontSize": "13px", "padding": "6px 8px"},
                             style_data_conditional=[
                                 {"if": {"row_index": "odd"}, **TABLE_STYLE_DATA_ODD},
                                 {"if": {"row_index": "even"}, **TABLE_STYLE_DATA_EVEN},
@@ -450,7 +455,7 @@ def _add_property_drawer() -> html.Div:
                 ),
                 # ── Divider ──
                 html.Div(
-                    html.Div("New Property Analysis", style={**SECTION_HEADER_STYLE, "margin": "0", "fontSize": "12px", "letterSpacing": "0.10em"}),
+                    html.Div("New Property Analysis", style={**SECTION_HEADER_STYLE, "margin": "0", "fontSize": "13px", "letterSpacing": "0.10em"}),
                     style={"textAlign": "center", "padding": "10px 0 4px"},
                 ),
                 # ── Form ──
@@ -504,7 +509,7 @@ def _add_property_form_body() -> list:
                 # Validation hint
                 html.Div(
                     id="form-validation-hint",
-                    style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "2px"},
+                    style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "2px"},
                 ),
             ],
             style=_DRAWER_CARD,
@@ -598,7 +603,7 @@ def _add_property_form_body() -> list:
                         ),
                         html.Div(
                             id="manual-unit-rent-note",
-                            style={"fontSize": "11px", "color": TEXT_MUTED},
+                            style={"fontSize": "13px", "color": TEXT_MUTED},
                         ),
                     ],
                     style={"display": "none"},
@@ -644,7 +649,7 @@ def _add_property_form_body() -> list:
                     style={**INPUT_STYLE, "height": "50px", "resize": "vertical"},
                 ),
                 html.Button("Add Comp", id="manual-add-comp-button", n_clicks=0, style={**BTN_SECONDARY, "width": "100%"}),
-                html.Div(id="manual-comps-preview", style={"fontSize": "12px", "color": TEXT_MUTED}),
+                html.Div(id="manual-comps-preview", style={"fontSize": "13px", "color": TEXT_MUTED}),
             ],
             style=_DRAWER_CARD,
         ),
@@ -665,7 +670,7 @@ def _add_property_form_body() -> list:
                     children=html.Div(id="analysis-loading-target"),
                     style={"marginTop": "4px"},
                 ),
-                html.Div(id="manual-entry-status", style={"fontSize": "12px", "marginTop": "6px"}),
+                html.Div(id="manual-entry-status", style={"fontSize": "13px", "marginTop": "6px"}),
             ],
             style={
                 "position": "sticky",
@@ -698,7 +703,7 @@ def _compare_controls() -> html.Div:
                         ],
                         style={"display": "flex", "gap": "8px", "marginTop": "8px"},
                     ),
-                    html.Div(id="compare-selection-status", style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
+                    html.Div(id="compare-selection-status", style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "6px"}),
                 ],
                 style={"flex": "1"},
             ),
@@ -715,7 +720,7 @@ def _compare_controls() -> html.Div:
                         ],
                         value="heatmap",
                         inline=True,
-                        labelStyle={"marginRight": "12px", "fontSize": "12px", "color": TEXT_SECONDARY},
+                        labelStyle={"marginRight": "12px", "fontSize": "13px", "color": TEXT_SECONDARY},
                         inputStyle={"marginRight": "4px"},
                     ),
                 ],
@@ -748,6 +753,10 @@ def _build_layout():
             dcc.Store(id="last-analysis-summary", data=None),
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
+            # Tour state (persists in browser localStorage)
+            dcc.Store(id="tour-state", storage_type="local", data={"completed": False, "step": 0}),
+            # PDF download target
+            dcc.Download(id="pdf-download"),
 
             # Top bar
             _topbar(),
@@ -769,6 +778,13 @@ def _build_layout():
 
             # Floating add-property drawer
             _add_property_drawer(),
+
+            # Tour: step store drives the overlay content
+            dcc.Store(id="tour-step", data=-1),
+            html.Div(id="tour-overlay-container"),
+
+            # Tour trigger button (always visible)
+            render_tour_trigger_button(),
         ],
         style={**PAGE_STYLE, "display": "flex", "flexDirection": "column"},
     )
@@ -858,7 +874,7 @@ def render_active_property_status(property_id: str | None, loaded_ids: list[str]
             html.Div(
                 [
                     html.Span(view.address, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginRight": "12px"}),
-                    html.Span(basics_text, style={"fontSize": "11px", "color": TEXT_MUTED}),
+                    html.Span(basics_text, style={"fontSize": "13px", "color": TEXT_MUTED}),
                 ],
                 style={"display": "flex", "alignItems": "baseline", "gap": "0"},
             ),
@@ -888,7 +904,7 @@ def _header_metric(label: str, value: str, *, color: str = TEXT_PRIMARY) -> html
     return html.Span(
         [
             html.Span(label, style={"fontSize": "9px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginRight": "3px"}),
-            html.Span(value, style={"fontSize": "12px", "fontWeight": "600", "color": color}),
+            html.Span(value, style={"fontSize": "13px", "fontWeight": "600", "color": color}),
         ],
         style={"display": "inline-flex", "alignItems": "baseline"},
     )
@@ -1022,6 +1038,14 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
             ]
         )
 
+    if tab == "portfolio":
+        loaded_ids = loaded_ids or []
+        if not loaded_ids:
+            return _empty_state("Load properties to view portfolio dashboard.")
+        reports = load_reports(loaded_ids)
+        views = [build_property_analysis_view(r) for r in reports.values()]
+        return _centered_main_panel(render_portfolio_dashboard(views), max_width="1200px")
+
     if tab == "data_quality":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
@@ -1034,7 +1058,7 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
 
 def _empty_state(message: str) -> html.Div:
     return html.Div(
-        html.P(message, style={"color": TEXT_MUTED, "fontSize": "12px"}),
+        html.P(message, style={"color": TEXT_MUTED, "fontSize": "13px"}),
         style={"padding": "40px 20px"},
     )
 
@@ -1205,7 +1229,7 @@ def export_tear_sheet(_n_clicks: int, property_id: str | None):
     if not property_id:
         return "Choose a property first."
     output_path = export_preset_tear_sheet(property_id)
-    return html.Span(str(output_path), style={**{"fontFamily": FONT_MONO, "fontSize": "11px"}})
+    return html.Span(str(output_path), style={**{"fontFamily": FONT_MONO, "fontSize": "13px"}})
 
 
 @app.callback(
@@ -1221,7 +1245,7 @@ def export_lane_tear_sheet(_clicks: list[int]):
     if not isinstance(property_id, str):
         return "Choose a property first."
     output_path = export_preset_tear_sheet(property_id)
-    return html.Span(str(output_path), style={"fontFamily": FONT_MONO, "fontSize": "11px"})
+    return html.Span(str(output_path), style={"fontFamily": FONT_MONO, "fontSize": "13px"})
 
 
 # ── Manual comp callbacks ──────────────────────────────────────────────────────
@@ -1309,7 +1333,7 @@ def add_manual_comp(
 def render_manual_comp_preview(comps: list[dict[str, object]] | None):
     comps = comps or []
     if not comps:
-        return html.Div("No manual comps added yet.", style={"color": TEXT_MUTED, "fontSize": "12px"})
+        return html.Div("No manual comps added yet.", style={"color": TEXT_MUTED, "fontSize": "13px"})
     cards = []
     for index, comp in enumerate(comps):
         cards.append(
@@ -1317,14 +1341,14 @@ def render_manual_comp_preview(comps: list[dict[str, object]] | None):
                 [
                     html.Div(
                         [
-                            html.Div(f"{index + 1}. {comp.get('address')}", style={"fontWeight": "600", "fontSize": "12px", "color": TEXT_PRIMARY}),
-                            html.Div(f"${float(comp.get('sale_price', 0)):,.0f} | {comp.get('sale_date')}", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            html.Div(f"{index + 1}. {comp.get('address')}", style={"fontWeight": "600", "fontSize": "13px", "color": TEXT_PRIMARY}),
+                            html.Div(f"${float(comp.get('sale_price', 0)):,.0f} | {comp.get('sale_date')}", style={"fontSize": "13px", "color": TEXT_MUTED}),
                         ]
                     ),
                     html.Div(
                         [
-                            html.Button("Edit", id={"type": "manual-edit-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "11px", "padding": "3px 8px"}),
-                            html.Button("Remove", id={"type": "manual-remove-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "11px", "padding": "3px 8px", "color": TONE_NEGATIVE_TEXT}),
+                            html.Button("Edit", id={"type": "manual-edit-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "13px", "padding": "3px 8px"}),
+                            html.Button("Remove", id={"type": "manual-remove-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "13px", "padding": "3px 8px", "color": TONE_NEGATIVE_TEXT}),
                         ],
                         style={"display": "flex", "gap": "4px"},
                     ),
@@ -1595,9 +1619,9 @@ def run_manual_analysis(
             [
                 html.Div("Analysis complete", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
                 html.Div(f"{address} saved and loaded as the active property.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
-                html.Div(f"Tear sheet: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "11px", "marginTop": "4px"}),
+                html.Div(f"Tear sheet: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "13px", "marginTop": "4px"}),
                 html.Ul(
-                    [html.Li(note, style={"color": TONE_WARNING_TEXT if "fell back" in note else TEXT_SECONDARY, "fontSize": "11px"}) for note in inline_notes],
+                    [html.Li(note, style={"color": TONE_WARNING_TEXT if "fell back" in note else TEXT_SECONDARY, "fontSize": "13px"}) for note in inline_notes],
                     style={"margin": "6px 0 0", "paddingLeft": "18px"},
                 ) if inline_notes else None,
             ]
@@ -1612,9 +1636,171 @@ def run_manual_analysis(
                 html.Details(
                     [
                         html.Summary("Show traceback", style={"cursor": "pointer", "color": TEXT_MUTED, "marginTop": "6px"}),
-                        html.Pre(tb, style={"whiteSpace": "pre-wrap", "fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
+                        html.Pre(tb, style={"whiteSpace": "pre-wrap", "fontSize": "13px", "color": TEXT_MUTED, "marginTop": "6px"}),
                     ]
                 ),
             ]
         )
         return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, "Start Analysis", False, ""
+
+
+# ── Tour callbacks ────────────────────────────────────────────────────────────
+
+# Callback 1: ANY button press updates the step store.
+# tour-trigger-btn is always in the DOM.
+# tour-next-btn / tour-prev-btn are inside the overlay (dynamic), so
+# suppress_callback_exceptions=True handles them.
+
+
+@app.callback(
+    Output("tour-step", "data"),
+    Output("tour-state", "data"),
+    Input("tour-trigger-btn", "n_clicks"),
+    Input("tour-next-btn", "n_clicks"),
+    Input("tour-prev-btn", "n_clicks"),
+    State("tour-step", "data"),
+    State("tour-state", "data"),
+    prevent_initial_call=True,
+)
+def tour_navigate(_trig: int, _nxt: int, _prv: int, step: int, tour_state: dict | None):
+    triggered = ctx.triggered_id
+    tour_state = tour_state or {"completed": False, "step": 0}
+    step = step if isinstance(step, int) else -1
+
+    if triggered == "tour-trigger-btn":
+        return 0, {"completed": False, "step": 0}
+
+    if triggered == "tour-next-btn":
+        if step >= 5:
+            return -1, {"completed": True, "step": 0}
+        return step + 1, {"completed": False, "step": step + 1}
+
+    if triggered == "tour-prev-btn":
+        if step <= 0:
+            return -1, {"completed": True, "step": 0}
+        return step - 1, {"completed": False, "step": step - 1}
+
+    return no_update, no_update
+
+
+# Callback 2: Render the overlay whenever tour-step changes.
+# step == -1 means hidden.  step >= 0 means show that step.
+
+
+@app.callback(
+    Output("tour-overlay-container", "children"),
+    Input("tour-step", "data"),
+)
+def tour_render(step: int):
+    if not isinstance(step, int) or step < 0:
+        return None
+    return render_tour_overlay(step)
+
+
+# Callback 3: On initial page load, check localStorage and auto-show tour.
+
+
+@app.callback(
+    Output("tour-step", "data", allow_duplicate=True),
+    Input("tour-state", "data"),
+    prevent_initial_call="initial_duplicate",
+)
+def tour_auto_show(tour_state: dict | None):
+    tour_state = tour_state or {"completed": False, "step": 0}
+    if not tour_state.get("completed", False):
+        return tour_state.get("step", 0)
+    return -1
+
+
+# ── What-if slider callback ───────────────────────────────────────────────────
+
+
+@app.callback(
+    Output("what-if-metrics", "children"),
+    Input("what-if-ask-slider", "value"),
+    State("property-selector-dropdown", "value"),
+    State("loaded-preset-ids", "data"),
+    prevent_initial_call=True,
+)
+def update_what_if(adjusted_ask: float | None, focus_id: str | None, loaded_ids: list[str] | None):
+    if adjusted_ask is None:
+        return no_update
+    report = _focused_report(loaded_ids, focus_id)
+    if report is None:
+        return no_update
+    view = build_property_analysis_view(report)
+    return render_what_if_metrics(view, adjusted_ask)
+
+
+# ── PDF/text export callback ─────────────────────────────────────────────────
+
+
+@app.callback(
+    Output("pdf-download", "data"),
+    Input("export-tear-sheet-button", "n_clicks"),
+    State("property-selector-dropdown", "value"),
+    State("loaded-preset-ids", "data"),
+    prevent_initial_call=True,
+)
+def export_analysis_report(_n: int, focus_id: str | None, loaded_ids: list[str] | None):
+    report = _focused_report(loaded_ids, focus_id)
+    if report is None:
+        return no_update
+    view = build_property_analysis_view(report)
+    from briarwood.dash_app.theme import score_label as _sl
+    from briarwood.dash_app.components import _extract_diverse_items
+    lines = [
+        "BRIARWOOD PROPERTY ANALYSIS",
+        "=" * 50,
+        "",
+        f"Property: {view.address}",
+        f"Ask: ${(view.ask_price or 0):,.0f}",
+        "",
+        f"VERDICT: {(view.recommendation_tier or 'N/A').upper()}",
+        f"Score: {(view.final_score or 0):.2f}/5 ({_sl(view.final_score or 0)})",
+        "",
+    ]
+    if view.lens_scores:
+        best = view.lens_scores.recommended_lens
+        lines.append(f"Best For: {best.replace('_', ' ').title()}")
+        lines.append(f"  Reason: {view.lens_scores.recommendation_reason}")
+        lines.append("")
+        lines.append("LENS SCORES")
+        lines.append(f"  Risk:      {view.lens_scores.risk_score:.1f}/5")
+        if view.lens_scores.investor_score is not None:
+            lines.append(f"  Investor:  {view.lens_scores.investor_score:.1f}/5")
+        if view.lens_scores.owner_score is not None:
+            lines.append(f"  Owner:     {view.lens_scores.owner_score:.1f}/5")
+        if view.lens_scores.developer_score is not None:
+            lines.append(f"  Developer: {view.lens_scores.developer_score:.1f}/5")
+        lines.append("")
+    if view.category_scores:
+        lines.append("CATEGORY SCORES")
+        for _key, cat in view.category_scores.items():
+            lines.append(f"  {cat.category_name:20s} {cat.score:.1f}/5  ({_sl(cat.score)})")
+        lines.append("")
+    strengths = _extract_diverse_items(view, best=True, count=3)
+    risks = _extract_diverse_items(view, best=False, count=3)
+    if strengths:
+        lines.append("TOP STRENGTHS")
+        for s in strengths:
+            lines.append(f"  + {s}")
+        lines.append("")
+    if risks:
+        lines.append("TOP RISKS")
+        for r in risks:
+            lines.append(f"  - {r}")
+        lines.append("")
+    lines.append("KEY METRICS")
+    lines.append(f"  BCV:       ${(view.bcv or 0):,.0f}")
+    lines.append(f"  Base Case: ${(view.base_case or 0):,.0f}")
+    if view.mispricing_pct is not None:
+        lines.append(f"  BCV Gap:   {view.mispricing_pct * 100:+.1f}%")
+    lines.append(f"  PTR:       {view.income_support.price_to_rent_text}")
+    lines.append(f"  Cash Flow: {view.income_support.monthly_cash_flow_text}")
+    lines.append(f"  Risk:      {view.risk_location.risk_score:.0f}/100")
+    lines.append("")
+    lines.append("Generated by Briarwood Research Platform")
+    content = "\n".join(lines)
+    safe_name = view.address.replace(" ", "_").replace(",", "")[:40]
+    return dict(content=content, filename=f"{safe_name}_analysis.txt")

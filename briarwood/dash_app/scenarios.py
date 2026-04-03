@@ -104,7 +104,7 @@ def _render_historic_forward_outlook(report: AnalysisReport) -> html.Div:
                     html.Div(
                         [
                             confidence_badge(scenario_module.confidence if scenario_module is not None else 0.0),
-                            html.Span("12-month forward framing", style={"fontSize": "12px", "color": TEXT_SECONDARY}),
+                            html.Span("12-month forward framing", style={"fontSize": "13px", "color": TEXT_SECONDARY}),
                         ],
                         style={"display": "flex", "gap": "10px", "alignItems": "center", "flexWrap": "wrap"},
                     ),
@@ -118,8 +118,8 @@ def _render_historic_forward_outlook(report: AnalysisReport) -> html.Div:
                         [
                             html.Div("Research Chart", style=SECTION_HEADER_STYLE),
                             dcc.Graph(figure=chart_bundle["figure"], config={"displayModeBar": False}),
-                            html.Div(chart_bundle["diagnostic_note"], style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
-                            html.Div(chart_bundle["fallback_note"], style={"fontSize": "11px", "color": TONE_WARNING_TEXT, "marginTop": "4px"}) if chart_bundle["fallback_note"] else None,
+                            html.Div(chart_bundle["diagnostic_note"], style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "6px"}),
+                            html.Div(chart_bundle["fallback_note"], style={"fontSize": "13px", "color": TONE_WARNING_TEXT, "marginTop": "4px"}) if chart_bundle["fallback_note"] else None,
                         ],
                         style=CARD_STYLE,
                     ),

@@ -92,6 +92,36 @@ RECOMMENDATION_TIERS: list[tuple[float, str, str]] = [
     (0.00, "Avoid", "Does not meet investment criteria on current information."),
 ]
 
+# ── Human-readable sub-factor labels (user-facing) ──────────────────────
+
+SUB_FACTOR_LABELS: dict[str, str] = {
+    # Price Context
+    "price_vs_comps": "Priced right vs. recent sales?",
+    "ppsf_positioning": "Price per sqft competitive?",
+    "historical_pricing": "Favorable vs. historical trends?",
+    "scarcity_premium": "Supply scarcity justifies premium?",
+    # Economic Support
+    "rent_support": "Does rent support the price?",
+    "carry_efficiency": "Can you afford monthly payments?",
+    "downside_protection": "Adequate downside buffer?",
+    "replacement_cost": "Priced below replacement cost?",
+    # Optionality
+    "adu_expansion": "Room to add rental income (ADU)?",
+    "renovation_upside": "Renovation creates value above cost?",
+    "strategy_flexibility": "Can you pivot strategies later?",
+    "zoning_optionality": "Zoning allows future development?",
+    # Market Position
+    "dom_signal": "Properties selling quickly here?",
+    "inventory_tightness": "Tight supply / seller's market?",
+    "buyer_seller_balance": "Market favors buyers or sellers?",
+    "location_momentum": "Town/submarket trending positively?",
+    # Risk Layer
+    "liquidity_risk": "Easy to resell if needed?",
+    "capex_risk": "Surprise maintenance exposure?",
+    "income_stability": "Rental income reliable?",
+    "macro_regulatory": "Flood, regulatory, or macro risks?",
+}
+
 # ── Scoring defaults ───────────────────────────────────────────────────────
 
 NEUTRAL_SCORE: float = 3.0
