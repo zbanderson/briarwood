@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
+from briarwood.agents.comparable_sales.store import JsonActiveListingStore
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
     get_current_value,
@@ -15,6 +17,9 @@ from briarwood.reports.section_helpers import (
 from briarwood.reports.sections.conclusion_section import build_conclusion_section
 from briarwood.reports.sections.thesis_section import build_thesis_section
 from briarwood.schemas import AnalysisReport, InputCoverageStatus, PropertyInput, SectionEvidence
+
+ROOT = Path(__file__).resolve().parents[2]
+ACTIVE_LISTINGS_PATH = ROOT / "data" / "comps" / "active_listings.json"
 
 
 def _fmt_currency(value: float | None) -> str:
@@ -43,6 +48,19 @@ def _fmt_number(value: float | int | None, suffix: str = "") -> str:
     if isinstance(value, float) and not value.is_integer():
         return f"{value:,.1f}{suffix}"
     return f"{int(value):,}{suffix}"
+
+
+def _scenario_stress_value(scenario: object) -> float | None:
+    return getattr(scenario, "stress_case_value", None)
+
+
+def _income_attr(income: object, name: str, default=None):
+    return getattr(income, name, default)
+
+
+def _income_list(income: object, name: str) -> list[float]:
+    value = getattr(income, name, None)
+    return value if isinstance(value, list) else []
 
 
 def _module_confidence(report: AnalysisReport, module_name: str) -> float | None:
@@ -140,6 +158,9 @@ class IncomeSupportViewModel:
     confidence: float
     rental_ease_label: str
     estimated_days_to_rent_text: str
+    total_rent_text: str
+    num_units_text: str
+    avg_rent_per_unit_text: str
     income_support_ratio_text: str
     monthly_cash_flow_text: str
     operating_cash_flow_text: str
@@ -147,6 +168,7 @@ class IncomeSupportViewModel:
     risk_view: str
     price_to_rent_text: str
     ptr_classification: str
+    unit_breakdown: list[tuple[str, str]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
@@ -174,10 +196,24 @@ class CompReviewRow:
 
 
 @dataclass(slots=True)
+class ActiveListingViewRow:
+    address: str
+    list_price: str
+    status: str
+    beds: str
+    baths: str
+    sqft: str
+    dom: str
+    condition: str
+    source_ref: str
+
+
+@dataclass(slots=True)
 class CompsViewModel:
     comparable_value_text: str
     comp_count_text: str
     confidence_text: str
+    active_listing_count_text: str
     dataset_name: str
     verification_summary: str
     curation_summary: str
@@ -186,6 +222,7 @@ class CompsViewModel:
     assumptions: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
     rows: list[CompReviewRow] = field(default_factory=list)
+    active_listing_rows: list[ActiveListingViewRow] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -350,10 +387,58 @@ def _screening_summary(report: AnalysisReport) -> str:
     return f"{output.comp_count} kept | {output.rejected_count} screened out" + (f" | {reasons}" if reasons else "")
 
 
+def _active_listing_rows(report: AnalysisReport) -> list[ActiveListingViewRow]:
+    property_input = report.property_input
+    if property_input is None or not ACTIVE_LISTINGS_PATH.exists():
+        return []
+
+    town = (property_input.town or "").strip().lower()
+    state = (property_input.state or "").strip().lower()
+    property_type = (property_input.property_type or "").strip().lower()
+    price_anchor = property_input.purchase_price
+
+    try:
+        dataset = JsonActiveListingStore(ACTIVE_LISTINGS_PATH).load()
+    except Exception:
+        return []
+
+    filtered = []
+    for listing in dataset.listings:
+        if town and listing.town.strip().lower() != town:
+            continue
+        if state and listing.state.strip().lower() != state:
+            continue
+        if property_type and listing.property_type and listing.property_type.strip().lower() != property_type:
+            type_penalty = 1
+        else:
+            type_penalty = 0
+        price_gap = abs((listing.list_price or 0.0) - (price_anchor or listing.list_price or 0.0))
+        filtered.append((type_penalty, price_gap, listing.address.lower(), listing))
+
+    filtered.sort(key=lambda item: (item[0], item[1], item[2]))
+    rows: list[ActiveListingViewRow] = []
+    for _, _, _, listing in filtered:
+        rows.append(
+            ActiveListingViewRow(
+                address=listing.address,
+                list_price=_fmt_currency(listing.list_price),
+                status=listing.listing_status.replace("_", " ").title(),
+                beds=_fmt_number(listing.beds),
+                baths=_fmt_number(listing.baths),
+                sqft=_fmt_number(listing.sqft),
+                dom=_fmt_number(listing.days_on_market, " days"),
+                condition=(listing.condition_profile or "Unavailable").replace("_", " ").title(),
+                source_ref=listing.source_ref or "Unavailable",
+            )
+        )
+    return rows
+
+
 def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView:
     property_input = report.property_input
     current_value = get_current_value(report)
     comparable_sales = get_comparable_sales(report)
+    active_listing_rows = _active_listing_rows(report)
     scenario = get_scenario_output(report)
     income = get_income_support(report)
     rental_ease = get_rental_ease(report)
@@ -412,7 +497,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         base_case=scenario.base_case_value,
         bull_case=scenario.bull_case_value,
         bear_case=scenario.bear_case_value,
-        stress_case=scenario.stress_case_value,
+        stress_case=_scenario_stress_value(scenario),
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
         pricing_view=current_value.pricing_view,
@@ -446,6 +531,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             comparable_value_text=_fmt_currency(comparable_sales.comparable_value),
             comp_count_text=str(comparable_sales.comp_count),
             confidence_text=_fmt_pct(comparable_sales.confidence),
+            active_listing_count_text=str(len(active_listing_rows)),
             dataset_name=comparable_sales.dataset_name or "Unavailable",
             verification_summary=comparable_sales.verification_summary or "Unavailable",
             curation_summary=comparable_sales.curation_summary or "Unavailable",
@@ -454,6 +540,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             assumptions=list(comparable_sales.assumptions),
             unsupported_claims=list(comparable_sales.unsupported_claims),
             rows=_comp_rows(report),
+            active_listing_rows=active_listing_rows,
         ),
         forward=ForwardViewModel(
             summary=forward_module.summary,
@@ -461,7 +548,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             bull_value_text=_fmt_currency(scenario.bull_case_value),
             base_value_text=_fmt_currency(scenario.base_case_value),
             bear_value_text=_fmt_currency(scenario.bear_case_value),
-            stress_case_value_text=_fmt_currency(scenario.stress_case_value),
+            stress_case_value_text=_fmt_currency(_scenario_stress_value(scenario)),
             upside_pct_text=_fmt_pct((scenario.bull_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
             downside_pct_text=_fmt_pct((scenario.bear_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
             market_drift_text=_fmt_currency(forward_module.metrics.get("market_drift")),
@@ -470,20 +557,27 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             optionality_premium_text=_fmt_currency(forward_module.metrics.get("optionality_premium")),
         ),
         income_support=IncomeSupportViewModel(
-            summary=income.summary,
-            confidence=float(income.confidence),
+            summary=_income_attr(income, "summary", "Income support unavailable."),
+            confidence=float(_income_attr(income, "confidence", 0.0)),
             rental_ease_label=rental_ease.rental_ease_label,
             estimated_days_to_rent_text=_fmt_number(rental_ease.estimated_days_to_rent, " days"),
-            income_support_ratio_text=(f"{income.income_support_ratio:.2f}x" if income.income_support_ratio is not None else "Unavailable"),
-            monthly_cash_flow_text=_fmt_currency(income.monthly_cash_flow),
-            operating_cash_flow_text=_fmt_currency(income.operating_monthly_cash_flow),
-            rent_source_type=income.rent_source_type.replace("_", " ").title(),
-            risk_view=income.risk_view.replace("_", " ").title(),
-            price_to_rent_text=_fmt_number(income.price_to_rent, "x"),
-            ptr_classification=income.price_to_rent_classification or "Unavailable",
-            warnings=list(income.warnings),
-            assumptions=list(income.assumptions),
-            unsupported_claims=list(income.unsupported_claims),
+            total_rent_text=_fmt_currency(_income_attr(income, "monthly_rent_estimate") or _income_attr(income, "gross_monthly_rent_before_vacancy")),
+            num_units_text=_fmt_number(_income_attr(income, "num_units")),
+            avg_rent_per_unit_text=_fmt_currency(_income_attr(income, "avg_rent_per_unit")),
+            income_support_ratio_text=(f"{_income_attr(income, 'income_support_ratio'):.2f}x" if _income_attr(income, "income_support_ratio") is not None else "Unavailable"),
+            monthly_cash_flow_text=_fmt_currency(_income_attr(income, "monthly_cash_flow")),
+            operating_cash_flow_text=_fmt_currency(_income_attr(income, "operating_monthly_cash_flow")),
+            rent_source_type=str(_income_attr(income, "rent_source_type", "missing")).replace("_", " ").title(),
+            risk_view=str(_income_attr(income, "risk_view", "unknown")).replace("_", " ").title(),
+            price_to_rent_text=_fmt_number(_income_attr(income, "price_to_rent"), "x"),
+            ptr_classification=_income_attr(income, "price_to_rent_classification") or "Unavailable",
+            unit_breakdown=[
+                (f"Unit {index + 1}", _fmt_currency(value))
+                for index, value in enumerate(_income_list(income, "unit_breakdown"))
+            ],
+            warnings=list(_income_attr(income, "warnings", [])),
+            assumptions=list(_income_attr(income, "assumptions", [])),
+            unsupported_claims=list(_income_attr(income, "unsupported_claims", [])),
         ),
         risk_location=RiskLocationViewModel(
             risk_summary=risk.summary,

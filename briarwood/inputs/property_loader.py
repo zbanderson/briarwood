@@ -149,6 +149,7 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         estimated_monthly_rent=_optional_float(assumptions_payload.get("estimated_monthly_rent", data.get("estimated_monthly_rent"))),
         back_house_monthly_rent=_optional_float(assumptions_payload.get("back_house_monthly_rent", data.get("back_house_monthly_rent"))),
         seasonal_monthly_rent=_optional_float(assumptions_payload.get("seasonal_monthly_rent", data.get("seasonal_monthly_rent"))),
+        unit_rents=_float_list(assumptions_payload.get("unit_rents", data.get("unit_rents", []))),
         insurance=_optional_float(assumptions_payload.get("insurance", data.get("insurance"))),
         down_payment_percent=_optional_float(
             assumptions_payload.get("down_payment_percent", data.get("down_payment_percent"))
@@ -227,6 +228,17 @@ def _optional_bool(value: object) -> bool | None:
     if text in {"false", "0", "no", "n"}:
         return False
     return None
+
+
+def _float_list(value: object) -> list[float]:
+    if not isinstance(value, list):
+        return []
+    floats: list[float] = []
+    for item in value:
+        parsed = _optional_float(item)
+        if parsed is not None and parsed > 0:
+            floats.append(parsed)
+    return floats
 
 
 def _coerce_landmark_points(value: object) -> dict[str, list[dict[str, object]]]:

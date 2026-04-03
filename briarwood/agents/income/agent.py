@@ -14,8 +14,11 @@ class IncomeAgent:
         """Return a deterministic monthly ownership snapshot."""
 
         income_input = payload if isinstance(payload, IncomeAgentInput) else IncomeAgentInput.model_validate(payload)
+        manual_unit_rents = [rent for rent in income_input.unit_rents if rent > 0]
         rent_source_type = (
-            "provided"
+            "manual_input"
+            if manual_unit_rents
+            else "provided"
             if income_input.estimated_monthly_rent is not None and income_input.rent_source_type == "missing"
             else income_input.rent_source_type
         )
@@ -103,6 +106,10 @@ class IncomeAgent:
 
         effective_monthly_rent: float | None = None
         gross_monthly_rent_before_vacancy: float | None = None
+        monthly_rent_estimate: float | None = None
+        num_units: int | None = None
+        avg_rent_per_unit: float | None = None
+        unit_breakdown: list[float] = list(manual_unit_rents)
         annual_rent: float | None = None
         income_support_ratio: float | None = None
         price_to_rent: float | None = None
@@ -110,7 +117,9 @@ class IncomeAgent:
         operating_monthly_cash_flow: float | None = None
         downside_burden: float | None = None
 
-        if rent_source_type == "missing" or income_input.estimated_monthly_rent is None:
+        if rent_source_type == "missing" or (
+            income_input.estimated_monthly_rent is None and not manual_unit_rents
+        ):
             missing_inputs.append("estimated_monthly_rent")
             warnings.append("Estimated monthly rent missing; income support metrics were not computed.")
             unsupported_claims.append("Rental downside analysis could not assess rent support because rent is missing.")
@@ -118,9 +127,20 @@ class IncomeAgent:
             if rent_source_type == "estimated":
                 assumptions.append("Monthly rent is estimated from town-level context and may differ from achieved lease income.")
                 warnings.append("Rent support uses an estimated rent input rather than a provided rent figure.")
+            elif rent_source_type == "manual_input":
+                num_units = len(manual_unit_rents)
+                avg_rent_per_unit = (sum(manual_unit_rents) / num_units) if num_units else None
+                assumptions.append(
+                    f"Manual rent schedule with {num_units} unit{'s' if num_units != 1 else ''} was used to override estimated rent."
+                )
             else:
                 assumptions.append("Rent is a provided estimate and may differ from achieved lease income.")
-            gross_monthly_rent_before_vacancy = income_input.estimated_monthly_rent
+            gross_monthly_rent_before_vacancy = (
+                sum(manual_unit_rents)
+                if manual_unit_rents
+                else income_input.estimated_monthly_rent
+            )
+            monthly_rent_estimate = gross_monthly_rent_before_vacancy
             if income_input.back_house_monthly_rent:
                 gross_monthly_rent_before_vacancy += income_input.back_house_monthly_rent
                 assumptions.append(
@@ -194,6 +214,10 @@ class IncomeAgent:
                 if gross_monthly_rent_before_vacancy is not None
                 else None
             ),
+            monthly_rent_estimate=round(monthly_rent_estimate, 2) if monthly_rent_estimate is not None else None,
+            num_units=num_units,
+            avg_rent_per_unit=round(avg_rent_per_unit, 2) if avg_rent_per_unit is not None else None,
+            unit_breakdown=[round(rent, 2) for rent in unit_breakdown],
             annual_rent=round(annual_rent, 2) if annual_rent is not None else None,
             rent_source_type=rent_source_type,
             income_support_ratio=round(income_support_ratio, 4) if income_support_ratio is not None else None,
@@ -284,6 +308,8 @@ class IncomeAgent:
     ) -> float:
         if rent_source_type == "provided":
             confidence = 0.82
+        elif rent_source_type == "manual_input":
+            confidence = 0.88
         elif rent_source_type == "estimated":
             confidence = 0.52
         else:
@@ -304,6 +330,8 @@ class IncomeAgent:
             confidence = min(confidence, 0.45)
         if rent_source_type == "estimated":
             confidence = min(confidence, 0.68)
+        if rent_source_type == "manual_input":
+            confidence = max(confidence, 0.72)
         if not financing_complete:
             confidence = min(confidence, 0.6)
         return round(max(0.1, min(confidence, 0.9)), 2)

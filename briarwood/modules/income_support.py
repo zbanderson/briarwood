@@ -57,17 +57,30 @@ class IncomeSupportModule:
         wrapper_warnings.append(
             f"Maintenance reserve not specified; assuming {maintenance_pct:.1%} annually."
         )
-        rent_context = self.rent_context_agent.run(
-            RentContextInput(
-                town=property_input.town,
-                state=property_input.state,
-                sqft=property_input.sqft,
-                beds=property_input.beds,
-                baths=property_input.baths,
-                explicit_monthly_rent=property_input.estimated_monthly_rent,
+        manual_unit_rents = [rent for rent in property_input.unit_rents if rent > 0]
+        if manual_unit_rents:
+            rent_context_rent = sum(manual_unit_rents)
+            rent_source_type = "manual_input"
+            rent_context_assumptions = [
+                f"Manual unit rent schedule supplied for {len(manual_unit_rents)} unit{'s' if len(manual_unit_rents) != 1 else ''}."
+            ]
+            rent_context_warnings: list[str] = []
+        else:
+            rent_context = self.rent_context_agent.run(
+                RentContextInput(
+                    town=property_input.town,
+                    state=property_input.state,
+                    sqft=property_input.sqft,
+                    beds=property_input.beds,
+                    baths=property_input.baths,
+                    explicit_monthly_rent=property_input.estimated_monthly_rent,
+                )
             )
-        )
-        wrapper_warnings.extend(rent_context.warnings)
+            rent_context_rent = rent_context.rent_estimate
+            rent_source_type = rent_context.rent_source_type
+            rent_context_assumptions = rent_context.assumptions
+            rent_context_warnings = rent_context.warnings
+        wrapper_warnings.extend(rent_context_warnings)
 
         output = self.agent.run(
             IncomeAgentInput(
@@ -78,9 +91,10 @@ class IncomeSupportModule:
                 annual_taxes=property_input.taxes,
                 annual_insurance=property_input.insurance,
                 monthly_hoa=property_input.monthly_hoa,
-                estimated_monthly_rent=rent_context.rent_estimate,
+                estimated_monthly_rent=rent_context_rent,
                 back_house_monthly_rent=property_input.back_house_monthly_rent,
-                rent_source_type=rent_context.rent_source_type,
+                unit_rents=manual_unit_rents,
+                rent_source_type=rent_source_type,
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,
                 market_price_to_rent_benchmark=property_input.market_price_to_rent_benchmark,
@@ -103,6 +117,10 @@ class IncomeSupportModule:
                 "total_monthly_cost": output.total_monthly_cost,
                 "operating_monthly_cost": output.operating_monthly_cost,
                 "effective_monthly_rent": output.effective_monthly_rent,
+                "monthly_rent_estimate": output.monthly_rent_estimate,
+                "num_units": output.num_units,
+                "avg_rent_per_unit": output.avg_rent_per_unit,
+                "unit_breakdown": output.unit_breakdown,
                 "income_support_ratio": output.income_support_ratio,
                 "rent_coverage": output.rent_coverage,
                 "price_to_rent": output.price_to_rent,
@@ -122,13 +140,13 @@ class IncomeSupportModule:
             payload=output.model_copy(
                 update={
                     "warnings": warnings,
-                    "assumptions": output.assumptions + rent_context.assumptions,
+                    "assumptions": output.assumptions + rent_context_assumptions,
                 }
             ),
             section_evidence=build_section_evidence(
                 property_input,
                 categories=["price_ask", "rent_estimate", "insurance_estimate", "financing_down_payment", "financing_interest_rate", "taxes", "hoa"],
-                extra_estimated_inputs=(["rent_estimate"] if rent_context.rent_source_type == "estimated" else []),
+                extra_estimated_inputs=(["rent_estimate"] if rent_source_type == "estimated" else []),
                 notes=["Income support is strongest with sourced rent and complete financing assumptions."],
             ),
         )

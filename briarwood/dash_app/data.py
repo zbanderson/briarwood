@@ -245,6 +245,7 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
             "estimated_monthly_rent": _optional_float(subject.get("estimated_monthly_rent")),
             "back_house_monthly_rent": _optional_float(subject.get("back_house_monthly_rent")),
             "seasonal_monthly_rent": _optional_float(subject.get("seasonal_monthly_rent")),
+            "unit_rents": _optional_float_list(subject.get("unit_rents")),
             "insurance": _optional_float(subject.get("insurance")),
             "monthly_maintenance_reserve_override": _optional_float(subject.get("monthly_maintenance_reserve_override")),
             "manual_comp_inputs": comps,
@@ -261,7 +262,10 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
                 "taxes": {"status": manual_status(subject.get("taxes")), "source_name": "manual entry"},
                 "hoa": {"status": manual_status(subject.get("monthly_hoa")), "source_name": "manual entry"},
                 "listing_history": {"status": manual_status(subject.get("days_on_market")), "source_name": "manual entry"},
-                "rent_estimate": {"status": manual_status(subject.get("estimated_monthly_rent")), "source_name": "manual entry"},
+                "rent_estimate": {
+                    "status": "user_supplied" if _optional_float_list(subject.get("unit_rents")) else manual_status(subject.get("estimated_monthly_rent")),
+                    "source_name": "manual entry",
+                },
                 "insurance_estimate": {"status": manual_status(subject.get("insurance")), "source_name": "manual entry"},
                 "comp_support": {"status": "user_supplied" if comps else "missing", "source_name": "manual entry"},
                 "scarcity_inputs": {"status": "user_supplied", "source_name": "manual entry"},
@@ -339,6 +343,17 @@ def _optional_float(value: object) -> float | None:
     if value in (None, ""):
         return None
     return float(str(value))
+
+
+def _optional_float_list(value: object) -> list[float]:
+    if not isinstance(value, list):
+        return []
+    values: list[float] = []
+    for item in value:
+        parsed = _optional_float(item)
+        if parsed is not None and parsed > 0:
+            values.append(parsed)
+    return values
 
 
 def _optional_bool(value: object) -> bool | None:

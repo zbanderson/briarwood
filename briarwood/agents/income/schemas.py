@@ -17,7 +17,8 @@ class IncomeAgentInput(BaseModel):
     monthly_hoa: float | None = Field(default=None, ge=0)
     estimated_monthly_rent: float | None = Field(default=None, ge=0)
     back_house_monthly_rent: float | None = Field(default=None, ge=0)
-    rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|missing)$")
+    unit_rents: list[float] = Field(default_factory=list)
+    rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|manual_input|missing)$")
     vacancy_pct: float | None = Field(default=None, ge=0, le=1)
     maintenance_pct: float | None = Field(default=None, ge=0, le=1)
     market_price_to_rent_benchmark: float | None = Field(default=None, gt=0)
@@ -48,8 +49,12 @@ class IncomeAgentOutput(BaseModel):
     financing_complete: bool
     effective_monthly_rent: float | None
     gross_monthly_rent_before_vacancy: float | None = None
+    monthly_rent_estimate: float | None = None
+    num_units: int | None = None
+    avg_rent_per_unit: float | None = None
+    unit_breakdown: list[float] = Field(default_factory=list)
     annual_rent: float | None
-    rent_source_type: str = Field(pattern="^(provided|estimated|missing)$")
+    rent_source_type: str = Field(pattern="^(provided|estimated|manual_input|missing)$")
     income_support_ratio: float | None
     rent_coverage: float | None
     price_to_rent: float | None

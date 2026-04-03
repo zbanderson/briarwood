@@ -6,6 +6,8 @@ Only shown when at least one scenario is enabled on the property.
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
+
 from dash import dcc, html
 import plotly.graph_objects as go
 
@@ -15,18 +17,19 @@ from briarwood.dash_app.components import (
     simple_table,
 )
 from briarwood.dash_app.theme import (
-    ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED,
-    BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BORDER,
+    ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED, ACCENT_TEAL,
+    BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4, BORDER,
     BODY_TEXT_STYLE, CARD_STYLE, FONT_FAMILY, GRID_2, GRID_3, GRID_4,
     PLOTLY_LAYOUT, SECTION_HEADER_STYLE, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_TEXT, TONE_WARNING_TEXT, TONE_WARNING_BG,
     VALUE_STYLE_LARGE, tone_color,
 )
+from briarwood.reports.section_helpers import get_current_value, get_market_value_history, get_scenario_output
 from briarwood.schemas import AnalysisReport
 
 
 def render_scenarios_section(report: AnalysisReport) -> html.Div:
-    blocks: list = []
+    blocks: list = [_render_historic_forward_outlook(report)]
 
     reno_result = report.module_results.get("renovation_scenario")
     if reno_result and isinstance(reno_result.payload, dict) and reno_result.payload.get("enabled"):
@@ -36,21 +39,388 @@ def render_scenarios_section(report: AnalysisReport) -> html.Div:
     if td_result and isinstance(td_result.payload, dict) and td_result.payload.get("enabled"):
         blocks.append(_render_teardown(td_result.payload, td_result.confidence))
 
-    if not blocks:
-        return html.Div(
+    if len(blocks) == 1:
+        blocks.append(
             html.Div(
                 [
-                    html.Div("No Investment Scenarios Configured", style={**VALUE_STYLE_LARGE, "fontSize": "18px", "marginBottom": "8px"}),
+                    html.Div("Optional Investment Scenarios", style=SECTION_HEADER_STYLE),
                     html.P(
-                        "Add renovation_scenario or teardown_scenario to the property input to activate scenario analysis.",
+                        "Forward outlook is available below. Add renovation_scenario or teardown_scenario inputs to activate project-specific strategy analysis.",
                         style=BODY_TEXT_STYLE,
                     ),
                 ],
-                style={**CARD_STYLE, "padding": "32px"},
+                style=CARD_STYLE,
             )
         )
 
     return html.Div(blocks, style={"display": "grid", "gap": "32px"})
+
+
+def _stress_value(scenario: object) -> float | None:
+    return getattr(scenario, "stress_case_value", None)
+
+
+# ── Historic + forward outlook ────────────────────────────────────────────────
+
+
+def _render_historic_forward_outlook(report: AnalysisReport) -> html.Div:
+    chart_bundle = _build_historic_forward_chart(report)
+    scenario_module = report.module_results.get("bull_base_bear")
+    current_value = get_current_value(report)
+    scenario = get_scenario_output(report)
+
+    low = scenario.bear_case_value
+    high = scenario.bull_case_value
+    spread_text = "—"
+    if low is not None and high is not None:
+        spread_text = f"${low:,.0f} to ${high:,.0f}"
+
+    metrics = [
+        metric_card("BCV Anchor", _currency(current_value.briarwood_current_value), tone="positive"),
+        metric_card("12M Base", _currency(scenario.base_case_value)),
+        metric_card("12M Range", spread_text),
+        metric_card("Stress Case", _currency(_stress_value(scenario)), tone="negative" if _stress_value(scenario) is not None else "neutral"),
+    ]
+
+    driver_metrics = scenario_module.metrics if scenario_module is not None else {}
+    drivers_table = simple_table(
+        [
+            {"Driver": "Market Drift", "Impact": _currency(driver_metrics.get("market_drift"))},
+            {"Driver": "Location Premium", "Impact": _currency(driver_metrics.get("location_premium"))},
+            {"Driver": "Risk Discount", "Impact": _currency(driver_metrics.get("risk_discount"))},
+            {"Driver": "Optionality", "Impact": _currency(driver_metrics.get("optionality_premium"))},
+        ]
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Historic + Forward Outlook", style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        "Here’s where the property or market has been, and where Briarwood thinks it could go next.",
+                        style={"fontSize": "18px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginBottom": "8px"},
+                    ),
+                    html.Div(
+                        [
+                            confidence_badge(scenario_module.confidence if scenario_module is not None else 0.0),
+                            html.Span("12-month forward framing", style={"fontSize": "12px", "color": TEXT_SECONDARY}),
+                        ],
+                        style={"display": "flex", "gap": "10px", "alignItems": "center", "flexWrap": "wrap"},
+                    ),
+                ],
+                style=CARD_STYLE,
+            ),
+            html.Div(metrics, style=GRID_4),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Research Chart", style=SECTION_HEADER_STYLE),
+                            dcc.Graph(figure=chart_bundle["figure"], config={"displayModeBar": False}),
+                            html.Div(chart_bundle["diagnostic_note"], style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
+                            html.Div(chart_bundle["fallback_note"], style={"fontSize": "11px", "color": TONE_WARNING_TEXT, "marginTop": "4px"}) if chart_bundle["fallback_note"] else None,
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Forward Framing", style=SECTION_HEADER_STYLE),
+                            html.P((scenario_module.summary if scenario_module is not None else "Forward scenario output unavailable."), style=BODY_TEXT_STYLE),
+                            html.Div("Driver Breakdown", style={**SECTION_HEADER_STYLE, "marginTop": "14px"}),
+                            drivers_table,
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "1.8fr 1fr", "gap": "12px"},
+            ),
+        ],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
+def _build_historic_forward_chart(report: AnalysisReport) -> dict[str, object]:
+    """
+    Diagnostic note for this chart:
+    - Historic property series comes from property_input.price_history and facts.sale_history when present.
+    - Historic market context comes from market_value_history.points.
+    - The forward bridge uses current_value.briarwood_current_value as the primary anchor, falling back to base case if needed.
+    """
+    current_value = get_current_value(report)
+    scenario = get_scenario_output(report)
+    market_history = get_market_value_history(report)
+
+    property_points = _extract_property_history_points(report)
+    market_points = _extract_market_history_points(report)
+
+    last_historic_date = max(
+        [point["date"] for point in property_points + market_points],
+        default=date.today(),
+    )
+    cutoff = last_historic_date - timedelta(days=365 * 10)
+    property_points = [point for point in property_points if point["date"] >= cutoff]
+    market_points = [point for point in market_points if point["date"] >= cutoff]
+
+    anchor_date = max([point["date"] for point in property_points + market_points], default=date.today())
+    horizon_date = anchor_date + timedelta(days=365)
+    anchor_value = current_value.briarwood_current_value or scenario.base_case_value
+
+    history_sources: list[str] = []
+    if property_points:
+        history_sources.append(f"property history ({len(property_points)} pts)")
+    if market_points:
+        history_sources.append(f"market history ({len(market_points)} pts)")
+    if not history_sources:
+        history_sources.append("forward projection only")
+
+    fallback_note = ""
+    if not property_points and not market_points:
+        fallback_note = "Historic pricing data not available. Showing forward projection only."
+    elif not property_points:
+        fallback_note = "No property transaction history found. Historic context uses market-level pricing only."
+    elif not market_points:
+        fallback_note = "Market history series not available. Historic context uses property-specific pricing only."
+
+    diagnostic_note = (
+        f"Historic series used: {', '.join(history_sources)}. "
+        f"Forward anchor: {_currency(anchor_value)} from {'BCV' if current_value.briarwood_current_value is not None else 'base case fallback'}."
+    )
+
+    fig = go.Figure()
+
+    anchor_x = anchor_date.isoformat()
+    horizon_x = horizon_date.isoformat()
+
+    if market_points:
+        fig.add_trace(
+            go.Scatter(
+                x=[point["date"].isoformat() for point in market_points],
+                y=[point["value"] for point in market_points],
+                mode="lines",
+                name="Market Context",
+                line={"color": TEXT_MUTED, "width": 2},
+                hovertemplate="%{x|%b %Y}<br>Market: %{y:$,.0f}<extra></extra>",
+            )
+        )
+
+    if property_points:
+        fig.add_trace(
+            go.Scatter(
+                x=[point["date"].isoformat() for point in property_points],
+                y=[point["value"] for point in property_points],
+                mode="lines+markers",
+                name="Property History",
+                line={"color": ACCENT_TEAL, "width": 2.5},
+                marker={
+                    "size": 8,
+                    "color": ACCENT_TEAL,
+                    "line": {"color": BORDER, "width": 1},
+                    "symbol": [point["symbol"] for point in property_points],
+                },
+                customdata=[[point["label"], point["event"]] for point in property_points],
+                hovertemplate="%{x|%b %Y}<br>%{customdata[0]}: %{y:$,.0f}<br>%{customdata[1]}<extra></extra>",
+            )
+        )
+
+    if anchor_value is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[anchor_x],
+                y=[anchor_value],
+                mode="markers",
+                name="Today / BCV",
+                marker={"size": 10, "color": ACCENT_BLUE, "line": {"color": BORDER, "width": 1.5}},
+                hovertemplate="%{x|%b %Y}<br>BCV anchor: %{y:$,.0f}<extra></extra>",
+            )
+        )
+
+        if scenario.bull_case_value is not None and scenario.bear_case_value is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[anchor_x, horizon_x, horizon_x, anchor_x],
+                    y=[anchor_value, scenario.bull_case_value, scenario.bear_case_value, anchor_value],
+                    fill="toself",
+                    fillcolor="rgba(88, 166, 255, 0.14)",
+                    line={"color": "rgba(0,0,0,0)"},
+                    hoverinfo="skip",
+                    name="Bull / Bear Fan",
+                    showlegend=True,
+                )
+            )
+
+        if scenario.bull_case_value is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[anchor_x, horizon_x],
+                    y=[anchor_value, scenario.bull_case_value],
+                    mode="lines",
+                    name="Bull",
+                    line={"color": ACCENT_GREEN, "width": 2, "dash": "dash"},
+                    hovertemplate="%{x|%b %Y}<br>Bull: %{y:$,.0f}<extra></extra>",
+                )
+            )
+        if scenario.bear_case_value is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[anchor_x, horizon_x],
+                    y=[anchor_value, scenario.bear_case_value],
+                    mode="lines",
+                    name="Bear",
+                    line={"color": ACCENT_RED, "width": 2, "dash": "dash"},
+                    hovertemplate="%{x|%b %Y}<br>Bear: %{y:$,.0f}<extra></extra>",
+                )
+            )
+        if scenario.base_case_value is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[anchor_x, horizon_x],
+                    y=[anchor_value, scenario.base_case_value],
+                    mode="lines+markers",
+                    name="Base",
+                    line={"color": ACCENT_BLUE, "width": 4},
+                    marker={"size": 7, "color": ACCENT_BLUE},
+                    hovertemplate="%{x|%b %Y}<br>Base: %{y:$,.0f}<extra></extra>",
+                )
+            )
+        if _stress_value(scenario) is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=[anchor_x, horizon_x],
+                    y=[anchor_value, _stress_value(scenario)],
+                    mode="lines",
+                    name="Stress",
+                    line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
+                    hovertemplate="%{x|%b %Y}<br>Stress: %{y:$,.0f}<extra></extra>",
+                )
+            )
+
+    fig.add_shape(
+        type="line",
+        x0=anchor_x,
+        x1=anchor_x,
+        y0=0,
+        y1=1,
+        xref="x",
+        yref="paper",
+        line={"dash": "dot", "color": ACCENT_ORANGE, "width": 1.5},
+    )
+    fig.add_annotation(
+        x=anchor_x,
+        y=1.02,
+        xref="x",
+        yref="paper",
+        text="Today",
+        showarrow=False,
+        font={"color": ACCENT_ORANGE, "size": 11},
+        xanchor="left",
+    )
+
+    layout = dict(PLOTLY_LAYOUT)
+    layout["height"] = 360
+    layout["margin"] = {"l": 48, "r": 20, "t": 20, "b": 48}
+    layout["legend"] = {
+        "orientation": "h",
+        "yanchor": "bottom",
+        "y": -0.24,
+        "x": 0,
+        "bgcolor": "rgba(0,0,0,0)",
+        "font": {"color": TEXT_SECONDARY, "size": 11},
+    }
+    layout["xaxis"] = {
+        **layout.get("xaxis", {}),
+        "title": "",
+        "showgrid": False,
+        "tickformat": "%Y",
+    }
+    layout["yaxis"] = {
+        **layout.get("yaxis", {}),
+        "tickformat": "$,.0f",
+        "gridcolor": BG_SURFACE_4,
+    }
+    fig.update_layout(**layout)
+
+    return {
+        "figure": fig,
+        "diagnostic_note": diagnostic_note,
+        "fallback_note": fallback_note,
+    }
+
+
+def _extract_market_history_points(report: AnalysisReport) -> list[dict[str, object]]:
+    history = get_market_value_history(report)
+    points: list[dict[str, object]] = []
+    for point in history.points:
+        parsed_date = _parse_date(point.date)
+        if parsed_date is None:
+            continue
+        points.append({"date": parsed_date, "value": float(point.value)})
+    return points
+
+
+def _extract_property_history_points(report: AnalysisReport) -> list[dict[str, object]]:
+    property_input = report.property_input
+    if property_input is None:
+        return []
+
+    raw_entries: list[dict[str, object]] = []
+    raw_entries.extend(list(property_input.price_history or []))
+    if property_input.facts is not None:
+        raw_entries.extend(list(property_input.facts.sale_history or []))
+
+    points: list[dict[str, object]] = []
+    seen: set[tuple[date, float, str]] = set()
+    for entry in raw_entries:
+        parsed_date = _parse_date(entry.get("date") or entry.get("sale_date"))
+        value = _coerce_float(entry.get("price") or entry.get("sale_price") or entry.get("list_price"))
+        if parsed_date is None or value is None:
+            continue
+        event = str(entry.get("event") or entry.get("status") or "Price event")
+        label = "Sale" if "sold" in event.lower() or "sale" in event.lower() else "List"
+        key = (parsed_date, value, label)
+        if key in seen:
+            continue
+        seen.add(key)
+        points.append(
+            {
+                "date": parsed_date,
+                "value": value,
+                "event": event,
+                "label": label,
+                "symbol": "diamond" if label == "Sale" else "circle",
+            }
+        )
+
+    return sorted(points, key=lambda point: point["date"])
+
+
+def _parse_date(value: object) -> date | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, date):
+        return value
+    text = str(value).strip()
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%Y/%m/%d", "%b %d, %Y", "%B %d, %Y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _coerce_float(value: object) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _currency(value: float | None) -> str:
+    if value is None:
+        return "—"
+    return f"${value:,.0f}"
 
 
 # ── Renovation Scenario ────────────────────────────────────────────────────────

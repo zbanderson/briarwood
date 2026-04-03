@@ -205,6 +205,24 @@ class ModuleTests(unittest.TestCase):
         self.assertGreater(result.metrics["effective_monthly_rent"], baseline_result.metrics["effective_monthly_rent"])
         self.assertGreater(result.metrics["income_support_ratio"], baseline_result.metrics["income_support_ratio"])
 
+    def test_income_support_uses_manual_unit_rents_when_provided(self) -> None:
+        baseline_input = sample_property()
+        baseline_result = IncomeSupportModule().run(baseline_input)
+
+        property_input = sample_property()
+        property_input.property_type = "Duplex"
+        property_input.unit_rents = [2400, 2200]
+        property_input.estimated_monthly_rent = 3000
+
+        result = IncomeSupportModule().run(property_input)
+
+        self.assertEqual(result.metrics["rent_source_type"], "manual_input")
+        self.assertEqual(result.metrics["monthly_rent_estimate"], 4600)
+        self.assertEqual(result.metrics["num_units"], 2)
+        self.assertEqual(result.metrics["unit_breakdown"], [2400, 2200])
+        self.assertGreater(result.metrics["effective_monthly_rent"], baseline_result.metrics["effective_monthly_rent"])
+        self.assertGreater(result.metrics["income_support_ratio"], baseline_result.metrics["income_support_ratio"])
+
     def test_rental_ease_module_returns_payload(self) -> None:
         result = RentalEaseModule().run(sample_property())
 

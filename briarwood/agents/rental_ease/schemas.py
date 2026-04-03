@@ -12,7 +12,7 @@ class RentalEaseInput(BaseModel):
     state: str = Field(min_length=2, max_length=2)
     county: str | None = None
     estimated_monthly_rent: float | None = Field(default=None, ge=0)
-    rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|missing)$")
+    rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|manual_input|missing)$")
     gross_monthly_cost: float | None = Field(default=None, ge=0)
     carrying_cost_complete: bool = False
     financing_complete: bool = False

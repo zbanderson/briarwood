@@ -147,6 +147,39 @@ class ManualCompWorkflowTests(unittest.TestCase):
             finally:
                 dash_data.SAVED_PROPERTY_DIR = original_saved_dir
 
+    def test_register_manual_analysis_persists_unit_rents_and_uses_manual_income_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, _output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "88 12th Ave, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "property_type": "Duplex",
+                        "purchase_price": 980000,
+                        "beds": 5,
+                        "baths": 3.0,
+                        "unit_rents": [2600, 2400],
+                        "insurance": 2400,
+                        "taxes": 12000,
+                    },
+                    [],
+                )
+
+                reports = dash_data.load_reports([property_id])
+                report = reports[property_id]
+                income = report.get_module("income_support")
+
+                self.assertEqual(income.metrics["rent_source_type"], "manual_input")
+                self.assertEqual(income.metrics["monthly_rent_estimate"], 5000)
+                saved_payload = (dash_data.SAVED_PROPERTY_DIR / property_id / "inputs.json").read_text()
+                self.assertIn('"unit_rents": [', saved_payload)
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
     def test_saved_property_summary_lists_recent_manual_analysis(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             original_saved_dir = dash_data.SAVED_PROPERTY_DIR

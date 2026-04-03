@@ -110,6 +110,7 @@ class UserAssumptions:
     estimated_monthly_rent: float | None = None
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
+    unit_rents: list[float] = field(default_factory=list)
     insurance: float | None = None
     down_payment_percent: float | None = None
     interest_rate: float | None = None
@@ -179,6 +180,7 @@ class PropertyInput:
     estimated_monthly_rent: float | None = None
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
+    unit_rents: list[float] = field(default_factory=list)
     down_payment_percent: float | None = None
     interest_rate: float | None = None
     loan_term_years: int | None = None
@@ -252,6 +254,7 @@ class PropertyInput:
             estimated_monthly_rent=assumptions.estimated_monthly_rent,
             back_house_monthly_rent=assumptions.back_house_monthly_rent,
             seasonal_monthly_rent=assumptions.seasonal_monthly_rent,
+            unit_rents=list(assumptions.unit_rents),
             down_payment_percent=assumptions.down_payment_percent,
             interest_rate=assumptions.interest_rate,
             loan_term_years=assumptions.loan_term_years,

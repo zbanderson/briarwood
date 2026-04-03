@@ -20,6 +20,7 @@ MODELED_FIELDS = {
     "insurance",
     "monthly_hoa",
     "estimated_monthly_rent",
+    "unit_rents",
     "back_house_monthly_rent",
     "down_payment_percent",
     "interest_rate",

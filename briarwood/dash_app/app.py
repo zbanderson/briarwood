@@ -5,8 +5,22 @@ Dark-theme, 4-tab layout: Tear Sheet | Scenarios | Compare | Data Quality
 from __future__ import annotations
 
 import os
+import traceback
 
 from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no_update
+try:
+    import dash_bootstrap_components as dbc
+except ImportError:  # pragma: no cover - lightweight fallback for local v1 usage
+    class _DBCShim:
+        @staticmethod
+        def Button(children=None, **kwargs):
+            return html.Button(children, **kwargs)
+
+        @staticmethod
+        def Spinner(children=None, **kwargs):
+            return html.Span("●", style={"fontSize": "10px", "lineHeight": "1", "display": "inline-block"})
+
+    dbc = _DBCShim()
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.components import (
@@ -15,6 +29,7 @@ from briarwood.dash_app.components import (
     RESPONSIVE_GRID_4,
     confidence_badge,
     compact_badge,
+    render_compare_decision_mode,
     render_compare_section,
     render_single_section,
     render_tear_sheet_body,
@@ -110,11 +125,11 @@ ADU_TYPE_OPTIONS = [
 ]
 
 PROPERTY_TYPE_OPTIONS = [
-    {"label": "Single Family Residence", "value": "Single Family Residence"},
-    {"label": "Duplex", "value": "Duplex"},
-    {"label": "Multi-Family (3-4 unit)", "value": "Multi-Family"},
-    {"label": "Condo / Townhome", "value": "Condo"},
-    {"label": "Land / Lot", "value": "Land"},
+    {"label": "Single Family", "value": "single_family"},
+    {"label": "Duplex", "value": "duplex"},
+    {"label": "Triplex", "value": "triplex"},
+    {"label": "Fourplex", "value": "fourplex"},
+    {"label": "Multi Family", "value": "multi_family"},
 ]
 
 # ── Style helpers ──────────────────────────────────────────────────────────────
@@ -256,6 +271,32 @@ def _capex_from_condition(condition_profile: str | None) -> str | None:
     if normalized in {"dated", "needs_work"}:
         return "heavy"
     return None
+
+
+def _unit_count_for_property_type(property_type: str | None) -> int:
+    mapping = {
+        "duplex": 2,
+        "triplex": 3,
+        "fourplex": 4,
+        "multi_family": 4,
+    }
+    return mapping.get((property_type or "").strip().lower(), 0)
+
+
+def _engine_property_type(property_type: str | None) -> str | None:
+    mapping = {
+        "single_family": "Single Family Residence",
+        "duplex": "Duplex",
+        "triplex": "Triplex",
+        "fourplex": "Fourplex",
+        "multi_family": "Multi-Family",
+    }
+    normalized = (property_type or "").strip().lower()
+    return mapping.get(normalized)
+
+
+def _normalize_property_label(property_type: str | None) -> str:
+    return (_engine_property_type(property_type) or "Property").replace("-", " ")
 
 
 # ── Layout builders ────────────────────────────────────────────────────────────
@@ -551,6 +592,26 @@ def _add_property_form_body() -> list:
                     style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
                 ),
                 html.Div(
+                    id="manual-unit-rents-container",
+                    children=[
+                        html.Div("Unit Rent Schedule", style=SECTION_HEADER_STYLE),
+                        html.Div(
+                            [
+                                _number_input("manual-rent-1", "Unit 1 rent ($/mo)"),
+                                _number_input("manual-rent-2", "Unit 2 rent ($/mo)"),
+                                _number_input("manual-rent-3", "Unit 3 rent ($/mo)"),
+                                _number_input("manual-rent-4", "Unit 4 rent ($/mo)"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                        ),
+                        html.Div(
+                            id="manual-unit-rent-note",
+                            style={"fontSize": "11px", "color": TEXT_MUTED},
+                        ),
+                    ],
+                    style={"display": "none"},
+                ),
+                html.Div(
                     [_number_input("manual-insurance", "Insurance ($/yr)"), _number_input("manual-maintenance-reserve", "Maint reserve ($/mo)")],
                     style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
                 ),
@@ -598,14 +659,13 @@ def _add_property_form_body() -> list:
         # ── Submit area ──
         html.Div(
             [
-                html.Button(
+                dbc.Button(
                     "Start Analysis",
                     id="manual-run-analysis-button",
                     n_clicks=0,
                     disabled=True,
                     style=_BTN_ANALYZE_DISABLED,
                 ),
-                # Loading overlay replaces the button text visually
                 dcc.Loading(
                     id="analysis-loading",
                     type="circle",
@@ -613,7 +673,7 @@ def _add_property_form_body() -> list:
                     children=html.Div(id="analysis-loading-target"),
                     style={"marginTop": "4px"},
                 ),
-                html.Div(id="manual-entry-status", style={"fontSize": "12px", "marginTop": "4px"}),
+                html.Div(id="manual-entry-status", style={"fontSize": "12px", "marginTop": "6px"}),
             ],
             style={
                 "position": "sticky",
@@ -640,12 +700,37 @@ def _compare_controls() -> html.Div:
                         placeholder="Select 2–4 properties to compare…",
                         style={"fontSize": "13px"},
                     ),
+                    html.Div(
+                        [
+                            html.Button("Go", id="compare-go-button", n_clicks=0, style=BTN_PRIMARY),
+                        ],
+                        style={"display": "flex", "gap": "8px", "marginTop": "8px"},
+                    ),
+                    html.Div(id="compare-selection-status", style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
                 ],
                 style={"flex": "1"},
             ),
             html.Div(
                 [
-                    html.Div("Section", style=SECTION_HEADER_STYLE),
+                    html.Div("Mode", style=SECTION_HEADER_STYLE),
+                    dcc.RadioItems(
+                        id="compare-mode-toggle",
+                        options=[
+                            {"label": "Heatmap", "value": "heatmap"},
+                            {"label": "Radar", "value": "radar"},
+                            {"label": "Table", "value": "table"},
+                            {"label": "Detail", "value": "detail"},
+                        ],
+                        value="heatmap",
+                        inline=True,
+                        labelStyle={"marginRight": "12px", "fontSize": "12px", "color": TEXT_SECONDARY},
+                        inputStyle={"marginRight": "4px"},
+                    ),
+                ],
+            ),
+            html.Div(
+                [
+                    html.Div("Detail Section", style=SECTION_HEADER_STYLE),
                     dcc.Dropdown(
                         id="compare-section-dropdown",
                         options=[{"label": label, "value": value} for value, label in COMPARE_SECTIONS],
@@ -669,6 +754,8 @@ def _build_layout():
             dcc.Store(id="property-catalog-version", data=0),
             dcc.Store(id="add-property-open", data=False),
             dcc.Store(id="last-analysis-summary", data=None),
+            dcc.Store(id="compare-confirmed-ids", data=[]),
+            dcc.Store(id="compare-go-token", data=0),
 
             # Top bar
             _topbar(),
@@ -722,7 +809,7 @@ def refresh_property_controls(
     allowed = {option["value"] for option in options}
     loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
     property_value = current_property_id if current_property_id in allowed else (loaded_ids[0] if loaded_ids else None)
-    compare_values = [pid for pid in (current_compare_ids or loaded_ids) if pid in allowed][:4]
+    compare_values = [pid for pid in (current_compare_ids or []) if pid in allowed][:4]
     return options, property_value, options, compare_values, _saved_property_rows()
 
 
@@ -731,9 +818,12 @@ def refresh_property_controls(
     Output("property-header-bar", "children"),
     Output("property-header-bar", "style"),
     Input("property-selector-dropdown", "value"),
+    Input("loaded-preset-ids", "data"),
 )
-def render_active_property_status(property_id: str | None):
+def render_active_property_status(property_id: str | None, loaded_ids: list[str] | None):
     hidden = {"display": "none"}
+    if not property_id and loaded_ids:
+        property_id = loaded_ids[0]
     if not property_id:
         return "No property selected", None, hidden
     try:
@@ -861,16 +951,32 @@ def select_property(property_id: str | None):
     prevent_initial_call=True,
 )
 def select_compare_properties(property_ids: list[str] | None):
+    return no_update
+
+
+@app.callback(
+    Output("compare-confirmed-ids", "data"),
+    Output("compare-go-token", "data"),
+    Output("compare-selection-status", "children"),
+    Input("compare-go-button", "n_clicks"),
+    State("compare-selector-dropdown", "value"),
+    State("compare-go-token", "data"),
+    prevent_initial_call=True,
+)
+def trigger_compare_go(_n_clicks: int, property_ids: list[str] | None, token: int | None):
     property_ids = [pid for pid in (property_ids or [])][:4]
-    if not property_ids:
-        return no_update
+    if len(property_ids) < 2:
+        return no_update, no_update, html.Span("Select at least 2 properties, then click Go.", style={"color": TONE_WARNING_TEXT})
     load_reports(property_ids)
-    return property_ids
+    return property_ids, int(token or 0) + 1, html.Span(f"Comparing {len(property_ids)} selected properties.", style={"color": TONE_POSITIVE_TEXT})
 
 
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
     Output("compare-selector-dropdown", "value", allow_duplicate=True),
+    Output("compare-confirmed-ids", "data", allow_duplicate=True),
+    Output("compare-go-token", "data", allow_duplicate=True),
+    Output("compare-selection-status", "children", allow_duplicate=True),
     Output("property-selector-dropdown", "value", allow_duplicate=True),
     Input("compare-selected-button", "n_clicks"),
     State("saved-properties-table", "data"),
@@ -883,12 +989,19 @@ def compare_selected_saved_properties(
     selected_rows: list[int] | None,
 ):
     if not rows or not selected_rows:
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
     property_ids = [rows[i]["property_id"] for i in selected_rows if 0 <= i < len(rows)][:4]
     if not property_ids:
-        return no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update
     load_reports(property_ids)
-    return property_ids, property_ids, no_update
+    return (
+        property_ids,
+        property_ids,
+        property_ids,
+        1,
+        html.Span(f"Comparing {len(property_ids)} properties selected from saved analyses.", style={"color": TONE_POSITIVE_TEXT}),
+        no_update,
+    )
 
 
 # ── Main tab content ───────────────────────────────────────────────────────────
@@ -912,7 +1025,10 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
         focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
         report = reports[focus_id]
         view = build_property_analysis_view(report)
-        return render_tear_sheet_body(view, report)
+        return html.Div(
+            render_tear_sheet_body(view, report),
+            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "0 20px 24px"},
+        )
 
     if tab == "scenarios":
         if not loaded_ids:
@@ -923,10 +1039,21 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
         focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
         report = reports[focus_id]
         from briarwood.dash_app.scenarios import render_scenarios_section
-        return html.Div(render_scenarios_section(report), style={"padding": "16px 20px"})
+        return html.Div(
+            html.Div(render_scenarios_section(report), style={"width": "100%", "maxWidth": "1180px"}),
+            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "16px 20px 24px"},
+        )
 
     if tab == "compare":
-        return html.Div([_compare_controls(), html.Div(id="compare-content", style={"padding": "16px 20px"})])
+        return html.Div(
+            [
+                _compare_controls(),
+                html.Div(
+                    id="compare-content",
+                    style={"width": "100%", "maxWidth": "1180px", "padding": "16px 20px 24px", "margin": "0 auto"},
+                ),
+            ]
+        )
 
     if tab == "data_quality":
         if not loaded_ids:
@@ -937,7 +1064,10 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
         focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
         report = reports[focus_id]
         from briarwood.dash_app.data_quality import render_data_quality_section
-        return html.Div(render_data_quality_section(report), style={"padding": "16px 20px"})
+        return html.Div(
+            html.Div(render_data_quality_section(report), style={"width": "100%", "maxWidth": "1180px"}),
+            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "16px 20px 24px"},
+        )
 
     return _empty_state("Select a tab.")
 
@@ -951,14 +1081,16 @@ def _empty_state(message: str) -> html.Div:
 
 @app.callback(
     Output("compare-content", "children"),
-    Input("compare-selector-dropdown", "value"),
+    Input("compare-go-token", "data"),
+    Input("compare-confirmed-ids", "data"),
+    Input("compare-mode-toggle", "value"),
     Input("compare-section-dropdown", "value"),
 )
-def render_compare(property_ids: list[str] | None, section: str | None):
+def render_compare(_go_token: int | None, property_ids: list[str] | None, mode: str | None, section: str | None):
     property_ids = [pid for pid in (property_ids or [])][:4]
     if len(property_ids) < 2:
         return html.Div(
-            "Select 2 or more properties above to compare them side by side.",
+            "Select 2 or more properties, click OK to confirm them, then click Go.",
             style={"color": TEXT_MUTED, "fontSize": "14px"},
         )
     reports_dict = load_reports(property_ids)
@@ -967,7 +1099,19 @@ def render_compare(property_ids: list[str] | None, section: str | None):
         return html.Div("Some selected properties are unavailable.", style={"color": TEXT_MUTED})
     views = [build_property_analysis_view(r) for r in report_list]
     summary = build_compare_summary(views)
-    return render_compare_section(section or "overview", views, report_list, summary)
+    return render_compare_decision_mode(mode or "heatmap", views, report_list, summary, section or "overview")
+
+
+@app.callback(
+    Output("compare-mode-toggle", "value", allow_duplicate=True),
+    Input("compare-section-dropdown", "value"),
+    State("compare-mode-toggle", "value"),
+    prevent_initial_call=True,
+)
+def focus_detail_mode_for_section(_section: str | None, current_mode: str | None):
+    if current_mode == "detail":
+        return no_update
+    return "detail"
 
 
 # ── Form validation callback ───────────────────────────────────────────────────
@@ -1022,6 +1166,25 @@ def validate_form(
         return False, _BTN_ANALYZE_ENABLED, hint
 
     return False, _BTN_ANALYZE_ENABLED, html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT})
+
+
+@app.callback(
+    Output("manual-unit-rents-container", "style"),
+    Output("manual-unit-rent-note", "children"),
+    Input("manual-property-type", "value"),
+)
+def toggle_rent_inputs(property_type: str | None):
+    unit_count = _unit_count_for_property_type(property_type)
+    if unit_count <= 1:
+        return {"display": "none"}, ""
+    property_label = _normalize_property_label(property_type)
+    return (
+        {"display": "grid", "gap": "6px"},
+        html.Span(
+            f"{property_label} selected — unit rents will override the single market-rent input when provided.",
+            style={"color": TONE_POSITIVE_TEXT},
+        ),
+    )
 
 
 # ── Drawer callbacks ───────────────────────────────────────────────────────────
@@ -1262,11 +1425,15 @@ def manage_manual_comps(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
     Output("manual-entry-status", "children", allow_duplicate=True),
     Output("property-catalog-version", "data", allow_duplicate=True),
+    Output("property-selector-dropdown", "options", allow_duplicate=True),
     Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("compare-selector-dropdown", "options", allow_duplicate=True),
     Output("compare-selector-dropdown", "value", allow_duplicate=True),
     Output("add-property-open", "data", allow_duplicate=True),
     Output("last-analysis-summary", "data", allow_duplicate=True),
     Output("main-tabs", "value"),
+    Output("manual-run-analysis-button", "children", allow_duplicate=True),
+    Output("manual-run-analysis-button", "disabled", allow_duplicate=True),
     Output("analysis-loading-target", "children"),
     Input("manual-run-analysis-button", "n_clicks"),
     State("property-catalog-version", "data"),
@@ -1299,6 +1466,10 @@ def manage_manual_comps(
     State("manual-corner-lot", "value"),
     State("manual-driveway-off-street", "value"),
     State("manual-estimated-rent", "value"),
+    State("manual-rent-1", "value"),
+    State("manual-rent-2", "value"),
+    State("manual-rent-3", "value"),
+    State("manual-rent-4", "value"),
     State("manual-back-house-rent", "value"),
     State("manual-seasonal-rent", "value"),
     State("manual-insurance", "value"),
@@ -1307,6 +1478,20 @@ def manage_manual_comps(
     State("manual-capex-lane", "value"),
     State("manual-notes", "value"),
     prevent_initial_call=True,
+    running=[
+        (
+            Output("manual-run-analysis-button", "children"),
+            html.Span(
+                [
+                    dbc.Spinner(size="sm", color="light"),
+                    html.Span("Analyzing...", style={"marginLeft": "8px"}),
+                ],
+                style={"display": "inline-flex", "alignItems": "center"},
+            ),
+            "Start Analysis",
+        ),
+        (Output("manual-run-analysis-button", "disabled"), True, False),
+    ],
 )
 def run_manual_analysis(
     _n_clicks: int,
@@ -1340,6 +1525,10 @@ def run_manual_analysis(
     corner_lot: str | None,
     driveway_off_street: str | None,
     estimated_rent: float | None,
+    rent_1: float | None,
+    rent_2: float | None,
+    rent_3: float | None,
+    rent_4: float | None,
     back_house_rent: float | None,
     seasonal_rent: float | None,
     insurance: float | None,
@@ -1348,10 +1537,17 @@ def run_manual_analysis(
     capex_lane: str | None,
     notes: str | None,
 ):
-    no_change = (no_update,) * 9
+    options = _property_options()
+    unit_count = _unit_count_for_property_type(property_type)
+    unit_rents = [rent for rent in (rent_1, rent_2, rent_3, rent_4) if rent not in (None, "", 0)]
     if not address or price in (None, ""):
-        error_msg = html.Span("Address and asking price are required.", style={"color": TONE_NEGATIVE_TEXT})
-        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, ""
+        error_msg = html.Div(
+            [
+                html.Div("Analysis not started", style={"color": TONE_NEGATIVE_TEXT, "fontWeight": "600"}),
+                html.Div("Address and asking price are required.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
+            ]
+        )
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, "Start Analysis", False, ""
 
     def _bool(v: str | None) -> bool | None:
         if v == "true":
@@ -1372,7 +1568,7 @@ def run_manual_analysis(
         "sqft": sqft,
         "lot_size": lot_size,
         "year_built": year_built,
-        "property_type": property_type,
+        "property_type": _engine_property_type(property_type),
         "taxes": taxes,
         "monthly_hoa": monthly_hoa,
         "days_on_market": days_on_market,
@@ -1389,10 +1585,11 @@ def run_manual_analysis(
         "corner_lot": _bool(corner_lot),
         "driveway_off_street": _bool(driveway_off_street),
         "estimated_monthly_rent": estimated_rent,
+        "unit_rents": unit_rents if unit_count > 1 else [],
         "back_house_monthly_rent": back_house_rent,
-        "seasonal_rent_annual": seasonal_rent,
-        "insurance_annual": insurance,
-        "maintenance_reserve_monthly": maintenance_reserve,
+        "seasonal_monthly_rent": seasonal_rent,
+        "insurance": insurance,
+        "monthly_maintenance_reserve_override": maintenance_reserve,
         "condition_profile": condition_profile or None,
         "capex_lane": capex_lane or None,
         "notes": notes or None,
@@ -1400,6 +1597,12 @@ def run_manual_analysis(
 
     try:
         new_id, tear_sheet_path = register_manual_analysis(subject, comps or [])
+        options = _property_options()
+        inline_notes: list[str] = []
+        if unit_count > 1 and not unit_rents:
+            inline_notes.append("Multi-unit selected without unit rents; income support fell back to the single rent field or market prior.")
+        if unit_count > 1 and unit_rents:
+            inline_notes.append(f"Manual rents for {len(unit_rents)} unit{'s' if len(unit_rents) != 1 else ''} were used in income support.")
         summary = {
             "property_id": new_id,
             "address": address,
@@ -1407,21 +1610,33 @@ def run_manual_analysis(
             "comp_count": str(len(comps or [])),
             "mode": "manual",
             "tear_sheet_path": str(tear_sheet_path),
+            "unit_rents": len(unit_rents),
         }
         new_version = (catalog_version or 0) + 1
-        success_msg = html.Span(
+        success_msg = html.Div(
             [
-                html.Span("Analysis complete ", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
-                html.Span(f"— {address}", style={"color": TEXT_SECONDARY}),
+                html.Div("Analysis complete", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
+                html.Div(f"{address} saved and loaded as the active property.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
+                html.Div(f"Tear sheet: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "11px", "marginTop": "4px"}),
+                html.Ul(
+                    [html.Li(note, style={"color": TONE_WARNING_TEXT if "fell back" in note else TEXT_SECONDARY, "fontSize": "11px"}) for note in inline_notes],
+                    style={"margin": "6px 0 0", "paddingLeft": "18px"},
+                ) if inline_notes else None,
             ]
         )
-        # Close drawer, switch to Tear Sheet tab, select the new property
-        return [new_id], success_msg, new_version, new_id, [new_id], False, summary, "tear_sheet", ""
+        return [new_id], success_msg, new_version, options, new_id, options, [new_id], False, summary, "tear_sheet", "Start Analysis", False, ""
     except Exception as exc:
-        error_msg = html.Span(
+        tb = traceback.format_exc(limit=6)
+        error_msg = html.Div(
             [
-                html.Span("Analysis failed: ", style={"color": TONE_NEGATIVE_TEXT, "fontWeight": "600"}),
-                html.Span(str(exc), style={"color": TEXT_SECONDARY}),
+                html.Div("Analysis failed", style={"color": TONE_NEGATIVE_TEXT, "fontWeight": "600"}),
+                html.Div(str(exc), style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
+                html.Details(
+                    [
+                        html.Summary("Show traceback", style={"cursor": "pointer", "color": TEXT_MUTED, "marginTop": "6px"}),
+                        html.Pre(tb, style={"whiteSpace": "pre-wrap", "fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px"}),
+                    ]
+                ),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, ""
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, "Start Analysis", False, ""
