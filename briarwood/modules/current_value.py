@@ -9,6 +9,7 @@ from briarwood.modules.market_value_history import (
     MarketValueHistoryModule,
     get_market_value_history_payload,
 )
+from briarwood.opportunity_metrics import calculate_net_opportunity_delta
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.settings import CurrentValueSettings, DEFAULT_CURRENT_VALUE_SETTINGS
 
@@ -82,10 +83,19 @@ class CurrentValueModule:
             )
         )
         modeled_fields, non_modeled_fields = audit_property_fields(property_input)
+        opportunity_delta = calculate_net_opportunity_delta(
+            value_anchor=output.briarwood_current_value,
+            property_input=property_input,
+        )
         output = output.model_copy(
             update={
                 "modeled_fields": modeled_fields,
                 "non_modeled_fields": non_modeled_fields,
+                "all_in_basis": opportunity_delta.all_in_basis,
+                "capex_basis_used": opportunity_delta.capex_amount,
+                "capex_basis_source": opportunity_delta.capex_source,
+                "net_opportunity_delta_value": opportunity_delta.delta_value,
+                "net_opportunity_delta_pct": opportunity_delta.delta_pct,
             }
         )
         output = self._apply_input_confidence_caps(output=output, income=income)
@@ -105,6 +115,15 @@ class CurrentValueModule:
                 "mispricing_amount": round(output.mispricing_amount, 2),
                 "mispricing_pct": round(output.mispricing_pct, 4),
                 "pricing_view": output.pricing_view,
+                "all_in_basis": round(output.all_in_basis, 2) if output.all_in_basis is not None else None,
+                "capex_basis_used": round(output.capex_basis_used, 2) if output.capex_basis_used is not None else None,
+                "capex_basis_source": output.capex_basis_source,
+                "net_opportunity_delta_value": round(output.net_opportunity_delta_value, 2)
+                if output.net_opportunity_delta_value is not None
+                else None,
+                "net_opportunity_delta_pct": round(output.net_opportunity_delta_pct, 4)
+                if output.net_opportunity_delta_pct is not None
+                else None,
                 "comparable_sales_value": output.components.comparable_sales_value,
                 "market_adjusted_value": output.components.market_adjusted_value,
                 "backdated_listing_value": output.components.backdated_listing_value,

@@ -26,6 +26,11 @@ class IncomeAgent:
         assumptions: list[str] = []
         unsupported_claims: list[str] = []
         missing_inputs: list[str] = []
+        rent_confidence_override = (
+            income_input.rent_confidence_override.lower()
+            if income_input.rent_confidence_override
+            else None
+        )
 
         annual_taxes = self._optional_value(
             value=income_input.annual_taxes,
@@ -180,7 +185,13 @@ class IncomeAgent:
             vacancy_present=income_input.vacancy_pct is not None,
             maintenance_present=income_input.maintenance_pct is not None,
             financing_complete=financing_complete,
+            rent_confidence_override=rent_confidence_override,
         )
+        if rent_confidence_override == "high" and rent_source_type in {"provided", "manual_input"}:
+            assumptions.append("Rent confidence was increased because the rent assumption was user-confirmed as high confidence.")
+        elif rent_confidence_override == "low":
+            warnings.append("Rent confidence was reduced because the rent assumption was marked low confidence by the user.")
+            unsupported_claims.append("Income support should be treated cautiously because rent confidence was marked low.")
 
         score_inputs_complete = all(
             value is not None
@@ -305,6 +316,7 @@ class IncomeAgent:
         vacancy_present: bool,
         maintenance_present: bool,
         financing_complete: bool,
+        rent_confidence_override: str | None,
     ) -> float:
         if rent_source_type == "provided":
             confidence = 0.82
@@ -334,6 +346,12 @@ class IncomeAgent:
             confidence = max(confidence, 0.72)
         if not financing_complete:
             confidence = min(confidence, 0.6)
+        if rent_confidence_override == "high" and rent_source_type in {"provided", "manual_input"}:
+            confidence += 0.04
+        elif rent_confidence_override == "low":
+            confidence -= 0.10
+        elif rent_confidence_override == "medium":
+            confidence += 0.0
         return round(max(0.1, min(confidence, 0.9)), 2)
 
     def _optional_value(

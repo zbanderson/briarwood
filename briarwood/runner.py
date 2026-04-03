@@ -13,7 +13,9 @@ from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_context import build_default_town_county_service
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
+from briarwood.modules.liquidity_signal import LiquiditySignalModule
 from briarwood.modules.local_intelligence import LocalIntelligenceModule
+from briarwood.modules.market_momentum_signal import MarketMomentumSignalModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.renovation_scenario import RenovationScenarioModule
 from briarwood.modules.teardown_scenario import TeardownScenarioModule
@@ -67,6 +69,16 @@ def build_engine(
         town_county_outlook_module=town_county_outlook_module,
         scarcity_support_module=scarcity_support_module,
     )
+    liquidity_signal_module = LiquiditySignalModule(
+        comparable_sales_module=comparable_sales_module,
+        rental_ease_module=rental_ease_module,
+        town_county_outlook_module=town_county_outlook_module,
+    )
+    market_momentum_signal_module = MarketMomentumSignalModule(
+        market_value_history_module=market_value_history_module,
+        town_county_outlook_module=town_county_outlook_module,
+        local_intelligence_module=local_intelligence_module,
+    )
 
     return AnalysisEngine(
         modules=[
@@ -77,6 +89,7 @@ def build_engine(
             CostValuationModule(settings=cost_settings),
             income_support_module,
             rental_ease_module,
+            liquidity_signal_module,
             BullBaseBearModule(
                 settings=bull_base_bear_settings,
                 current_value_module=current_value_module,
@@ -90,6 +103,7 @@ def build_engine(
             scarcity_support_module,
             location_intelligence_module,
             local_intelligence_module,
+            market_momentum_signal_module,
             renovation_scenario_module,
             teardown_scenario_module,
         ]

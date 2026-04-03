@@ -19,6 +19,7 @@ class IncomeAgentInput(BaseModel):
     back_house_monthly_rent: float | None = Field(default=None, ge=0)
     unit_rents: list[float] = Field(default_factory=list)
     rent_source_type: str = Field(default="missing", pattern="^(provided|estimated|manual_input|missing)$")
+    rent_confidence_override: str | None = Field(default=None, pattern="^(low|medium|high)$")
     vacancy_pct: float | None = Field(default=None, ge=0, le=1)
     maintenance_pct: float | None = Field(default=None, ge=0, le=1)
     market_price_to_rent_benchmark: float | None = Field(default=None, gt=0)

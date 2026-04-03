@@ -253,10 +253,10 @@ $comp_warnings
       <div class="metric-grid compact-metrics evidence-metrics">
         <div><span>Evidence Mode</span><strong>$evidence_mode</strong></div>
         <div><span>Report Confidence</span><strong>$evidence_overall_confidence</strong></div>
-        <div><span>Value</span><strong>$evidence_value_confidence</strong></div>
-        <div><span>Location</span><strong>$evidence_location_confidence</strong></div>
-        <div><span>Rental</span><strong>$evidence_rental_confidence</strong></div>
-        <div><span>Scenario</span><strong>$evidence_scenario_confidence</strong></div>
+        <div><span>Rent</span><strong>$evidence_rent_component_confidence</strong></div>
+        <div><span>CapEx</span><strong>$evidence_capex_component_confidence</strong></div>
+        <div><span>Market</span><strong>$evidence_market_component_confidence</strong></div>
+        <div><span>Liquidity</span><strong>$evidence_liquidity_component_confidence</strong></div>
       </div>
       <div class="durability-grid carry-detail-grid">
         <div>
@@ -272,13 +272,19 @@ $evidence_strongest
           </ul>
         </div>
         <div>
+          <div class="case-block-label">Confidence Drivers</div>
+          <ul class="case-list">
+$evidence_confidence_reasons
+          </ul>
+        </div>
+      </div>
+      <div class="durability-grid carry-detail-grid">
+        <div>
           <div class="case-block-label">Thinner Evidence</div>
           <ul class="case-list">
 $evidence_weaker
           </ul>
         </div>
-      </div>
-      <div class="durability-grid carry-detail-grid">
         <div>
           <div class="case-block-label">Major Missing Inputs</div>
           <ul class="case-list">

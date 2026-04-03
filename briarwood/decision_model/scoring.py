@@ -45,6 +45,8 @@ class CategoryScore:
     weight: float  # category weight in final score
     contribution: float  # score × weight
     sub_factors: list[SubFactorScore] = field(default_factory=list)
+    component_scores: dict[str, float] = field(default_factory=dict)
+    component_notes: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -89,6 +91,11 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
     cv = _get_metrics(report, "current_value")
     m["bcv"] = cv.get("briarwood_current_value")
     m["mispricing_pct"] = cv.get("mispricing_pct")
+    m["all_in_basis"] = cv.get("all_in_basis")
+    m["capex_basis_used"] = cv.get("capex_basis_used")
+    m["capex_basis_source"] = cv.get("capex_basis_source")
+    m["net_opportunity_delta_value"] = cv.get("net_opportunity_delta_value")
+    m["net_opportunity_delta_pct"] = cv.get("net_opportunity_delta_pct")
     m["pricing_view"] = cv.get("pricing_view")
     m["comparable_sales_value"] = cv.get("comparable_sales_value")
     m["income_supported_value"] = cv.get("income_supported_value")
@@ -144,9 +151,16 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
     re = _get_metrics(report, "rental_ease")
     m["rental_ease_score"] = re.get("rental_ease_score")
     m["rental_ease_label"] = re.get("rental_ease_label")
-    m["liquidity_score"] = re.get("liquidity_score")
+    m["rental_liquidity_score"] = re.get("liquidity_score")
     m["demand_depth_score"] = re.get("demand_depth_score")
     m["estimated_days_to_rent"] = re.get("estimated_days_to_rent")
+
+    # ── liquidity_signal ──
+    ls = _get_metrics(report, "liquidity_signal")
+    m["liquidity_score"] = ls.get("liquidity_score")
+    m["liquidity_label"] = ls.get("liquidity_label")
+    m["market_liquidity_score"] = ls.get("market_liquidity_score")
+    m["comp_depth_score"] = ls.get("comp_depth_score")
 
     # ── town_county_outlook ──
     tco = _get_metrics(report, "town_county_outlook")
@@ -171,6 +185,11 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
     m["development_activity_score"] = loc.get("development_activity_score")
     m["supply_pipeline_score"] = loc.get("supply_pipeline_score")
     m["regulatory_trend_score"] = loc.get("regulatory_trend_score")
+
+    # ── market_momentum_signal ──
+    mm = _get_metrics(report, "market_momentum_signal")
+    m["market_momentum_score"] = mm.get("market_momentum_score")
+    m["market_momentum_label"] = mm.get("market_momentum_label")
 
     # ── market_value_history ──
     mvh = _get_metrics(report, "market_value_history")
@@ -199,6 +218,9 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
         m["days_on_market"] = pi.days_on_market
         m["condition_profile"] = pi.condition_profile
         m["capex_lane"] = pi.capex_lane
+        m["condition_confirmed"] = pi.condition_confirmed
+        m["capex_confirmed"] = pi.capex_confirmed
+        m["repair_capex_budget"] = pi.repair_capex_budget
         m["has_back_house"] = pi.has_back_house
         m["adu_type"] = pi.adu_type
         m["has_basement"] = pi.has_basement
@@ -207,6 +229,10 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
         m["corner_lot"] = pi.corner_lot
         m["property_type"] = pi.property_type
         m["taxes"] = pi.taxes
+        m["rent_confidence_override"] = pi.rent_confidence_override
+        m["strategy_intent"] = pi.strategy_intent
+        m["hold_period_years"] = pi.hold_period_years
+        m["risk_tolerance"] = pi.risk_tolerance
     else:
         m["purchase_price"] = m.get("ask_price")
 
@@ -250,12 +276,31 @@ def _sf(name: str, score: float, evidence: str, data_source: str, raw: float | s
 
 
 def _score_price_vs_comps(m: dict) -> tuple[float, str, float | None]:
-    """Ask price vs BCV (comp-derived). Negative mispricing = below comps = good."""
+    """BCV versus all-in basis when available; fallback to ask versus BCV."""
+    net_delta_pct = m.get("net_opportunity_delta_pct")
+    net_delta_value = m.get("net_opportunity_delta_value")
+    capex_source = m.get("capex_basis_source")
+    if net_delta_pct is not None:
+        delta = net_delta_pct * 100
+        source_note = {
+            "user_budget": "using explicit capex budget",
+            "inferred_lane": "after inferred capex lane",
+            "inferred_condition": "with condition-implied zero capex",
+            "unknown": "before capex could be fully established",
+        }.get(str(capex_source), "using all-in basis")
+        if delta >= 10:
+            return 5.0, f"Net opportunity delta {delta:.1f}% (+${abs(net_delta_value or 0):,.0f}) {source_note}", delta
+        if delta >= 5:
+            return 4.0, f"Net opportunity delta {delta:.1f}% — modest upside {source_note}", delta
+        if delta >= -5:
+            return 3.0, f"Net opportunity delta {delta:+.1f}% — roughly in line {source_note}", delta
+        if delta >= -15:
+            return 2.0, f"Net opportunity delta {delta:+.1f}% — thin after capex", delta
+        return 1.0, f"Net opportunity delta {delta:+.1f}% — upside disappears after basis", delta
+
     pct = m.get("mispricing_pct")
     if pct is None:
         return NEUTRAL_SCORE, "No comp-based valuation available", None
-    # mispricing_pct in the codebase is (base_case - ask) / ask, so positive = underpriced
-    # We want: underpriced (positive pct) = high score
     delta = pct * 100  # convert to percentage points
     if delta >= 10:
         return 5.0, f"Priced {delta:.1f}% below model value — significant discount", delta
@@ -522,17 +567,6 @@ def _score_strategy_flexibility(m: dict) -> tuple[float, str, float | None]:
         options += 1
         notes.append("teardown viable")
 
-    # ADU/expansion?
-    if m.get("has_back_house") or m.get("has_basement") or (m.get("lot_size") or 0) >= 0.2:
-        options += 1
-        notes.append("expansion possible")
-
-    # Quick flip (low DOM, underpriced)?
-    misp = m.get("mispricing_pct") or 0
-    if misp > 0.05:
-        options += 1
-        notes.append("potential flip")
-
     detail = ", ".join(notes) if notes else "limited options"
     score = min(5.0, 1.0 + options)
     return score, f"{options} viable strategies: {detail}", options
@@ -576,6 +610,28 @@ def _score_zoning_optionality(m: dict) -> tuple[float, str, str | None]:
     return NEUTRAL_SCORE, f"Insufficient zoning data: {detail}", detail
 
 
+def _weighted_component_average(subs: list[SubFactorScore], names: set[str]) -> float | None:
+    matched = [sf for sf in subs if sf.name in names]
+    if not matched:
+        return None
+    total_weight = sum(sf.weight for sf in matched)
+    if total_weight <= 0:
+        return None
+    weighted_score = sum(sf.score * sf.weight for sf in matched) / total_weight
+    return round(weighted_score, 2)
+
+
+def _component_note(subs: list[SubFactorScore], names: set[str]) -> str:
+    matched = [sf for sf in subs if sf.name in names]
+    if not matched:
+        return "No sub-factors available."
+    strongest = max(matched, key=lambda sf: sf.score)
+    weakest = min(matched, key=lambda sf: sf.score)
+    if strongest.name == weakest.name:
+        return strongest.evidence
+    return f"Best support: {strongest.evidence} Main drag: {weakest.evidence}"
+
+
 def _calculate_optionality(m: dict) -> CategoryScore:
     w = SUB_FACTOR_WEIGHTS["optionality"]
     subs = []
@@ -589,7 +645,25 @@ def _calculate_optionality(m: dict) -> CategoryScore:
         subs.append(_sf(name, score, evidence, src, raw, w[name]))
     cat_score = _clamp(sum(s.contribution for s in subs))
     cw = CATEGORY_WEIGHTS["optionality"]
-    return CategoryScore("Optionality", round(cat_score, 2), cw, round(cat_score * cw, 4), subs)
+    physical_names = {"adu_expansion", "renovation_upside", "zoning_optionality"}
+    strategic_names = {"strategy_flexibility"}
+    component_scores = {
+        "physical_optionality": _weighted_component_average(subs, physical_names) or NEUTRAL_SCORE,
+        "strategic_optionality": _weighted_component_average(subs, strategic_names) or NEUTRAL_SCORE,
+    }
+    component_notes = {
+        "physical_optionality": _component_note(subs, physical_names),
+        "strategic_optionality": _component_note(subs, strategic_names),
+    }
+    return CategoryScore(
+        "Optionality",
+        round(cat_score, 2),
+        cw,
+        round(cat_score * cw, 4),
+        subs,
+        component_scores=component_scores,
+        component_notes=component_notes,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -678,6 +752,13 @@ def _score_buyer_seller_balance(m: dict) -> tuple[float, str, float | None]:
 
 def _score_location_momentum(m: dict) -> tuple[float, str, float | None]:
     """Town/county trend direction."""
+    market_momentum = m.get("market_momentum_score")
+    market_label = m.get("market_momentum_label")
+    if market_momentum is not None:
+        score = _lerp_score(float(market_momentum), 20, 85, 1.0, 5.0)
+        label = market_label or "momentum signal"
+        return score, f"{label} ({float(market_momentum):.0f}/100)", market_momentum
+
     town = m.get("town_county_score")
     dev = m.get("development_activity_score")
     yr1 = m.get("zhvi_1yr_change")
@@ -729,11 +810,10 @@ def _calculate_market_position(m: dict) -> CategoryScore:
 
 def _score_liquidity_risk(m: dict) -> tuple[float, str, float | None]:
     """How quickly could this property be resold?"""
-    ease = m.get("rental_ease_score")
     liq = m.get("liquidity_score")
     dom = m.get("days_on_market")
+    rental_liq = m.get("rental_liquidity_score")
 
-    # Use rental_ease liquidity sub-score if available, else DOM
     if liq is not None:
         if liq >= 75:
             return 5.0, f"High liquidity (score {liq:.0f}) — quick exit possible", liq
@@ -744,6 +824,13 @@ def _score_liquidity_risk(m: dict) -> tuple[float, str, float | None]:
         if liq >= 25:
             return 2.0, f"Low liquidity ({liq:.0f}) — exit may take time", liq
         return 1.0, f"Very low liquidity ({liq:.0f}) — illiquid market", liq
+
+    if rental_liq is not None:
+        if rental_liq >= 75:
+            return 4.5, f"Liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
+        if rental_liq >= 55:
+            return 3.5, f"Moderate liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
+        return 2.0, f"Thin liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
 
     if dom is not None:
         score = _lerp_score(dom, 90, 7, 1.5, 4.5)
@@ -757,6 +844,27 @@ def _score_capex_risk(m: dict) -> tuple[float, str, str | None]:
     condition = (m.get("condition_profile") or "").lower()
     capex = (m.get("capex_lane") or "").lower()
     year_built = m.get("year_built")
+    repair_capex_budget = m.get("repair_capex_budget")
+    sqft = m.get("sqft")
+    condition_confirmed = bool(m.get("condition_confirmed"))
+    capex_confirmed = bool(m.get("capex_confirmed"))
+
+    if repair_capex_budget is not None and repair_capex_budget >= 0:
+        budget_psf = (repair_capex_budget / sqft) if sqft else None
+        confirmation_tag = "user-confirmed" if capex_confirmed or condition_confirmed else "explicit"
+        if budget_psf is not None:
+            if budget_psf <= 15:
+                return 4.5, f"Low capex risk: {confirmation_tag} budget about ${budget_psf:.0f}/SF", f"${repair_capex_budget:,.0f}"
+            if budget_psf <= 40:
+                return 3.5, f"Manageable capex load: {confirmation_tag} budget about ${budget_psf:.0f}/SF", f"${repair_capex_budget:,.0f}"
+            if budget_psf <= 80:
+                return 2.0, f"Meaningful capex burden: {confirmation_tag} budget about ${budget_psf:.0f}/SF", f"${repair_capex_budget:,.0f}"
+            return 1.0, f"Heavy capex burden: {confirmation_tag} budget about ${budget_psf:.0f}/SF", f"${repair_capex_budget:,.0f}"
+        if repair_capex_budget <= 25000:
+            return 4.0, f"Low capex risk: {confirmation_tag} budget of ${repair_capex_budget:,.0f}", f"${repair_capex_budget:,.0f}"
+        if repair_capex_budget <= 75000:
+            return 3.0, f"Moderate capex risk: {confirmation_tag} budget of ${repair_capex_budget:,.0f}", f"${repair_capex_budget:,.0f}"
+        return 1.5, f"High capex risk: {confirmation_tag} budget of ${repair_capex_budget:,.0f}", f"${repair_capex_budget:,.0f}"
 
     risk_signals = 0
     notes = []
@@ -780,6 +888,10 @@ def _score_capex_risk(m: dict) -> tuple[float, str, str | None]:
     if year_built and year_built < 1970:
         risk_signals += 1
         notes.append(f"built {year_built}")
+    if condition_confirmed:
+        notes.append("condition confirmed by user")
+    if capex_confirmed:
+        notes.append("capex confirmed by user")
 
     detail = "; ".join(notes) if notes else "condition unknown"
     # Higher score = LOWER risk (inverted: 5 = safe, 1 = risky)
@@ -802,6 +914,7 @@ def _score_income_stability(m: dict) -> tuple[float, str, float | None]:
     ease_label = (m.get("rental_ease_label") or "").lower()
     burden = m.get("downside_burden")
     risk_view = (m.get("risk_view") or "").lower()
+    rent_confidence = (m.get("rent_confidence_override") or "").lower()
 
     score = NEUTRAL_SCORE
     notes = []
@@ -838,6 +951,13 @@ def _score_income_stability(m: dict) -> tuple[float, str, float | None]:
         score += 0.3
     elif "negative" in risk_view:
         score -= 0.5
+
+    if rent_confidence == "high":
+        score += 0.25
+        notes.append("user-confirmed high rent confidence")
+    elif rent_confidence == "low":
+        score -= 0.4
+        notes.append("user-marked low rent confidence")
 
     detail = "; ".join(notes) if notes else "limited income data"
     return _clamp(score), f"Income stability: {detail}", score
@@ -896,7 +1016,33 @@ def _calculate_risk_layer(m: dict) -> CategoryScore:
         subs.append(_sf(name, score, evidence, src, raw, w[name]))
     cat_score = _clamp(sum(s.contribution for s in subs))
     cw = CATEGORY_WEIGHTS["risk_layer"]
-    return CategoryScore("Risk Layer", round(cat_score, 2), cw, round(cat_score * cw, 4), subs)
+    liquidity_sub = next((sub for sub in subs if sub.name == "liquidity_risk"), None)
+    capex_sub = next((sub for sub in subs if sub.name == "capex_risk"), None)
+    macro_sub = next((sub for sub in subs if sub.name == "macro_regulatory"), None)
+    income_sub = next((sub for sub in subs if sub.name == "income_stability"), None)
+    component_scores = {}
+    component_notes = {}
+    if liquidity_sub is not None:
+        component_scores["exit_liquidity"] = round(liquidity_sub.score, 2)
+        component_notes["exit_liquidity"] = liquidity_sub.evidence
+    if capex_sub is not None:
+        component_scores["capex_execution"] = round(capex_sub.score, 2)
+        component_notes["capex_execution"] = capex_sub.evidence
+    if macro_sub is not None:
+        component_scores["macro_regulatory"] = round(macro_sub.score, 2)
+        component_notes["macro_regulatory"] = macro_sub.evidence
+    if income_sub is not None:
+        component_scores["income_stability"] = round(income_sub.score, 2)
+        component_notes["income_stability"] = income_sub.evidence
+    return CategoryScore(
+        "Risk Layer",
+        round(cat_score, 2),
+        cw,
+        round(cat_score * cw, 4),
+        subs,
+        component_scores=component_scores,
+        component_notes=component_notes,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

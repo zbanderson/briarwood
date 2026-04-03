@@ -111,6 +111,7 @@ class UserAssumptions:
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
     unit_rents: list[float] = field(default_factory=list)
+    rent_confidence_override: str | None = None
     insurance: float | None = None
     down_payment_percent: float | None = None
     interest_rate: float | None = None
@@ -118,8 +119,13 @@ class UserAssumptions:
     vacancy_rate: float | None = None
     monthly_maintenance_reserve_override: float | None = None
     condition_profile_override: str | None = None
+    condition_confirmed: bool | None = None
     capex_lane_override: str | None = None
+    capex_confirmed: bool | None = None
     repair_capex_budget: float | None = None
+    strategy_intent: str | None = None
+    hold_period_years: int | None = None
+    risk_tolerance: str | None = None
     manual_comp_inputs: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -181,6 +187,7 @@ class PropertyInput:
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
     unit_rents: list[float] = field(default_factory=list)
+    rent_confidence_override: str | None = None
     down_payment_percent: float | None = None
     interest_rate: float | None = None
     loan_term_years: int | None = None
@@ -191,7 +198,12 @@ class PropertyInput:
     price_history: list[dict[str, Any]] = field(default_factory=list)
     vacancy_rate: float | None = None
     monthly_maintenance_reserve_override: float | None = None
+    condition_confirmed: bool | None = None
+    capex_confirmed: bool | None = None
     repair_capex_budget: float | None = None
+    strategy_intent: str | None = None
+    hold_period_years: int | None = None
+    risk_tolerance: str | None = None
     manual_comp_inputs: list[dict[str, Any]] = field(default_factory=list)
     town_population_trend: float | None = None
     town_price_trend: float | None = None
@@ -255,6 +267,7 @@ class PropertyInput:
             back_house_monthly_rent=assumptions.back_house_monthly_rent,
             seasonal_monthly_rent=assumptions.seasonal_monthly_rent,
             unit_rents=list(assumptions.unit_rents),
+            rent_confidence_override=assumptions.rent_confidence_override,
             down_payment_percent=assumptions.down_payment_percent,
             interest_rate=assumptions.interest_rate,
             loan_term_years=assumptions.loan_term_years,
@@ -265,7 +278,12 @@ class PropertyInput:
             price_history=facts.price_history,
             vacancy_rate=assumptions.vacancy_rate,
             monthly_maintenance_reserve_override=assumptions.monthly_maintenance_reserve_override,
+            condition_confirmed=assumptions.condition_confirmed,
+            capex_confirmed=assumptions.capex_confirmed,
             repair_capex_budget=assumptions.repair_capex_budget,
+            strategy_intent=assumptions.strategy_intent,
+            hold_period_years=assumptions.hold_period_years,
+            risk_tolerance=assumptions.risk_tolerance,
             manual_comp_inputs=assumptions.manual_comp_inputs,
             town_population_trend=market.town_population_trend,
             town_price_trend=market.town_price_trend,
@@ -437,6 +455,42 @@ class LocalIntelligenceProject:
     location: str | None = None
     notes: str | None = None
     confidence: float = 0.0
+
+
+@dataclass(slots=True)
+class LiquiditySignalOutput:
+    liquidity_score: float
+    liquidity_label: str
+    confidence: float
+    summary: str
+    days_on_market: int | None = None
+    dom_score: float | None = None
+    market_liquidity_view: str | None = None
+    market_liquidity_score: float | None = None
+    rental_liquidity_score: float | None = None
+    comp_depth_score: float | None = None
+    comp_count: int = 0
+    assumptions: list[str] = field(default_factory=list)
+    supporting_evidence: list[str] = field(default_factory=list)
+    unsupported_claims: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class MarketMomentumOutput:
+    market_momentum_score: float
+    market_momentum_label: str
+    confidence: float
+    summary: str
+    history_trend_score: float | None = None
+    town_market_score: float | None = None
+    local_activity_score: float | None = None
+    scenario_drift_score: float | None = None
+    one_year_change_pct: float | None = None
+    three_year_change_pct: float | None = None
+    base_market_drift_pct: float | None = None
+    drivers: list[str] = field(default_factory=list)
+    assumptions: list[str] = field(default_factory=list)
+    unsupported_claims: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

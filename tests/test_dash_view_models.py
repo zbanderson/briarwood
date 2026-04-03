@@ -32,6 +32,18 @@ class DashViewModelTests(unittest.TestCase):
         self.assertTrue(view.comps.screening_summary)
         self.assertIn(view.evidence_mode, {"Listing Assisted", "Public Record", "Mls Connected"})
         self.assertGreaterEqual(len(view.comps.active_listing_rows), 1)
+        self.assertIsNotNone(view.net_opportunity_delta_value)
+        self.assertIsNotNone(view.all_in_basis)
+        optionality = view.category_scores.get("optionality") if view.category_scores else None
+        self.assertIsNotNone(optionality)
+        self.assertIn("physical_optionality", optionality.component_scores)
+        self.assertIn("strategic_optionality", optionality.component_scores)
+        self.assertEqual(
+            [item.key for item in view.evidence.confidence_components],
+            ["rent", "capex", "market", "liquidity"],
+        )
+        self.assertEqual(len(view.evidence.metric_statuses), 8)
+        self.assertGreater(view.overall_confidence, 0)
 
     def test_compare_summary_explains_differences(self) -> None:
         views = [build_property_analysis_view(report) for report in self.reports.values()]
@@ -57,6 +69,8 @@ class DashViewModelTests(unittest.TestCase):
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
         self.assertIn("Current Competition", _flatten_text(body))
+        self.assertIn("Confidence Drivers", _flatten_text(body))
+        self.assertIn("Metric Basis & Gaps", _flatten_text(body))
 
     def test_compare_decision_mode_renders_heatmap_view(self) -> None:
         reports = list(self.reports.values())

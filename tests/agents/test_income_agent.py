@@ -168,6 +168,28 @@ class IncomeAgentTests(unittest.TestCase):
 
         self.assertEqual(result.price_to_rent_classification, "Fair")
 
+    def test_high_user_confirmed_rent_confidence_boosts_income_confidence(self) -> None:
+        baseline = IncomeAgent().run(sample_payload())
+
+        payload = sample_payload()
+        payload["rent_confidence_override"] = "high"
+
+        result = IncomeAgent().run(payload)
+
+        self.assertGreater(result.confidence, baseline.confidence)
+        self.assertTrue(any("high confidence" in item.lower() for item in result.assumptions))
+
+    def test_low_user_marked_rent_confidence_reduces_income_confidence(self) -> None:
+        baseline = IncomeAgent().run(sample_payload())
+
+        payload = sample_payload()
+        payload["rent_confidence_override"] = "low"
+
+        result = IncomeAgent().run(payload)
+
+        self.assertLess(result.confidence, baseline.confidence)
+        self.assertTrue(any("low confidence" in item.lower() for item in result.warnings))
+
     def test_strong_negative_cash_flow_reads_as_weak_support(self) -> None:
         payload = sample_payload()
         payload["estimated_monthly_rent"] = 2400.0

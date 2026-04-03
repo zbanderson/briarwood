@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from briarwood.opportunity_metrics import infer_capex_amount
 from briarwood.schemas import (
     AnalysisReport,
     LocalIntelligenceOutput,
@@ -190,16 +191,8 @@ def _relative_pct(left: float | None, right: float | None) -> float | None:
 
 
 def _capex_amount(property_input) -> float | None:
-    if property_input.repair_capex_budget is not None:
-        return float(property_input.repair_capex_budget)
-    lane = (property_input.capex_lane or "").strip().lower()
-    if lane == "light":
-        return 25000.0
-    if lane == "moderate":
-        return 75000.0
-    if lane == "heavy":
-        return 150000.0
-    return 0.0 if property_input.condition_profile in {"renovated", "updated"} else None
+    capex, _ = infer_capex_amount(property_input)
+    return capex
 
 
 def _value_creation_uplift(property_input, capex: float | None) -> float:

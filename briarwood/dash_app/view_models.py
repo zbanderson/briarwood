@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore
+from briarwood.evidence import compute_confidence_breakdown, compute_metric_input_statuses
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
     get_current_value,
@@ -68,18 +69,83 @@ def _module_confidence(report: AnalysisReport, module_name: str) -> float | None
     return None if module is None else float(module.confidence)
 
 
-def _overall_confidence(report: AnalysisReport) -> float:
-    key_modules = [
-        "current_value",
-        "bull_base_bear",
-        "town_county_outlook",
-        "rental_ease",
-    ]
-    confidences = [_module_confidence(report, name) for name in key_modules]
-    present = [value for value in confidences if value is not None]
-    if not present:
-        return 0.0
-    return round(sum(present) / len(present), 2)
+def _liquidity_metrics(report: AnalysisReport) -> tuple[dict[str, Any], list[str], list[str]]:
+    module = report.module_results.get("liquidity_signal")
+    if module is not None:
+        payload = module.payload
+        supporting = list(getattr(payload, "supporting_evidence", [])) if payload is not None else []
+        unsupported = list(getattr(payload, "unsupported_claims", [])) if payload is not None else []
+        return module.metrics, supporting, unsupported
+
+    property_input = report.property_input
+    rental_ease = report.module_results.get("rental_ease")
+    town = report.module_results.get("town_county_outlook")
+    comparable_sales = report.module_results.get("comparable_sales")
+    dom = property_input.days_on_market if property_input else None
+    rental_score = None if rental_ease is None else rental_ease.metrics.get("liquidity_score")
+    market_view = None if town is None else town.metrics.get("liquidity_view")
+    score = rental_score or (82.0 if dom is not None and dom <= 21 else 62.0 if dom is not None and dom <= 45 else 42.0 if dom is not None else 50.0)
+    label = (
+        "Strong Exit Liquidity" if float(score) >= 78 else
+        "Normal Exit Liquidity" if float(score) >= 62 else
+        "Mixed Exit Liquidity" if float(score) >= 45 else
+        "Thin Exit Liquidity"
+    )
+    supporting = []
+    if dom is not None:
+        supporting.append(f"{dom} DOM is being used as the primary legacy liquidity proxy.")
+    if market_view:
+        supporting.append(f"Town/county liquidity backdrop reads {str(market_view).replace('_', ' ')}.")
+    unsupported = ["Canonical liquidity was backfilled from older report outputs because this report predates the dedicated liquidity module."]
+    return {
+        "liquidity_score": score,
+        "liquidity_label": label,
+        "market_liquidity_view": market_view,
+    }, supporting, unsupported
+
+
+def _market_momentum_metrics(report: AnalysisReport) -> tuple[dict[str, Any], list[str], list[str]]:
+    module = report.module_results.get("market_momentum_signal")
+    if module is not None:
+        payload = module.payload
+        drivers = list(getattr(payload, "drivers", [])) if payload is not None else []
+        unsupported = list(getattr(payload, "unsupported_claims", [])) if payload is not None else []
+        return module.metrics, drivers, unsupported
+
+    history = report.module_results.get("market_value_history")
+    town = report.module_results.get("town_county_outlook")
+    local = report.module_results.get("local_intelligence")
+    one_year = None if history is None else history.metrics.get("one_year_change_pct")
+    town_score = None if town is None else town.metrics.get("town_county_score")
+    dev = None if local is None else local.metrics.get("development_activity_score")
+    base = 50.0
+    if isinstance(town_score, (int, float)):
+        base = 0.6 * float(town_score) + 0.4 * base
+    if isinstance(one_year, (int, float)):
+        base += max(-12.0, min(float(one_year) * 250.0, 12.0))
+    if isinstance(dev, (int, float)) and dev >= 65:
+        base += 5.0
+    score = round(max(0.0, min(base, 100.0)), 1)
+    label = (
+        "Supportive Momentum" if score >= 72 else
+        "Constructive Momentum" if score >= 58 else
+        "Mixed Momentum" if score >= 45 else
+        "Weak Momentum"
+    )
+    drivers = []
+    if isinstance(one_year, (int, float)):
+        drivers.append(
+            "positive recent price trend" if float(one_year) >= 0.03 else
+            "negative recent price trend" if float(one_year) <= -0.02 else
+            "flat recent price trend"
+        )
+    if isinstance(dev, (int, float)) and dev >= 65:
+        drivers.append("active redevelopment pipeline")
+    unsupported = ["Canonical market momentum was backfilled from older report outputs because this report predates the dedicated momentum module."]
+    return {
+        "market_momentum_score": score,
+        "market_momentum_label": label,
+    }, drivers, unsupported
 
 
 def _coverage_status_label(status: InputCoverageStatus) -> str:
@@ -101,6 +167,37 @@ class SectionConfidenceItem:
 
 
 @dataclass(slots=True)
+class ConfidenceComponentItem:
+    key: str
+    label: str
+    confidence: float
+    weight: float
+    reason: str
+
+
+@dataclass(slots=True)
+class AssumptionTransparencyItem:
+    label: str
+    value: str
+    source_kind: str
+    source_label: str
+    note: str = ""
+
+
+@dataclass(slots=True)
+class MetricInputStatusItem:
+    key: str
+    label: str
+    status: str
+    facts_used: list[str] = field(default_factory=list)
+    user_inputs_used: list[str] = field(default_factory=list)
+    assumptions_used: list[str] = field(default_factory=list)
+    missing_inputs: list[str] = field(default_factory=list)
+    confidence_impact: str = ""
+    prompt_fields: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class EvidenceViewModel:
     evidence_mode: str
     sourced_inputs: list[str] = field(default_factory=list)
@@ -108,6 +205,11 @@ class EvidenceViewModel:
     estimated_inputs: list[str] = field(default_factory=list)
     missing_inputs: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
+    confidence_components: list[ConfidenceComponentItem] = field(default_factory=list)
+    confidence_notes: list[str] = field(default_factory=list)
+    transparency_items: list[AssumptionTransparencyItem] = field(default_factory=list)
+    metric_statuses: list[MetricInputStatusItem] = field(default_factory=list)
+    gap_prompt_fields: list[str] = field(default_factory=list)
     section_confidences: list[SectionConfidenceItem] = field(default_factory=list)
 
 
@@ -128,6 +230,10 @@ class RiskLocationViewModel:
     town_score: float
     town_label: str
     scarcity_score: float
+    liquidity_score: float
+    liquidity_label: str
+    market_momentum_score: float
+    market_momentum_label: str
     flood_risk: str
     liquidity_view: str
     drivers: list[str] = field(default_factory=list)
@@ -244,6 +350,11 @@ class PropertyAnalysisView:
     stress_case: float | None
     mispricing_amount: float | None
     mispricing_pct: float | None
+    all_in_basis: float | None
+    capex_basis_used: float | None
+    capex_basis_source: str
+    net_opportunity_delta_value: float | None
+    net_opportunity_delta_pct: float | None
     pricing_view: str
     memo_verdict: str
     biggest_risk: str
@@ -445,11 +556,15 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     town_county = get_town_county_outlook(report)
     scarcity = get_scarcity_support(report)
     risk = report.get_module("risk_constraints")
+    liquidity_metrics, liquidity_supporting, liquidity_unsupported = _liquidity_metrics(report)
+    market_momentum_metrics, market_momentum_drivers, market_momentum_unsupported = _market_momentum_metrics(report)
     forward_module = report.get_module("bull_base_bear")
     conclusion = build_conclusion_section(report)
     thesis = build_thesis_section(report)
     sourced, user_supplied, estimated, missing = _coverage_lists(property_input)
-    overall_confidence = _overall_confidence(report)
+    confidence_breakdown = compute_confidence_breakdown(report)
+    metric_statuses = compute_metric_input_statuses(report)
+    overall_confidence = confidence_breakdown.overall_confidence
 
     positives = list(town_county.score.demand_drivers[:2]) + list(scarcity.demand_drivers[:1])
     risks = list(rental_ease.risks[:2]) + list(town_county.score.demand_risks[:2])
@@ -466,6 +581,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "ask_price": ask_price_val,
         "bcv": current_value.briarwood_current_value,
         "bcv_delta": current_value.mispricing_amount,
+        "all_in_basis": current_value.all_in_basis,
+        "net_opportunity_delta_value": current_value.net_opportunity_delta_value,
+        "net_opportunity_delta_pct": current_value.net_opportunity_delta_pct,
         "bcv_range": f"{current_value.value_low:,.0f}-{current_value.value_high:,.0f}",
         "forward_base_case": scenario.base_case_value,
         "lot_size": property_input.lot_size if property_input else None,
@@ -476,6 +594,10 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "price_to_rent": income.price_to_rent,
         "forward_gap_pct": forward_gap_pct,
         "risk_score": risk.score,
+        "liquidity_score": liquidity_metrics.get("liquidity_score"),
+        "liquidity_label": liquidity_metrics.get("liquidity_label"),
+        "market_momentum_score": market_momentum_metrics.get("market_momentum_score"),
+        "market_momentum_label": market_momentum_metrics.get("market_momentum_label"),
         "town_county_score": town_county.score.town_county_score,
         "scarcity_score": scarcity.scarcity_support_score,
         "confidence": overall_confidence,
@@ -500,6 +622,11 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         stress_case=_scenario_stress_value(scenario),
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
+        all_in_basis=current_value.all_in_basis,
+        capex_basis_used=current_value.capex_basis_used,
+        capex_basis_source=(current_value.capex_basis_source or "unknown"),
+        net_opportunity_delta_value=current_value.net_opportunity_delta_value,
+        net_opportunity_delta_pct=current_value.net_opportunity_delta_pct,
         pricing_view=current_value.pricing_view,
         memo_verdict=conclusion.verdict,
         biggest_risk=conclusion.top_risk,
@@ -585,10 +712,14 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             town_score=float(town_county.score.town_county_score),
             town_label=town_county.score.location_thesis_label,
             scarcity_score=float(scarcity.scarcity_support_score),
+            liquidity_score=float(liquidity_metrics.get("liquidity_score") or 0.0),
+            liquidity_label=str(liquidity_metrics.get("liquidity_label") or "Unknown"),
+            market_momentum_score=float(market_momentum_metrics.get("market_momentum_score") or 0.0),
+            market_momentum_label=str(market_momentum_metrics.get("market_momentum_label") or "Unknown"),
             flood_risk=property_input.flood_risk if property_input and property_input.flood_risk else "Unavailable",
             liquidity_view=town_county.score.liquidity_view,
-            drivers=list(town_county.score.demand_drivers[:3]) + list(scarcity.demand_drivers[:2]),
-            risks=list(town_county.score.demand_risks[:3]) + list(scarcity.scarcity_notes[:2]),
+            drivers=list(market_momentum_drivers[:2]) + list(liquidity_supporting[:1]) + list(town_county.score.demand_drivers[:1]) + list(scarcity.demand_drivers[:1]),
+            risks=list(market_momentum_unsupported[:1]) + list(liquidity_unsupported[:1]) + list(town_county.score.demand_risks[:2]) + list(scarcity.scarcity_notes[:1]),
             warnings=list(risk.metrics.get("warnings", [])) if isinstance(risk.metrics.get("warnings"), list) else [],
             unsupported_claims=list(town_county.score.unsupported_claims) + list(scarcity.unsupported_claims),
         ),
@@ -599,9 +730,48 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             estimated_inputs=estimated,
             missing_inputs=missing,
             unsupported_claims=_collect_unsupported_claims(report),
+            confidence_components=[
+                ConfidenceComponentItem(
+                    key=item.key,
+                    label=item.label,
+                    confidence=item.confidence,
+                    weight=item.weight,
+                    reason=item.reason,
+                )
+                for item in confidence_breakdown.components
+            ],
+            confidence_notes=list(confidence_breakdown.notes),
+            transparency_items=[],
+            metric_statuses=[
+                MetricInputStatusItem(
+                    key=item.key,
+                    label=item.label,
+                    status=item.status,
+                    facts_used=list(item.facts_used),
+                    user_inputs_used=list(item.user_inputs_used),
+                    assumptions_used=list(item.assumptions_used),
+                    missing_inputs=list(item.missing_inputs),
+                    confidence_impact=item.confidence_impact,
+                    prompt_fields=list(item.prompt_fields),
+                )
+                for item in metric_statuses
+            ],
+            gap_prompt_fields=sorted(
+                {
+                    field
+                    for item in metric_statuses
+                    if item.status != "fact_based"
+                    for field in item.prompt_fields
+                }
+            ),
             section_confidences=_section_confidences(report),
         ),
         compare_metrics=compare_metrics,
+    )
+    view.evidence.transparency_items = _assumption_transparency_items(
+        property_input,
+        income=income,
+        confidence_components=view.evidence.confidence_components,
     )
 
     # Scoring layer — gracefully degrade if scoring fails
@@ -656,3 +826,127 @@ def _flatten_section_evidence(module_name: str, confidence: float, evidence: Sec
         "Missing": ", ".join(evidence.major_missing_inputs[:3]) or "None",
         "Notes": "; ".join(evidence.notes[:2]) or "",
     }
+
+
+def _assumption_transparency_items(
+    property_input: PropertyInput | None,
+    *,
+    income: object,
+    confidence_components: list[ConfidenceComponentItem],
+) -> list[AssumptionTransparencyItem]:
+    if property_input is None:
+        return []
+    assumptions = property_input.user_assumptions
+    coverage = property_input.coverage_for
+    component_map = {item.key: item for item in confidence_components}
+    items: list[AssumptionTransparencyItem] = []
+
+    rent_source = coverage("rent_estimate").status
+    rent_value = None
+    if assumptions and assumptions.unit_rents:
+        rent_value = f"{_fmt_currency(sum(assumptions.unit_rents))}/mo across {len(assumptions.unit_rents)} units"
+    elif assumptions and assumptions.estimated_monthly_rent is not None:
+        rent_value = f"{_fmt_currency(assumptions.estimated_monthly_rent)}/mo"
+    elif _income_attr(income, "monthly_rent_estimate") is not None:
+        rent_value = f"{_fmt_currency(_income_attr(income, 'monthly_rent_estimate'))}/mo"
+    if rent_value:
+        source_kind = "confirmed" if rent_source is InputCoverageStatus.USER_SUPPLIED else "inferred"
+        source_label = "User Confirmed" if source_kind == "confirmed" else "Model Inferred"
+        note = component_map.get("rent").reason if component_map.get("rent") else ""
+        if assumptions and assumptions.rent_confidence_override:
+            note = f"{note} Rent confidence override: {assumptions.rent_confidence_override.title()}."
+        items.append(
+            AssumptionTransparencyItem(
+                label="Rent",
+                value=rent_value,
+                source_kind=source_kind,
+                source_label=source_label,
+                note=note,
+            )
+        )
+
+    capex_value = None
+    if property_input.repair_capex_budget is not None:
+        capex_value = _fmt_currency(property_input.repair_capex_budget)
+    elif property_input.capex_lane:
+        capex_value = property_input.capex_lane.replace("_", " ").title()
+    if capex_value:
+        capex_override = bool(
+            (assumptions and assumptions.capex_lane_override)
+            or property_input.capex_confirmed
+            or property_input.repair_capex_budget is not None
+        )
+        source_kind = "confirmed" if capex_override else "inferred"
+        source_label = "User Confirmed" if source_kind == "confirmed" else "Model Inferred"
+        note = component_map.get("capex").reason if component_map.get("capex") else ""
+        items.append(
+            AssumptionTransparencyItem(
+                label="CapEx",
+                value=capex_value,
+                source_kind=source_kind,
+                source_label=source_label,
+                note=note,
+            )
+        )
+
+    if property_input.condition_profile:
+        condition_override = bool((assumptions and assumptions.condition_profile_override) or property_input.condition_confirmed)
+        source_kind = "confirmed" if condition_override else "inferred"
+        source_label = "User Confirmed" if source_kind == "confirmed" else "Model Inferred"
+        items.append(
+            AssumptionTransparencyItem(
+                label="Condition",
+                value=property_input.condition_profile.replace("_", " ").title(),
+                source_kind=source_kind,
+                source_label=source_label,
+                note="Current condition informs CapEx burden and execution confidence.",
+            )
+        )
+
+    financing_parts: list[str] = []
+    if property_input.down_payment_percent is not None:
+        financing_parts.append(f"{property_input.down_payment_percent * 100:.0f}% down")
+    if property_input.interest_rate is not None:
+        financing_parts.append(f"{property_input.interest_rate * 100:.2f}% rate")
+    if property_input.loan_term_years is not None:
+        financing_parts.append(f"{property_input.loan_term_years}y term")
+    if financing_parts:
+        items.append(
+            AssumptionTransparencyItem(
+                label="Financing",
+                value=" / ".join(financing_parts),
+                source_kind="confirmed",
+                source_label="User Confirmed",
+                note="These inputs feed monthly carry, cash flow, and downside support.",
+            )
+        )
+    else:
+        items.append(
+            AssumptionTransparencyItem(
+                label="Financing",
+                value="Incomplete",
+                source_kind="inferred",
+                source_label="Model Inferred",
+                note="Monthly carry confidence stays lower until down payment, rate, and term are supplied.",
+            )
+        )
+
+    preference_parts: list[str] = []
+    if property_input.strategy_intent:
+        preference_parts.append(property_input.strategy_intent.replace("_", " ").title())
+    if property_input.hold_period_years is not None:
+        preference_parts.append(f"{property_input.hold_period_years}y hold")
+    if property_input.risk_tolerance:
+        preference_parts.append(f"{property_input.risk_tolerance.title()} risk")
+    if preference_parts:
+        items.append(
+            AssumptionTransparencyItem(
+                label="Strategy",
+                value=" / ".join(preference_parts),
+                source_kind="preference",
+                source_label="User Preference",
+                note="Preference inputs shape interpretation and fit, but do not raise factual confidence on their own.",
+            )
+        )
+
+    return items

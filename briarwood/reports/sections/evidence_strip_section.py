@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from briarwood.evidence import infer_overall_report_confidence
+from briarwood.evidence import compute_confidence_breakdown
 from briarwood.field_audit import audit_property_fields
 from briarwood.reports.section_helpers import (
     get_current_value,
@@ -52,6 +52,8 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
     estimated_inputs: list[str] = []
     evidence_mode_text = "Unknown"
     overall_report_confidence_text = "n/a"
+    confidence_breakdown = compute_confidence_breakdown(report)
+    component_map = {component.key: component for component in confidence_breakdown.components}
     if property_input and property_input.source_metadata:
         evidence_mode_text = property_input.source_metadata.evidence_mode.value.replace("_", " ").title()
         coverage = property_input.source_metadata.source_coverage
@@ -70,7 +72,7 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
             for key, item in coverage.items()
             if item.status == InputCoverageStatus.ESTIMATED
         ]
-        overall_report_confidence_text = f"{infer_overall_report_confidence(property_input, [module.confidence for module in report.module_results.values()]):.0%}"
+        overall_report_confidence_text = f"{confidence_breakdown.overall_confidence:.0%}"
     modeled_fields, non_modeled_fields = audit_property_fields(property_input) if property_input else ([], [])
     if report.get_module("market_value_history").confidence > 0:
         coverage_highlights.append("Market history: sourced")
@@ -87,6 +89,10 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
         title="Confidence / Evidence",
         evidence_mode_text=evidence_mode_text,
         overall_report_confidence_text=overall_report_confidence_text,
+        rent_component_confidence_text=f"{component_map['rent'].confidence:.0%}",
+        capex_component_confidence_text=f"{component_map['capex'].confidence:.0%}",
+        market_component_confidence_text=f"{component_map['market'].confidence:.0%}",
+        liquidity_component_confidence_text=f"{component_map['liquidity'].confidence:.0%}",
         value_confidence_text=f"{current_value_module.confidence:.0%}",
         location_confidence_text=f"{town_score.confidence:.0%}",
         rental_confidence_text=f"{min(income.confidence, rental_ease.confidence):.0%}",
@@ -95,6 +101,7 @@ def build_evidence_strip_section(report: AnalysisReport) -> EvidenceStripSection
             if scenario_module.confidence > 0
             else "Heuristic"
         ),
+        confidence_reason_lines=[component.reason for component in confidence_breakdown.components],
         source_coverage_highlights=_dedupe(coverage_highlights)[:6],
         major_missing_inputs=_dedupe(major_missing_inputs)[:5],
         estimated_inputs=_dedupe(estimated_inputs)[:5],

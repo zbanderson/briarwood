@@ -21,6 +21,7 @@ MODELED_FIELDS = {
     "monthly_hoa",
     "estimated_monthly_rent",
     "unit_rents",
+    "rent_confidence_override",
     "back_house_monthly_rent",
     "down_payment_percent",
     "interest_rate",
@@ -30,6 +31,8 @@ MODELED_FIELDS = {
     "listing_description",
     "price_history",
     "vacancy_rate",
+    "condition_confirmed",
+    "capex_confirmed",
     "repair_capex_budget",
     "manual_comp_inputs",
     "town_population_trend",
@@ -64,6 +67,9 @@ DESCRIPTIVE_FIELDS = {
     "driveway_off_street",
     "seasonal_monthly_rent",
     "monthly_maintenance_reserve_override",
+    "strategy_intent",
+    "hold_period_years",
+    "risk_tolerance",
 }
 
 

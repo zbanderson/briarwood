@@ -62,6 +62,47 @@ class EvidenceModeTests(unittest.TestCase):
         self.assertEqual(property_input.coverage_for("listing_history").status, InputCoverageStatus.SOURCED)
         self.assertEqual(property_input.coverage_for("insurance_estimate").status, InputCoverageStatus.MISSING)
 
+    def test_manual_overrides_flow_through_canonical_property_input(self) -> None:
+        canonical = PublicRecordAdapter().build(
+            {
+                "property_id": "pr-3",
+                "address": "1 Main St",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2.0,
+                "sqft": 1200,
+                "purchase_price": 650000,
+            }
+        )
+        updated = ManualInputAdapter().apply(
+            canonical,
+            overrides={
+                "condition_profile_override": "updated",
+                "condition_confirmed": True,
+                "capex_lane_override": "light",
+                "capex_confirmed": True,
+                "repair_capex_budget": 18000,
+                "rent_confidence_override": "high",
+                "strategy_intent": "rental_hold",
+                "hold_period_years": 7,
+                "risk_tolerance": "medium",
+            },
+        )
+
+        property_input = PropertyInput.from_canonical(updated)
+
+        self.assertEqual(property_input.condition_profile, "updated")
+        self.assertTrue(property_input.condition_confirmed)
+        self.assertEqual(property_input.capex_lane, "light")
+        self.assertTrue(property_input.capex_confirmed)
+        self.assertEqual(property_input.repair_capex_budget, 18000)
+        self.assertEqual(property_input.rent_confidence_override, "high")
+        self.assertEqual(property_input.strategy_intent, "rental_hold")
+        self.assertEqual(property_input.hold_period_years, 7)
+        self.assertEqual(property_input.risk_tolerance, "medium")
+        self.assertEqual(updated.source_metadata.source_coverage["capex_budget"].status, InputCoverageStatus.USER_SUPPLIED)
+
 
 if __name__ == "__main__":
     unittest.main()

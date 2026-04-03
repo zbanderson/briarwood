@@ -24,16 +24,8 @@ except ImportError:  # pragma: no cover - lightweight fallback for local v1 usag
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.components import (
-    RESPONSIVE_GRID_2,
-    RESPONSIVE_GRID_3,
-    RESPONSIVE_GRID_4,
-    confidence_badge,
-    compact_badge,
     render_compare_decision_mode,
-    render_compare_section,
-    render_single_section,
     render_tear_sheet_body,
-    summary_strip,
 )
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
@@ -47,13 +39,13 @@ from briarwood.dash_app.data import (
 from briarwood.dash_app.theme import (
     ACCENT_BLUE, ACCENT_GREEN, BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BORDER, BORDER_SUBTLE, BTN_GHOST, BTN_PRIMARY, BTN_SECONDARY,
-    CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO, GRID_2, GRID_3, GRID_4,
+    CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO,
     INPUT_STYLE, LABEL_STYLE, PAGE_STYLE, SECTION_HEADER_STYLE,
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
-    TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE, PROPERTY_HEADER_HEIGHT,
+    TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE,
     tone_badge_style, score_color,
 )
 from briarwood.dash_app.view_models import build_property_analysis_view
@@ -946,15 +938,6 @@ def select_property(property_id: str | None):
 
 
 @app.callback(
-    Output("loaded-preset-ids", "data", allow_duplicate=True),
-    Input("compare-selector-dropdown", "value"),
-    prevent_initial_call=True,
-)
-def select_compare_properties(property_ids: list[str] | None):
-    return no_update
-
-
-@app.callback(
     Output("compare-confirmed-ids", "data"),
     Output("compare-go-token", "data"),
     Output("compare-selection-status", "children"),
@@ -1014,35 +997,19 @@ def compare_selected_saved_properties(
     Input("property-selector-dropdown", "value"),
 )
 def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None):
-    loaded_ids = loaded_ids or []
-
     if tab == "tear_sheet":
-        if not loaded_ids:
+        report = _focused_report(loaded_ids, focus_id)
+        if report is None:
             return _empty_state("Add or select a property to begin.")
-        reports = load_reports(loaded_ids)
-        if not reports:
-            return _empty_state("Property unavailable.")
-        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
-        report = reports[focus_id]
         view = build_property_analysis_view(report)
-        return html.Div(
-            render_tear_sheet_body(view, report),
-            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "0 20px 24px"},
-        )
+        return _centered_main_panel(render_tear_sheet_body(view, report), padding="0 20px 24px", max_width="1140px")
 
     if tab == "scenarios":
-        if not loaded_ids:
+        report = _focused_report(loaded_ids, focus_id)
+        if report is None:
             return _empty_state("Select a property to view investment scenarios.")
-        reports = load_reports(loaded_ids)
-        if not reports:
-            return _empty_state("Property unavailable.")
-        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
-        report = reports[focus_id]
         from briarwood.dash_app.scenarios import render_scenarios_section
-        return html.Div(
-            html.Div(render_scenarios_section(report), style={"width": "100%", "maxWidth": "1180px"}),
-            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "16px 20px 24px"},
-        )
+        return _centered_main_panel(render_scenarios_section(report))
 
     if tab == "compare":
         return html.Div(
@@ -1056,18 +1023,11 @@ def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None
         )
 
     if tab == "data_quality":
-        if not loaded_ids:
+        report = _focused_report(loaded_ids, focus_id)
+        if report is None:
             return _empty_state("Select a property to view diagnostics.")
-        reports = load_reports(loaded_ids)
-        if not reports:
-            return _empty_state("Property unavailable.")
-        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
-        report = reports[focus_id]
         from briarwood.dash_app.data_quality import render_data_quality_section
-        return html.Div(
-            html.Div(render_data_quality_section(report), style={"width": "100%", "maxWidth": "1180px"}),
-            style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": "16px 20px 24px"},
-        )
+        return _centered_main_panel(render_data_quality_section(report))
 
     return _empty_state("Select a tab.")
 
@@ -1077,6 +1037,24 @@ def _empty_state(message: str) -> html.Div:
         html.P(message, style={"color": TEXT_MUTED, "fontSize": "12px"}),
         style={"padding": "40px 20px"},
     )
+
+
+def _centered_main_panel(content, *, padding: str = "16px 20px 24px", max_width: str = "1180px") -> html.Div:
+    return html.Div(
+        html.Div(content, style={"width": "100%", "maxWidth": max_width}),
+        style={"width": "100%", "display": "flex", "justifyContent": "center", "padding": padding},
+    )
+
+
+def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> AnalysisReport | None:
+    property_ids = loaded_ids or []
+    if not property_ids:
+        return None
+    reports = load_reports(property_ids)
+    if not reports:
+        return None
+    resolved_focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
+    return reports[resolved_focus_id]
 
 
 @app.callback(

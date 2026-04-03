@@ -124,6 +124,12 @@ class LocalIntelligenceModule:
                 "supply_pipeline_score": scores.supply_pipeline_score,
                 "regulatory_trend_score": scores.regulatory_trend_score,
                 "sentiment_score": scores.sentiment_score,
+                "market_momentum_score": round(
+                    (0.45 * scores.development_activity_score)
+                    + (0.35 * scores.regulatory_trend_score)
+                    + (0.20 * (100.0 - scores.supply_pipeline_score)),
+                    1,
+                ),
             },
             score=scores.development_activity_score,
             confidence=output.confidence.score,

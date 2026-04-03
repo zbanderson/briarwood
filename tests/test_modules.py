@@ -6,7 +6,9 @@ from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
+from briarwood.modules.liquidity_signal import LiquiditySignalModule
 from briarwood.modules.local_intelligence import LocalIntelligenceModule
+from briarwood.modules.market_momentum_signal import MarketMomentumSignalModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.rental_ease import RentalEaseModule
@@ -57,6 +59,8 @@ class ModuleTests(unittest.TestCase):
             CostValuationModule(),
             IncomeSupportModule(),
             RentalEaseModule(),
+            LiquiditySignalModule(),
+            MarketMomentumSignalModule(),
             BullBaseBearModule(),
             RiskConstraintsModule(),
             TownCountyOutlookModule(),
@@ -114,6 +118,8 @@ class ModuleTests(unittest.TestCase):
     def test_location_modules_return_payloads(self) -> None:
         town_result = TownCountyOutlookModule().run(sample_property())
         scarcity_result = ScarcitySupportModule().run(sample_property())
+        liquidity_result = LiquiditySignalModule().run(sample_property())
+        momentum_result = MarketMomentumSignalModule().run(sample_property())
         location_result = LocationIntelligenceModule().run(sample_property())
         local_result = LocalIntelligenceModule().run(sample_property())
 
@@ -121,6 +127,10 @@ class ModuleTests(unittest.TestCase):
         self.assertGreaterEqual(town_result.confidence, 0.0)
         self.assertIn("scarcity_support_score", scarcity_result.metrics)
         self.assertIn("buyer_takeaway", scarcity_result.metrics)
+        self.assertIn("liquidity_score", liquidity_result.metrics)
+        self.assertIn("liquidity_label", liquidity_result.metrics)
+        self.assertIn("market_momentum_score", momentum_result.metrics)
+        self.assertIn("market_momentum_label", momentum_result.metrics)
         self.assertIn("location_score", location_result.metrics)
         self.assertIn("geo_peer_comp_count", location_result.metrics)
         self.assertIn("development_activity_score", local_result.metrics)
@@ -138,6 +148,9 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("briarwood_current_value", result.metrics)
         self.assertIn("pricing_view", result.metrics)
         self.assertIn("comparable_sales_value", result.metrics)
+        self.assertIn("net_opportunity_delta_value", result.metrics)
+        self.assertIn("net_opportunity_delta_pct", result.metrics)
+        self.assertIn("all_in_basis", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_comparable_sales_module_returns_payload(self) -> None:

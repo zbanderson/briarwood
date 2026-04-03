@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from briarwood.decision_model.scoring import calculate_final_score
 from briarwood.reports.schemas import SignalMetric, SignalMetricsSection
 from briarwood.schemas import AnalysisReport
 
@@ -7,6 +8,7 @@ from briarwood.schemas import AnalysisReport
 def build_signal_metrics_section(report: AnalysisReport) -> SignalMetricsSection:
     return SignalMetricsSection(
         price_to_rent=_build_price_to_rent(report),
+        net_opportunity_delta=_build_net_opportunity_delta(report),
         scarcity=_build_scarcity(report),
         forward_gap=_build_forward_gap(report),
         liquidity=_build_liquidity(report),
@@ -62,6 +64,55 @@ def _build_scarcity(report: AnalysisReport) -> SignalMetric | None:
     )
 
 
+def _build_net_opportunity_delta(report: AnalysisReport) -> SignalMetric | None:
+    current_value = report.get_module("current_value")
+    delta = current_value.metrics.get("net_opportunity_delta_value")
+    delta_pct = current_value.metrics.get("net_opportunity_delta_pct")
+    basis = current_value.metrics.get("all_in_basis")
+    capex_source = str(current_value.metrics.get("capex_basis_source") or "unknown")
+
+    if delta is None or delta_pct is None:
+        return SignalMetric(
+            label="Net Opportunity Delta",
+            value_text="n/a",
+            classification="Unavailable",
+            context="Net opportunity delta requires a current value anchor and a usable purchase basis.",
+        )
+
+    delta_val = float(delta)
+    delta_pct_val = float(delta_pct)
+    basis_val = float(basis) if basis is not None else None
+
+    if delta_pct_val >= 0.10:
+        classification = "Positive"
+    elif delta_pct_val >= 0.0:
+        classification = "Moderate"
+    elif delta_pct_val >= -0.10:
+        classification = "Limited"
+    else:
+        classification = "Negative"
+
+    source_text = {
+        "user_budget": "explicit capex budget",
+        "inferred_lane": "inferred capex lane",
+        "inferred_condition": "condition-implied zero capex",
+        "unknown": "incomplete capex basis",
+    }.get(capex_source, "current capex basis")
+
+    sign = "+" if delta_val >= 0 else "-"
+    value_text = f"{sign}${abs(delta_val):,.0f} ({delta_pct_val:+.1%})"
+    basis_context = f" against all-in basis of ${basis_val:,.0f}" if basis_val is not None else ""
+    return SignalMetric(
+        label="Net Opportunity Delta",
+        value_text=value_text,
+        classification=classification,
+        context=(
+            f"BCV minus all-in basis is {delta_pct_val:+.1%}{basis_context}, using {source_text}. "
+            "This is the clearest current-value opportunity check after required work."
+        ),
+    )
+
+
 def _build_forward_gap(report: AnalysisReport) -> SignalMetric | None:
     bbb = report.get_module("bull_base_bear")
     income = report.get_module("cost_valuation")
@@ -91,31 +142,27 @@ def _build_forward_gap(report: AnalysisReport) -> SignalMetric | None:
 
 
 def _build_liquidity(report: AnalysisReport) -> SignalMetric | None:
-    risk = report.get_module("risk_constraints")
-    property_input = report.property_input
-    dom = property_input.days_on_market if property_input else None
-    flood_risk = risk.metrics.get("flood_risk")
+    liquidity = report.get_module("liquidity_signal")
+    score = liquidity.metrics.get("liquidity_score")
+    label = str(liquidity.metrics.get("liquidity_label") or "Unavailable")
+    dom = liquidity.metrics.get("days_on_market")
+    market_view = str(liquidity.metrics.get("market_liquidity_view") or "unknown").replace("_", " ")
+    comp_count = int(liquidity.metrics.get("comp_count") or 0)
 
-    if dom is None:
+    if score is None:
         classification = "Unavailable"
         value_text = "n/a"
-        context = "Days-on-market data is missing — liquidity signal cannot be computed."
-    elif dom < 15:
-        classification = "Fast"
-        value_text = f"{dom} days DOM"
-        context = f"Property sold in {dom} days — fast absorption suggests strong local demand."
-    elif dom < 45:
-        classification = "Normal"
-        value_text = f"{dom} days DOM"
-        context = f"{dom} days on market is within normal range for this market type."
-    elif dom < 90:
-        classification = "Slow"
-        value_text = f"{dom} days DOM"
-        context = f"{dom} days on market is above typical absorption — price or condition may be limiting demand."
+        context = "Exit liquidity could not be computed from the available property and market evidence."
     else:
-        classification = "Stale"
-        value_text = f"{dom} days DOM"
-        context = f"{dom} days on market signals stale listing risk — exit flexibility may be constrained."
+        score_val = float(score)
+        classification = label
+        value_text = f"{score_val:.0f}/100"
+        dom_text = f"{int(dom)} DOM" if dom is not None else "DOM unavailable"
+        context = (
+            f"Canonical exit liquidity scores {score_val:.0f}/100, combining {dom_text}, "
+            f"a {market_view} market backdrop, and {comp_count} usable comp{'s' if comp_count != 1 else ''}. "
+            "Higher means the asset should be easier to exit if you need to sell."
+        )
 
     return SignalMetric(
         label="Liquidity",
@@ -126,38 +173,46 @@ def _build_liquidity(report: AnalysisReport) -> SignalMetric | None:
 
 
 def _build_optionality(report: AnalysisReport) -> SignalMetric | None:
-    bbb = report.get_module("bull_base_bear")
-    optionality_score = bbb.metrics.get("optionality_score")
-    optionality_premium = bbb.metrics.get("optionality_premium")
+    try:
+        final_score = calculate_final_score(report)
+        optionality = final_score.category_scores.get("optionality")
+    except Exception:
+        optionality = None
 
-    if optionality_score is None:
+    if optionality is None:
         return SignalMetric(
             label="Optionality",
             value_text="n/a",
             classification="Unavailable",
             context="Optionality score could not be computed.",
         )
-    score_val = float(optionality_score)
-    premium_val = float(optionality_premium) if optionality_premium is not None else 0.0
 
-    if score_val >= 70:
+    score_val = float(optionality.score)
+    physical = optionality.component_scores.get("physical_optionality")
+    strategic = optionality.component_scores.get("strategic_optionality")
+
+    if score_val >= 4.0:
         classification = "High"
-    elif score_val >= 50:
+    elif score_val >= 3.0:
         classification = "Moderate"
-    elif score_val >= 30:
+    elif score_val >= 2.25:
         classification = "Limited"
     else:
         classification = "Weak"
 
-    premium_text = (
-        f" (adds ~${premium_val:,.0f} to base)" if abs(premium_val) > 1000 else ""
-    )
+    component_text = []
+    if physical is not None:
+        component_text.append(f"physical {physical:.1f}/5")
+    if strategic is not None:
+        component_text.append(f"strategic {strategic:.1f}/5")
+    suffix = f" ({', '.join(component_text)})" if component_text else ""
+
     return SignalMetric(
         label="Optionality",
-        value_text=f"{score_val:.0f}/100{premium_text}",
+        value_text=f"{score_val:.1f}/5{suffix}",
         classification=classification,
         context=(
-            f"Optionality of {score_val:.0f} ({classification.lower()}) reflects scarcity-driven "
-            "upside potential from location advantages, land use, or renovation headroom."
+            "Optionality blends physical upside such as ADU / expansion / redevelopment headroom "
+            "with strategic flexibility across hold, rent, renovate, or teardown paths."
         ),
     )

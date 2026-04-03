@@ -89,10 +89,15 @@ def render_tear_sheet_html(tear_sheet: TearSheet) -> str:
         "$evidence_title": escape(tear_sheet.evidence_strip.title),
         "$evidence_mode": escape(tear_sheet.evidence_strip.evidence_mode_text),
         "$evidence_overall_confidence": escape(tear_sheet.evidence_strip.overall_report_confidence_text),
+        "$evidence_rent_component_confidence": escape(tear_sheet.evidence_strip.rent_component_confidence_text),
+        "$evidence_capex_component_confidence": escape(tear_sheet.evidence_strip.capex_component_confidence_text),
+        "$evidence_market_component_confidence": escape(tear_sheet.evidence_strip.market_component_confidence_text),
+        "$evidence_liquidity_component_confidence": escape(tear_sheet.evidence_strip.liquidity_component_confidence_text),
         "$evidence_value_confidence": escape(tear_sheet.evidence_strip.value_confidence_text),
         "$evidence_location_confidence": escape(tear_sheet.evidence_strip.location_confidence_text),
         "$evidence_rental_confidence": escape(tear_sheet.evidence_strip.rental_confidence_text),
         "$evidence_scenario_confidence": escape(tear_sheet.evidence_strip.scenario_confidence_text),
+        "$evidence_confidence_reasons": _render_case_list_items(tear_sheet.evidence_strip.confidence_reason_lines),
         "$evidence_coverage": _render_case_list_items(tear_sheet.evidence_strip.source_coverage_highlights),
         "$evidence_missing": _render_case_list_items(tear_sheet.evidence_strip.major_missing_inputs),
         "$evidence_estimated": _render_case_list_items(tear_sheet.evidence_strip.estimated_inputs),
@@ -241,6 +246,7 @@ def _render_case_card(case: ScenarioCase) -> str:
 def _render_signal_metrics(section: object) -> str:
     metrics = [
         section.price_to_rent,
+        section.net_opportunity_delta,
         section.scarcity,
         section.forward_gap,
         section.liquidity,

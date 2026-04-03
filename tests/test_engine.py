@@ -65,10 +65,12 @@ class EngineTests(unittest.TestCase):
         self.assertIn("comparable_sales", report.module_results)
         self.assertIn("income_support", report.module_results)
         self.assertIn("rental_ease", report.module_results)
+        self.assertIn("liquidity_signal", report.module_results)
         self.assertIn("town_county_outlook", report.module_results)
         self.assertIn("scarcity_support", report.module_results)
         self.assertIn("location_intelligence", report.module_results)
         self.assertIn("local_intelligence", report.module_results)
+        self.assertIn("market_momentum_signal", report.module_results)
 
     def test_runner_can_write_tear_sheet_html(self) -> None:
         report = run_report("data/sample_property.json")
@@ -98,6 +100,8 @@ class EngineTests(unittest.TestCase):
         self.assertIn("Demand Holds Because", html)
         self.assertIn("Demand Weakens If", html)
         self.assertIn("Fallback Rental Support", html)
+        self.assertIn("physical", html.lower())
+        self.assertIn("strategic", html.lower())
         self.assertIn("Comparable Sales", html)
         self.assertTrue(
             "Why This Is A Comp" in html or "No usable same-town sale comps were available" in html

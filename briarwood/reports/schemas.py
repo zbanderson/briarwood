@@ -178,10 +178,15 @@ class EvidenceStripSection:
     title: str
     evidence_mode_text: str
     overall_report_confidence_text: str
-    value_confidence_text: str
-    location_confidence_text: str
-    rental_confidence_text: str
-    scenario_confidence_text: str
+    rent_component_confidence_text: str = ""
+    capex_component_confidence_text: str = ""
+    market_component_confidence_text: str = ""
+    liquidity_component_confidence_text: str = ""
+    value_confidence_text: str = ""
+    location_confidence_text: str = ""
+    rental_confidence_text: str = ""
+    scenario_confidence_text: str = ""
+    confidence_reason_lines: list[str] = field(default_factory=list)
     source_coverage_highlights: list[str] = field(default_factory=list)
     major_missing_inputs: list[str] = field(default_factory=list)
     estimated_inputs: list[str] = field(default_factory=list)
@@ -203,6 +208,7 @@ class SignalMetric:
 @dataclass(slots=True)
 class SignalMetricsSection:
     price_to_rent: SignalMetric | None
+    net_opportunity_delta: SignalMetric | None
     scarcity: SignalMetric | None
     forward_gap: SignalMetric | None
     liquidity: SignalMetric | None

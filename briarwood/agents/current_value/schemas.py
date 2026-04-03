@@ -71,6 +71,11 @@ class CurrentValueOutput(BaseModel):
     value_high: float
     mispricing_amount: float
     mispricing_pct: float
+    all_in_basis: float | None = None
+    capex_basis_used: float | None = None
+    capex_basis_source: str | None = None
+    net_opportunity_delta_value: float | None = None
+    net_opportunity_delta_pct: float | None = None
     pricing_view: str
     components: CurrentValueComponents
     weights: CurrentValueWeights

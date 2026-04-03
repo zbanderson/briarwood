@@ -131,6 +131,30 @@ def _fmt_compact(value: float | None) -> str:
     return f"${value / 1_000:.0f}K"
 
 
+def _fmt_signed_currency(value: float | None) -> str:
+    if value is None:
+        return "—"
+    sign = "+" if value >= 0 else "-"
+    return f"{sign}${abs(value):,.0f}"
+
+
+def _fmt_signed_pct(value: float | None) -> str:
+    if value is None:
+        return "—"
+    sign = "+" if value >= 0 else ""
+    return f"{sign}{value * 100:.1f}%"
+
+
+def _capex_basis_source_label(source: str | None) -> str:
+    mapping = {
+        "user_budget": "Explicit CapEx",
+        "inferred_lane": "Inferred CapEx",
+        "inferred_condition": "Condition Implied",
+        "unknown": "CapEx Unknown",
+    }
+    return mapping.get(source or "unknown", "CapEx Basis")
+
+
 def simple_table(rows: list[dict[str, str]], *, page_size: int = 10) -> dash_table.DataTable:
     if not rows:
         rows = [{"Metric": "—", "Value": "—"}]
@@ -271,6 +295,7 @@ def _render_category_mini_bars(view: PropertyAnalysisView) -> list:
                                     ),
                                 ]
                             ),
+                            _render_category_components(cat),
                             render_sub_factors(cat.sub_factors) if cat.sub_factors else None,
                         ],
                         style={"paddingTop": "6px"},
@@ -292,6 +317,51 @@ def _category_drill_in_summary(category_name: str, strongest: str | None, weakes
     if not parts:
         parts.append(f"{category_name} is being scored from the currently available Briarwood evidence and heuristics.")
     return " ".join(parts)
+
+
+def _render_category_components(cat: object) -> html.Div | None:
+    component_scores = getattr(cat, "component_scores", None) or {}
+    if not component_scores:
+        return None
+    component_notes = getattr(cat, "component_notes", None) or {}
+    label_map = {
+        "physical_optionality": "Physical Optionality",
+        "strategic_optionality": "Strategic Optionality",
+    }
+    rows = []
+    for key, value in component_scores.items():
+        if value is None:
+            continue
+        sc = score_color(value)
+        pct = (value / 5.0) * 100
+        rows.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(label_map.get(key, key.replace("_", " ").title()), style={"fontSize": "10px", "color": TEXT_MUTED}),
+                            html.Span(f"{value:.1f}/5", style={"fontSize": "10px", "fontWeight": "600", "color": sc}),
+                        ],
+                        style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
+                    ),
+                    html.Div(
+                        html.Div(style={"width": f"{pct}%", "height": "100%", "backgroundColor": sc, "borderRadius": "1px"}),
+                        style={"height": "3px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "1px", "overflow": "hidden", "marginBottom": "4px"},
+                    ),
+                    html.Div(component_notes.get(key, ""), style={"fontSize": "10px", "lineHeight": "1.4", "color": TEXT_MUTED}),
+                ],
+                style={"padding": "4px 0", "borderBottom": f"1px solid {BORDER_SUBTLE}"},
+            )
+        )
+    if not rows:
+        return None
+    return html.Div(
+        [
+            html.Div("Sub-Components", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "4px"}),
+            html.Div(rows, style={"display": "grid", "gap": "2px"}),
+        ],
+        style={"marginTop": "8px"},
+    )
 
 
 def render_sub_factors(sub_factors: list) -> html.Div:
@@ -463,6 +533,7 @@ def render_category_section(
                         html.Span("Sub-Factor Breakdown", style={"fontSize": "10px", "fontWeight": "600", "color": TEXT_MUTED, "textTransform": "uppercase", "cursor": "pointer"}),
                         style={"listStyle": "none", "padding": "6px 0", "outline": "none"},
                     ),
+                    _render_category_components(cat),
                     render_sub_factors(cat.sub_factors),
                 ],
                 open=default_open,
@@ -849,6 +920,7 @@ def location_metrics_bars(view: PropertyAnalysisView, report: AnalysisReport) ->
     if local_module is not None:
         local_metrics = local_module.metrics
         for label, key in [
+            ("Momentum", "market_momentum_score"),
             ("Development", "development_activity_score"),
             ("Regulatory", "regulatory_trend_score"),
             ("Supply Pipeline", "supply_pipeline_score"),
@@ -857,6 +929,12 @@ def location_metrics_bars(view: PropertyAnalysisView, report: AnalysisReport) ->
             value = local_metrics.get(key)
             if isinstance(value, (int, float)):
                 metrics.append((label, float(value), neutral_benchmark))
+
+    momentum_module = report.module_results.get("market_momentum_signal")
+    if momentum_module is not None:
+        momentum_value = momentum_module.metrics.get("market_momentum_score")
+        if isinstance(momentum_value, (int, float)):
+            metrics.insert(0, ("Momentum", float(momentum_value), neutral_benchmark))
 
     if location_module is not None and len(metrics) < 5:
         location_metrics = location_module.metrics
@@ -1035,6 +1113,169 @@ def confidence_progress_bars(view: PropertyAnalysisView) -> html.Div:
     return html.Div(bars)
 
 
+def confidence_component_bars(view: PropertyAnalysisView) -> html.Div:
+    """Evidence-quality confidence split by underwriting dimension."""
+    components = view.evidence.confidence_components if view.evidence else []
+    if not components:
+        return html.Div()
+    bars = []
+    for item in components:
+        pct = item.confidence * 100
+        weight_pct = round(item.weight * 100)
+        if pct >= 75:
+            color = ACCENT_GREEN
+        elif pct >= 50:
+            color = ACCENT_YELLOW
+        else:
+            color = ACCENT_RED
+        bars.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(item.label, style={"fontSize": "10px", "color": TEXT_MUTED}),
+                            html.Span(f"{pct:.0f}%  ·  wt {weight_pct}%", style={"fontSize": "10px", "fontWeight": "600"}),
+                        ],
+                        style={"display": "flex", "justifyContent": "space-between", "marginBottom": "2px"},
+                    ),
+                    html.Div(
+                        html.Div(style={"width": f"{pct}%", "height": "100%", "backgroundColor": color, "borderRadius": "1px"}),
+                        style={"height": "4px", "backgroundColor": BORDER_SUBTLE, "borderRadius": "1px", "overflow": "hidden"},
+                    ),
+                    html.Div(item.reason, style={"fontSize": "10px", "color": TEXT_MUTED, "marginTop": "3px", "lineHeight": "1.4"}),
+                ],
+                style={"marginBottom": "8px"},
+            )
+        )
+    return html.Div(bars)
+
+
+def assumptions_transparency_block(view: PropertyAnalysisView) -> html.Div:
+    """Compact distinction between model assumptions and user inputs."""
+    items = view.evidence.transparency_items if view.evidence else []
+    if not items:
+        return html.Div()
+
+    def _source_badge(item) -> html.Span:
+        tone = "positive" if item.source_kind == "confirmed" else "warning" if item.source_kind == "inferred" else "neutral"
+        return html.Span(item.source_label, style=tone_badge_style(tone))
+
+    rows = []
+    for item in items:
+        rows.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(item.label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                            html.Div(item.value, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginTop": "2px"}),
+                        ],
+                        style={"minWidth": "140px"},
+                    ),
+                    html.Div(
+                        [
+                            _source_badge(item),
+                            html.Div(item.note, style={"fontSize": "10px", "color": TEXT_MUTED, "lineHeight": "1.4", "marginTop": "4px"}),
+                        ],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "150px 1fr",
+                    "gap": "12px",
+                    "padding": "8px 0",
+                    "borderBottom": f"1px solid {BORDER_SUBTLE}",
+                },
+            )
+        )
+
+    return html.Div(
+        [
+            html.Div("Model Assumptions vs User Inputs", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "This block distinguishes what Briarwood inferred, what the user confirmed, and which entries are preferences rather than factual inputs.",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "6px"},
+            ),
+            html.Div(rows, style={"display": "grid", "gap": "0"}),
+        ],
+        style={**CARD_STYLE, "padding": "10px 12px"},
+    )
+
+
+def metric_input_status_block(view: PropertyAnalysisView) -> html.Div:
+    """Audit trail for whether top-line metrics are fact-based, estimated, or unresolved."""
+    items = view.evidence.metric_statuses if view.evidence else []
+    if not items:
+        return html.Div()
+
+    tone_map = {
+        "fact_based": ("positive", "Fact Based"),
+        "user_confirmed": ("positive", "User Confirmed"),
+        "estimated": ("warning", "Estimated"),
+        "unresolved": ("negative", "Unresolved"),
+    }
+    rows = []
+    for item in items:
+        tone, label = tone_map.get(item.status, ("neutral", item.status.replace("_", " ").title()))
+        detail_parts = []
+        if item.facts_used:
+            detail_parts.append(f"facts: {', '.join(item.facts_used[:3])}")
+        if item.user_inputs_used:
+            detail_parts.append(f"user: {', '.join(item.user_inputs_used[:3])}")
+        if item.assumptions_used:
+            detail_parts.append(f"assumptions: {', '.join(item.assumptions_used[:3])}")
+        if item.missing_inputs:
+            detail_parts.append(f"missing: {', '.join(item.missing_inputs[:3])}")
+        rows.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(item.label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                            html.Div(item.confidence_impact, style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4", "marginTop": "3px"}),
+                            html.Div(" | ".join(detail_parts), style={"fontSize": "10px", "color": TEXT_MUTED, "marginTop": "4px", "lineHeight": "1.4"}) if detail_parts else None,
+                        ]
+                    ),
+                    html.Div(compact_badge("Status", label, tone=tone), style={"justifySelf": "end"}),
+                ],
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "1fr auto",
+                    "gap": "12px",
+                    "padding": "8px 0",
+                    "borderBottom": f"1px solid {BORDER_SUBTLE}",
+                },
+            )
+        )
+
+    gap_block = None
+    if view.evidence.gap_prompt_fields:
+        gap_block = html.Div(
+            [
+                html.Div("To Strengthen This Analysis", style=SECTION_HEADER_STYLE),
+                html.Div(
+                    ", ".join(field.replace("_", " ") for field in view.evidence.gap_prompt_fields[:8]),
+                    style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.5"},
+                ),
+            ],
+            style={**CARD_STYLE, "padding": "8px 10px", "marginTop": "8px"},
+        )
+
+    return html.Div(
+        [
+            html.Div("Metric Basis & Gaps", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "Each core metric is labeled as fact-based, user-confirmed, estimated, or unresolved based on the actual inputs used.",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "6px"},
+            ),
+            html.Div(rows, style={"display": "grid", "gap": "0"}),
+            gap_block,
+        ],
+        style={**CARD_STYLE, "padding": "10px 12px"},
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMARY STRIP (property header in tear sheet)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1089,9 +1330,10 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                 metrics_strip=inline_metric_strip([
                     ("Ask", _fmt_compact(view.ask_price), None),
                     ("BCV", _fmt_compact(view.bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
+                    ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct) if view.net_opportunity_delta_pct is not None else None),
                     ("Comps", view.comps.comparable_value_text, f"{view.comps.comp_count_text} used"),
                     ("Actives", view.comps.active_listing_count_text, None),
-                    ("Base", _fmt_compact(view.base_case), None),
+                    ("Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
                 ]),
                 chart=html.Div(
                     [
@@ -1101,7 +1343,10 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                     style={"display": "grid", "gap": "8px"},
                 ),
                 narrative=view.forward.summary if view.forward else None,
-                extra_content=_active_listing_block(view),
+                extra_content=html.Div(
+                    [block for block in [_net_opportunity_delta_block(view), _active_listing_block(view)] if block is not None],
+                    style={"display": "grid", "gap": "8px"},
+                ),
                 default_open=False,
             ),
             # Economic Support (open by default as example)
@@ -1134,8 +1379,9 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport) -
                 "MARKET POSITION", "market_position", view,
                 metrics_strip=inline_metric_strip([
                     ("Town Score", f"{view.risk_location.town_score:.0f}", view.risk_location.town_label.replace("_", " ").title()),
+                    ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label),
                     ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", None),
-                    ("Liquidity", view.risk_location.liquidity_view.title(), None),
+                    ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
                 ]),
                 chart=location_metrics_bars(view, report),
                 extra_content=html.Div(
@@ -1232,7 +1478,41 @@ def _render_evidence_footer(view: PropertyAnalysisView, report: AnalysisReport) 
                 ],
                 style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "8px"},
             ),
-            confidence_progress_bars(view),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Confidence Drivers", style=SECTION_HEADER_STYLE),
+                            html.Div(
+                                "Overall confidence is a weighted blend of Rent 30%, CapEx 25%, Market 25%, and Liquidity 20%.",
+                                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "8px"},
+                            ),
+                            confidence_component_bars(view),
+                        ],
+                        style={"flex": "1"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Section Confidence", style=SECTION_HEADER_STYLE),
+                            confidence_progress_bars(view),
+                        ],
+                        style={"flex": "1"},
+                    ),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "16px", "alignItems": "start"},
+            ),
+            assumptions_transparency_block(view),
+            metric_input_status_block(view),
+            html.Div(
+                [
+                    html.Div("Where Confidence Is Thin", style=SECTION_HEADER_STYLE),
+                    html.Ul(
+                        [html.Li(note, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for note in view.evidence.confidence_notes],
+                        style={"margin": "4px 0 0 0", "paddingLeft": "16px"},
+                    ),
+                ],
+                style={**CARD_STYLE, "padding": "8px 10px", "marginTop": "8px"},
+            ) if view.evidence.confidence_notes else None,
             html.Div(
                 [
                     html.Div(
@@ -1282,7 +1562,14 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
     comp_rows = [{"Address": r.address, "Adjusted": r.adjusted_price, "Fit": r.fit, "Verification": r.verification} for r in view.comps.rows]
     return html.Div(
         [
-            inline_metric_strip([("Pricing", view.pricing_view.title(), None), ("Confidence", f"{view.value.confidence:.0%}", None), ("Comps", view.comps.comparable_value_text, None)]),
+            inline_metric_strip([
+                ("Pricing", view.pricing_view.title(), None),
+                ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct) if view.net_opportunity_delta_pct is not None else None),
+                ("Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
+                ("Confidence", f"{view.value.confidence:.0%}", None),
+                ("Comps", view.comps.comparable_value_text, None),
+            ]),
+            _net_opportunity_delta_block(view),
             simple_table(comp_rows or [{"Address": "No comps", "Adjusted": "—", "Fit": "—", "Verification": "—"}], page_size=5),
         ],
         style={"display": "grid", "gap": "8px"},
@@ -1307,6 +1594,7 @@ def render_risk_section(view: PropertyAnalysisView, *, compact: bool = False) ->
     return html.Div(
         [
             inline_metric_strip([("Risk Score", f"{view.risk_location.risk_score:.0f}", None), ("Flood", view.risk_location.flood_risk.title(), None), ("Liquidity", view.risk_location.liquidity_view.title(), None)]),
+            inline_metric_strip([("Exit Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label)]),
             html.Div(view.risk_location.risk_summary, style=BODY_TEXT_STYLE),
             risk_breakdown_bars(view),
         ],
@@ -1317,7 +1605,7 @@ def render_risk_section(view: PropertyAnalysisView, *, compact: bool = False) ->
 def render_location_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
     return html.Div(
         [
-            inline_metric_strip([("Town", f"{view.risk_location.town_score:.0f}", view.risk_location.town_label.replace("_", " ").title()), ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", None)]),
+            inline_metric_strip([("Town", f"{view.risk_location.town_score:.0f}", view.risk_location.town_label.replace("_", " ").title()), ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label), ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", None), ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label)]),
             html.Div(
                 [
                     html.Ul([html.Li(d, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for d in view.risk_location.drivers[:4]], style={"margin": "0", "paddingLeft": "16px"}),
@@ -1364,6 +1652,42 @@ def _unit_breakdown_block(view: PropertyAnalysisView) -> html.Div | None:
             ("Avg / Unit", view.income_support.avg_rent_per_unit_text, None),
         ]
     )
+    return html.Div(
+        [
+            html.Div("Unit Rent Breakdown", style=SECTION_HEADER_STYLE),
+            header,
+            html.Div(rows, style={"display": "grid", "gap": "0"}),
+        ],
+        style={**CARD_STYLE, "padding": "8px 10px"},
+    )
+
+
+def _net_opportunity_delta_block(view: PropertyAnalysisView) -> html.Div | None:
+    if view.net_opportunity_delta_value is None:
+        return None
+    explanation = (
+        f"Net Opportunity Delta = BCV {_fmt_compact(view.bcv)} minus all-in basis {_fmt_compact(view.all_in_basis)}."
+    )
+    capex_note = (
+        f"CapEx basis used: {_fmt_compact(view.capex_basis_used)} ({_capex_basis_source_label(view.capex_basis_source)})."
+        if view.capex_basis_used is not None
+        else "CapEx basis could not be established cleanly, so delta should be treated cautiously."
+    )
+    return html.Div(
+        [
+            html.Div("Net Opportunity Delta", style=SECTION_HEADER_STYLE),
+            inline_metric_strip(
+                [
+                    ("Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct) if view.net_opportunity_delta_pct is not None else None),
+                    ("BCV", _fmt_compact(view.bcv), None),
+                    ("All-In Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
+                ]
+            ),
+            html.Div(explanation, style={"fontSize": "11px", "color": TEXT_SECONDARY, "marginTop": "2px"}),
+            html.Div(capex_note, style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "4px"}),
+        ],
+        style={**CARD_STYLE, "marginTop": "8px"},
+    )
 
 
 def _active_listing_block(view: PropertyAnalysisView) -> html.Div | None:
@@ -1393,14 +1717,6 @@ def _active_listing_block(view: PropertyAnalysisView) -> html.Div | None:
         ],
         style={**CARD_STYLE, "marginTop": "8px"},
     )
-    return html.Div(
-        [
-            html.Div("Unit Rent Breakdown", style=SECTION_HEADER_STYLE),
-            header,
-            html.Div(rows, style={"display": "grid", "gap": "0"}),
-        ],
-        style={**CARD_STYLE, "padding": "8px 10px"},
-    )
 
 
 def render_evidence_section(report: AnalysisReport, view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
@@ -1413,6 +1729,9 @@ def render_evidence_section(report: AnalysisReport, view: PropertyAnalysisView, 
                 ("Estimated", str(len(view.evidence.estimated_inputs)), None),
                 ("Missing", str(len(view.evidence.missing_inputs)), None),
             ]),
+            assumptions_transparency_block(view),
+            metric_input_status_block(view),
+            confidence_component_bars(view),
             confidence_progress_bars(view),
             simple_table(evidence_rows, page_size=10) if not compact else html.Div(),
         ],
@@ -1425,25 +1744,31 @@ def render_evidence_section(report: AnalysisReport, view: PropertyAnalysisView, 
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def render_single_section(section: str, view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
-    """Legacy dispatcher — used by compare view. Tear sheet uses render_tear_sheet_body directly."""
-    mapping = {
-        "overview": render_overview_section,
-        "value": render_value_section,
-        "forward": render_forward_section,
-        "risk": render_risk_section,
-        "location": render_location_section,
-        "income": render_income_support_section,
-    }
+_SECTION_RENDERERS = {
+    "overview": render_overview_section,
+    "value": render_value_section,
+    "forward": render_forward_section,
+    "risk": render_risk_section,
+    "location": render_location_section,
+    "income": render_income_support_section,
+}
+
+
+def _render_section_content(section: str, view: PropertyAnalysisView, report: AnalysisReport, *, compact: bool):
     if section == "evidence":
-        return render_evidence_section(report, view, compact=False)
+        return render_evidence_section(report, view, compact=compact)
     if section == "data_quality":
         from briarwood.dash_app.data_quality import render_data_quality_section
         return render_data_quality_section(report)
     if section == "scenarios":
         from briarwood.dash_app.scenarios import render_scenarios_section
         return render_scenarios_section(report)
-    return mapping.get(section, render_overview_section)(view, compact=False)
+    return _SECTION_RENDERERS.get(section, render_overview_section)(view, compact=compact)
+
+
+def render_single_section(section: str, view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    """Legacy dispatcher — used by compare view. Tear sheet uses render_tear_sheet_body directly."""
+    return _render_section_content(section, view, report, compact=False)
 
 
 _COMPARE_SECTION_METRICS: dict[str, set[str]] = {
@@ -1801,26 +2126,9 @@ def _lane_header(view: PropertyAnalysisView, *, show_export_button: bool = False
 
 def render_compare_section(section: str, views: list[PropertyAnalysisView], reports: list[AnalysisReport], summary: CompareSummary) -> html.Div:
     summary_block = render_compare_summary(section, summary)
-    lane_renderer = {
-        "overview": render_overview_section,
-        "value": render_value_section,
-        "forward": render_forward_section,
-        "risk": render_risk_section,
-        "location": render_location_section,
-        "income": render_income_support_section,
-    }
     lanes: list[html.Div] = []
     for view, report in zip(views, reports):
-        if section == "evidence":
-            body = render_evidence_section(report, view, compact=True)
-        elif section == "data_quality":
-            from briarwood.dash_app.data_quality import render_data_quality_section
-            body = render_data_quality_section(report)
-        elif section == "scenarios":
-            from briarwood.dash_app.scenarios import render_scenarios_section
-            body = render_scenarios_section(report)
-        else:
-            body = lane_renderer.get(section, render_overview_section)(view, compact=True)
+        body = _render_section_content(section, view, report, compact=True)
         lanes.append(html.Div([_lane_header(view, show_export_button=True), body], style={"display": "grid", "gap": "8px"}))
     col_count = min(len(lanes), 2)
     return html.Div(

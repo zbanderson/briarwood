@@ -95,12 +95,18 @@ class IncomeSupportModule:
                 back_house_monthly_rent=property_input.back_house_monthly_rent,
                 unit_rents=manual_unit_rents,
                 rent_source_type=rent_source_type,
+                rent_confidence_override=property_input.rent_confidence_override,
                 vacancy_pct=property_input.vacancy_rate,
                 maintenance_pct=maintenance_pct,
                 market_price_to_rent_benchmark=property_input.market_price_to_rent_benchmark,
             )
         )
         warnings = wrapper_warnings + output.warnings
+        assumptions = output.assumptions + rent_context_assumptions
+        if property_input.rent_confidence_override:
+            assumptions.append(
+                f"User marked rent confidence as {property_input.rent_confidence_override.lower()}."
+            )
         support_label = output.rent_support_classification
         confidence = output.confidence
         summary = output.summary
@@ -140,7 +146,7 @@ class IncomeSupportModule:
             payload=output.model_copy(
                 update={
                     "warnings": warnings,
-                    "assumptions": output.assumptions + rent_context_assumptions,
+                    "assumptions": assumptions,
                 }
             ),
             section_evidence=build_section_evidence(

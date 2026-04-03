@@ -150,6 +150,7 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         back_house_monthly_rent=_optional_float(assumptions_payload.get("back_house_monthly_rent", data.get("back_house_monthly_rent"))),
         seasonal_monthly_rent=_optional_float(assumptions_payload.get("seasonal_monthly_rent", data.get("seasonal_monthly_rent"))),
         unit_rents=_float_list(assumptions_payload.get("unit_rents", data.get("unit_rents", []))),
+        rent_confidence_override=_optional_str(assumptions_payload.get("rent_confidence_override", data.get("rent_confidence_override"))),
         insurance=_optional_float(assumptions_payload.get("insurance", data.get("insurance"))),
         down_payment_percent=_optional_float(
             assumptions_payload.get("down_payment_percent", data.get("down_payment_percent"))
@@ -161,8 +162,13 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
             assumptions_payload.get("monthly_maintenance_reserve_override", data.get("monthly_maintenance_reserve_override"))
         ),
         condition_profile_override=_optional_str(assumptions_payload.get("condition_profile_override")),
+        condition_confirmed=_optional_bool(assumptions_payload.get("condition_confirmed", data.get("condition_confirmed"))),
         capex_lane_override=_optional_str(assumptions_payload.get("capex_lane_override")),
+        capex_confirmed=_optional_bool(assumptions_payload.get("capex_confirmed", data.get("capex_confirmed"))),
         repair_capex_budget=_optional_float(assumptions_payload.get("repair_capex_budget", data.get("repair_capex_budget"))),
+        strategy_intent=_optional_str(assumptions_payload.get("strategy_intent", data.get("strategy_intent"))),
+        hold_period_years=_optional_int(assumptions_payload.get("hold_period_years", data.get("hold_period_years"))),
+        risk_tolerance=_optional_str(assumptions_payload.get("risk_tolerance", data.get("risk_tolerance"))),
         manual_comp_inputs=list(assumptions_payload.get("manual_comp_inputs", data.get("manual_comp_inputs", [])) or []),
     )
     raw_mode = str(metadata_payload.get("evidence_mode") or "public_record")

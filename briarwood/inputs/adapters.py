@@ -63,11 +63,20 @@ class PublicRecordAdapter:
         )
         assumptions = UserAssumptions(
             estimated_monthly_rent=_optional_float(payload.get("estimated_monthly_rent")),
+            rent_confidence_override=_optional_str(payload.get("rent_confidence_override")),
             insurance=_optional_float(payload.get("insurance")),
             down_payment_percent=_optional_float(payload.get("down_payment_percent")),
             interest_rate=_optional_float(payload.get("interest_rate")),
             loan_term_years=_optional_int(payload.get("loan_term_years")),
             vacancy_rate=_optional_float(payload.get("vacancy_rate")),
+            condition_profile_override=_optional_str(payload.get("condition_profile_override")),
+            condition_confirmed=_optional_bool(payload.get("condition_confirmed")),
+            capex_lane_override=_optional_str(payload.get("capex_lane_override")),
+            capex_confirmed=_optional_bool(payload.get("capex_confirmed")),
+            repair_capex_budget=_optional_float(payload.get("repair_capex_budget")),
+            strategy_intent=_optional_str(payload.get("strategy_intent")),
+            hold_period_years=_optional_int(payload.get("hold_period_years")),
+            risk_tolerance=_optional_str(payload.get("risk_tolerance")),
         )
         evidence_mode = (
             EvidenceMode.LISTING_ASSISTED
@@ -109,18 +118,32 @@ class ManualInputAdapter:
         assumptions = replace(
             canonical.user_assumptions,
             estimated_monthly_rent=_coalesce_float(overrides.get("estimated_monthly_rent"), canonical.user_assumptions.estimated_monthly_rent),
+            rent_confidence_override=_coalesce_str(overrides.get("rent_confidence_override"), canonical.user_assumptions.rent_confidence_override),
             insurance=_coalesce_float(overrides.get("insurance"), canonical.user_assumptions.insurance),
             down_payment_percent=_coalesce_float(overrides.get("down_payment_percent"), canonical.user_assumptions.down_payment_percent),
             interest_rate=_coalesce_float(overrides.get("interest_rate"), canonical.user_assumptions.interest_rate),
             loan_term_years=_coalesce_int(overrides.get("loan_term_years"), canonical.user_assumptions.loan_term_years),
             vacancy_rate=_coalesce_float(overrides.get("vacancy_rate"), canonical.user_assumptions.vacancy_rate),
+            condition_profile_override=_coalesce_str(overrides.get("condition_profile_override"), canonical.user_assumptions.condition_profile_override),
+            condition_confirmed=_coalesce_bool(overrides.get("condition_confirmed"), canonical.user_assumptions.condition_confirmed),
+            capex_lane_override=_coalesce_str(overrides.get("capex_lane_override"), canonical.user_assumptions.capex_lane_override),
+            capex_confirmed=_coalesce_bool(overrides.get("capex_confirmed"), canonical.user_assumptions.capex_confirmed),
+            repair_capex_budget=_coalesce_float(overrides.get("repair_capex_budget"), canonical.user_assumptions.repair_capex_budget),
+            strategy_intent=_coalesce_str(overrides.get("strategy_intent"), canonical.user_assumptions.strategy_intent),
+            hold_period_years=_coalesce_int(overrides.get("hold_period_years"), canonical.user_assumptions.hold_period_years),
+            risk_tolerance=_coalesce_str(overrides.get("risk_tolerance"), canonical.user_assumptions.risk_tolerance),
         )
         coverage = dict(canonical.source_metadata.source_coverage)
         for category, key in {
             "rent_estimate": "estimated_monthly_rent",
+            "rent_confidence": "rent_confidence_override",
             "insurance_estimate": "insurance",
             "financing_down_payment": "down_payment_percent",
             "financing_interest_rate": "interest_rate",
+            "condition_assumption": "condition_profile_override",
+            "capex_assumption": "capex_lane_override",
+            "capex_budget": "repair_capex_budget",
+            "strategy_intent": "strategy_intent",
         }.items():
             if overrides.get(key) is not None:
                 coverage[category] = SourceCoverageItem(
@@ -196,6 +219,11 @@ def _infer_source_metadata(
         "comp_support": SourceCoverageItem("comp_support", InputCoverageStatus.MISSING),
         "financing_down_payment": _assumption_coverage("financing_down_payment", assumptions.down_payment_percent),
         "financing_interest_rate": _assumption_coverage("financing_interest_rate", assumptions.interest_rate),
+        "rent_confidence": _assumption_coverage("rent_confidence", assumptions.rent_confidence_override),
+        "condition_assumption": _assumption_coverage("condition_assumption", assumptions.condition_profile_override),
+        "capex_assumption": _assumption_coverage("capex_assumption", assumptions.capex_lane_override),
+        "capex_budget": _assumption_coverage("capex_budget", assumptions.repair_capex_budget),
+        "strategy_intent": _assumption_coverage("strategy_intent", assumptions.strategy_intent),
     }
     return SourceMetadata(
         evidence_mode=evidence_mode,
@@ -241,12 +269,33 @@ def _optional_float(value: object) -> float | None:
     return float(value)
 
 
+def _optional_bool(value: object) -> bool | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y"}:
+        return True
+    if text in {"false", "0", "no", "n"}:
+        return False
+    return None
+
+
 def _coalesce_float(left: object, right: float | None) -> float | None:
     return _optional_float(left) if left is not None else right
 
 
 def _coalesce_int(left: object, right: int | None) -> int | None:
     return _optional_int(left) if left is not None else right
+
+
+def _coalesce_str(left: object, right: str | None) -> str | None:
+    return _optional_str(left) if left is not None else right
+
+
+def _coalesce_bool(left: object, right: bool | None) -> bool | None:
+    return _optional_bool(left) if left is not None else right
 
 
 def _coerce_landmark_points(value: object) -> dict[str, list[dict[str, object]]]:
