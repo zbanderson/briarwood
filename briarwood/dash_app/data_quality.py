@@ -1,9 +1,9 @@
 """
-Data Quality scorecard for developer use.
+Data Quality scorecard — dark-theme renderer.
 
-Shows comp database health, per-property comp matching detail,
+Developer / analyst view: comp database health, per-property comp matching,
 value driver attribution, and input impact signals.
-Not intended for end-user delivery — developer/analyst view only.
+Not intended for end-user delivery.
 """
 from __future__ import annotations
 
@@ -13,7 +13,16 @@ from pathlib import Path
 from dash import dash_table, html
 
 from briarwood.agents.comparable_sales.schemas import AdjustedComparable, ComparableSalesOutput
-from briarwood.dash_app.components import CARD_STYLE, RESPONSIVE_GRID_3, RESPONSIVE_GRID_4, metric_card
+from briarwood.dash_app.components import metric_card, simple_table
+from briarwood.dash_app.theme import (
+    BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BORDER,
+    BODY_TEXT_STYLE, CARD_STYLE, GRID_3, GRID_4,
+    SECTION_HEADER_STYLE, TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN,
+    TABLE_STYLE_DATA_ODD, TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
+    TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+    TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
+    TONE_WARNING_BG,
+)
 from briarwood.modules.comparable_sales import get_comparable_sales_payload
 from briarwood.schemas import AnalysisReport
 
@@ -43,33 +52,54 @@ def _load_comp_db() -> list[dict]:
     return rows if isinstance(rows, list) else []
 
 
+def _dark_table(
+    columns: list[str],
+    data: list[dict],
+    *,
+    page_size: int = 15,
+    conditional_styles: list[dict] | None = None,
+) -> dash_table.DataTable:
+    base_conditional = [
+        {"if": {"row_index": "odd"}, **TABLE_STYLE_DATA_ODD},
+        {"if": {"row_index": "even"}, **TABLE_STYLE_DATA_EVEN},
+    ]
+    return dash_table.DataTable(
+        columns=[{"name": c, "id": c} for c in columns],
+        data=data,
+        page_size=page_size,
+        style_table=TABLE_STYLE_TABLE,
+        style_header=TABLE_STYLE_HEADER,
+        style_cell={**TABLE_STYLE_CELL, "whiteSpace": "normal", "height": "auto"},
+        style_data_conditional=base_conditional + (conditional_styles or []),
+    )
+
+
 # ── comp database health ────────────────────────────────────────────────────────
 
 
 def _render_db_health() -> html.Div:
     rows = _load_comp_db()
     if not rows:
-        return html.Div("Comp database not found.", style=CARD_STYLE)
+        return html.Div(
+            html.P("Comp database not found.", style={**BODY_TEXT_STYLE, "color": TONE_NEGATIVE_TEXT}),
+            style=CARD_STYLE,
+        )
 
     total = len(rows)
 
-    # town counts
     town_counts: dict[str, int] = {}
     for r in rows:
         town = r.get("town", "Unknown")
         town_counts[town] = town_counts.get(town, 0) + 1
 
-    # verification tiers
     ver_counts: dict[str, int] = {}
     for r in rows:
         v = r.get("sale_verification_status") or "unknown"
         ver_counts[v] = ver_counts.get(v, 0) + 1
 
-    # estimated dates
     estimated_dates = sum(1 for r in rows if r.get("verification_notes", "").startswith("sale_date_estimated"))
     real_dates = total - estimated_dates
 
-    # field completeness
     fields = ["lot_size", "year_built", "sqft", "beds", "baths", "stories", "garage_spaces"]
     completeness = {f: sum(1 for r in rows if r.get(f) not in (None, "", 0)) / total for f in fields}
 
@@ -79,7 +109,7 @@ def _render_db_health() -> html.Div:
 
     return html.Div(
         [
-            html.H3("Comp Database Health", style={"margin": "0 0 12px 0"}),
+            html.Div("Comp Database Health", style=SECTION_HEADER_STYLE),
             html.Div(
                 [
                     metric_card("Total Comps", str(total)),
@@ -87,61 +117,43 @@ def _render_db_health() -> html.Div:
                     metric_card("Real Sale Dates", str(real_dates), tone="positive" if real_dates > total * 0.5 else "negative"),
                     metric_card("Estimated Dates", str(estimated_dates), tone="negative" if estimated_dates > 0 else "neutral"),
                 ],
-                style=RESPONSIVE_GRID_4,
+                style=GRID_4,
             ),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.H4("Coverage by Town", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Town", "Count", "Coverage"]],
-                                data=town_table_rows,
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                style_data_conditional=[
-                                    {"if": {"filter_query": '{Coverage} = "Low"', "column_id": "Coverage"}, "color": "#a23d3d", "fontWeight": "600"},
-                                    {"if": {"filter_query": '{Coverage} = "OK"', "column_id": "Coverage"}, "color": "#0b7a5d", "fontWeight": "600"},
+                            html.Div("Coverage by Town", style=SECTION_HEADER_STYLE),
+                            _dark_table(
+                                ["Town", "Count", "Coverage"],
+                                town_table_rows,
+                                conditional_styles=[
+                                    {"if": {"filter_query": '{Coverage} = "Low"', "column_id": "Coverage"}, "color": TONE_NEGATIVE_TEXT, "fontWeight": "600"},
+                                    {"if": {"filter_query": '{Coverage} = "OK"', "column_id": "Coverage"}, "color": TONE_POSITIVE_TEXT, "fontWeight": "600"},
                                 ],
-                                page_size=15,
                             ),
                         ],
                         style=CARD_STYLE,
                     ),
                     html.Div(
                         [
-                            html.H4("Verification Tiers", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Verification Status", "Count"]],
-                                data=ver_table_rows,
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                page_size=10,
-                            ),
+                            html.Div("Verification Tiers", style=SECTION_HEADER_STYLE),
+                            _dark_table(["Verification Status", "Count"], ver_table_rows, page_size=10),
                         ],
                         style=CARD_STYLE,
                     ),
                     html.Div(
                         [
-                            html.H4("Field Completeness", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Field", "Complete", "Count"]],
-                                data=completeness_rows,
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                style_data_conditional=[
-                                    {"if": {"filter_query": 'tonumber({Complete}) < 0.5', "column_id": "Complete"}, "color": "#a23d3d", "fontWeight": "600"},
-                                ],
-                                page_size=10,
-                            ),
+                            html.Div("Field Completeness", style=SECTION_HEADER_STYLE),
+                            _dark_table(["Field", "Complete", "Count"], completeness_rows, page_size=10),
                         ],
                         style=CARD_STYLE,
                     ),
                 ],
-                style=RESPONSIVE_GRID_3,
+                style=GRID_3,
             ),
         ],
-        style={"display": "grid", "gap": "14px"},
+        style={"display": "grid", "gap": "12px"},
     )
 
 
@@ -156,10 +168,10 @@ def _render_comp_matching(comp_output: ComparableSalesOutput) -> html.Div:
     if not comps:
         return html.Div(
             [
-                html.H3("Comp Matching — This Property", style={"margin": "0 0 12px 0"}),
+                html.Div("Comp Matching — This Property", style=SECTION_HEADER_STYLE),
                 html.Div(
                     f"No comps used. Rejected: {rejected}. Reasons: {rejection_reasons}",
-                    style={"color": "#a23d3d"},
+                    style={"color": TONE_NEGATIVE_TEXT, "fontSize": "13px"},
                 ),
             ],
             style=CARD_STYLE,
@@ -182,72 +194,58 @@ def _render_comp_matching(comp_output: ComparableSalesOutput) -> html.Div:
         }
         for c in comps
     ]
-
     rejection_rows = [{"Reason": k.replace("_", " "), "Count": v} for k, v in sorted(rejection_reasons.items(), key=lambda x: -x[1])]
 
     return html.Div(
         [
-            html.H3("Comp Matching — This Property", style={"margin": "0 0 12px 0"}),
+            html.Div("Comp Matching — This Property", style=SECTION_HEADER_STYLE),
             html.Div(
                 [
                     metric_card("Comps Used", str(len(comps))),
                     metric_card("Rejected", str(rejected), tone="negative" if rejected > 10 else "neutral"),
                     metric_card("Avg Similarity", f"{avg_similarity:.2f}"),
-                    metric_card("Avg Time Adj", _pct(avg_time_adj), tone="neutral"),
+                    metric_card("Avg Time Adj", _pct(avg_time_adj)),
                     metric_card("Avg Subject Adj", _pct(avg_subject_adj), tone="positive" if avg_subject_adj >= 0 else "negative"),
                 ],
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(140px, 1fr))", "gap": "12px"},
             ),
             html.Div(
                 [
-                    html.Div(
-                        [
-                            html.H4("Comps Used", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Address", "Sale Price", "Time Adj", "Subject Adj", "Adj Price", "Similarity", "Fit", "Cautions"]],
-                                data=comp_rows,
-                                style_cell={"padding": "6px 8px", "fontSize": "12px", "textAlign": "left", "whiteSpace": "normal", "height": "auto"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                style_data_conditional=[
-                                    {"if": {"filter_query": '{Fit} = "strong"', "column_id": "Fit"}, "color": "#0b7a5d", "fontWeight": "600"},
-                                    {"if": {"filter_query": '{Fit} = "stretch"', "column_id": "Fit"}, "color": "#a23d3d", "fontWeight": "600"},
-                                ],
-                                page_size=10,
-                            ),
+                    html.Div("Comps Used", style=SECTION_HEADER_STYLE),
+                    _dark_table(
+                        ["Address", "Sale Price", "Time Adj", "Subject Adj", "Adj Price", "Similarity", "Fit", "Cautions"],
+                        comp_rows,
+                        conditional_styles=[
+                            {"if": {"filter_query": '{Fit} = "strong"', "column_id": "Fit"}, "color": TONE_POSITIVE_TEXT, "fontWeight": "600"},
+                            {"if": {"filter_query": '{Fit} = "stretch"', "column_id": "Fit"}, "color": TONE_NEGATIVE_TEXT, "fontWeight": "600"},
                         ],
-                        style=CARD_STYLE,
                     ),
                 ],
+                style=CARD_STYLE,
             ),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.H4("Rejection Reasons", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Reason", "Count"]],
-                                data=rejection_rows or [{"Reason": "No rejections", "Count": 0}],
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                page_size=10,
-                            ),
+                            html.Div("Rejection Reasons", style=SECTION_HEADER_STYLE),
+                            _dark_table(["Reason", "Count"], rejection_rows or [{"Reason": "No rejections", "Count": 0}], page_size=10),
                         ],
                         style=CARD_STYLE,
                     ),
                     html.Div(
                         [
-                            html.H4("Comp Adjustments Detail", style={"margin": "0 0 8px 0"}),
+                            html.Div("Adjustments Detail", style=SECTION_HEADER_STYLE),
                             html.Div(
                                 [
                                     html.Div(
                                         [
-                                            html.Div(c.address, style={"fontWeight": "600", "fontSize": "12px"}),
+                                            html.Div(c.address, style={"fontWeight": "600", "fontSize": "12px", "color": TEXT_PRIMARY, "marginBottom": "4px"}),
                                             html.Ul(
-                                                [html.Li(note, style={"fontSize": "12px"}) for note in c.adjustments_summary],
-                                                style={"margin": "4px 0 0 0", "paddingLeft": "16px"},
+                                                [html.Li(note, style={"fontSize": "12px", "color": TEXT_SECONDARY}) for note in c.adjustments_summary],
+                                                style={"margin": "0", "paddingLeft": "16px"},
                                             ),
                                         ],
-                                        style={"marginBottom": "10px"},
+                                        style={"marginBottom": "12px"},
                                     )
                                     for c in comps
                                 ]
@@ -256,10 +254,10 @@ def _render_comp_matching(comp_output: ComparableSalesOutput) -> html.Div:
                         style=CARD_STYLE,
                     ),
                 ],
-                style=RESPONSIVE_GRID_3,
+                style=GRID_3,
             ),
         ],
-        style={"display": "grid", "gap": "14px"},
+        style={"display": "grid", "gap": "12px"},
     )
 
 
@@ -267,11 +265,9 @@ def _render_comp_matching(comp_output: ComparableSalesOutput) -> html.Div:
 
 
 def _render_value_attribution(report: AnalysisReport, comp_output: ComparableSalesOutput | None) -> html.Div:
-    """Show what's driving the BCV blend and flag unexpected signal directions."""
-
     cv_result = report.module_results.get("current_value")
     if cv_result is None:
-        return html.Div("Current value module not available.", style=CARD_STYLE)
+        return html.Div(html.P("Current value module not available.", style=BODY_TEXT_STYLE), style=CARD_STYLE)
 
     payload = cv_result.payload
     components = getattr(payload, "components", None)
@@ -301,8 +297,6 @@ def _render_value_attribution(report: AnalysisReport, comp_output: ComparableSal
                 "Flag": flag,
             })
 
-    # Location tag impact: check if beach_access or similar appear in comps
-    # and surface whether they're pulling similarity up or down
     location_signals: list[dict] = []
     if comp_output and comp_output.comps_used:
         tag_counter: dict[str, list[float]] = {}
@@ -315,10 +309,9 @@ def _render_value_attribution(report: AnalysisReport, comp_output: ComparableSal
                 "Tag": tag,
                 "Comps": len(scores),
                 "Avg Similarity": f"{avg_score:.2f}",
-                "Note": "Shared tag — confirms match" if avg_score >= 0.70 else "Low similarity despite shared tag — check adjustments",
+                "Note": "Shared tag — confirms match" if avg_score >= 0.70 else "Low similarity despite shared tag",
             })
 
-    # Subject adjustment direction analysis
     adj_analysis: list[dict] = []
     if comp_output and comp_output.comps_used:
         net_pushes: dict[str, list[float]] = {}
@@ -353,64 +346,58 @@ def _render_value_attribution(report: AnalysisReport, comp_output: ComparableSal
 
     return html.Div(
         [
-            html.H3("Value Driver Attribution", style={"margin": "0 0 12px 0"}),
+            html.Div("Value Driver Attribution", style=SECTION_HEADER_STYLE),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.H4("BCV Blend Components", style={"margin": "0 0 8px 0"}),
-                            html.Div("Each component vs. ask price. HIGH DELTA = component diverges >20% from ask.", style={"fontSize": "12px", "color": "#6b7b8d", "marginBottom": "8px"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Component", "Value", "vs Ask", "Flag"]],
-                                data=blend_rows,
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                style_data_conditional=[
-                                    {"if": {"filter_query": '{Flag} = "HIGH DELTA"', "column_id": "Flag"}, "color": "#a23d3d", "fontWeight": "700"},
-                                    {"if": {"filter_query": '{Flag} = "mod delta"', "column_id": "Flag"}, "color": "#a36a00", "fontWeight": "600"},
-                                ],
+                            html.Div("BCV Blend Components", style=SECTION_HEADER_STYLE),
+                            html.P("Each component vs. ask. HIGH DELTA = diverges >20% from ask.", style={**BODY_TEXT_STYLE, "marginBottom": "8px"}),
+                            _dark_table(
+                                ["Component", "Value", "vs Ask", "Flag"],
+                                blend_rows,
                                 page_size=6,
-                            ),
-                        ],
-                        style=CARD_STYLE,
-                    ),
-                    html.Div(
-                        [
-                            html.H4("Input Factor Push Direction", style={"margin": "0 0 8px 0"}),
-                            html.Div("Average subject adjustment per factor across used comps. Watch for unexpected DOWN signals.", style={"fontSize": "12px", "color": "#6b7b8d", "marginBottom": "8px"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Input Factor", "Avg Push", "Direction", "Alert"]],
-                                data=adj_analysis or [{"Input Factor": "No adjustment data", "Avg Push": "—", "Direction": "—", "Alert": ""}],
-                                style_cell={"padding": "6px 10px", "fontSize": "13px", "textAlign": "left"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                style_data_conditional=[
-                                    {"if": {"filter_query": '{Direction} = "UP"', "column_id": "Direction"}, "color": "#0b7a5d", "fontWeight": "600"},
-                                    {"if": {"filter_query": '{Direction} = "DOWN"', "column_id": "Direction"}, "color": "#a23d3d", "fontWeight": "600"},
-                                    {"if": {"filter_query": '{Alert} != ""', "column_id": "Alert"}, "color": "#a23d3d", "fontWeight": "700"},
+                                conditional_styles=[
+                                    {"if": {"filter_query": '{Flag} = "HIGH DELTA"', "column_id": "Flag"}, "color": TONE_NEGATIVE_TEXT, "fontWeight": "700"},
+                                    {"if": {"filter_query": '{Flag} = "mod delta"', "column_id": "Flag"}, "color": TONE_WARNING_TEXT, "fontWeight": "600"},
                                 ],
-                                page_size=10,
                             ),
                         ],
                         style=CARD_STYLE,
                     ),
                     html.Div(
                         [
-                            html.H4("Location Tag Presence in Used Comps", style={"margin": "0 0 8px 0"}),
-                            dash_table.DataTable(
-                                columns=[{"name": c, "id": c} for c in ["Tag", "Comps", "Avg Similarity", "Note"]],
-                                data=location_signals or [{"Tag": "No location tags found in used comps", "Comps": 0, "Avg Similarity": "—", "Note": ""}],
-                                style_cell={"padding": "6px 10px", "fontSize": "12px", "textAlign": "left", "whiteSpace": "normal", "height": "auto"},
-                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
+                            html.Div("Input Factor Push Direction", style=SECTION_HEADER_STYLE),
+                            html.P("Avg subject adjustment per factor across used comps.", style={**BODY_TEXT_STYLE, "marginBottom": "8px"}),
+                            _dark_table(
+                                ["Input Factor", "Avg Push", "Direction", "Alert"],
+                                adj_analysis or [{"Input Factor": "No adjustment data", "Avg Push": "—", "Direction": "—", "Alert": ""}],
+                                page_size=10,
+                                conditional_styles=[
+                                    {"if": {"filter_query": '{Direction} = "UP"', "column_id": "Direction"}, "color": TONE_POSITIVE_TEXT, "fontWeight": "600"},
+                                    {"if": {"filter_query": '{Direction} = "DOWN"', "column_id": "Direction"}, "color": TONE_NEGATIVE_TEXT, "fontWeight": "600"},
+                                    {"if": {"filter_query": '{Alert} != ""', "column_id": "Alert"}, "color": TONE_NEGATIVE_TEXT, "fontWeight": "700"},
+                                ],
+                            ),
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Location Tags in Used Comps", style=SECTION_HEADER_STYLE),
+                            _dark_table(
+                                ["Tag", "Comps", "Avg Similarity", "Note"],
+                                location_signals or [{"Tag": "No location tags found", "Comps": 0, "Avg Similarity": "—", "Note": ""}],
                                 page_size=10,
                             ),
                         ],
                         style=CARD_STYLE,
                     ),
                 ],
-                style=RESPONSIVE_GRID_3,
+                style=GRID_3,
             ),
         ],
-        style={"display": "grid", "gap": "14px"},
+        style={"display": "grid", "gap": "12px"},
     )
 
 
@@ -427,22 +414,24 @@ def render_data_quality_section(report: AnalysisReport) -> html.Div:
             pass
 
     banner = html.Div(
-        "Developer view — not for client delivery. Shows comp database health, matching detail, and value driver signals.",
+        "Developer view — comp database health, matching detail, and value driver signals. Not for client delivery.",
         style={
-            "backgroundColor": "#fff8e1",
-            "border": "1px solid #f5c842",
-            "borderRadius": "8px",
+            "backgroundColor": TONE_WARNING_BG,
+            "border": f"1px solid #6a4f0e",
+            "borderRadius": "6px",
             "padding": "10px 14px",
             "fontSize": "13px",
-            "color": "#7a5a00",
-            "marginBottom": "4px",
+            "color": TONE_WARNING_TEXT,
         },
     )
 
     blocks = [
         banner,
         _render_db_health(),
-        _render_comp_matching(comp_output) if comp_output is not None else html.Div("No comp output available for this property.", style=CARD_STYLE),
+        _render_comp_matching(comp_output) if comp_output is not None else html.Div(
+            html.P("No comp output available for this property.", style=BODY_TEXT_STYLE),
+            style=CARD_STYLE,
+        ),
         _render_value_attribution(report, comp_output),
     ]
     return html.Div(blocks, style={"display": "grid", "gap": "20px"})

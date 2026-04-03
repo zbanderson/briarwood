@@ -224,6 +224,12 @@ class PropertyAnalysisView:
     risk_location: RiskLocationViewModel
     evidence: EvidenceViewModel
     compare_metrics: dict[str, Any] = field(default_factory=dict)
+    # Scoring layer
+    final_score: float | None = None
+    recommendation_tier: str | None = None
+    recommendation_action: str | None = None
+    score_narrative: str | None = None
+    category_scores: Any | None = None  # dict[str, CategoryScore] from engine
 
 
 def _coverage_lists(property_input: PropertyInput | None) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -391,7 +397,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "missing_inputs": missing,
     }
 
-    return PropertyAnalysisView(
+    view = PropertyAnalysisView(
         property_id=report.property_id,
         label=(property_input.address if property_input else report.address).split(",")[0],
         address=property_input.address if property_input else report.address,
@@ -503,6 +509,20 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         ),
         compare_metrics=compare_metrics,
     )
+
+    # Scoring layer — gracefully degrade if scoring fails
+    try:
+        from briarwood.decision_model.scoring import calculate_final_score
+        fs = calculate_final_score(report)
+        view.final_score = fs.score
+        view.recommendation_tier = fs.tier
+        view.recommendation_action = fs.action
+        view.score_narrative = fs.narrative
+        view.category_scores = fs.category_scores
+    except Exception:
+        pass
+
+    return view
 
 
 def build_evidence_rows(report: AnalysisReport) -> list[dict[str, str]]:

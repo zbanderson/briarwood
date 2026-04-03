@@ -1,80 +1,163 @@
-.workspace-shell {
-  width: 100%;
-  max-width: 100vw;
+/* ── Briarwood Dark Theme — Global CSS Overrides ───────────────────────── */
+
+/* ── Dropdown dark theme ─────────────────────────────────────────────── */
+/* Dash renders dropdowns as React-Select components with their own DOM.
+   These overrides ensure the dropdown menu, options, and selected text
+   match the dark theme tokens from theme.py. */
+
+.briarwood-dropdown .Select-control,
+.Select-control {
+  background-color: #21262d !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
 }
 
-.workspace-sidebar,
-.workspace-main {
+.briarwood-dropdown .Select-value-label,
+.Select-value-label {
+  color: #e6edf3 !important;
+}
+
+.briarwood-dropdown .Select-placeholder,
+.Select-placeholder {
+  color: #6e7681 !important;
+}
+
+.briarwood-dropdown .Select-input input,
+.Select-input input {
+  color: #e6edf3 !important;
+}
+
+.briarwood-dropdown .Select-menu-outer,
+.Select-menu-outer {
+  background-color: #1c2333 !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+  z-index: 300 !important;
+}
+
+.briarwood-dropdown .VirtualizedSelectOption,
+.VirtualizedSelectOption {
+  background-color: #1c2333 !important;
+  color: #e6edf3 !important;
+}
+
+.briarwood-dropdown .VirtualizedSelectFocusedOption,
+.VirtualizedSelectFocusedOption {
+  background-color: #2d333b !important;
+  color: #e6edf3 !important;
+}
+
+.briarwood-dropdown .Select-arrow-zone .Select-arrow,
+.Select-arrow-zone .Select-arrow {
+  border-top-color: #8b949e !important;
+}
+
+.briarwood-dropdown .Select-clear-zone,
+.Select-clear-zone {
+  color: #8b949e !important;
+}
+
+/* Dash's newer dropdown rendering (div-based) */
+.briarwood-dropdown .dash-dropdown .Select-menu,
+.dash-dropdown .Select-menu {
+  background-color: #1c2333 !important;
+}
+
+/* Multi-select tags */
+.briarwood-dropdown .Select-value,
+.Select--multi .Select-value {
+  background-color: #2d333b !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+}
+
+/* ── DataTable dark overrides ────────────────────────────────────────── */
+/* Ensure DataTable filter/pagination elements match the dark theme */
+
+.dash-spreadsheet .dash-filter input {
+  background-color: #21262d !important;
+  color: #e6edf3 !important;
+  border-color: #30363d !important;
+}
+
+.previous-next-container button {
+  color: #8b949e !important;
+}
+
+.previous-next-container button:hover {
+  color: #e6edf3 !important;
+}
+
+/* ── Collapsible sections (<details>/<summary>) ──────────────────────── */
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "▶ ";
+  font-size: 9px;
+  color: #6e7681;
+  margin-right: 4px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+details[open] > summary::before {
+  content: "▼ ";
+}
+
+details[open] > summary {
+  border-bottom-color: #30363d;
+}
+
+/* ── dcc.Tabs overrides ──────────────────────────────────────────────── */
+
+.tab-container {
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.tab--selected {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* ── Loading spinner ─────────────────────────────────────────────────── */
+
+.dash-spinner {
+  margin: 0 auto;
+}
+
+/* ── General layout ──────────────────────────────────────────────────── */
+
+* {
   box-sizing: border-box;
-}
-
-.workspace-sidebar {
-  overflow-x: hidden;
-}
-
-.workspace-sidebar input,
-.workspace-sidebar textarea,
-.workspace-sidebar .Select-control,
-.workspace-sidebar .Select-menu-outer,
-.workspace-sidebar .dash-dropdown,
-.workspace-sidebar .dash-input,
-.workspace-sidebar .dash-textarea,
-.workspace-sidebar .dash-table-container,
-.workspace-sidebar .dash-spreadsheet-container,
-.workspace-sidebar .dash-spreadsheet-inner {
-  width: 100%;
-  max-width: 100%;
-}
-
-.workspace-sidebar .dash-table-container {
-  overflow-x: auto;
-}
-
-.analysis-feedback-banner {
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 13px;
-  display: grid;
-  gap: 4px;
-}
-
-.analysis-feedback-banner--neutral {
-  background: #eef3f8;
-  color: #4f6275;
-}
-
-.analysis-feedback-banner--positive {
-  background: #e8f5ef;
-  color: #0b7a5d;
-  border: 1px solid #cfe8db;
-}
-
-.workspace-main {
-  min-width: 0;
 }
 
 .compare-lanes-grid > div {
   min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .workspace-shell {
-    flex-direction: column;
-  }
-
-  .workspace-sidebar {
-    width: 100% !important;
-    border-right: none !important;
-    border-bottom: 1px solid #d9e1ea;
-  }
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-@media (max-width: 720px) {
-  .workspace-main {
-    padding: 16px !important;
-  }
+::-webkit-scrollbar-track {
+  background: #0d1117;
+}
 
-  .workspace-sidebar {
-    padding: 16px !important;
-  }
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
 }

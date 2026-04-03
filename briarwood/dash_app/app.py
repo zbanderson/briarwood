@@ -1,3 +1,7 @@
+"""
+Briarwood — Investment Research Platform
+Dark-theme, 4-tab layout: Tear Sheet | Scenarios | Compare | Data Quality
+"""
 from __future__ import annotations
 
 import os
@@ -6,10 +10,14 @@ from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.components import (
-    PAGE_STYLE,
-    SIDEBAR_STYLE,
+    RESPONSIVE_GRID_2,
+    RESPONSIVE_GRID_3,
+    RESPONSIVE_GRID_4,
+    confidence_badge,
+    compact_badge,
     render_compare_section,
     render_single_section,
+    render_tear_sheet_body,
     summary_strip,
 )
 from briarwood.dash_app.data import (
@@ -21,27 +29,47 @@ from briarwood.dash_app.data import (
     load_reports,
     register_manual_analysis,
 )
+from briarwood.dash_app.theme import (
+    ACCENT_BLUE, ACCENT_GREEN, BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
+    BORDER, BORDER_SUBTLE, BTN_GHOST, BTN_PRIMARY, BTN_SECONDARY,
+    CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO, GRID_2, GRID_3, GRID_4,
+    INPUT_STYLE, LABEL_STYLE, PAGE_STYLE, SECTION_HEADER_STYLE,
+    TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
+    TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
+    TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+    TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
+    TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE, PROPERTY_HEADER_HEIGHT,
+    tone_badge_style, score_color,
+)
 from briarwood.dash_app.view_models import build_property_analysis_view
 
 
 app = Dash(
     __name__,
-    title="Briarwood Workspace",
+    title="Briarwood",
     suppress_callback_exceptions=True,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 server = app.server
 
-SECTION_TABS = [
+# ── Constants ──────────────────────────────────────────────────────────────────
+
+MAIN_TABS = [
+    ("tear_sheet", "Tear Sheet"),
+    ("scenarios", "Scenarios"),
+    ("compare", "Compare"),
+    ("data_quality", "Diagnostics"),
+]
+
+# Compare view still uses section-based rendering
+COMPARE_SECTIONS = [
     ("overview", "Overview"),
     ("value", "Value"),
     ("forward", "Forward"),
     ("risk", "Risk"),
     ("location", "Location"),
-    ("income", "Income Support"),
+    ("income", "Income"),
     ("evidence", "Evidence"),
-    ("data_quality", "Data Quality"),
-    ("scenarios", "Scenarios"),
 ]
 
 CONDITION_OPTIONS = [
@@ -81,6 +109,58 @@ ADU_TYPE_OPTIONS = [
     {"label": "Guest Suite", "value": "guest_suite"},
 ]
 
+PROPERTY_TYPE_OPTIONS = [
+    {"label": "Single Family Residence", "value": "Single Family Residence"},
+    {"label": "Duplex", "value": "Duplex"},
+    {"label": "Multi-Family (3-4 unit)", "value": "Multi-Family"},
+    {"label": "Condo / Townhome", "value": "Condo"},
+    {"label": "Land / Lot", "value": "Land"},
+]
+
+# ── Style helpers ──────────────────────────────────────────────────────────────
+
+_TAB_STYLE = {
+    "padding": "10px 18px",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "fontFamily": FONT_FAMILY,
+    "color": TEXT_MUTED,
+    "backgroundColor": "transparent",
+    "borderBottom": "2px solid transparent",
+    "cursor": "pointer",
+    "border": "none",
+    "borderTop": "none",
+    "borderLeft": "none",
+    "borderRight": "none",
+}
+
+_TAB_SELECTED_STYLE = {
+    **_TAB_STYLE,
+    "color": TEXT_PRIMARY,
+    "borderBottom": f"2px solid {ACCENT_BLUE}",
+    "fontWeight": "600",
+}
+
+_TAB_BAR_STYLE = {
+    "backgroundColor": BG_SURFACE,
+    "borderBottom": f"1px solid {BORDER}",
+    "display": "flex",
+    "padding": "0 24px",
+}
+
+    # Section-level sub-tabs removed — tear sheet is now one scrollable page.
+
+_DROPDOWN_STYLE = {
+    "backgroundColor": BG_SURFACE_3,
+    "color": TEXT_PRIMARY,
+    "border": f"1px solid {BORDER}",
+    "borderRadius": "6px",
+    "fontSize": "13px",
+    "fontFamily": FONT_FAMILY,
+}
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _property_options() -> list[dict[str, str]]:
     saved_by_id = {item.property_id: item for item in list_saved_properties()}
@@ -107,8 +187,7 @@ def _saved_property_rows() -> list[dict[str, str]]:
                 "Pricing View": item.pricing_view.replace("_", " ").title(),
                 "Confidence": f"{item.confidence:.0%}",
                 "Comp Trust": item.comp_trust,
-                "Missing Inputs": str(item.missing_input_count),
-                "Saved": item.timestamp[:16].replace("T", " "),
+                "Missing": str(item.missing_input_count),
             }
         )
     return rows
@@ -116,299 +195,510 @@ def _saved_property_rows() -> list[dict[str, str]]:
 
 def _fmt_currency(value: float | None) -> str:
     if value is None:
-        return "Unavailable"
+        return "—"
     return f"${value:,.0f}"
 
 
-def _text_input(input_id: str, placeholder: str, *, value: str | None = None) -> dcc.Input:
-    return dcc.Input(id=input_id, placeholder=placeholder, type="text", value=value)
+def _labeled(label: str, child) -> html.Div:
+    """Wrap a form input with a label above it."""
+    return html.Div(
+        [
+            html.Div(label, style={**LABEL_STYLE, "marginBottom": "3px"}),
+            child,
+        ],
+    )
 
 
-def _number_input(input_id: str, placeholder: str) -> dcc.Input:
-    return dcc.Input(id=input_id, placeholder=placeholder, type="number")
+def _text_input(input_id: str, label: str, *, value: str | None = None) -> html.Div:
+    return _labeled(
+        label,
+        dcc.Input(
+            id=input_id, placeholder=label, type="text", value=value,
+            style=INPUT_STYLE,
+            debounce=False,
+        ),
+    )
 
 
-def _dropdown(input_id: str, options: list[dict[str, str]], placeholder: str) -> dcc.Dropdown:
-    return dcc.Dropdown(id=input_id, options=options, value="", placeholder=placeholder, clearable=False)
+def _number_input(input_id: str, label: str) -> html.Div:
+    return _labeled(
+        label,
+        dcc.Input(
+            id=input_id, placeholder=label, type="number",
+            style=INPUT_STYLE,
+        ),
+    )
+
+
+def _dropdown(input_id: str, options: list[dict[str, str]], label: str) -> html.Div:
+    return _labeled(
+        label,
+        dcc.Dropdown(
+            id=input_id, options=options, value="", placeholder=label, clearable=False,
+            className="briarwood-dropdown",
+            style={"fontSize": "13px"},
+        ),
+    )
+
+
+def _section_label(text: str) -> html.Div:
+    return html.Div(text, style={**SECTION_HEADER_STYLE, "marginTop": "12px"})
+
+
+def _capex_from_condition(condition_profile: str | None) -> str | None:
+    if not condition_profile:
+        return None
+    normalized = condition_profile.strip().lower()
+    if normalized in {"renovated", "updated"}:
+        return "light"
+    if normalized in {"maintained"}:
+        return "moderate"
+    if normalized in {"dated", "needs_work"}:
+        return "heavy"
+    return None
+
+
+# ── Layout builders ────────────────────────────────────────────────────────────
+
+
+def _topbar() -> html.Div:
+    return html.Div(
+        [
+            # Logo / wordmark
+            html.Div(
+                [
+                    html.Span("Briarwood", style={"fontWeight": "700", "fontSize": "16px", "color": TEXT_PRIMARY, "letterSpacing": "-0.02em"}),
+                    html.Span("Research Platform", style={"fontSize": "11px", "color": TEXT_MUTED, "marginLeft": "8px"}),
+                ],
+                style={"display": "flex", "alignItems": "baseline", "gap": "0", "flexShrink": "0"},
+            ),
+            # Separator
+            html.Div(style={"width": "1px", "height": "24px", "backgroundColor": BORDER, "flexShrink": "0"}),
+            # Property selector
+            html.Div(
+                [
+                    dcc.Dropdown(
+                        id="property-selector-dropdown",
+                        clearable=False,
+                        persistence=True,
+                        placeholder="Select property…",
+                        style={"minWidth": "280px", "fontSize": "13px"},
+                    ),
+                ],
+                style={"flex": "1", "maxWidth": "360px"},
+            ),
+            # Add Property toggle
+            html.Button("+ Add Property", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
+            # Export button
+            html.Div(
+                [
+                    html.Button("Export Tear Sheet", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
+                    html.Div(id="export-status", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                ],
+                style={"display": "flex", "alignItems": "center", "gap": "8px"},
+            ),
+            # Spacer
+            html.Div(style={"flex": "1"}),
+            # Active property status
+            html.Div(id="active-property-status", style={"fontSize": "11px", "color": TEXT_MUTED, "flexShrink": "0"}),
+        ],
+        style=TOPBAR_STYLE,
+    )
+
+
+def _feedback_banner() -> html.Div:
+    return html.Div(id="analysis-feedback-banner", style={"flexShrink": "0"})
+
+
+def _main_tab_bar() -> dcc.Tabs:
+    return dcc.Tabs(
+        id="main-tabs",
+        value="tear_sheet",
+        children=[
+            dcc.Tab(
+                label=label,
+                value=value,
+                style=_TAB_STYLE,
+                selected_style=_TAB_SELECTED_STYLE,
+            )
+            for value, label in MAIN_TABS
+        ],
+        style=_TAB_BAR_STYLE,
+        colors={"border": "transparent", "primary": ACCENT_BLUE, "background": BG_SURFACE},
+    )
+
+
+    # _tear_sheet_section_tabs removed — section tabs are now built inline
+    # inside _tear_sheet_shell() to avoid dynamic component ID issues.
+
+
+_DRAWER_CARD: dict = {
+    **CARD_STYLE_ELEVATED,
+    "padding": "14px 16px",
+    "display": "grid",
+    "gap": "8px",
+}
+
+_DRAWER_WIDTH = "400px"
+
+_BTN_ANALYZE_ENABLED: dict = {
+    **BTN_PRIMARY,
+    "width": "100%",
+    "padding": "12px 16px",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "letterSpacing": "0.02em",
+}
+
+_BTN_ANALYZE_DISABLED: dict = {
+    **_BTN_ANALYZE_ENABLED,
+    "backgroundColor": BG_SURFACE_3,
+    "color": TEXT_MUTED,
+    "cursor": "not-allowed",
+    "opacity": "0.6",
+}
+
+
+def _field_label(text: str) -> html.Div:
+    return html.Div(text, style={**LABEL_STYLE, "marginBottom": "0"})
+
+
+def _required_dot() -> html.Span:
+    return html.Span(" *", style={"color": ACCENT_GREEN, "fontWeight": "700"})
+
+
+def _add_property_drawer() -> html.Div:
+    """Slide-in drawer with two modes: Browse saved properties, or add new."""
+    return html.Div(
+        html.Div(
+            [
+                # ── Header ──
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div("Property Manager", style={"fontWeight": "700", "fontSize": "15px", "color": TEXT_PRIMARY, "letterSpacing": "-0.01em"}),
+                                html.Div("Browse saved or add a new analysis", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                            ]
+                        ),
+                        html.Button("✕", id="add-property-close-button", n_clicks=0, style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"}),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "alignItems": "start", "marginBottom": "16px"},
+                ),
+                # ── Saved properties card ──
+                html.Div(
+                    [
+                        html.Div("Saved Properties", style=SECTION_HEADER_STYLE),
+                        dash_table.DataTable(
+                            id="saved-properties-table",
+                            columns=[
+                                {"name": "Address", "id": "Address"},
+                                {"name": "Ask", "id": "Ask"},
+                                {"name": "BCV", "id": "BCV"},
+                                {"name": "Pricing View", "id": "Pricing View"},
+                                {"name": "Confidence", "id": "Confidence"},
+                                {"name": "Missing", "id": "Missing"},
+                            ],
+                            data=[],
+                            row_selectable="multi",
+                            selected_rows=[],
+                            page_size=5,
+                            style_table={**TABLE_STYLE_TABLE, "maxWidth": "100%"},
+                            style_header=TABLE_STYLE_HEADER,
+                            style_cell={**TABLE_STYLE_CELL, "minWidth": "55px", "maxWidth": "110px", "whiteSpace": "normal", "fontSize": "11px", "padding": "6px 8px"},
+                            style_data_conditional=[
+                                {"if": {"row_index": "odd"}, **TABLE_STYLE_DATA_ODD},
+                                {"if": {"row_index": "even"}, **TABLE_STYLE_DATA_EVEN},
+                            ],
+                        ),
+                        html.Button("Compare Selected", id="compare-selected-button", n_clicks=0, style={**BTN_SECONDARY, "marginTop": "4px"}),
+                    ],
+                    style=_DRAWER_CARD,
+                ),
+                # ── Divider ──
+                html.Div(
+                    html.Div("New Property Analysis", style={**SECTION_HEADER_STYLE, "margin": "0", "fontSize": "12px", "letterSpacing": "0.10em"}),
+                    style={"textAlign": "center", "padding": "10px 0 4px"},
+                ),
+                # ── Form ──
+                html.Div(id="add-property-form", style={"display": "grid", "gap": "10px"}, children=_add_property_form_body()),
+            ],
+            style={
+                "backgroundColor": BG_BASE,
+                "borderLeft": f"1px solid {BORDER}",
+                "padding": "20px",
+                "width": _DRAWER_WIDTH,
+                "overflowY": "auto",
+                "height": f"calc(100vh - {TOPBAR_HEIGHT})",
+                "position": "fixed",
+                "top": TOPBAR_HEIGHT,
+                "right": "0",
+                "zIndex": "150",
+                "boxShadow": "-12px 0 40px rgba(0,0,0,0.5)",
+            },
+        ),
+        id="add-property-drawer",
+        style={"display": "none"},
+    )
+
+
+def _add_property_form_body() -> list:
+    """Form fields grouped into themed cards."""
+    return [
+        # ── Required: Subject Property ──
+        html.Div(
+            [
+                html.Div(
+                    [html.Span("Subject Property", style={**SECTION_HEADER_STYLE, "marginBottom": "0", "display": "inline"}), _required_dot()],
+                ),
+                _text_input("manual-address", "Street address"),
+                html.Div(
+                    [_number_input("manual-price", "Asking price ($)")],
+                ),
+                html.Div(
+                    [
+                        _text_input("manual-town", "Town", value="Belmar"),
+                        _text_input("manual-state", "State", value="NJ"),
+                        _text_input("manual-county", "County", value="Monmouth"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 70px 1fr", "gap": "6px"},
+                ),
+                html.Div(
+                    [_number_input("manual-beds", "Beds"), _number_input("manual-baths", "Baths"), _number_input("manual-sqft", "Sqft")],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                _text_input("manual-property-id", "Property ID (optional)"),
+                # Validation hint
+                html.Div(
+                    id="form-validation-hint",
+                    style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "2px"},
+                ),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        # ── Property Details (optional) ──
+        html.Div(
+            [
+                html.Div("Property Details", style=SECTION_HEADER_STYLE),
+                html.Div(
+                    [_number_input("manual-lot-size", "Lot (acres)"), _number_input("manual-year-built", "Year built"), _number_input("manual-dom", "Days on market")],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [_number_input("manual-taxes", "Annual Taxes ($)"), _number_input("manual-hoa", "Monthly HOA ($)")],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                ),
+                _dropdown("manual-property-type", PROPERTY_TYPE_OPTIONS, "Property Type"),
+                html.Div(
+                    [
+                        _dropdown("manual-condition-profile", CONDITION_OPTIONS, "Condition"),
+                        _dropdown("manual-capex-lane", CAPEX_OPTIONS, "CapEx Lane"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                ),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        # ── Physical Features (optional, collapsed feel) ──
+        html.Div(
+            [
+                html.Div("Physical Features", style=SECTION_HEADER_STYLE),
+                html.Div(
+                    [
+                        _number_input("manual-garage-spaces", "Garage spaces"),
+                        _dropdown("manual-garage-type", GARAGE_TYPE_OPTIONS, "Garage type"),
+                        _dropdown("manual-has-detached-garage", YES_NO_OPTIONS, "Detached"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [
+                        _dropdown("manual-has-back-house", YES_NO_OPTIONS, "Back house / ADU"),
+                        _dropdown("manual-adu-type", ADU_TYPE_OPTIONS, "ADU type"),
+                        _number_input("manual-adu-sqft", "ADU sqft"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [
+                        _dropdown("manual-has-basement", YES_NO_OPTIONS, "Basement"),
+                        _dropdown("manual-basement-finished", YES_NO_OPTIONS, "Finished"),
+                        _dropdown("manual-has-pool", YES_NO_OPTIONS, "Pool"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [
+                        _number_input("manual-parking-spaces", "Parking spaces"),
+                        _dropdown("manual-corner-lot", YES_NO_OPTIONS, "Corner lot"),
+                        _dropdown("manual-driveway-off-street", YES_NO_OPTIONS, "Off-street"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        # ── Income & Carry (optional) ──
+        html.Div(
+            [
+                html.Div("Income & Carry", style=SECTION_HEADER_STYLE),
+                html.Div(
+                    [
+                        _number_input("manual-estimated-rent", "Market rent ($/mo)"),
+                        _number_input("manual-back-house-rent", "Back house rent"),
+                        _number_input("manual-seasonal-rent", "Seasonal rent"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [_number_input("manual-insurance", "Insurance ($/yr)"), _number_input("manual-maintenance-reserve", "Maint reserve ($/mo)")],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                ),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        # ── Notes ──
+        dcc.Textarea(
+            id="manual-notes", placeholder="Notes or listing description (optional)",
+            style={**INPUT_STYLE, "height": "60px", "resize": "vertical"},
+        ),
+        # ── Manual Comps (collapsible card) ──
+        html.Div(
+            [
+                html.Div("Manual Comps (optional)", style=SECTION_HEADER_STYLE),
+                _text_input("manual-comp-address", "Comp address"),
+                html.Div(
+                    [_number_input("manual-comp-sale-price", "Sale price"), _text_input("manual-comp-sale-date", "Date YYYY-MM-DD")],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                ),
+                html.Div(
+                    [_number_input("manual-comp-beds", "Beds"), _number_input("manual-comp-baths", "Baths"), _number_input("manual-comp-sqft", "Sqft")],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [_number_input("manual-comp-lot-size", "Lot (acres)"), _number_input("manual-comp-year-built", "Year built"), _number_input("manual-comp-distance", "Distance mi")],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                ),
+                html.Div(
+                    [
+                        _text_input("manual-comp-property-type", "Type", value="Single Family Residence"),
+                        _dropdown("manual-comp-condition-profile", CONDITION_OPTIONS, "Comp condition"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "1.3fr 1fr", "gap": "6px"},
+                ),
+                dcc.Textarea(
+                    id="manual-comp-notes", placeholder="Comp notes",
+                    style={**INPUT_STYLE, "height": "50px", "resize": "vertical"},
+                ),
+                html.Button("Add Comp", id="manual-add-comp-button", n_clicks=0, style={**BTN_SECONDARY, "width": "100%"}),
+                html.Div(id="manual-comps-preview", style={"fontSize": "12px", "color": TEXT_MUTED}),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        # ── Submit area ──
+        html.Div(
+            [
+                html.Button(
+                    "Start Analysis",
+                    id="manual-run-analysis-button",
+                    n_clicks=0,
+                    disabled=True,
+                    style=_BTN_ANALYZE_DISABLED,
+                ),
+                # Loading overlay replaces the button text visually
+                dcc.Loading(
+                    id="analysis-loading",
+                    type="circle",
+                    color=ACCENT_GREEN,
+                    children=html.Div(id="analysis-loading-target"),
+                    style={"marginTop": "4px"},
+                ),
+                html.Div(id="manual-entry-status", style={"fontSize": "12px", "marginTop": "4px"}),
+            ],
+            style={
+                "position": "sticky",
+                "bottom": "0",
+                "backgroundColor": BG_BASE,
+                "padding": "12px 0 4px",
+                "borderTop": f"1px solid {BORDER}",
+                "zIndex": "10",
+            },
+        ),
+    ]
+
+
+def _compare_controls() -> html.Div:
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Compare Properties", style=SECTION_HEADER_STYLE),
+                    dcc.Dropdown(
+                        id="compare-selector-dropdown",
+                        multi=True,
+                        persistence=True,
+                        placeholder="Select 2–4 properties to compare…",
+                        style={"fontSize": "13px"},
+                    ),
+                ],
+                style={"flex": "1"},
+            ),
+            html.Div(
+                [
+                    html.Div("Section", style=SECTION_HEADER_STYLE),
+                    dcc.Dropdown(
+                        id="compare-section-dropdown",
+                        options=[{"label": label, "value": value} for value, label in COMPARE_SECTIONS],
+                        value="overview",
+                        clearable=False,
+                        style={"fontSize": "13px", "minWidth": "160px"},
+                    ),
+                ],
+            ),
+        ],
+        style={"display": "flex", "gap": "16px", "alignItems": "end", "padding": "16px 24px", "borderBottom": f"1px solid {BORDER}", "backgroundColor": BG_SURFACE},
+    )
 
 
 def _build_layout():
     return html.Div(
         [
+            # Stores
             dcc.Store(id="loaded-preset-ids", data=DEFAULT_PRESET_IDS),
             dcc.Store(id="manual-comps-store", data=[]),
             dcc.Store(id="property-catalog-version", data=0),
             dcc.Store(id="add-property-open", data=False),
             dcc.Store(id="last-analysis-summary", data=None),
+
+            # Top bar
+            _topbar(),
+
+            # Sticky property header (populated by callback)
+            html.Div(id="property-header-bar", style={"display": "none"}),
+
+            # Feedback banner (only shown after analysis)
+            _feedback_banner(),
+
+            # Main tab bar
+            _main_tab_bar(),
+
+            # Main content area
             html.Div(
-                [
-                    html.Div(
-                        [
-                            html.Div(
-                                [
-                                    html.H2("Briarwood Workspace", style={"margin": 0}),
-                                    html.Div("Interactive decision layer for value, risk, income support, and evidence.", style={"color": "#5f7286"}),
-                                ]
-                            ),
-                            html.Div(
-                                [
-                                    html.Button("Add Property", id="add-property-button", n_clicks=0),
-                                    html.Div(
-                                        [
-                                            html.Label("Select Property"),
-                                            dcc.Dropdown(id="property-selector-dropdown", clearable=False, persistence=True),
-                                        ],
-                                        style={"minWidth": "280px", "flex": "1"},
-                                    ),
-                                    html.Div(
-                                        [
-                                            html.Label("Compare Properties"),
-                                            dcc.Dropdown(id="compare-selector-dropdown", multi=True, persistence=True),
-                                        ],
-                                        style={"minWidth": "320px", "flex": "1.2"},
-                                    ),
-                                    html.Div(
-                                        [
-                                            html.Label("Mode"),
-                                            dcc.RadioItems(
-                                                id="workspace-mode",
-                                                options=[
-                                                    {"label": "Single Property", "value": "single"},
-                                                    {"label": "Compare", "value": "compare"},
-                                                ],
-                                                value="single",
-                                                inline=True,
-                                            ),
-                                        ]
-                                    ),
-                                    html.Div(
-                                        [
-                                            html.Button("Export Tear Sheet", id="export-tear-sheet-button", n_clicks=0),
-                                            html.Div(id="export-status", style={"fontSize": "13px", "color": "#5f7286"}),
-                                        ],
-                                        style={"display": "grid", "gap": "6px"},
-                                    ),
-                                ],
-                                style={"display": "flex", "gap": "14px", "alignItems": "end", "flexWrap": "wrap"},
-                            ),
-                            html.Div(id="analysis-feedback-banner"),
-                            html.Div(id="active-property-status", style={"fontSize": "13px", "color": "#5f7286"}),
-                        ],
-                        style={
-                            "backgroundColor": "white",
-                            "borderBottom": "1px solid #d9e1ea",
-                            "padding": "16px clamp(16px, 2.5vw, 28px)",
-                            "display": "grid",
-                            "gap": "14px",
-                        },
-                    ),
-                    html.Div(
-                        [
-                            html.Div(
-                                [
-                                    html.Div(
-                                        [
-                                            html.H3("Saved Properties", style={"margin": "0 0 8px 0"}),
-                                            dash_table.DataTable(
-                                                id="saved-properties-table",
-                                                columns=[
-                                                    {"name": "Address", "id": "Address"},
-                                                    {"name": "Ask", "id": "Ask"},
-                                                    {"name": "BCV", "id": "BCV"},
-                                                    {"name": "Pricing View", "id": "Pricing View"},
-                                                    {"name": "Confidence", "id": "Confidence"},
-                                                    {"name": "Comp Trust", "id": "Comp Trust"},
-                                                    {"name": "Missing Inputs", "id": "Missing Inputs"},
-                                                ],
-                                                data=[],
-                                                row_selectable="multi",
-                                                selected_rows=[],
-                                                page_size=8,
-                                                style_table={"overflowX": "auto", "maxWidth": "100%", "width": "100%"},
-                                                style_cell={
-                                                    "padding": "8px",
-                                                    "textAlign": "left",
-                                                    "fontFamily": "Avenir Next, Helvetica Neue, sans-serif",
-                                                    "fontSize": "12px",
-                                                    "whiteSpace": "normal",
-                                                    "height": "auto",
-                                                    "minWidth": "72px",
-                                                    "maxWidth": "150px",
-                                                },
-                                                style_header={"backgroundColor": "#edf3f8", "fontWeight": "700"},
-                                            ),
-                                            html.Button("Compare Selected", id="compare-selected-button", n_clicks=0),
-                                        ],
-                                        style={"display": "grid", "gap": "10px"},
-                                    ),
-                                    html.Hr(),
-                                    html.Div(
-                                        [
-                                            html.H3("Add Property", style={"margin": "0 0 8px 0"}),
-                                            html.Div("Core facts", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
-                                            _text_input("manual-property-id", "Property id (optional)"),
-                                            _text_input("manual-address", "Address"),
-                                            html.Div(
-                                                [
-                                                    _text_input("manual-town", "Town", value="Belmar"),
-                                                    _text_input("manual-state", "State", value="NJ"),
-                                                    _text_input("manual-county", "County", value="Monmouth"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "1fr 90px 1fr", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-price", "Ask price"),
-                                                    _number_input("manual-beds", "Beds"),
-                                                    _number_input("manual-baths", "Baths"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-sqft", "Sqft"),
-                                                    _number_input("manual-lot-size", "Lot size (acres)"),
-                                                    _number_input("manual-year-built", "Year built"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-taxes", "Taxes"),
-                                                    _number_input("manual-hoa", "HOA / month"),
-                                                    _number_input("manual-dom", "Days on market"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            _text_input("manual-property-type", "Property type", value="Single Family Residence"),
-                                            html.Div("Physical differentiators", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-garage-spaces", "Garage spaces"),
-                                                    _dropdown("manual-garage-type", GARAGE_TYPE_OPTIONS, "Garage type"),
-                                                    _dropdown("manual-has-detached-garage", YES_NO_OPTIONS, "Detached garage"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _dropdown("manual-has-back-house", YES_NO_OPTIONS, "Back house / ADU"),
-                                                    _dropdown("manual-adu-type", ADU_TYPE_OPTIONS, "ADU type"),
-                                                    _number_input("manual-adu-sqft", "ADU sqft"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _dropdown("manual-has-basement", YES_NO_OPTIONS, "Has basement"),
-                                                    _dropdown("manual-basement-finished", YES_NO_OPTIONS, "Basement finished"),
-                                                    _dropdown("manual-has-pool", YES_NO_OPTIONS, "Has pool"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-parking-spaces", "Parking spaces"),
-                                                    _dropdown("manual-corner-lot", YES_NO_OPTIONS, "Corner lot"),
-                                                    _dropdown("manual-driveway-off-street", YES_NO_OPTIONS, "Driveway / off-street"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    dcc.Dropdown(id="manual-condition-profile", options=CONDITION_OPTIONS, value="", placeholder="Condition", clearable=False),
-                                                    dcc.Dropdown(id="manual-capex-lane", options=CAPEX_OPTIONS, value="", placeholder="CapEx lane", clearable=False),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "8px"},
-                                            ),
-                                            html.Div("Income / support inputs", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-estimated-rent", "Estimated market rent"),
-                                                    _number_input("manual-back-house-rent", "Back house rent"),
-                                                    _number_input("manual-seasonal-rent", "Seasonal rent"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-insurance", "Insurance estimate"),
-                                                    _number_input("manual-maintenance-reserve", "Maintenance reserve / month"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "8px"},
-                                            ),
-                                            dcc.Textarea(id="manual-notes", placeholder="Notes", style={"width": "100%", "height": "70px"}),
-                                            html.Div("Optional manual comps", style={"fontSize": "12px", "textTransform": "uppercase", "color": "#6b7b8d"}),
-                                            _text_input("manual-comp-address", "Comp address"),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-comp-sale-price", "Sale price"),
-                                                    _text_input("manual-comp-sale-date", "Sale date YYYY-MM-DD"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-comp-beds", "Beds"),
-                                                    _number_input("manual-comp-baths", "Baths"),
-                                                    _number_input("manual-comp-sqft", "Sqft"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _number_input("manual-comp-lot-size", "Lot size (acres)"),
-                                                    _number_input("manual-comp-year-built", "Year built"),
-                                                    _number_input("manual-comp-distance", "Distance miles"),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "8px"},
-                                            ),
-                                            html.Div(
-                                                [
-                                                    _text_input("manual-comp-property-type", "Property type", value="Single Family Residence"),
-                                                    dcc.Dropdown(id="manual-comp-condition-profile", options=CONDITION_OPTIONS, value="", placeholder="Comp condition", clearable=False),
-                                                ],
-                                                style={"display": "grid", "gridTemplateColumns": "1.3fr 1fr", "gap": "8px"},
-                                            ),
-                                            dcc.Textarea(id="manual-comp-notes", placeholder="Comp notes", style={"width": "100%", "height": "60px"}),
-                                            html.Button("Add Comp", id="manual-add-comp-button", n_clicks=0),
-                                            html.Div(id="manual-comps-preview", style={"fontSize": "12px", "color": "#5f7286"}),
-                                            html.Button("Analyze Property", id="manual-run-analysis-button", n_clicks=0),
-                                            html.Div(id="manual-entry-status", style={"fontSize": "13px", "color": "#5f7286"}),
-                                        ],
-                                        id="add-property-form",
-                                        style={"display": "grid", "gap": "8px"},
-                                    ),
-                                ],
-                                style=SIDEBAR_STYLE,
-                                className="workspace-sidebar",
-                            ),
-                            html.Div(
-                                [
-                                    html.Div(id="top-summary"),
-                                    dcc.Tabs(
-                                        id="section-tabs",
-                                        value="overview",
-                                        children=[dcc.Tab(label=label, value=value) for value, label in SECTION_TABS],
-                                        style={"marginTop": "12px"},
-                                    ),
-                                    html.Div(id="workspace-tab-content", style={"marginTop": "16px"}),
-                                ],
-                                style={"flex": "1", "padding": "clamp(16px, 2.5vw, 28px)", "minWidth": 0},
-                                className="workspace-main",
-                            ),
-                        ],
-                        style={"display": "flex", "minHeight": "calc(100vh - 120px)", "alignItems": "stretch"},
-                        className="workspace-shell",
-                    ),
-                ]
+                id="main-tab-content",
+                style={"flex": "1", "minHeight": "0"},
             ),
+
+            # Floating add-property drawer
+            _add_property_drawer(),
         ],
-        style=PAGE_STYLE,
+        style={**PAGE_STYLE, "display": "flex", "flexDirection": "column"},
     )
 
 
 app.layout = _build_layout()
+
+
+# ── Callbacks ──────────────────────────────────────────────────────────────────
 
 
 @app.callback(
@@ -430,27 +720,95 @@ def refresh_property_controls(
 ):
     options = _property_options()
     allowed = {option["value"] for option in options}
-    loaded_ids = [property_id for property_id in (loaded_ids or []) if property_id in allowed]
+    loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
     property_value = current_property_id if current_property_id in allowed else (loaded_ids[0] if loaded_ids else None)
-    compare_values = [property_id for property_id in (current_compare_ids or loaded_ids) if property_id in allowed][:4]
+    compare_values = [pid for pid in (current_compare_ids or loaded_ids) if pid in allowed][:4]
     return options, property_value, options, compare_values, _saved_property_rows()
 
 
 @app.callback(
     Output("active-property-status", "children"),
+    Output("property-header-bar", "children"),
+    Output("property-header-bar", "style"),
     Input("property-selector-dropdown", "value"),
 )
 def render_active_property_status(property_id: str | None):
+    hidden = {"display": "none"}
     if not property_id:
-        return "No active property selected."
+        return "No property selected", None, hidden
     try:
         report = load_report_for_preset(property_id)
     except KeyError:
-        return "Selected property is unavailable."
+        return "Unavailable", None, hidden
     view = build_property_analysis_view(report)
-    return (
-        f"Active property: {view.address} | Ask: {_fmt_currency(view.ask_price)} | "
-        f"BCV: {_fmt_currency(view.bcv)} | Confidence: {view.overall_confidence:.0%}"
+
+    # Top bar status (compact)
+    status = f"{view.address}  ·  {_fmt_currency(view.ask_price)}  ·  {view.overall_confidence:.0%}"
+
+    # Sticky property header
+    pi = report.property_input
+    basics_parts = []
+    if pi:
+        if pi.beds:
+            basics_parts.append(f"{pi.beds}bd")
+        if pi.baths:
+            basics_parts.append(f"{pi.baths}ba")
+        if pi.sqft:
+            basics_parts.append(f"{pi.sqft:,}sf")
+        if pi.town:
+            basics_parts.append(f"{pi.town}")
+    basics_text = " · ".join(basics_parts)
+
+    gap_text = ""
+    if view.mispricing_pct is not None:
+        sign = "+" if view.mispricing_pct >= 0 else ""
+        gap_text = f"{sign}{view.mispricing_pct * 100:.1f}%"
+
+    score_text = ""
+    sc = TEXT_MUTED
+    if view.final_score is not None:
+        score_text = f"{view.final_score:.1f}/5"
+        sc = score_color(view.final_score)
+
+    header_children = html.Div(
+        [
+            # Left: address + basics
+            html.Div(
+                [
+                    html.Span(view.address, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginRight": "12px"}),
+                    html.Span(basics_text, style={"fontSize": "11px", "color": TEXT_MUTED}),
+                ],
+                style={"display": "flex", "alignItems": "baseline", "gap": "0"},
+            ),
+            # Right: key metrics inline
+            html.Div(
+                [
+                    _header_metric("Ask", _fmt_currency(view.ask_price)),
+                    _header_metric("BCV", _fmt_currency(view.bcv)),
+                    _header_metric("Gap", gap_text or "—"),
+                    _header_metric("Base", _fmt_currency(view.base_case)),
+                    _header_metric("Score", score_text or "—", color=sc),
+                    html.Span(
+                        view.recommendation_tier,
+                        style=tone_badge_style("positive" if (view.final_score or 0) >= 3.75 else "warning" if (view.final_score or 0) >= 3.0 else "negative"),
+                    ) if view.recommendation_tier else None,
+                ],
+                style={"display": "flex", "gap": "12px", "alignItems": "center"},
+            ),
+        ],
+        style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "width": "100%"},
+    )
+
+    return status, header_children, PROPERTY_HEADER_STYLE
+
+
+def _header_metric(label: str, value: str, *, color: str = TEXT_PRIMARY) -> html.Span:
+    return html.Span(
+        [
+            html.Span(label, style={"fontSize": "9px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginRight": "3px"}),
+            html.Span(value, style={"fontSize": "12px", "fontWeight": "600", "color": color}),
+        ],
+        style={"display": "inline-flex", "alignItems": "baseline"},
     )
 
 
@@ -460,64 +818,60 @@ def render_active_property_status(property_id: str | None):
 )
 def render_analysis_feedback(summary: dict[str, str] | None):
     if not summary:
-        return html.Div(
-            "Saved analyses reopen from persisted results. Add a property to create a new saved analysis.",
-            className="analysis-feedback-banner analysis-feedback-banner--neutral",
-        )
+        return None
     return html.Div(
         [
-            html.Div("Analysis Saved And Loaded", style={"fontWeight": "700"}),
-            html.Div(
-                f"{summary.get('address', 'Property')} | Ask: {summary.get('ask_price', 'Unavailable')} | "
-                f"Comps: {summary.get('comp_count', '0')} | Evidence: {summary.get('mode', 'Unknown')}"
-            ),
             html.Div(
                 [
-                    "Saved id: ",
-                    html.Code(summary.get("property_id", "")),
-                    html.Span(" | "),
-                    "Tear sheet: ",
-                    html.Code(summary.get("tear_sheet_path", "")),
+                    html.Span("Analysis saved", style={"fontWeight": "700", "color": TONE_POSITIVE_TEXT}),
+                    html.Span(" — ", style={"color": TEXT_MUTED}),
+                    html.Span(
+                        f"{summary.get('address', 'Property')}  ·  Ask: {summary.get('ask_price', '—')}  ·  "
+                        f"Comps: {summary.get('comp_count', '0')}  ·  Evidence: {summary.get('mode', '—')}",
+                        style={"color": TEXT_SECONDARY},
+                    ),
                 ],
-                style={"fontSize": "12px"},
+                style={"fontSize": "13px"},
             ),
         ],
-        className="analysis-feedback-banner analysis-feedback-banner--positive",
+        style={
+            "backgroundColor": "#1a3a1f",
+            "borderBottom": "1px solid #2d6a35",
+            "padding": "10px 24px",
+            "flexShrink": "0",
+        },
     )
 
 
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
-    Output("workspace-mode", "value", allow_duplicate=True),
     Input("property-selector-dropdown", "value"),
     prevent_initial_call=True,
 )
 def select_property(property_id: str | None):
     if not property_id:
-        return no_update, no_update
+        return no_update
     load_reports([property_id])
-    return [property_id], "single"
+    return [property_id]
 
 
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
-    Output("workspace-mode", "value", allow_duplicate=True),
     Input("compare-selector-dropdown", "value"),
     prevent_initial_call=True,
 )
 def select_compare_properties(property_ids: list[str] | None):
-    property_ids = [property_id for property_id in (property_ids or [])][:4]
+    property_ids = [pid for pid in (property_ids or [])][:4]
     if not property_ids:
-        return no_update, no_update
+        return no_update
     load_reports(property_ids)
-    return property_ids, ("compare" if len(property_ids) > 1 else "single")
+    return property_ids
 
 
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
     Output("compare-selector-dropdown", "value", allow_duplicate=True),
     Output("property-selector-dropdown", "value", allow_duplicate=True),
-    Output("workspace-mode", "value", allow_duplicate=True),
     Input("compare-selected-button", "n_clicks"),
     State("saved-properties-table", "data"),
     State("saved-properties-table", "selected_rows"),
@@ -529,57 +883,175 @@ def compare_selected_saved_properties(
     selected_rows: list[int] | None,
 ):
     if not rows or not selected_rows:
-        return no_update, no_update, no_update, no_update
-    property_ids = [rows[index]["property_id"] for index in selected_rows if 0 <= index < len(rows)][:4]
+        return no_update, no_update, no_update
+    property_ids = [rows[i]["property_id"] for i in selected_rows if 0 <= i < len(rows)][:4]
     if not property_ids:
-        return no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update
     load_reports(property_ids)
-    return property_ids, property_ids, no_update, ("compare" if len(property_ids) > 1 else "single")
+    return property_ids, property_ids, no_update
+
+
+# ── Main tab content ───────────────────────────────────────────────────────────
 
 
 @app.callback(
-    Output("top-summary", "children"),
-    Output("workspace-tab-content", "children"),
-    Input("workspace-mode", "value"),
-    Input("section-tabs", "value"),
+    Output("main-tab-content", "children"),
+    Input("main-tabs", "value"),
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
 )
-def render_workspace(mode: str, section_value: str, loaded_ids: list[str] | None, focus_id: str | None):
+def render_main_tab(tab: str, loaded_ids: list[str] | None, focus_id: str | None):
     loaded_ids = loaded_ids or []
-    if not loaded_ids:
-        empty = html.Div("Add or select a property to start the workspace.")
-        return empty, empty
-    reports = load_reports(loaded_ids)
-    if not reports:
-        empty = html.Div("Selected properties are unavailable.")
-        return empty, empty
-    focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
-    focus_report = reports[focus_id]
-    focus_view = build_property_analysis_view(focus_report)
-    report_list = list(reports.values())
-    compare_views = [build_property_analysis_view(report) for report in report_list]
 
-    if mode == "single":
-        summary = summary_strip(focus_view)
-        content = render_single_section(section_value, focus_view, focus_report)
-    else:
-        summary = html.Div(
+    if tab == "tear_sheet":
+        if not loaded_ids:
+            return _empty_state("Add or select a property to begin.")
+        reports = load_reports(loaded_ids)
+        if not reports:
+            return _empty_state("Property unavailable.")
+        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
+        report = reports[focus_id]
+        view = build_property_analysis_view(report)
+        return render_tear_sheet_body(view, report)
+
+    if tab == "scenarios":
+        if not loaded_ids:
+            return _empty_state("Select a property to view investment scenarios.")
+        reports = load_reports(loaded_ids)
+        if not reports:
+            return _empty_state("Property unavailable.")
+        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
+        report = reports[focus_id]
+        from briarwood.dash_app.scenarios import render_scenarios_section
+        return html.Div(render_scenarios_section(report), style={"padding": "16px 20px"})
+
+    if tab == "compare":
+        return html.Div([_compare_controls(), html.Div(id="compare-content", style={"padding": "16px 20px"})])
+
+    if tab == "data_quality":
+        if not loaded_ids:
+            return _empty_state("Select a property to view diagnostics.")
+        reports = load_reports(loaded_ids)
+        if not reports:
+            return _empty_state("Property unavailable.")
+        focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
+        report = reports[focus_id]
+        from briarwood.dash_app.data_quality import render_data_quality_section
+        return html.Div(render_data_quality_section(report), style={"padding": "16px 20px"})
+
+    return _empty_state("Select a tab.")
+
+
+def _empty_state(message: str) -> html.Div:
+    return html.Div(
+        html.P(message, style={"color": TEXT_MUTED, "fontSize": "12px"}),
+        style={"padding": "40px 20px"},
+    )
+
+
+@app.callback(
+    Output("compare-content", "children"),
+    Input("compare-selector-dropdown", "value"),
+    Input("compare-section-dropdown", "value"),
+)
+def render_compare(property_ids: list[str] | None, section: str | None):
+    property_ids = [pid for pid in (property_ids or [])][:4]
+    if len(property_ids) < 2:
+        return html.Div(
+            "Select 2 or more properties above to compare them side by side.",
+            style={"color": TEXT_MUTED, "fontSize": "14px"},
+        )
+    reports_dict = load_reports(property_ids)
+    report_list = [reports_dict[pid] for pid in property_ids if pid in reports_dict]
+    if len(report_list) < 2:
+        return html.Div("Some selected properties are unavailable.", style={"color": TEXT_MUTED})
+    views = [build_property_analysis_view(r) for r in report_list]
+    summary = build_compare_summary(views)
+    return render_compare_section(section or "overview", views, report_list, summary)
+
+
+# ── Form validation callback ───────────────────────────────────────────────────
+
+
+@app.callback(
+    Output("manual-run-analysis-button", "disabled"),
+    Output("manual-run-analysis-button", "style"),
+    Output("form-validation-hint", "children"),
+    Input("manual-address", "value"),
+    Input("manual-price", "value"),
+    Input("manual-beds", "value"),
+    Input("manual-baths", "value"),
+    Input("manual-sqft", "value"),
+)
+def validate_form(
+    address: str | None,
+    price: float | None,
+    beds: float | None,
+    baths: float | None,
+    sqft: float | None,
+):
+    missing: list[str] = []
+    if not address or not str(address).strip():
+        missing.append("address")
+    if price in (None, "", 0):
+        missing.append("asking price")
+
+    # Beds/baths/sqft are strongly recommended but not blocking
+    warnings: list[str] = []
+    if beds in (None, ""):
+        warnings.append("beds")
+    if baths in (None, ""):
+        warnings.append("baths")
+    if sqft in (None, "", 0):
+        warnings.append("sqft")
+
+    if missing:
+        hint = html.Span(
+            f"Required: {', '.join(missing)}",
+            style={"color": TONE_NEGATIVE_TEXT},
+        )
+        return True, _BTN_ANALYZE_DISABLED, hint
+
+    if warnings:
+        hint = html.Span(
             [
-                html.Div(
-                    [
-                        html.H1("Compare View", style={"margin": "0 0 6px 0"}),
-                        html.Div(
-                            f"{len(compare_views)} properties loaded. Each lane shows the same Briarwood section side by side.",
-                            style={"color": "#5f7286"},
-                        ),
-                    ],
-                    style={"backgroundColor": "white", "border": "1px solid #dde4ec", "borderRadius": "12px", "padding": "16px"},
-                )
+                html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT}),
+                html.Span(f"  ·  recommended: {', '.join(warnings)}", style={"color": TONE_WARNING_TEXT}),
             ]
         )
-        content = render_compare_section(section_value, compare_views, report_list, build_compare_summary(compare_views))
-    return summary, content
+        return False, _BTN_ANALYZE_ENABLED, hint
+
+    return False, _BTN_ANALYZE_ENABLED, html.Span("Ready to analyze", style={"color": TONE_POSITIVE_TEXT})
+
+
+# ── Drawer callbacks ───────────────────────────────────────────────────────────
+
+
+@app.callback(
+    Output("add-property-open", "data"),
+    Input("add-property-button", "n_clicks"),
+    Input("add-property-close-button", "n_clicks"),
+    State("add-property-open", "data"),
+    prevent_initial_call=True,
+)
+def toggle_add_property_drawer(_open_clicks: int, _close_clicks: int, is_open: bool | None):
+    triggered = ctx.triggered_id
+    if triggered == "add-property-close-button":
+        return False
+    return not bool(is_open)
+
+
+@app.callback(
+    Output("add-property-drawer", "style"),
+    Input("add-property-open", "data"),
+)
+def set_drawer_visibility(is_open: bool | None):
+    if is_open:
+        return {"display": "block"}
+    return {"display": "none"}
+
+
+# ── Export callbacks ───────────────────────────────────────────────────────────
 
 
 @app.callback(
@@ -590,9 +1062,9 @@ def render_workspace(mode: str, section_value: str, loaded_ids: list[str] | None
 )
 def export_tear_sheet(_n_clicks: int, property_id: str | None):
     if not property_id:
-        return "Choose a property before exporting."
+        return "Choose a property first."
     output_path = export_preset_tear_sheet(property_id)
-    return html.Div(["Tear sheet ready: ", html.Code(str(output_path))])
+    return html.Span(str(output_path), style={**{"fontFamily": FONT_MONO, "fontSize": "11px"}})
 
 
 @app.callback(
@@ -603,30 +1075,15 @@ def export_tear_sheet(_n_clicks: int, property_id: str | None):
 def export_lane_tear_sheet(_clicks: list[int]):
     triggered = ctx.triggered_id
     if not isinstance(triggered, dict):
-        return "Choose a property before exporting."
+        return "Choose a property first."
     property_id = triggered.get("property_id")
     if not isinstance(property_id, str):
-        return "Choose a property before exporting."
+        return "Choose a property first."
     output_path = export_preset_tear_sheet(property_id)
-    return html.Div(["Tear sheet ready: ", html.Code(str(output_path))])
+    return html.Span(str(output_path), style={"fontFamily": FONT_MONO, "fontSize": "11px"})
 
 
-@app.callback(
-    Output("add-property-open", "data"),
-    Input("add-property-button", "n_clicks"),
-    State("add-property-open", "data"),
-    prevent_initial_call=True,
-)
-def toggle_add_property_form(_n_clicks: int, is_open: bool | None):
-    return not bool(is_open)
-
-
-@app.callback(
-    Output("add-property-form", "style"),
-    Input("add-property-open", "data"),
-)
-def set_add_property_form_style(is_open: bool | None):
-    return {"display": "grid", "gap": "8px"} if is_open else {"display": "none"}
+# ── Manual comp callbacks ──────────────────────────────────────────────────────
 
 
 @app.callback(
@@ -670,9 +1127,9 @@ def add_manual_comp(
 ):
     comps = list(current_comps or [])
     if not address or sale_price in (None, "") or not sale_date:
-        return no_update, "Comp needs at least address, sale price, and sale date."
+        return no_update, "Comp needs at least address, sale price, and date."
     if len(comps) >= 10:
-        return no_update, "Comp limit reached for v1 manual entry (10 comps)."
+        return no_update, "Comp limit reached (10 comps max)."
     comp = {
         "address": address,
         "town": town or "Unknown",
@@ -711,7 +1168,7 @@ def add_manual_comp(
 def render_manual_comp_preview(comps: list[dict[str, object]] | None):
     comps = comps or []
     if not comps:
-        return "No manual comps added yet."
+        return html.Div("No manual comps added yet.", style={"color": TEXT_MUTED, "fontSize": "12px"})
     cards = []
     for index, comp in enumerate(comps):
         cards.append(
@@ -719,31 +1176,30 @@ def render_manual_comp_preview(comps: list[dict[str, object]] | None):
                 [
                     html.Div(
                         [
-                            html.Div(f"{index + 1}. {comp.get('address')}", style={"fontWeight": "600"}),
-                            html.Div(f"${float(comp.get('sale_price', 0)):,.0f} | {comp.get('sale_date')}", style={"fontSize": "12px"}),
+                            html.Div(f"{index + 1}. {comp.get('address')}", style={"fontWeight": "600", "fontSize": "12px", "color": TEXT_PRIMARY}),
+                            html.Div(f"${float(comp.get('sale_price', 0)):,.0f} | {comp.get('sale_date')}", style={"fontSize": "11px", "color": TEXT_MUTED}),
                         ]
                     ),
                     html.Div(
                         [
-                            html.Button("Edit", id={"type": "manual-edit-comp-button", "index": index}, n_clicks=0),
-                            html.Button("Remove", id={"type": "manual-remove-comp-button", "index": index}, n_clicks=0),
+                            html.Button("Edit", id={"type": "manual-edit-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "11px", "padding": "3px 8px"}),
+                            html.Button("Remove", id={"type": "manual-remove-comp-button", "index": index}, n_clicks=0, style={**BTN_GHOST, "fontSize": "11px", "padding": "3px 8px", "color": TONE_NEGATIVE_TEXT}),
                         ],
-                        style={"display": "flex", "gap": "6px"},
+                        style={"display": "flex", "gap": "4px"},
                     ),
                 ],
                 style={
                     "display": "flex",
                     "justifyContent": "space-between",
                     "alignItems": "center",
-                    "border": "1px solid #d9e1ea",
-                    "borderRadius": "8px",
-                    "padding": "8px",
-                    "backgroundColor": "white",
-                    "gap": "8px",
+                    "border": f"1px solid {BORDER}",
+                    "borderRadius": "6px",
+                    "padding": "8px 10px",
+                    "backgroundColor": BG_SURFACE_3,
                 },
             )
         )
-    return html.Div(cards, style={"display": "grid", "gap": "8px"})
+    return html.Div(cards, style={"display": "grid", "gap": "6px"})
 
 
 @app.callback(
@@ -799,15 +1255,19 @@ def manage_manual_comps(
     )
 
 
+# ── Manual analysis callback ───────────────────────────────────────────────────
+
+
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
     Output("manual-entry-status", "children", allow_duplicate=True),
     Output("property-catalog-version", "data", allow_duplicate=True),
     Output("property-selector-dropdown", "value", allow_duplicate=True),
     Output("compare-selector-dropdown", "value", allow_duplicate=True),
-    Output("workspace-mode", "value", allow_duplicate=True),
     Output("add-property-open", "data", allow_duplicate=True),
     Output("last-analysis-summary", "data", allow_duplicate=True),
+    Output("main-tabs", "value"),
+    Output("analysis-loading-target", "children"),
     Input("manual-run-analysis-button", "n_clicks"),
     State("property-catalog-version", "data"),
     State("manual-comps-store", "data"),
@@ -888,8 +1348,18 @@ def run_manual_analysis(
     capex_lane: str | None,
     notes: str | None,
 ):
+    no_change = (no_update,) * 9
     if not address or price in (None, ""):
-        return no_update, "Subject property needs at least address and asking price.", no_update, no_update, no_update, no_update, no_update, no_update
+        error_msg = html.Span("Address and asking price are required.", style={"color": TONE_NEGATIVE_TEXT})
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, ""
+
+    def _bool(v: str | None) -> bool | None:
+        if v == "true":
+            return True
+        if v == "false":
+            return False
+        return None
+
     subject = {
         "property_id": property_id,
         "address": address,
@@ -908,76 +1378,50 @@ def run_manual_analysis(
         "days_on_market": days_on_market,
         "garage_spaces": garage_spaces,
         "garage_type": garage_type or None,
-        "has_detached_garage": _bool_from_form(has_detached_garage),
-        "has_back_house": _bool_from_form(has_back_house),
+        "has_detached_garage": _bool(has_detached_garage),
+        "has_back_house": _bool(has_back_house),
         "adu_type": adu_type or None,
         "adu_sqft": adu_sqft,
-        "has_basement": _bool_from_form(has_basement),
-        "basement_finished": _bool_from_form(basement_finished),
-        "has_pool": _bool_from_form(has_pool),
+        "has_basement": _bool(has_basement),
+        "basement_finished": _bool(basement_finished),
+        "has_pool": _bool(has_pool),
         "parking_spaces": parking_spaces,
-        "corner_lot": _bool_from_form(corner_lot),
-        "driveway_off_street": _bool_from_form(driveway_off_street),
+        "corner_lot": _bool(corner_lot),
+        "driveway_off_street": _bool(driveway_off_street),
         "estimated_monthly_rent": estimated_rent,
         "back_house_monthly_rent": back_house_rent,
-        "seasonal_monthly_rent": seasonal_rent,
-        "insurance": insurance,
-        "monthly_maintenance_reserve_override": maintenance_reserve,
+        "seasonal_rent_annual": seasonal_rent,
+        "insurance_annual": insurance,
+        "maintenance_reserve_monthly": maintenance_reserve,
         "condition_profile": condition_profile or None,
-        "capex_lane": capex_lane or _capex_from_condition(condition_profile),
+        "capex_lane": capex_lane or None,
         "notes": notes or None,
     }
-    manual_id, output_path = register_manual_analysis(subject, list(comps or []))
-    load_reports([manual_id])
-    summary = {
-        "property_id": manual_id,
-        "address": address,
-        "ask_price": _fmt_currency(price),
-        "comp_count": str(len(comps or [])),
-        "mode": "Public Record",
-        "tear_sheet_path": str(output_path),
-    }
-    return (
-        [manual_id],
-        html.Div(
+
+    try:
+        new_id, tear_sheet_path = register_manual_analysis(subject, comps or [])
+        summary = {
+            "property_id": new_id,
+            "address": address,
+            "ask_price": f"${price:,.0f}",
+            "comp_count": str(len(comps or [])),
+            "mode": "manual",
+            "tear_sheet_path": str(tear_sheet_path),
+        }
+        new_version = (catalog_version or 0) + 1
+        success_msg = html.Span(
             [
-                html.Div(f"Saved and analyzed {address}.", style={"fontWeight": "700"}),
-                html.Div(f"Loaded as active property: {manual_id}"),
-                html.Div(["Tear sheet: ", html.Code(str(output_path))], style={"fontSize": "12px"}),
+                html.Span("Analysis complete ", style={"color": TONE_POSITIVE_TEXT, "fontWeight": "600"}),
+                html.Span(f"— {address}", style={"color": TEXT_SECONDARY}),
             ]
-        ),
-        int(catalog_version or 0) + 1,
-        manual_id,
-        [manual_id],
-        "single",
-        False,
-        summary,
-    )
-
-
-def main() -> None:
-    load_reports(DEFAULT_PRESET_IDS)
-    debug = os.getenv("BRIARWOOD_DASH_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}
-    app.run(debug=debug)
-
-
-def _capex_from_condition(condition_profile: str | None) -> str | None:
-    if condition_profile == "renovated":
-        return "light"
-    if condition_profile in {"updated", "maintained", "dated"}:
-        return "moderate"
-    if condition_profile == "needs_work":
-        return "heavy"
-    return None
-
-
-def _bool_from_form(value: str | None) -> bool | None:
-    if value == "true":
-        return True
-    if value == "false":
-        return False
-    return None
-
-
-if __name__ == "__main__":
-    main()
+        )
+        # Close drawer, switch to Tear Sheet tab, select the new property
+        return [new_id], success_msg, new_version, new_id, [new_id], False, summary, "tear_sheet", ""
+    except Exception as exc:
+        error_msg = html.Span(
+            [
+                html.Span("Analysis failed: ", style={"color": TONE_NEGATIVE_TEXT, "fontWeight": "600"}),
+                html.Span(str(exc), style={"color": TEXT_SECONDARY}),
+            ]
+        )
+        return no_update, error_msg, no_update, no_update, no_update, no_update, no_update, no_update, ""
