@@ -40,6 +40,15 @@ class CurrentValueAgentTests(unittest.TestCase):
             + result.weights.market_adjusted_weight
             + result.weights.backdated_listing_weight
             + result.weights.income_weight,
+            1.0 - result.weights.town_prior_weight,
+            places=3,
+        )
+        self.assertAlmostEqual(
+            result.weights.comparable_sales_weight
+            + result.weights.market_adjusted_weight
+            + result.weights.backdated_listing_weight
+            + result.weights.income_weight
+            + result.weights.town_prior_weight,
             1.0,
             places=3,
         )
@@ -71,7 +80,8 @@ class CurrentValueAgentTests(unittest.TestCase):
             result.weights.comparable_sales_weight
             + result.weights.market_adjusted_weight
             + result.weights.backdated_listing_weight
-            + result.weights.income_weight,
+            + result.weights.income_weight
+            + result.weights.town_prior_weight,
             1.0,
             places=3,
         )
@@ -79,7 +89,7 @@ class CurrentValueAgentTests(unittest.TestCase):
             result.weights.market_adjusted_weight
             + result.weights.backdated_listing_weight
             + result.weights.income_weight,
-            1.0 - result.weights.comparable_sales_weight,
+            1.0 - result.weights.comparable_sales_weight - result.weights.town_prior_weight,
             places=3,
         )
         comp_driver = next(item for item in result.value_drivers if item.component == "Comparable sales")
@@ -147,8 +157,31 @@ class CurrentValueAgentTests(unittest.TestCase):
 
         self.assertEqual(result.weights.backdated_listing_weight, 0.0)
         self.assertEqual(result.weights.income_weight, 0.0)
-        self.assertEqual(result.weights.market_adjusted_weight, 1.0)
+        self.assertAlmostEqual(
+            result.weights.market_adjusted_weight + result.weights.town_prior_weight,
+            1.0,
+            places=3,
+        )
         self.assertEqual(result.weights.comparable_sales_weight, 0.0)
+
+    def test_town_prior_can_participate_in_value_blend(self) -> None:
+        result = CurrentValueAgent().run(
+            CurrentValueInput(
+                ask_price=1500000,
+                market_value_today=1000000,
+                market_history_points=sample_history(),
+                sqft=2000,
+                lot_size=0.20,
+                town_median_ppsf=900,
+                town_median_sqft=1800,
+                town_median_lot_size=0.16,
+                town_context_confidence=0.82,
+                cap_rate_assumption=0.05,
+            )
+        )
+
+        self.assertIsNotNone(result.components.town_prior_value)
+        self.assertGreater(result.weights.town_prior_weight, 0.0)
 
     def test_mispricing_calculation(self) -> None:
         result = CurrentValueAgent().run(

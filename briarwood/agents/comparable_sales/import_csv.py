@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -14,8 +15,6 @@ REQUIRED_FIELDS = [
     "sqft",
     "beds",
     "baths",
-    "lot_size",
-    "year_built",
     "verification_status",
 ]
 
@@ -100,7 +99,7 @@ def load_comp_rows(
                             "days_on_market": _parse_int(_field_value(row, "days_on_market")),
                             "source_name": _field_value(row, "source_name") or source_name,
                             "source_quality": "imported",
-                            "source_ref": _field_value(row, "source_ref") or f"{town.upper()}-CSV-{index}",
+                            "source_ref": _stable_sale_source_ref(row, town=town, fallback_index=index),
                             "source_notes": _field_value(row, "notes"),
                             "condition_profile": _normalize_condition_profile(_field_value(row, "condition_profile")),
                             "capex_lane": _normalize_capex_lane(_field_value(row, "capex_lane")),
@@ -158,7 +157,7 @@ def load_active_listing_rows(
                             "condition_profile": _normalize_condition_profile(_field_value(row, "condition_profile")),
                             "capex_lane": _normalize_capex_lane(_field_value(row, "capex_lane")),
                             "source_name": _field_value(row, "source_name") or source_name,
-                            "source_ref": _field_value(row, "source_ref") or f"{town.upper()}-ACTIVE-{index}",
+                            "source_ref": _stable_active_source_ref(row, town=town, fallback_index=index),
                             "source_notes": _field_value(row, "notes"),
                             "days_on_market": _parse_int(_field_value(row, "days_on_market")),
                             "beds": _parse_int(_field_value(row, "beds")),
@@ -199,6 +198,41 @@ def append_rows(
     return len(imported_rows)
 
 
+def merge_rows(
+    *,
+    comps_path: str | Path,
+    imported_rows: list[ComparableSale],
+    dataset_name: str | None = None,
+    as_of: str | None = None,
+    match_on: str = "source_ref",
+) -> tuple[int, int]:
+    store = JsonComparableSalesStore(comps_path)
+    dataset = store.load()
+    existing_by_key = {
+        getattr(row, match_on, None): index
+        for index, row in enumerate(dataset.sales)
+        if getattr(row, match_on, None)
+    }
+    created = 0
+    updated = 0
+    for row in imported_rows:
+        key = getattr(row, match_on, None)
+        if key and key in existing_by_key:
+            dataset.sales[existing_by_key[key]] = row
+            updated += 1
+        else:
+            dataset.sales.append(row)
+            if key:
+                existing_by_key[key] = len(dataset.sales) - 1
+            created += 1
+    if dataset_name:
+        dataset.metadata["dataset_name"] = dataset_name
+    if as_of:
+        dataset.metadata["as_of"] = as_of
+    store.save(dataset)
+    return created, updated
+
+
 def append_active_rows(
     *,
     active_path: str | Path,
@@ -218,6 +252,41 @@ def append_active_rows(
     return len(imported_rows)
 
 
+def merge_active_rows(
+    *,
+    active_path: str | Path,
+    imported_rows: list[ActiveListingRecord],
+    dataset_name: str | None = None,
+    as_of: str | None = None,
+    match_on: str = "source_ref",
+) -> tuple[int, int]:
+    store = JsonActiveListingStore(active_path)
+    dataset = store.load()
+    existing_by_key = {
+        getattr(row, match_on, None): index
+        for index, row in enumerate(dataset.listings)
+        if getattr(row, match_on, None)
+    }
+    created = 0
+    updated = 0
+    for row in imported_rows:
+        key = getattr(row, match_on, None)
+        if key and key in existing_by_key:
+            dataset.listings[existing_by_key[key]] = row
+            updated += 1
+        else:
+            dataset.listings.append(row)
+            if key:
+                existing_by_key[key] = len(dataset.listings) - 1
+            created += 1
+    if dataset_name:
+        dataset.metadata["dataset_name"] = dataset_name
+    if as_of:
+        dataset.metadata["as_of"] = as_of
+    store.save(dataset)
+    return created, updated
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Import a strict comparable-sales CSV into Briarwood's JSON dataset.")
     parser.add_argument("--input-csv", required=True)
@@ -228,6 +297,7 @@ def main() -> int:
     parser.add_argument("--source-name", default="manual comp import")
     parser.add_argument("--dataset-name", default=None)
     parser.add_argument("--as-of", default=datetime.today().strftime("%Y-%m-%d"))
+    parser.add_argument("--mode", choices=["append", "upsert"], default="upsert")
     args = parser.parse_args()
 
     rows = load_comp_rows(
@@ -237,26 +307,46 @@ def main() -> int:
         source_name=args.source_name,
         as_of=args.as_of,
     )
-    count = append_rows(
-        comps_path=args.comps,
-        imported_rows=rows,
-        dataset_name=args.dataset_name,
-        as_of=args.as_of,
-    )
+    if args.mode == "append":
+        sold_result = append_rows(
+            comps_path=args.comps,
+            imported_rows=rows,
+            dataset_name=args.dataset_name,
+            as_of=args.as_of,
+        )
+        sold_summary = f"Imported {sold_result} sold comps into {args.comps}"
+    else:
+        sold_created, sold_updated = merge_rows(
+            comps_path=args.comps,
+            imported_rows=rows,
+            dataset_name=args.dataset_name,
+            as_of=args.as_of,
+        )
+        sold_summary = f"Merged sold comps into {args.comps}: {sold_created} created, {sold_updated} updated"
     active_rows = load_active_listing_rows(
         args.input_csv,
         town=args.town,
         state=args.state,
         source_name=args.source_name,
     )
-    active_count = append_active_rows(
-        active_path=args.active_listings,
-        imported_rows=active_rows,
-        dataset_name=args.dataset_name,
-        as_of=args.as_of,
-    )
-    print(f"Imported {count} sold comps into {args.comps}")
-    print(f"Imported {active_count} active listings into {args.active_listings}")
+    if args.mode == "append":
+        active_result = append_active_rows(
+            active_path=args.active_listings,
+            imported_rows=active_rows,
+            dataset_name=args.dataset_name,
+            as_of=args.as_of,
+        )
+        active_summary = f"Imported {active_result} active listings into {args.active_listings}"
+    else:
+        active_created, active_updated = merge_active_rows(
+            active_path=args.active_listings,
+            imported_rows=active_rows,
+            dataset_name=args.dataset_name,
+            as_of=args.as_of,
+        )
+        active_summary = f"Merged active listings into {args.active_listings}: {active_created} created, {active_updated} updated"
+    print(sold_summary)
+    print(active_summary)
     return 0
 
 
@@ -277,7 +367,7 @@ def _normalize_date(value: object) -> str | None:
     if value in (None, "", "N/A", "n/a", "--", "-"):
         return None
     text = str(value).strip()
-    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d"):
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%m/%d/%Y", "%m/%d/%y", "%Y/%m/%d"):
         try:
             return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
         except ValueError:
@@ -298,6 +388,32 @@ def _field_value(row: dict[str, object], logical_name: str) -> object:
 
 def _normalize_column_name(value: str) -> str:
     return value.strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _slug_token(value: object) -> str:
+    text = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    return text or "unknown"
+
+
+def _stable_sale_source_ref(row: dict[str, object], *, town: str, fallback_index: int) -> str:
+    existing = _field_value(row, "source_ref")
+    if existing not in (None, "", "N/A", "n/a", "--", "-"):
+        return str(existing).strip()
+    address = _slug_token(_field_value(row, "address"))
+    sale_date = _normalize_date(_field_value(row, "sale_date"))
+    if sale_date:
+        return f"{town.strip().upper().replace(' ', '-')}-SALE-{address}-{sale_date}"
+    return f"{town.strip().upper().replace(' ', '-')}-CSV-{fallback_index}"
+
+
+def _stable_active_source_ref(row: dict[str, object], *, town: str, fallback_index: int) -> str:
+    existing = _field_value(row, "source_ref")
+    if existing not in (None, "", "N/A", "n/a", "--", "-"):
+        return str(existing).strip()
+    address = _slug_token(_field_value(row, "address"))
+    if address != "unknown":
+        return f"{town.strip().upper().replace(' ', '-')}-ACTIVE-{address}"
+    return f"{town.strip().upper().replace(' ', '-')}-ACTIVE-{fallback_index}"
 
 
 def _normalize_status(value: object) -> str | None:

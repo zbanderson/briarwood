@@ -14,9 +14,10 @@ from dash import dash_table, html
 
 from briarwood.agents.comparable_sales.schemas import AdjustedComparable, ComparableSalesOutput
 from briarwood.dash_app.components import metric_card, simple_table
+from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.dash_app.theme import (
     BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BORDER,
-    BODY_TEXT_STYLE, CARD_STYLE, GRID_3, GRID_4,
+    BODY_TEXT_STYLE, CARD_STYLE, GRID_2, GRID_3, GRID_4,
     SECTION_HEADER_STYLE, TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN,
     TABLE_STYLE_DATA_ODD, TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
@@ -24,6 +25,7 @@ from briarwood.dash_app.theme import (
     TONE_WARNING_BG,
 )
 from briarwood.modules.comparable_sales import get_comparable_sales_payload
+from briarwood.modules.town_aggregation_diagnostics import build_town_aggregation_diagnostics, normalize_town_name
 from briarwood.schemas import AnalysisReport
 
 _SALES_COMPS_PATH = Path(__file__).resolve().parents[2] / "data" / "comps" / "sales_comps.json"
@@ -74,6 +76,31 @@ def _dark_table(
     )
 
 
+def _format_metric(value: object, *, currency: bool = False, pct: bool = False, decimals: int = 1) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, float) and pd_isna(value):
+        return "—"
+    if pct:
+        return f"{float(value) * 100:.{decimals}f}%"
+    if currency:
+        return _dollar(float(value))
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, float):
+        return f"{value:.{decimals}f}"
+    return str(value)
+
+
+def pd_isna(value: object) -> bool:
+    try:
+        import pandas as pd
+
+        return bool(pd.isna(value))
+    except Exception:
+        return False
+
+
 # ── comp database health ────────────────────────────────────────────────────────
 
 
@@ -89,7 +116,7 @@ def _render_db_health() -> html.Div:
 
     town_counts: dict[str, int] = {}
     for r in rows:
-        town = r.get("town", "Unknown")
+        town = normalize_town_name(r.get("town", "Unknown"))
         town_counts[town] = town_counts.get(town, 0) + 1
 
     ver_counts: dict[str, int] = {}
@@ -401,6 +428,217 @@ def _render_value_attribution(report: AnalysisReport, comp_output: ComparableSal
     )
 
 
+def _render_town_aggregation_diagnostics() -> html.Div:
+    diagnostics = build_town_aggregation_diagnostics()
+    summary = diagnostics.town_summary
+    premium = diagnostics.town_premium_index
+    features = diagnostics.feature_sensitivity
+    qa = diagnostics.town_qa_flags
+    calibration = diagnostics.town_calibration
+
+    warning_towns = qa[
+        qa[["low_sample_flag", "high_missingness_flag", "high_dispersion_flag", "outlier_heavy_flag", "low_confidence_flag"]].any(axis=1)
+    ]["town"].tolist() if not qa.empty else []
+
+    summary_rows = [
+        {
+            "Town": row["town"],
+            "Listings": int(row["listing_count"]),
+            "Sold": int(row["sold_count"]),
+            "Median List": _format_metric(row["median_list_price"], currency=True),
+            "Median Sale": _format_metric(row["median_sale_price"], currency=True),
+            "Median PPSF": _format_metric(row["median_ppsf"], currency=True),
+            "Median Sqft": _format_metric(row["median_sqft"], decimals=0),
+            "Median DOM": _format_metric(row["median_days_on_market"], decimals=0),
+            "Missing Rate": _format_metric(row["missing_data_rate"], pct=True, decimals=0),
+            "Outliers": int(row["outlier_count"] or 0),
+        }
+        for _, row in summary.iterrows()
+    ]
+    premium_rows = [
+        {
+            "Town": row["town"],
+            "Price Index": _format_metric(row["town_price_index"], decimals=1),
+            "PPSF Index": _format_metric(row["town_ppsf_index"], decimals=1),
+            "Lot Index": _format_metric(row["town_lot_index"], decimals=1),
+            "Liquidity Index": _format_metric(row["town_liquidity_index"], decimals=1),
+        }
+        for _, row in premium.iterrows()
+    ]
+    feature_rows = [
+        {
+            "Town": row["town"],
+            "Feature": row["feature_name"],
+            "Group": row["feature_group"],
+            "Records": int(row["record_count"]),
+            "Median Price": _format_metric(row["median_price"], currency=True),
+            "Median PPSF": _format_metric(row["median_ppsf"], currency=True),
+            "Median Sqft": _format_metric(row["median_sqft"], decimals=0),
+        }
+        for _, row in features.iterrows()
+    ]
+    qa_rows = [
+        {
+            "Town": row["town"],
+            "Sample": int(row["sample_size"]),
+            "Sqft Coverage": _format_metric(row["sqft_coverage_rate"], pct=True, decimals=0),
+            "Lot Coverage": _format_metric(row["lot_size_coverage_rate"], pct=True, decimals=0),
+            "Year Coverage": _format_metric(row["year_built_coverage_rate"], pct=True, decimals=0),
+            "PPSF Std Dev": _format_metric(row["ppsf_std_dev"], decimals=1),
+            "Low Sample": _format_metric(row["low_sample_flag"]),
+            "High Missing": _format_metric(row["high_missingness_flag"]),
+            "High Dispersion": _format_metric(row["high_dispersion_flag"]),
+            "Outlier Heavy": _format_metric(row["outlier_heavy_flag"]),
+            "Low Confidence": _format_metric(row["low_confidence_flag"]),
+        }
+        for _, row in qa.iterrows()
+    ]
+    calibration_rows = [
+        {
+            "Town": row["town"],
+            "Records": int(row["record_count"]),
+            "Region Price Residual": _format_metric(row["avg_abs_region_price_residual"], pct=True, decimals=1),
+            "Town Price Residual": _format_metric(row["avg_abs_town_price_residual"], pct=True, decimals=1),
+            "Region PPSF Residual": _format_metric(row["avg_abs_region_ppsf_residual"], pct=True, decimals=1),
+            "Town PPSF Residual": _format_metric(row["avg_abs_town_ppsf_residual"], pct=True, decimals=1),
+            "PPSF Improvement": _format_metric(row["ppsf_residual_improvement"], pct=True, decimals=1),
+            "Note": row["calibration_note"],
+        }
+        for _, row in calibration.iterrows()
+    ]
+
+    warning_banner = html.Div(
+        f"Town QA warnings are active for: {', '.join(warning_towns[:8])}. Treat thin-sample towns as directional only."
+        if warning_towns
+        else "No town-level QA flags are currently tripped.",
+        style={
+            "backgroundColor": TONE_WARNING_BG if warning_towns else BG_SURFACE_2,
+            "border": f"1px solid {'#6a4f0e' if warning_towns else BORDER}",
+            "borderRadius": "6px",
+            "padding": "10px 14px",
+            "fontSize": "13px",
+            "color": TONE_WARNING_TEXT if warning_towns else TEXT_SECONDARY,
+        },
+    )
+
+
+def _render_subject_town_context(report: AnalysisReport) -> html.Div:
+    view = build_property_analysis_view(report)
+    town_context = view.town_context
+    if not town_context:
+        return html.Div(
+            [
+                html.Div("Subject Town Context", style=SECTION_HEADER_STYLE),
+                html.P("No usable town context was available for this property.", style=BODY_TEXT_STYLE),
+            ],
+            style=CARD_STYLE,
+        )
+
+    lines: list[str] = []
+    if town_context.get("subject_ppsf_vs_town") is not None:
+        ratio = float(town_context["subject_ppsf_vs_town"])
+        lines.append(
+            f"Subject PPSF is {ratio:.2f}x the town median."
+        )
+    if town_context.get("subject_price_vs_town") is not None:
+        ratio = float(town_context["subject_price_vs_town"])
+        lines.append(
+            f"Ask price is {ratio:.2f}x the town median price anchor."
+        )
+    if town_context.get("subject_lot_vs_town") is not None:
+        ratio = float(town_context["subject_lot_vs_town"])
+        lines.append(f"Lot size is {ratio:.2f}x the town median lot size.")
+    if town_context.get("qa_summary"):
+        lines.append(str(town_context["qa_summary"]))
+
+    metric_grid = html.Div(
+        [
+            metric_card("Town", str(town_context.get("town") or "—")),
+            metric_card("Town Context Confidence", _format_metric(town_context.get("town_context_confidence"), pct=True, decimals=0)),
+            metric_card("Town Median PPSF", _format_metric(town_context.get("baseline_median_ppsf"), currency=True)),
+            metric_card("Town Opportunity Score", _format_metric(town_context.get("town_relative_opportunity_score"), decimals=2)),
+        ],
+        style=GRID_4,
+    )
+    flag_text = ", ".join(town_context.get("qa_flags", [])) or "none"
+    return html.Div(
+        [
+            html.Div("Subject Town Context", style=SECTION_HEADER_STYLE),
+            html.P("Shows how this property sits relative to its own town baseline before any final valuation logic is changed.", style=BODY_TEXT_STYLE),
+            metric_grid,
+            html.Div(f"QA Flags: {flag_text}", style={**BODY_TEXT_STYLE, "color": TONE_WARNING_TEXT if flag_text != 'none' else TEXT_SECONDARY}),
+            html.Ul([html.Li(line, style=BODY_TEXT_STYLE) for line in lines], style={"margin": "0", "paddingLeft": "18px"}),
+        ],
+        style=CARD_STYLE,
+    )
+
+    return html.Div(
+        [
+            html.Div("Town Aggregation Diagnostics", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "Diagnostic town baselines, regional premium indexes, feature sensitivity slices, and QA flags. This is calibration support for internal use only.",
+                style={**BODY_TEXT_STYLE, "color": TEXT_SECONDARY},
+            ),
+            warning_banner,
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Town Summary Table", style=SECTION_HEADER_STYLE),
+                            html.P("Median town baselines across current sold + active coverage, with explicit missingness and outlier counts.", style=BODY_TEXT_STYLE),
+                            _dark_table(["Town", "Listings", "Sold", "Median List", "Median Sale", "Median PPSF", "Median Sqft", "Median DOM", "Missing Rate", "Outliers"], summary_rows, page_size=12),
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Town Premium Index Table", style=SECTION_HEADER_STYLE),
+                            html.P("Regional baseline = 100. Liquidity index rewards lower DOM and stronger sale-to-list support where present.", style=BODY_TEXT_STYLE),
+                            _dark_table(["Town", "Price Index", "PPSF Index", "Lot Index", "Liquidity Index"], premium_rows, page_size=12),
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                ],
+                style=GRID_2 if "GRID_2" in globals() else {"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "12px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Feature Sensitivity Table", style=SECTION_HEADER_STYLE),
+                            html.P("Grouped diagnostic medians by town for feature buckets that are actually encoded in the current datasets.", style=BODY_TEXT_STYLE),
+                            _dark_table(["Town", "Feature", "Group", "Records", "Median Price", "Median PPSF", "Median Sqft"], feature_rows or [{"Town": "—", "Feature": "No feature groups available", "Group": "—", "Records": 0, "Median Price": "—", "Median PPSF": "—", "Median Sqft": "—"}], page_size=15),
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Town QA Flags Table", style=SECTION_HEADER_STYLE),
+                            html.P("Coverage, dispersion, and confidence flags are intentionally conservative and should be tuned before any valuation use.", style=BODY_TEXT_STYLE),
+                            _dark_table(["Town", "Sample", "Sqft Coverage", "Lot Coverage", "Year Coverage", "PPSF Std Dev", "Low Sample", "High Missing", "High Dispersion", "Outlier Heavy", "Low Confidence"], qa_rows, page_size=12),
+                        ],
+                        style=CARD_STYLE,
+                    ),
+                ],
+                style=GRID_2 if "GRID_2" in globals() else {"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "12px"},
+            ),
+            html.Div(
+                [
+                    html.Div("Town Calibration Table", style=SECTION_HEADER_STYLE),
+                    html.P("Compares region-only residuals with town-relative residuals. Positive improvement means town context reduces pricing error in diagnostics.", style=BODY_TEXT_STYLE),
+                    _dark_table(
+                        ["Town", "Records", "Region Price Residual", "Town Price Residual", "Region PPSF Residual", "Town PPSF Residual", "PPSF Improvement", "Note"],
+                        calibration_rows or [{"Town": "—", "Records": 0, "Region Price Residual": "—", "Town Price Residual": "—", "Region PPSF Residual": "—", "Town PPSF Residual": "—", "PPSF Improvement": "—", "Note": "No calibration rows available"}],
+                        page_size=12,
+                    ),
+                ],
+                style=CARD_STYLE,
+            ),
+        ],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
 # ── public entry point ─────────────────────────────────────────────────────────
 
 
@@ -428,6 +666,8 @@ def render_data_quality_section(report: AnalysisReport) -> html.Div:
     blocks = [
         banner,
         _render_db_health(),
+        _render_town_aggregation_diagnostics(),
+        _render_subject_town_context(report),
         _render_comp_matching(comp_output) if comp_output is not None else html.Div(
             html.P("No comp output available for this property.", style=BODY_TEXT_STYLE),
             style=CARD_STYLE,

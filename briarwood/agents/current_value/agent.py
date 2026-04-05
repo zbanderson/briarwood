@@ -16,10 +16,11 @@ class CurrentValueAgent:
     """Estimate a defensible Briarwood Current Value for today's market."""
 
     _COMPONENT_BASE_WEIGHTS = {
-        "comparable_sales": 0.45,
-        "market_adjusted": 0.30,
-        "backdated_listing": 0.15,
-        "income": 0.10,
+        "comparable_sales": 0.40,
+        "market_adjusted": 0.24,
+        "backdated_listing": 0.12,
+        "income": 0.08,
+        "town_prior": 0.16,
     }
 
     def run(self, input_data: CurrentValueInput) -> CurrentValueOutput:
@@ -113,17 +114,30 @@ class CurrentValueAgent:
         else:
             unsupported_claims.append("Income-supported value is unavailable because rent support is missing.")
 
+        town_prior_value = self._town_prior_value(input_data)
+        town_prior_confidence = self._town_prior_confidence(input_data)
+        if town_prior_value is not None and town_prior_confidence > 0:
+            assumptions.append(
+                "Town prior uses the subject town's median pricing structure as a bounded secondary anchor, never as a hard override."
+            )
+            if input_data.comparable_sales_count and input_data.comparable_sales_count >= 4:
+                assumptions.append("Town prior was intentionally de-emphasized because direct comp depth is already healthy.")
+        else:
+            unsupported_claims.append("Town prior is unavailable or too weak to inform BCV.")
+
         weighted_components = {
             "comparable_sales": self._COMPONENT_BASE_WEIGHTS["comparable_sales"] * comparable_sales_confidence,
             "market_adjusted": self._COMPONENT_BASE_WEIGHTS["market_adjusted"] * market_component_confidence,
             "backdated_listing": self._COMPONENT_BASE_WEIGHTS["backdated_listing"] * backdated_component_confidence,
             "income": self._COMPONENT_BASE_WEIGHTS["income"] * income_component_confidence,
+            "town_prior": self._COMPONENT_BASE_WEIGHTS["town_prior"] * town_prior_confidence,
         }
         available_components = {
             "comparable_sales": comparable_sales_value,
             "market_adjusted": market_adjusted_value,
             "backdated_listing": backdated_listing_value,
             "income": income_supported_value,
+            "town_prior": town_prior_value,
         }
         weights = self._normalize_weights(weighted_components, available_components)
 
@@ -137,6 +151,7 @@ class CurrentValueAgent:
                 + (market_adjusted_value or 0.0) * weights["market_adjusted"]
                 + (backdated_listing_value or 0.0) * weights["backdated_listing"]
                 + (income_supported_value or 0.0) * weights["income"]
+                + (town_prior_value or 0.0) * weights["town_prior"]
             )
             confidence = self._overall_confidence(
                 weights=weights,
@@ -145,6 +160,7 @@ class CurrentValueAgent:
                     "market_adjusted": market_component_confidence,
                     "backdated_listing": backdated_component_confidence,
                     "income": income_component_confidence,
+                    "town_prior": town_prior_confidence,
                 },
             )
 
@@ -172,12 +188,14 @@ class CurrentValueAgent:
                 market_adjusted_value=self._round_or_none(market_adjusted_value),
                 backdated_listing_value=self._round_or_none(backdated_listing_value),
                 income_supported_value=self._round_or_none(income_supported_value),
+                town_prior_value=self._round_or_none(town_prior_value),
             ),
             weights=CurrentValueWeights(
                 comparable_sales_weight=round(weights["comparable_sales"], 4),
                 market_adjusted_weight=round(weights["market_adjusted"], 4),
                 backdated_listing_weight=round(weights["backdated_listing"], 4),
                 income_weight=round(weights["income"], 4),
+                town_prior_weight=round(weights["town_prior"], 4),
             ),
             value_drivers=self._value_drivers(
                 component_values=available_components,
@@ -187,15 +205,51 @@ class CurrentValueAgent:
                     "market_adjusted": market_component_confidence,
                     "backdated_listing": backdated_component_confidence,
                     "income": income_component_confidence,
+                    "town_prior": town_prior_confidence,
                 },
             ),
             confidence=round(confidence, 2),
+            town_context_confidence=round(town_prior_confidence, 2) if town_prior_confidence > 0 else None,
             modeled_fields=[],
             non_modeled_fields=[],
             assumptions=assumptions,
             unsupported_claims=unsupported_claims,
             warnings=warnings,
         )
+
+    def _town_prior_value(self, input_data: CurrentValueInput) -> float | None:
+        if input_data.town_median_ppsf is not None and input_data.sqft is not None and input_data.sqft > 0:
+            base_value = input_data.town_median_ppsf * input_data.sqft
+            size_adjustment = 1.0
+            lot_adjustment = 1.0
+            if input_data.town_median_sqft not in (None, 0):
+                size_ratio = input_data.sqft / input_data.town_median_sqft
+                size_adjustment = max(0.94, min(1.06, 1 + ((size_ratio - 1.0) * 0.10)))
+            if input_data.lot_size not in (None, 0) and input_data.town_median_lot_size not in (None, 0):
+                lot_ratio = input_data.lot_size / input_data.town_median_lot_size
+                lot_adjustment = max(0.94, min(1.08, 1 + ((lot_ratio - 1.0) * 0.12)))
+            return base_value * size_adjustment * lot_adjustment
+        if input_data.town_median_price is not None:
+            return input_data.town_median_price
+        return None
+
+    def _town_prior_confidence(self, input_data: CurrentValueInput) -> float:
+        confidence = float(input_data.town_context_confidence or 0.0)
+        if confidence <= 0:
+            return 0.0
+        if input_data.comparable_sales_count is not None:
+            if input_data.comparable_sales_count >= 5:
+                confidence *= 0.45
+            elif input_data.comparable_sales_count >= 3:
+                confidence *= 0.60
+            elif input_data.comparable_sales_count == 2:
+                confidence *= 0.75
+        elif (input_data.comparable_sales_confidence or 0.0) >= 0.80:
+            confidence *= 0.60
+
+        if input_data.town_median_ppsf is None and input_data.town_median_price is None:
+            return 0.0
+        return round(max(0.0, min(confidence, 0.78)), 2)
 
     def _property_adjustment_factor(self, input_data: CurrentValueInput) -> tuple[float, int]:
         adjustment = 0.0
@@ -375,15 +429,17 @@ class CurrentValueAgent:
             "market_adjusted": "Market-adjusted anchor",
             "backdated_listing": "Backdated listing anchor",
             "income": "Income-supported anchor",
+            "town_prior": "Town-aware prior",
         }
         notes = {
             "comparable_sales": "Most property-specific value input when verified comps exist.",
             "market_adjusted": "Town-level market history adjusted by basic property facts.",
             "backdated_listing": "Ask anchored to listing date and market drift.",
             "income": "Generic cap-rate conversion from effective rent support.",
+            "town_prior": "Town baseline anchor using local median pricing structure, bounded so direct comps still dominate.",
         }
         drivers: list[CurrentValueTraceItem] = []
-        for key in ("comparable_sales", "market_adjusted", "backdated_listing", "income"):
+        for key in ("comparable_sales", "market_adjusted", "backdated_listing", "income", "town_prior"):
             value = component_values.get(key)
             weight = weights.get(key, 0.0)
             confidence = component_confidences.get(key, 0.0)

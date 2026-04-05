@@ -6,6 +6,7 @@ from typing import Any
 
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore
 from briarwood.evidence import compute_confidence_breakdown, compute_metric_input_statuses
+from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
     get_current_value,
@@ -67,6 +68,49 @@ def _income_list(income: object, name: str) -> list[float]:
 def _module_confidence(report: AnalysisReport, module_name: str) -> float | None:
     module = report.module_results.get(module_name)
     return None if module is None else float(module.confidence)
+
+
+def _safe_ratio(value: float | None, baseline: float | None) -> float | None:
+    if value in (None, 0) or baseline in (None, 0):
+        return None
+    return round(float(value) / float(baseline), 3)
+
+
+def _town_relative_opportunity_score(
+    *,
+    subject_ppsf_vs_town: float | None,
+    subject_price_vs_town: float | None,
+    town_context_confidence: float | None,
+) -> float | None:
+    scores: list[float] = []
+    if subject_ppsf_vs_town is not None:
+        if subject_ppsf_vs_town <= 0.85:
+            scores.append(4.8)
+        elif subject_ppsf_vs_town <= 0.95:
+            scores.append(4.1)
+        elif subject_ppsf_vs_town <= 1.05:
+            scores.append(3.0)
+        elif subject_ppsf_vs_town <= 1.15:
+            scores.append(2.1)
+        else:
+            scores.append(1.3)
+    if subject_price_vs_town is not None:
+        if subject_price_vs_town <= 0.85:
+            scores.append(4.4)
+        elif subject_price_vs_town <= 0.95:
+            scores.append(3.8)
+        elif subject_price_vs_town <= 1.05:
+            scores.append(3.0)
+        elif subject_price_vs_town <= 1.15:
+            scores.append(2.3)
+        else:
+            scores.append(1.5)
+    if not scores:
+        return None
+    raw_score = sum(scores) / len(scores)
+    confidence = town_context_confidence if town_context_confidence is not None else 0.0
+    shrunk = 3.0 + (raw_score - 3.0) * max(0.25, min(confidence, 1.0))
+    return round(shrunk, 2)
 
 
 def _liquidity_metrics(report: AnalysisReport) -> tuple[dict[str, Any], list[str], list[str]]:
@@ -388,6 +432,7 @@ class PropertyAnalysisView:
     risk_location: RiskLocationViewModel
     evidence: EvidenceViewModel
     decision: DecisionViewModel | None = None
+    town_context: dict[str, Any] = field(default_factory=dict)
     compare_metrics: dict[str, Any] = field(default_factory=dict)
     # Defaults transparency
     defaults_applied: dict[str, str] = field(default_factory=dict)
@@ -484,6 +529,11 @@ def _component_rows(report: AnalysisReport) -> list[tuple[str, str, str]]:
         ("Market-Adjusted", _fmt_currency(current_value.components.market_adjusted_value), _fmt_pct(current_value.weights.market_adjusted_weight)),
         ("Listing-Aligned", _fmt_currency(current_value.components.backdated_listing_value), _fmt_pct(current_value.weights.backdated_listing_weight)),
         ("Income-Supported", _fmt_currency(current_value.components.income_supported_value), _fmt_pct(current_value.weights.income_weight)),
+        (
+            "Town-Aware Prior",
+            _fmt_currency(getattr(current_value.components, "town_prior_value", None)),
+            _fmt_pct(getattr(current_value.weights, "town_prior_weight", None)),
+        ),
     ]
     return rows
 
@@ -598,6 +648,50 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         if ask_price_val
         else None
     )
+    town_context_raw = get_town_context(property_input.town if property_input else None)
+    subject_ppsf = (ask_price_val / property_input.sqft) if property_input and ask_price_val and property_input.sqft else None
+    subject_ppsf_vs_town = _safe_ratio(subject_ppsf, town_context_raw.median_ppsf) if town_context_raw else None
+    subject_price_vs_town = _safe_ratio(ask_price_val, town_context_raw.median_price) if town_context_raw else None
+    subject_lot_vs_town = _safe_ratio(property_input.lot_size if property_input else None, town_context_raw.median_lot_size) if town_context_raw else None
+    town_adjusted_value_gap = (
+        round((town_context_raw.median_ppsf - subject_ppsf) / subject_ppsf, 3)
+        if town_context_raw and subject_ppsf not in (None, 0) and town_context_raw.median_ppsf not in (None, 0)
+        else None
+    )
+    town_relative_opportunity_score = _town_relative_opportunity_score(
+        subject_ppsf_vs_town=subject_ppsf_vs_town,
+        subject_price_vs_town=subject_price_vs_town,
+        town_context_confidence=(town_context_raw.context_confidence if town_context_raw else None),
+    )
+    town_context = (
+        {
+            "town": town_context_raw.town,
+            "baseline_median_price": town_context_raw.median_price,
+            "baseline_median_ppsf": town_context_raw.median_ppsf,
+            "baseline_median_sqft": town_context_raw.median_sqft,
+            "baseline_median_lot_size": town_context_raw.median_lot_size,
+            "town_price_index": town_context_raw.town_price_index,
+            "town_ppsf_index": town_context_raw.town_ppsf_index,
+            "town_lot_index": town_context_raw.town_lot_index,
+            "town_liquidity_index": town_context_raw.town_liquidity_index,
+            "town_context_confidence": town_context_raw.context_confidence,
+            "qa_flags": list(town_context_raw.qa_flags),
+            "subject_ppsf_vs_town": subject_ppsf_vs_town,
+            "subject_price_vs_town": subject_price_vs_town,
+            "subject_lot_vs_town": subject_lot_vs_town,
+            "town_adjusted_value_gap": town_adjusted_value_gap,
+            "town_relative_opportunity_score": town_relative_opportunity_score,
+            "qa_summary": (
+                "Town context is strong enough to inform pricing context."
+                if not town_context_raw.qa_flags and town_context_raw.context_confidence >= 0.78
+                else f"Town context is directional only because {', '.join(town_context_raw.qa_flags)}."
+                if town_context_raw.qa_flags
+                else "Town context is usable, but not clean enough to dominate direct comps."
+            ),
+        }
+        if town_context_raw
+        else {}
+    )
     compare_metrics = {
         "ask_price": ask_price_val,
         "bcv": current_value.briarwood_current_value,
@@ -624,6 +718,21 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "scarcity_score": scarcity.scarcity_support_score,
         "confidence": overall_confidence,
         "missing_inputs": missing,
+        "subject_ppsf": subject_ppsf,
+        "town_baseline_median_price": town_context.get("baseline_median_price"),
+        "town_baseline_median_ppsf": town_context.get("baseline_median_ppsf"),
+        "town_baseline_median_sqft": town_context.get("baseline_median_sqft"),
+        "town_price_index": town_context.get("town_price_index"),
+        "town_ppsf_index": town_context.get("town_ppsf_index"),
+        "town_lot_index": town_context.get("town_lot_index"),
+        "town_liquidity_index": town_context.get("town_liquidity_index"),
+        "town_context_confidence": town_context.get("town_context_confidence"),
+        "town_qa_flags": town_context.get("qa_flags", []),
+        "subject_ppsf_vs_town": subject_ppsf_vs_town,
+        "subject_price_vs_town": subject_price_vs_town,
+        "subject_lot_vs_town": subject_lot_vs_town,
+        "town_adjusted_value_gap": town_adjusted_value_gap,
+        "town_relative_opportunity_score": town_relative_opportunity_score,
     }
 
     view = PropertyAnalysisView(
@@ -788,6 +897,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             ),
             section_confidences=_section_confidences(report),
         ),
+        town_context=town_context,
         compare_metrics=compare_metrics,
     )
     view.evidence.transparency_items = _assumption_transparency_items(
@@ -800,6 +910,15 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     if property_input is not None:
         view.defaults_applied = getattr(property_input, "defaults_applied", {}) or {}
         view.geocoded = getattr(property_input, "geocoded", False)
+    if town_context:
+        if town_context.get("qa_flags"):
+            view.evidence.confidence_notes.append(
+                f"Town context for {town_context['town']} is weaker because {', '.join(town_context['qa_flags'])}."
+            )
+        elif town_context.get("town_context_confidence") is not None and town_context["town_context_confidence"] >= 0.78:
+            view.evidence.confidence_notes.append(
+                f"Town context for {town_context['town']} is well covered and can be used as a secondary pricing benchmark."
+            )
 
     # Scoring layer — gracefully degrade if scoring fails
     try:
@@ -1031,6 +1150,9 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
     income_support_ratio = view.compare_metrics.get("income_support_ratio")
     liquidity_score = view.risk_location.liquidity_score
     momentum_score = view.risk_location.market_momentum_score
+    subject_ppsf_vs_town = view.compare_metrics.get("subject_ppsf_vs_town")
+    town_adjusted_value_gap = view.compare_metrics.get("town_adjusted_value_gap")
+    town_context_confidence = view.compare_metrics.get("town_context_confidence")
     confidence_level = _confidence_level(view.overall_confidence)
     best_fit = _strategy_fit_label(view.lens_scores)
     display_fit = best_fit
@@ -1059,6 +1181,14 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
             risks.append(f"basis is slightly rich versus current support ({abs(valuation_pct) * 100:.0f}%)")
     else:
         dependencies.append("valuation support is still incomplete")
+
+    if isinstance(subject_ppsf_vs_town, (int, float)) and isinstance(town_context_confidence, (int, float)) and town_context_confidence >= 0.45:
+        if subject_ppsf_vs_town <= 0.92:
+            supporting_factors.append("screens cheap relative to the town's median pricing band")
+        elif subject_ppsf_vs_town >= 1.10:
+            risks.append("screens rich relative to the town's median pricing band")
+    elif view.town_context.get("qa_flags"):
+        dependencies.append("town-level context is still noisy")
 
     if isinstance(monthly_cash_flow, (int, float)):
         if monthly_cash_flow >= 250:
@@ -1159,6 +1289,11 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
             f"Current value support is the main reason this works, with about {abs(valuation_pct) * 100:.0f}% "
             f"{'upside versus basis' if valuation_pct >= 0 else 'overpricing versus support'} driving the call."
         )
+        if isinstance(town_adjusted_value_gap, (int, float)) and isinstance(town_context_confidence, (int, float)) and town_context_confidence >= 0.45:
+            if town_adjusted_value_gap >= 0.06:
+                thesis += f" It also screens about {town_adjusted_value_gap * 100:.0f}% cheap relative to its town baseline."
+            elif town_adjusted_value_gap <= -0.06:
+                thesis += f" It also screens about {abs(town_adjusted_value_gap) * 100:.0f}% rich relative to its town baseline."
     elif primary_driver == "carry":
         thesis = "Hold economics are the main constraint; the property needs more support from rent or a better basis to be compelling."
     elif primary_driver == "liquidity":

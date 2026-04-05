@@ -9,6 +9,7 @@ from briarwood.modules.market_value_history import (
     MarketValueHistoryModule,
     get_market_value_history_payload,
 )
+from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.opportunity_metrics import calculate_net_opportunity_delta
 from briarwood.schemas import ModuleResult, PropertyInput
 from briarwood.settings import CurrentValueSettings, DEFAULT_CURRENT_VALUE_SETTINGS
@@ -60,14 +61,17 @@ class CurrentValueModule:
         comparable_sales = get_comparable_sales_payload(comparable_result)
         history = get_market_value_history_payload(history_result)
         income = get_income_support_payload(income_result)
+        town_context = get_town_context(property_input.town)
 
         output = self.agent.run(
             CurrentValueInput(
                 ask_price=property_input.purchase_price,
                 comparable_sales_value=comparable_sales.comparable_value,
                 comparable_sales_confidence=comparable_sales.confidence,
+                comparable_sales_count=comparable_sales.comp_count,
                 market_value_today=history.current_value,
                 market_history_points=history.points,
+                sqft=property_input.sqft if property_input.sqft and property_input.sqft > 0 else None,
                 beds=property_input.beds,
                 baths=property_input.baths,
                 lot_size=property_input.lot_size,
@@ -80,6 +84,11 @@ class CurrentValueModule:
                     income.effective_monthly_rent * 12 if income.effective_monthly_rent is not None else None
                 ),
                 cap_rate_assumption=self.settings.income_cap_rate_assumption,
+                town_median_price=(town_context.median_price if town_context else None),
+                town_median_ppsf=(town_context.median_ppsf if town_context else None),
+                town_median_sqft=(town_context.median_sqft if town_context else None),
+                town_median_lot_size=(town_context.median_lot_size if town_context else None),
+                town_context_confidence=(town_context.context_confidence if town_context else None),
             )
         )
         modeled_fields, non_modeled_fields = audit_property_fields(property_input)
@@ -128,6 +137,7 @@ class CurrentValueModule:
                 "market_adjusted_value": output.components.market_adjusted_value,
                 "backdated_listing_value": output.components.backdated_listing_value,
                 "income_supported_value": output.components.income_supported_value,
+                "town_prior_value": output.components.town_prior_value,
                 "value_drivers": ", ".join(
                     f"{item.component} {item.normalized_weight:.0%}"
                     for item in output.value_drivers
@@ -137,6 +147,8 @@ class CurrentValueModule:
                 "market_adjusted_weight": round(output.weights.market_adjusted_weight, 4),
                 "backdated_listing_weight": round(output.weights.backdated_listing_weight, 4),
                 "income_weight": round(output.weights.income_weight, 4),
+                "town_prior_weight": round(output.weights.town_prior_weight, 4),
+                "town_context_confidence": output.town_context_confidence,
             },
             score=max(0.0, min(output.confidence * 100, 100.0)),
             confidence=output.confidence,
@@ -146,7 +158,7 @@ class CurrentValueModule:
                 property_input,
                 categories=["price_ask", "market_history", "comp_support", "rent_estimate", "listing_history"],
                 extra_estimated_inputs=(["rent_estimate"] if getattr(income, "rent_source_type", "missing") == "estimated" else []),
-                notes=["BCV blends sourced market context with comp support and any income-backed check that is available."],
+                notes=["BCV blends sourced market context with comp support, a bounded town-aware prior, and any income-backed check that is available."],
             ),
         )
 

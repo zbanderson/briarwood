@@ -14,6 +14,7 @@ class CurrentValueComponents(BaseModel):
     market_adjusted_value: float | None = None
     backdated_listing_value: float | None = None
     income_supported_value: float | None = None
+    town_prior_value: float | None = None
 
 
 class CurrentValueWeights(BaseModel):
@@ -25,6 +26,7 @@ class CurrentValueWeights(BaseModel):
     market_adjusted_weight: float = Field(ge=0)
     backdated_listing_weight: float = Field(ge=0)
     income_weight: float = Field(ge=0)
+    town_prior_weight: float = Field(ge=0)
 
 
 class CurrentValueTraceItem(BaseModel):
@@ -46,8 +48,10 @@ class CurrentValueInput(BaseModel):
     ask_price: float = Field(gt=0)
     comparable_sales_value: float | None = Field(default=None, gt=0)
     comparable_sales_confidence: float | None = Field(default=None, ge=0, le=1)
+    comparable_sales_count: int | None = Field(default=None, ge=0)
     market_value_today: float | None = Field(default=None, gt=0)
     market_history_points: list[HistoricalValuePoint] = Field(default_factory=list)
+    sqft: float | None = Field(default=None, gt=0)
     beds: int | None = Field(default=None, ge=0)
     baths: float | None = Field(default=None, ge=0)
     lot_size: float | None = Field(default=None, ge=0)
@@ -58,6 +62,11 @@ class CurrentValueInput(BaseModel):
     days_on_market: int | None = Field(default=None, ge=0)
     effective_annual_rent: float | None = Field(default=None, ge=0)
     cap_rate_assumption: float = Field(gt=0.02, lt=0.15)
+    town_median_price: float | None = Field(default=None, gt=0)
+    town_median_ppsf: float | None = Field(default=None, gt=0)
+    town_median_sqft: float | None = Field(default=None, gt=0)
+    town_median_lot_size: float | None = Field(default=None, ge=0)
+    town_context_confidence: float | None = Field(default=None, ge=0, le=1)
 
 
 class CurrentValueOutput(BaseModel):
@@ -83,6 +92,7 @@ class CurrentValueOutput(BaseModel):
     modeled_fields: list[str] = Field(default_factory=list)
     non_modeled_fields: list[str] = Field(default_factory=list)
     confidence: float
+    town_context_confidence: float | None = None
     assumptions: list[str]
     unsupported_claims: list[str]
     warnings: list[str]

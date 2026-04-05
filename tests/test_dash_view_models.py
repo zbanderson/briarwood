@@ -43,6 +43,9 @@ class DashViewModelTests(unittest.TestCase):
         )
         self.assertEqual(len(view.evidence.metric_statuses), 8)
         self.assertGreater(view.overall_confidence, 0)
+        self.assertIn("town_context_confidence", view.compare_metrics)
+        self.assertIn("subject_ppsf_vs_town", view.compare_metrics)
+        self.assertIn("town_relative_opportunity_score", view.compare_metrics)
 
     def test_compare_summary_explains_differences(self) -> None:
         views = [build_property_analysis_view(report) for report in self.reports.values()]

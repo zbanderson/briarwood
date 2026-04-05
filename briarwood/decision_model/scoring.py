@@ -20,6 +20,7 @@ from briarwood.decision_model.scoring_config import (
     SUB_FACTOR_QUESTIONS,
     SUB_FACTOR_WEIGHTS,
 )
+from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.schemas import AnalysisReport, PropertyInput
 
 
@@ -235,6 +236,35 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
         m["strategy_intent"] = pi.strategy_intent
         m["hold_period_years"] = pi.hold_period_years
         m["risk_tolerance"] = pi.risk_tolerance
+        town_context = get_town_context(pi.town)
+        if town_context is not None:
+            ask_price = pi.purchase_price or m.get("ask_price")
+            subject_ppsf = (ask_price / pi.sqft) if ask_price and pi.sqft else None
+            town_price_anchor = town_context.median_price
+            m["town_price_index"] = town_context.town_price_index
+            m["town_ppsf_index"] = town_context.town_ppsf_index
+            m["town_lot_index"] = town_context.town_lot_index
+            m["town_liquidity_index"] = town_context.town_liquidity_index
+            m["town_baseline_median_price"] = town_price_anchor
+            m["town_baseline_median_ppsf"] = town_context.median_ppsf
+            m["town_baseline_median_sqft"] = town_context.median_sqft
+            m["town_baseline_median_lot_size"] = town_context.median_lot_size
+            m["town_context_confidence"] = town_context.context_confidence
+            m["town_context_flags"] = list(town_context.qa_flags)
+            m["town_low_sample_flag"] = town_context.low_sample_flag
+            m["town_high_missingness_flag"] = town_context.high_missingness_flag
+            m["town_high_dispersion_flag"] = town_context.high_dispersion_flag
+            m["town_outlier_heavy_flag"] = town_context.outlier_heavy_flag
+            m["town_low_confidence_flag"] = town_context.low_confidence_flag
+            m["subject_ppsf_vs_town"] = _safe_ratio(subject_ppsf, town_context.median_ppsf)
+            m["subject_price_vs_town"] = _safe_ratio(ask_price, town_price_anchor)
+            m["subject_lot_vs_town"] = _safe_ratio(pi.lot_size, town_context.median_lot_size)
+            # Positive means the subject screens cheaper than the town's typical PPSF.
+            m["town_adjusted_value_gap"] = (
+                ((town_context.median_ppsf - subject_ppsf) / subject_ppsf)
+                if subject_ppsf not in (None, 0) and town_context.median_ppsf not in (None, 0)
+                else None
+            )
     else:
         m["purchase_price"] = m.get("ask_price")
 
@@ -255,6 +285,50 @@ def _lerp_score(value: float, lo: float, hi: float, score_at_lo: float, score_at
     t = (value - lo) / (hi - lo)
     t = max(0.0, min(1.0, t))
     return score_at_lo + t * (score_at_hi - score_at_lo)
+
+
+def _safe_ratio(value: float | None, baseline: float | None) -> float | None:
+    if value in (None, 0) or baseline in (None, 0):
+        return None
+    return float(value) / float(baseline)
+
+
+def _ppsf_benchmark_signal(
+    ask_ppsf: float,
+    benchmark_ppsf: float | None,
+    label: str,
+) -> tuple[float, str, float | None] | None:
+    if benchmark_ppsf in (None, 0):
+        return None
+    delta_pct = ((benchmark_ppsf - ask_ppsf) / ask_ppsf) * 100
+    if delta_pct >= 10:
+        return 5.0, f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — {delta_pct:.0f}% below benchmark", delta_pct
+    if delta_pct >= 3:
+        return 4.0, f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — slightly below benchmark", delta_pct
+    if delta_pct >= -5:
+        return 3.0, f"Ask $/SF ${ask_ppsf:.0f} roughly in line with {label} ${benchmark_ppsf:.0f}", delta_pct
+    if delta_pct >= -15:
+        return 2.0, f"Ask $/SF ${ask_ppsf:.0f} above {label} ${benchmark_ppsf:.0f} — premium pricing", delta_pct
+    return 1.0, f"Ask $/SF ${ask_ppsf:.0f} significantly above {label} ${benchmark_ppsf:.0f}", delta_pct
+
+
+def _town_liquidity_score(town_liquidity_index: float) -> float:
+    return _clamp(_lerp_score(float(town_liquidity_index), 80, 120, 2.0, 4.5))
+
+
+def _town_liquidity_adjusted_score(
+    base_signal: float,
+    town_liquidity_index: float | None,
+    *,
+    use_normalized_input: bool = True,
+) -> float:
+    if town_liquidity_index is None:
+        return _clamp(base_signal if use_normalized_input else base_signal / 20.0)
+    if use_normalized_input:
+        normalized_base = base_signal / 20.0
+    else:
+        normalized_base = base_signal
+    return _clamp(normalized_base * 0.85 + _town_liquidity_score(float(town_liquidity_index)) * 0.15)
 
 
 def _sf(name: str, score: float | None, evidence: str, data_source: str, raw: float | str | None, weight: float) -> SubFactorScore | None:
@@ -361,21 +435,28 @@ def _score_ppsf_positioning(m: dict) -> tuple[float, str, float | None]:
     ask = m.get("purchase_price")
     bcv = m.get("bcv")
     sqft = m.get("sqft")
+    town_median_ppsf = m.get("town_baseline_median_ppsf")
+    town_confidence = float(m.get("town_context_confidence") or 0.0)
     if not ask or not sqft or sqft == 0:
         return NEUTRAL_SCORE, "Sqft unavailable — cannot calculate $/SF", None
     ask_ppsf = ask / sqft
-    if bcv and sqft:
-        bcv_ppsf = bcv / sqft
-        delta_pct = ((bcv_ppsf - ask_ppsf) / ask_ppsf) * 100
-        if delta_pct >= 10:
-            return 5.0, f"Ask $/SF ${ask_ppsf:.0f} vs model ${bcv_ppsf:.0f} — {delta_pct:.0f}% below market", delta_pct
-        if delta_pct >= 3:
-            return 4.0, f"Ask $/SF ${ask_ppsf:.0f} vs model ${bcv_ppsf:.0f} — slightly below market", delta_pct
-        if delta_pct >= -5:
-            return 3.0, f"Ask $/SF ${ask_ppsf:.0f} roughly in line with model ${bcv_ppsf:.0f}", delta_pct
-        if delta_pct >= -15:
-            return 2.0, f"Ask $/SF ${ask_ppsf:.0f} above model ${bcv_ppsf:.0f} — premium pricing", delta_pct
-        return 1.0, f"Ask $/SF ${ask_ppsf:.0f} significantly above model ${bcv_ppsf:.0f}", delta_pct
+    model_benchmark = (bcv / sqft) if bcv and sqft else None
+    model_signal = _ppsf_benchmark_signal(ask_ppsf, model_benchmark, "model")
+    town_signal = _ppsf_benchmark_signal(ask_ppsf, town_median_ppsf, "town")
+
+    if model_signal and town_signal and town_confidence >= 0.45:
+        blended_score = _clamp(model_signal[0] * 0.75 + town_signal[0] * 0.25)
+        delta_pct = ((model_benchmark - ask_ppsf) / ask_ppsf) * 100 if model_benchmark else None
+        return (
+            blended_score,
+            f"Ask $/SF ${ask_ppsf:.0f} vs model ${model_benchmark:.0f}; town median ${town_median_ppsf:.0f}. "
+            f"Town context is additive only ({town_confidence:.0%} confidence).",
+            delta_pct,
+        )
+    if model_signal:
+        return model_signal
+    if town_signal and town_confidence >= 0.45:
+        return town_signal[0], f"Ask $/SF ${ask_ppsf:.0f} vs town median ${town_median_ppsf:.0f} — comp PPSF benchmark is thin", town_signal[2]
     return NEUTRAL_SCORE, f"Ask $/SF ${ask_ppsf:.0f} — no model benchmark available", ask_ppsf
 
 
@@ -722,17 +803,32 @@ def _calculate_optionality(m: dict) -> CategoryScore:
 def _score_dom_signal(m: dict) -> tuple[float, str, float | None]:
     """Days on market — absorption speed signal."""
     dom = m.get("days_on_market")
+    town_liquidity_index = m.get("town_liquidity_index")
     if dom is None:
+        if town_liquidity_index is not None:
+            score = _lerp_score(float(town_liquidity_index), 80, 120, 2.0, 4.5)
+            return score, f"DOM unavailable — using town liquidity index {float(town_liquidity_index):.0f}", town_liquidity_index
         return NEUTRAL_SCORE, "Days on market unavailable", None
     if dom <= 7:
-        return 5.0, f"{dom} DOM — hot demand, absorbing immediately", dom
-    if dom <= 21:
-        return 4.0, f"{dom} DOM — healthy demand", dom
-    if dom <= 45:
-        return 3.0, f"{dom} DOM — normal absorption", dom
-    if dom <= 90:
-        return 2.0, f"{dom} DOM — slow absorption, possible issues", dom
-    return 1.0, f"{dom} DOM — stale listing, demand concerns", dom
+        base_score = 5.0
+        evidence = f"{dom} DOM — hot demand, absorbing immediately"
+    elif dom <= 21:
+        base_score = 4.0
+        evidence = f"{dom} DOM — healthy demand"
+    elif dom <= 45:
+        base_score = 3.0
+        evidence = f"{dom} DOM — normal absorption"
+    elif dom <= 90:
+        base_score = 2.0
+        evidence = f"{dom} DOM — slow absorption, possible issues"
+    else:
+        base_score = 1.0
+        evidence = f"{dom} DOM — stale listing, demand concerns"
+    if town_liquidity_index is not None:
+        town_bias = _town_liquidity_score(float(town_liquidity_index))
+        base_score = _clamp(base_score * 0.8 + town_bias * 0.2)
+        evidence = f"{evidence}; town liquidity backdrop {float(town_liquidity_index):.0f}/100"
+    return base_score, evidence, dom
 
 
 def _score_inventory_tightness(m: dict) -> tuple[float | None, str, float | None]:
@@ -847,28 +943,36 @@ def _score_liquidity_risk(m: dict) -> tuple[float, str, float | None]:
     liq = m.get("liquidity_score")
     dom = m.get("days_on_market")
     rental_liq = m.get("rental_liquidity_score")
+    town_liquidity_index = m.get("town_liquidity_index")
 
     if liq is not None:
+        score = _town_liquidity_adjusted_score(float(liq), town_liquidity_index)
         if liq >= 75:
-            return 5.0, f"High liquidity (score {liq:.0f}) — quick exit possible", liq
+            return score, f"High liquidity (score {liq:.0f}) — quick exit possible", liq
         if liq >= 55:
-            return 4.0, f"Good liquidity ({liq:.0f})", liq
+            return score, f"Good liquidity ({liq:.0f})", liq
         if liq >= 40:
-            return 3.0, f"Moderate liquidity ({liq:.0f})", liq
+            return score, f"Moderate liquidity ({liq:.0f})", liq
         if liq >= 25:
-            return 2.0, f"Low liquidity ({liq:.0f}) — exit may take time", liq
-        return 1.0, f"Very low liquidity ({liq:.0f}) — illiquid market", liq
+            return score, f"Low liquidity ({liq:.0f}) — exit may take time", liq
+        return score, f"Very low liquidity ({liq:.0f}) — illiquid market", liq
 
     if rental_liq is not None:
+        score = _town_liquidity_adjusted_score(float(rental_liq), town_liquidity_index)
         if rental_liq >= 75:
-            return 4.5, f"Liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
+            return score, f"Liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
         if rental_liq >= 55:
-            return 3.5, f"Moderate liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
-        return 2.0, f"Thin liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
+            return score, f"Moderate liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
+        return score, f"Thin liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
 
     if dom is not None:
         score = _lerp_score(dom, 90, 7, 1.5, 4.5)
+        score = _town_liquidity_adjusted_score(score, town_liquidity_index, use_normalized_input=False)
         return score, f"Liquidity estimated from {dom} DOM", dom
+
+    if town_liquidity_index is not None:
+        score = _town_liquidity_score(float(town_liquidity_index))
+        return score, f"Property liquidity unavailable — using town liquidity context ({float(town_liquidity_index):.0f}/100)", town_liquidity_index
 
     return NEUTRAL_SCORE, "No liquidity data available", None
 

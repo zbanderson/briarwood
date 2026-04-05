@@ -10,6 +10,7 @@ from briarwood.schemas import (
     SectionEvidence,
     SourceCoverageItem,
 )
+from briarwood.modules.town_aggregation_diagnostics import get_town_context
 
 
 def build_section_evidence(
@@ -88,6 +89,7 @@ def compute_confidence_breakdown(report: AnalysisReport) -> ConfidenceBreakdown:
         _liquidity_confidence_component(report, property_input),
     ]
     components = _apply_metric_status_caps(components, status_map)
+    components = _apply_town_context_caps(components, property_input)
     total_weight = sum(component.weight for component in components if component.confidence is not None)
     if total_weight <= 0:
         return ConfidenceBreakdown(overall_confidence=0.0, components=components, notes=[])
@@ -808,6 +810,48 @@ def _apply_metric_status_caps(
             if cap is not None and confidence > cap:
                 confidence = cap
                 reason = f"{reason} Confidence reduced because {status.label.lower()} is {status.status.replace('_', ' ')}."
+        updated.append(
+            ConfidenceComponent(
+                key=component.key,
+                label=component.label,
+                confidence=_clamp_confidence(confidence),
+                weight=component.weight,
+                reason=reason,
+            )
+        )
+    return updated
+
+
+def _apply_town_context_caps(
+    components: list[ConfidenceComponent],
+    property_input: PropertyInput | None,
+) -> list[ConfidenceComponent]:
+    if property_input is None:
+        return components
+    town_context = get_town_context(property_input.town)
+    if town_context is None:
+        return components
+
+    flag_count = len(town_context.qa_flags)
+    if flag_count == 0 and town_context.context_confidence >= 0.78:
+        return components
+
+    if town_context.context_confidence < 0.45 or flag_count >= 3:
+        caps = {"market": 0.62, "liquidity": 0.58}
+    elif town_context.context_confidence < 0.60 or flag_count >= 2:
+        caps = {"market": 0.70, "liquidity": 0.66}
+    else:
+        caps = {"market": 0.78, "liquidity": 0.74}
+
+    town_reason = f"Town context for {town_context.town} is weaker ({', '.join(town_context.qa_flags) or 'coverage risk'})."
+    updated: list[ConfidenceComponent] = []
+    for component in components:
+        confidence = component.confidence
+        reason = component.reason
+        cap = caps.get(component.key)
+        if cap is not None and confidence > cap:
+            confidence = cap
+            reason = f"{reason} {town_reason}"
         updated.append(
             ConfidenceComponent(
                 key=component.key,
