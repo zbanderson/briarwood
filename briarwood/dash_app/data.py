@@ -11,6 +11,7 @@ from typing import Callable
 from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
 from briarwood.runner import run_report, run_report_from_listing_text, write_report_html
+from briarwood.reports.pdf_renderer import write_tear_sheet_pdf
 from briarwood.schemas import AnalysisReport
 
 
@@ -201,6 +202,13 @@ def export_preset_tear_sheet(preset_id: str) -> Path:
     report = load_report_for_preset(preset_id)
     filename = f"{preset_id}_tear_sheet.html"
     return write_report_html(report, OUTPUT_DIR / filename)
+
+
+def export_preset_tear_sheet_pdf(preset_id: str) -> Path:
+    """Export a PDF tear sheet for a saved/loaded property."""
+    report = load_report_for_preset(preset_id)
+    filename = f"{preset_id}_tear_sheet.pdf"
+    return write_tear_sheet_pdf(report, OUTPUT_DIR / filename)
 
 
 def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], list[dict[str, object]]]:

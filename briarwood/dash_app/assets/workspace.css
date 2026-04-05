@@ -275,3 +275,16 @@ details[open] > summary {
 .rc-slider-tooltip-arrow {
   border-top-color: #1c2333 !important;
 }
+
+/* ── Confidence tooltip ────────────────────────────────────────────── */
+
+.confidence-level-wrap:hover .confidence-tooltip {
+  display: block !important;
+}
+
+/* ── Low-confidence section treatment ──────────────────────────────── */
+
+.section-low-confidence {
+  border-left: 3px solid #f8514999 !important;
+  opacity: 0.92;
+}

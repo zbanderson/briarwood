@@ -22,6 +22,7 @@ from briarwood.decision_model.scoring_config import (
 )
 from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.schemas import AnalysisReport, PropertyInput
+from briarwood.settings import DEFAULT_DECISION_MODEL_SETTINGS, DecisionModelSettings
 
 
 # ── Data classes ───────────────────────────────────────────────────────────────
@@ -83,6 +84,116 @@ def _get_payload(report: AnalysisReport, module_name: str) -> Any:
 
 def _prop(report: AnalysisReport) -> PropertyInput | None:
     return report.property_input
+
+
+def _estimate_comp_renovation_premium(report: AnalysisReport) -> dict[str, Any]:
+    """Estimate renovation premium from comp condition data.
+
+    Compares median $/sqft of renovated/updated comps vs dated/needs_work comps.
+    First tries the matched comp set; if insufficient condition data, falls back
+    to the full comp database filtered to the subject's town.
+    Returns a dict with premium_pct, estimated_renovated_value, sample counts,
+    and a narrative snippet.  Empty dict if insufficient data.
+    """
+    import statistics
+    from pathlib import Path
+
+    pi = report.property_input
+    subject_town = (pi.town or "").lower() if pi else ""
+
+    upper: list[float] = []   # renovated / updated comps — $/sqft
+    lower: list[float] = []   # dated / needs_work comps — $/sqft
+    upper_count = 0
+    lower_count = 0
+    source = "matched"
+
+    # First: try matched comps
+    comp_payload = _get_payload(report, "comparable_sales")
+    if comp_payload is not None and hasattr(comp_payload, "comps_used"):
+        for c in (comp_payload.comps_used or []):
+            cond = (getattr(c, "condition_profile", None) or "").lower()
+            sqft = getattr(c, "sqft", None)
+            adj_price = getattr(c, "adjusted_price", None)
+            if adj_price is None or not sqft or sqft <= 0:
+                continue
+            ppsf = adj_price / sqft
+            if cond in ("renovated", "updated"):
+                upper.append(ppsf)
+                upper_count += 1
+            elif cond in ("dated", "needs_work"):
+                lower.append(ppsf)
+                lower_count += 1
+
+    # Fallback: scan the full comp database for the same town
+    if (not upper or not lower) and subject_town:
+        source = "database"
+        try:
+            import json
+            db_path = Path(__file__).resolve().parents[2] / "data" / "comps" / "sales_comps.json"
+            if db_path.exists():
+                with open(db_path) as f:
+                    db = json.load(f)
+                sales = db.get("sales", []) if isinstance(db, dict) else db
+                upper = []
+                lower = []
+                upper_count = 0
+                lower_count = 0
+                for sale in sales:
+                    if not isinstance(sale, dict):
+                        continue
+                    town = (sale.get("town") or "").lower()
+                    if town != subject_town:
+                        continue
+                    cond = (sale.get("condition_profile") or "").lower()
+                    sqft = sale.get("sqft")
+                    price = sale.get("sale_price")
+                    if price is None or not sqft or sqft <= 0:
+                        continue
+                    ppsf = price / sqft
+                    if cond in ("renovated", "updated"):
+                        upper.append(ppsf)
+                        upper_count += 1
+                    elif cond in ("dated", "needs_work", "maintained"):
+                        lower.append(ppsf)
+                        lower_count += 1
+        except Exception:
+            pass
+
+    result: dict[str, Any] = {
+        "renovated_comp_count": upper_count,
+        "dated_comp_count": lower_count,
+        "renovation_premium_source": source,
+    }
+
+    if not upper or not lower:
+        return result
+
+    median_upper = statistics.median(upper)
+    median_lower = statistics.median(lower)
+
+    if median_lower <= 0:
+        return result
+
+    premium_pct = (median_upper - median_lower) / median_lower
+
+    # Estimate what the subject would be worth renovated
+    bcv_metrics = _get_metrics(report, "current_value")
+    bcv = bcv_metrics.get("briarwood_current_value")
+
+    estimated_renovated_value = None
+    estimated_value_creation = None
+    if bcv and premium_pct > 0:
+        estimated_renovated_value = round(bcv * (1 + premium_pct))
+        estimated_value_creation = estimated_renovated_value - bcv
+
+    result.update({
+        "renovation_premium_pct": round(premium_pct, 3),
+        "median_renovated_ppsf": round(median_upper, 2),
+        "median_dated_ppsf": round(median_lower, 2),
+        "estimated_renovated_value": estimated_renovated_value,
+        "estimated_value_creation": estimated_value_creation,
+    })
+    return result
 
 
 def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
@@ -204,6 +315,16 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
     m["reno_enabled"] = reno.get("enabled", False)
     m["reno_roi_pct"] = reno.get("roi_pct")
     m["reno_net_value_creation"] = reno.get("net_value_creation")
+
+    # ── comp-derived renovation premium ──
+    reno_premium = _estimate_comp_renovation_premium(report)
+    m["comp_renovation_premium_pct"] = reno_premium.get("renovation_premium_pct")
+    m["comp_renovated_comp_count"] = reno_premium.get("renovated_comp_count", 0)
+    m["comp_dated_comp_count"] = reno_premium.get("dated_comp_count", 0)
+    m["comp_median_renovated_ppsf"] = reno_premium.get("median_renovated_ppsf")
+    m["comp_median_dated_ppsf"] = reno_premium.get("median_dated_ppsf")
+    m["comp_estimated_renovated_value"] = reno_premium.get("estimated_renovated_value")
+    m["comp_estimated_value_creation"] = reno_premium.get("estimated_value_creation")
 
     # ── teardown_scenario ──
     td = _get_metrics(report, "teardown_scenario")
@@ -580,15 +701,16 @@ def _score_downside_protection(m: dict) -> tuple[float, str, float | None]:
 
 
 def _score_replacement_cost(m: dict) -> tuple[float, str, float | None]:
-    """Is the property priced below replacement cost (rough $/sqft heuristic)?"""
+    """Is the property priced below replacement cost?
+    Bug 6: replacement cost now read from DecisionModelSettings instead of
+    hardcoded $400/sqft. TODO: make geography/property-type aware."""
     ask = m.get("purchase_price") or m.get("ask_price")
     sqft = m.get("sqft")
     lot_size = m.get("lot_size")
     if not ask or not sqft or sqft == 0:
         return NEUTRAL_SCORE, "Cannot estimate replacement cost", None
     ask_ppsf = ask / sqft
-    # NJ coastal replacement cost benchmark: $350-$450/sqft new construction
-    replacement_ppsf = 400.0
+    replacement_ppsf = DEFAULT_DECISION_MODEL_SETTINGS.replacement_cost_per_sqft
     ratio = ask_ppsf / replacement_ppsf
     if ratio <= 0.6:
         return 5.0, f"Ask ${ask_ppsf:.0f}/SF — well below replacement (~${replacement_ppsf:.0f}/SF)", ratio
@@ -679,12 +801,41 @@ def _score_renovation_upside(m: dict) -> tuple[float, str, float | None]:
                 return 3.0, f"Renovation ROI {roi:.0f}% — marginal value creation", roi
             return 2.0, f"Renovation ROI {roi:.0f}% — destroys value", roi
 
-    # No renovation scenario — score based on condition
+    # No renovation scenario — estimate from comp-derived renovation premium
     condition = (m.get("condition_profile") or "").lower()
     capex = (m.get("capex_lane") or "").lower()
+    premium_pct = m.get("comp_renovation_premium_pct")
+    est_value = m.get("comp_estimated_renovated_value")
+    est_creation = m.get("comp_estimated_value_creation")
+    reno_comp_count = m.get("comp_renovated_comp_count", 0)
+    dated_comp_count = m.get("comp_dated_comp_count", 0)
+    median_reno_ppsf = m.get("comp_median_renovated_ppsf")
+    median_dated_ppsf = m.get("comp_median_dated_ppsf")
+
     if condition in ("dated", "needs_work", "needs work") or capex == "heavy":
-        return 4.0, "No renovation modeled but property needs work — upside likely exists", condition or capex
+        if premium_pct is not None and reno_comp_count >= 1 and dated_comp_count >= 1:
+            pct_display = premium_pct * 100
+            evidence = (
+                f"Renovated comps trade at ${median_reno_ppsf:,.0f}/sqft vs ${median_dated_ppsf:,.0f}/sqft "
+                f"for dated — a {pct_display:.0f}% premium "
+                f"({reno_comp_count} renovated, {dated_comp_count} dated comp{'s' if dated_comp_count != 1 else ''})"
+            )
+            if est_creation is not None and est_creation > 0:
+                evidence += f". Estimated value creation: ${est_creation:,.0f}"
+            if pct_display >= 20:
+                return 5.0, evidence, premium_pct
+            if pct_display >= 10:
+                return 4.0, evidence, premium_pct
+            return 3.5, evidence, premium_pct
+        return 4.0, "Property needs work but no renovated comps available to estimate premium", condition or capex
     if condition in ("maintained",) or capex == "moderate":
+        if premium_pct is not None and premium_pct > 0 and reno_comp_count >= 1:
+            pct_display = premium_pct * 100
+            evidence = (
+                f"Moderate renovation potential — renovated comps trade at a {pct_display:.0f}% premium "
+                f"(${median_reno_ppsf:,.0f}/sqft vs ${median_dated_ppsf:,.0f}/sqft)"
+            )
+            return 3.0, evidence, premium_pct
         return 3.0, "Moderate renovation potential based on condition", condition or capex
     if condition in ("updated", "renovated") or capex == "light":
         return 2.0, "Already updated — limited renovation upside", condition or capex
@@ -1151,14 +1302,36 @@ def get_recommendation_tier(score: float) -> tuple[str, str]:
     return "Avoid", "Does not meet investment criteria on current information."
 
 
-def _generate_narrative(score: float, categories: dict[str, CategoryScore]) -> str:
-    """Generate a 2-3 sentence narrative summarizing the score."""
+def _generate_narrative(
+    score: float,
+    categories: dict[str, CategoryScore],
+    *,
+    confidence_level: str = "High",
+    top_missing_input: str = "",
+    top_two_missing: str = "",
+) -> str:
+    """Generate a 2-3 sentence narrative summarizing the score, with
+    confidence calibration when data quality is Medium or Low."""
     tier, _ = get_recommendation_tier(score)
     ranked = sorted(categories.values(), key=lambda c: c.score, reverse=True)
     strongest = ranked[0]
     weakest = ranked[-1]
 
-    parts = [f"Overall score {score:.2f}/5.0 — {tier}."]
+    parts: list[str] = []
+
+    # Confidence calibration prefix
+    if confidence_level == "Low":
+        caveat = "Caution: This analysis has significant data gaps. Key assumptions are estimated."
+        if top_two_missing:
+            caveat += f" Consider this a preliminary assessment — add {top_two_missing} for a more reliable recommendation."
+        parts.append(caveat)
+    elif confidence_level == "Medium":
+        caveat = "Note: This analysis is based on partially estimated data."
+        if top_missing_input:
+            caveat += f" The recommendation confidence would improve with {top_missing_input.lower()}."
+        parts.append(caveat)
+
+    parts.append(f"Overall score {score:.2f}/5.0 — {tier}.")
 
     if strongest.score >= 4.0:
         parts.append(f"Strongest dimension is {strongest.category_name} ({strongest.score:.1f}/5).")
@@ -1185,7 +1358,15 @@ def calculate_final_score(report: AnalysisReport) -> FinalScore:
     final = _clamp(sum(cat.contribution for cat in categories.values()))
     final = round(final, 2)
     tier, action = get_recommendation_tier(final)
-    narrative = _generate_narrative(final, categories)
+
+    # Compute confidence level for narrative calibration
+    confidence_level, top_missing, top_two = _extract_confidence_for_narrative(report)
+    narrative = _generate_narrative(
+        final, categories,
+        confidence_level=confidence_level,
+        top_missing_input=top_missing,
+        top_two_missing=top_two,
+    )
 
     return FinalScore(
         score=final,
@@ -1194,3 +1375,67 @@ def calculate_final_score(report: AnalysisReport) -> FinalScore:
         narrative=narrative,
         category_scores=categories,
     )
+
+
+def _extract_confidence_for_narrative(report: AnalysisReport) -> tuple[str, str, str]:
+    """Derive confidence level and top missing inputs for narrative calibration."""
+    from briarwood.evidence import compute_confidence_breakdown, compute_metric_input_statuses
+
+    breakdown = compute_confidence_breakdown(report)
+    overall = breakdown.overall_confidence
+    statuses = compute_metric_input_statuses(report)
+
+    # Determine level using same logic as view_models._compute_confidence_level
+    comp_mod = report.module_results.get("comparable_sales")
+    comp_count = int(comp_mod.metrics.get("comp_count", 0)) if comp_mod else 0
+    cost_val = report.module_results.get("cost_valuation")
+    rent_source = str(cost_val.metrics.get("rent_source_type", "missing")) if cost_val else "missing"
+    town_mod = report.module_results.get("town_county_outlook")
+    town_conf = town_mod.confidence if town_mod else 0.0
+
+    weak_count = 0
+    strong_count = 0
+    if comp_count < 3:
+        weak_count += 1
+    elif comp_count >= 5:
+        strong_count += 1
+    if rent_source in ("missing",):
+        weak_count += 1
+    elif rent_source in ("manual_input", "provided"):
+        strong_count += 1
+    if town_conf < 0.50:
+        weak_count += 1
+    elif town_conf >= 0.75:
+        strong_count += 1
+
+    if weak_count >= 2 or overall < 0.55:
+        level = "Low"
+    elif strong_count >= 3 and overall >= 0.75:
+        level = "High"
+    else:
+        level = "Medium"
+
+    # Collect top missing inputs from metric statuses
+    _impact_labels = {
+        "estimated_monthly_rent": "rent estimate", "unit_rents": "unit rents",
+        "taxes": "property taxes", "insurance": "insurance cost",
+        "repair_capex_budget": "renovation budget", "condition_profile_override": "condition confirmation",
+        "local_documents": "local market data",
+    }
+    seen: set[str] = set()
+    top_fields: list[str] = []
+    for s in statuses:
+        if s.status == "fact_based":
+            continue
+        for f in s.prompt_fields:
+            if f not in seen and f in _impact_labels:
+                seen.add(f)
+                top_fields.append(_impact_labels[f])
+            if len(top_fields) >= 2:
+                break
+        if len(top_fields) >= 2:
+            break
+
+    top_missing = top_fields[0] if top_fields else ""
+    top_two = " and ".join(top_fields[:2]) if top_fields else ""
+    return level, top_missing, top_two

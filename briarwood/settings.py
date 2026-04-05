@@ -6,20 +6,35 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class CostValuationSettings:
     default_vacancy_rate: float = 0.05
+    # Bug 8: higher default for coastal seasonal properties
+    default_coastal_seasonal_vacancy_rate: float = 0.15
     default_maintenance_reserve_pct: float = 0.01
     loan_term_years: int = 30
-    base_score: float = 45.0
-    cap_rate_weight: float = 500.0
+    # Bug 1: lowered from 45 to 25 — remaining 75 pts must be earned from
+    # actual income support, cap rate, and cash flow metrics.
+    base_score: float = 25.0
+    # Bug 2: changed from 500 to 285 so the 20-pt cap is reached at ~7% cap rate
+    # instead of 4%, giving meaningful differentiation across the 3-7% spectrum.
+    cap_rate_weight: float = 285.0
     cap_rate_score_cap: float = 20.0
     dscr_baseline: float = 1.0
     dscr_weight: float = 25.0
     dscr_score_cap: float = 20.0
     cash_on_cash_weight: float = 120.0
     cash_on_cash_score_cap: float = 10.0
-    positive_cash_flow_divisor: float = 100.0
+    # Bug 3: both divisors set to 150 for symmetric treatment of positive
+    # and negative cash flow (was 100/200 — asymmetry masked downside risk).
+    positive_cash_flow_divisor: float = 150.0
     positive_cash_flow_score_cap: float = 5.0
-    negative_cash_flow_divisor: float = 200.0
+    negative_cash_flow_divisor: float = 150.0
     negative_cash_flow_score_floor: float = -15.0
+    # Bug 7: age-based maintenance reserve tiers (override default_maintenance_reserve_pct)
+    maintenance_reserve_post_2010: float = 0.0075
+    maintenance_reserve_1990_2010: float = 0.01
+    maintenance_reserve_1970_1989: float = 0.0125
+    maintenance_reserve_1950_1969: float = 0.015
+    maintenance_reserve_pre_1950: float = 0.0175
+    maintenance_reserve_poor_condition_adder: float = 0.0025
     confidence_floor: float = 0.4
     confidence_range: float = 0.55
     # Confidence caps applied when key inputs are missing or estimated
@@ -58,8 +73,10 @@ class BullBaseBearSettings:
     bbb_risk_tier_1_max_penalty: float = 0.05    # penalty at tier_2 threshold
     bbb_risk_tier_2_max_penalty: float = 0.12    # penalty at tier_3 threshold
     bbb_risk_tier_3_max_penalty: float = 0.20    # penalty at risk_score = 0
-    # Scenario attenuation: in bull risks matter less, in bear they fully materialize
-    bbb_risk_bull_attenuation: float = 0.3
+    # Scenario attenuation: in bull risks matter less, in bear they fully materialize.
+    # Bug 9: raised bull attenuation from 0.30 to 0.50 — structural risks (flood, age)
+    # don't disappear in bull markets. 0.50 is a compromise pending structural/cyclical split.
+    bbb_risk_bull_attenuation: float = 0.5
     bbb_risk_base_attenuation: float = 0.7
     bbb_risk_bear_attenuation: float = 1.0
 
@@ -97,7 +114,16 @@ class CurrentValueSettings:
 @dataclass(slots=True)
 class RiskSettings:
     older_home_age_threshold: int = 60
-    high_vacancy_threshold: float = 0.06
+    # Bug 5: vacancy penalty thresholds — replaced binary 6% threshold
+    # with graduated tiers for smooth penalty accumulation.
+    vacancy_tier1_start: float = 0.05     # 0-5%: no penalty
+    vacancy_tier1_end: float = 0.08       # 5-8%: ramp 0 → -5
+    vacancy_tier1_max_penalty: float = 5.0
+    vacancy_tier2_end: float = 0.12       # 8-12%: ramp -5 → -10
+    vacancy_tier2_max_penalty: float = 10.0
+    vacancy_tier3_end: float = 0.20       # 12-20%: ramp -10 → -20
+    vacancy_tier3_max_penalty: float = 20.0
+    vacancy_penalty_cap: float = 20.0     # 20%+: capped
     base_score: float = 85.0
     # Flood risk: graduated by tier (was one flat 12-pt penalty for medium or high)
     flood_risk_high_penalty: float = 20.0
@@ -112,13 +138,16 @@ class RiskSettings:
     tax_penalty_tier2_max: float = 20000.0          # interpolate 12→20 pts between tier2 and tier3
     tax_penalty_tier3_threshold: float = 25000.0    # 25K+ caps at 20 pts
     tax_penalty_cap: float = 20.0
-    # DOM: graduated (was binary at 45 days → 12 pts)
-    dom_penalty_start: int = 30       # 0–30: no penalty
-    dom_penalty_mid: int = 60         # 30–60: interpolate 0→8
-    dom_penalty_high: int = 90        # 60–90: interpolate 8→15
-    dom_penalty_cap: float = 18.0     # 90+: cap at 18
-    # Vacancy: flat (already a rate, threshold is meaningful)
-    vacancy_penalty: float = 10.0
+    # Bug 4: DOM graduated function — replaced cliff at 30 days with smooth ramp.
+    # 0-14: no penalty (fresh listing). 15-30: ramp 0→5. 31-60: ramp 5→15.
+    # 61-90: ramp 15→25. 90+: capped at 25.
+    dom_penalty_start: int = 15       # 0–14: no penalty
+    dom_penalty_tier1_end: int = 30   # 15–30: interpolate 0→5
+    dom_penalty_tier1_max: float = 5.0
+    dom_penalty_tier2_end: int = 60   # 31–60: interpolate 5→15
+    dom_penalty_tier2_max: float = 15.0
+    dom_penalty_tier3_end: int = 90   # 61–90: interpolate 15→25
+    dom_penalty_cap: float = 25.0     # 90+: capped at 25
     # Positive credit for low-risk attributes (max total +8 so perfect score = 93)
     low_flood_credit: float = 3.0     # flood_risk == "low" or "none"
     low_tax_credit: float = 2.0       # taxes <= $8K (well below the tier-1 threshold)
@@ -130,6 +159,13 @@ class RiskSettings:
     confidence_tier_full: float = 0.85   # all 5 dimensions present
     confidence_tier_medium: float = 0.72  # 3–4 dimensions present
     confidence_tier_low: float = 0.55    # fewer than 3 dimensions
+
+
+@dataclass(slots=True)
+class DecisionModelSettings:
+    # Bug 6: replacement cost benchmark — extracted from hardcoded $400/sqft.
+    # TODO: make geography/property-type aware in a future iteration.
+    replacement_cost_per_sqft: float = 400.0
 
 
 @dataclass(slots=True)
@@ -174,6 +210,7 @@ DEFAULT_COST_VALUATION_SETTINGS = CostValuationSettings()
 DEFAULT_BULL_BASE_BEAR_SETTINGS = BullBaseBearSettings()
 DEFAULT_CURRENT_VALUE_SETTINGS = CurrentValueSettings()
 DEFAULT_RISK_SETTINGS = RiskSettings()
+DEFAULT_DECISION_MODEL_SETTINGS = DecisionModelSettings()
 DEFAULT_RELATIVE_OPPORTUNITY_SETTINGS = RelativeOpportunitySettings()
 DEFAULT_APP_SETTINGS = AppSettings()
 DEFAULT_RENOVATION_SCENARIO_SETTINGS = RenovationScenarioSettings()

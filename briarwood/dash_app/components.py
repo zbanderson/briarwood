@@ -23,7 +23,10 @@ from briarwood.dash_app.theme import (
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
-    TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_BG, TONE_WARNING_TEXT,
+    TONE_NEGATIVE_BG, TONE_NEGATIVE_BORDER, TONE_NEGATIVE_TEXT,
+    TONE_NEUTRAL_BG, TONE_NEUTRAL_BORDER, TONE_NEUTRAL_TEXT,
+    TONE_POSITIVE_BG, TONE_POSITIVE_BORDER, TONE_POSITIVE_TEXT,
+    TONE_WARNING_BG, TONE_WARNING_BORDER, TONE_WARNING_TEXT,
     VALUE_STYLE_LARGE, VALUE_STYLE_MEDIUM,
     score_color, score_label, tone_badge_style, tone_color, verdict_color,
 )
@@ -143,8 +146,101 @@ def confidence_badge(confidence: float) -> html.Span:
     return html.Span(f"{confidence:.0%}", style=tone_badge_style(tone))
 
 
+def _confidence_level_color(level: str) -> str:
+    return {"High": TONE_POSITIVE_TEXT, "Medium": TONE_WARNING_TEXT, "Low": TONE_NEGATIVE_TEXT}.get(level, TEXT_MUTED)
+
+
+def _confidence_level_dot(level: str) -> str:
+    return {"High": TONE_POSITIVE_TEXT, "Medium": TONE_WARNING_TEXT, "Low": TONE_NEGATIVE_TEXT}.get(level, TEXT_MUTED)
+
+
+def confidence_level_badge(view: "PropertyAnalysisView") -> html.Div:
+    """Global confidence indicator with hover tooltip showing factor breakdown."""
+    level = view.confidence_level
+    color = _confidence_level_color(level)
+    dot_style = {"width": "8px", "height": "8px", "borderRadius": "50%", "backgroundColor": color, "display": "inline-block", "marginRight": "5px", "flexShrink": "0"}
+
+    # Build tooltip rows from confidence factors
+    factor_rows = []
+    for f in view.confidence_factors:
+        f_color = {"strong": TONE_POSITIVE_TEXT, "ok": TONE_WARNING_TEXT, "weak": TONE_NEGATIVE_TEXT}.get(f.level, TEXT_MUTED)
+        f_label = {"strong": "Strong", "ok": "OK", "weak": "Weak"}.get(f.level, "")
+        factor_rows.append(
+            html.Div(
+                [
+                    html.Span(f"{f.label}: ", style={"color": TEXT_MUTED, "fontSize": "11px"}),
+                    html.Span(f"{f.detail} ", style={"color": TEXT_PRIMARY, "fontSize": "11px"}),
+                    html.Span(f"({f_label})", style={"color": f_color, "fontSize": "10px", "fontWeight": "600"}),
+                ],
+                style={"lineHeight": "1.6"},
+            )
+        )
+
+    tooltip = html.Div(
+        [
+            html.Div("Data Quality Factors", style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "letterSpacing": "0.08em", "marginBottom": "6px"}),
+            *factor_rows,
+        ],
+        style={
+            "position": "absolute", "top": "100%", "right": "0", "marginTop": "4px",
+            "backgroundColor": BG_SURFACE_2, "border": f"1px solid {BORDER}", "borderRadius": "6px",
+            "padding": "10px 12px", "minWidth": "260px", "zIndex": "10",
+            "boxShadow": "0 4px 12px rgba(0,0,0,0.3)", "display": "none",
+        },
+        className="confidence-tooltip",
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [html.Span(style=dot_style), html.Span(f"{level}", style={"fontSize": "11px", "fontWeight": "600", "color": color})],
+                style={"display": "flex", "alignItems": "center", "cursor": "default"},
+            ),
+            tooltip,
+        ],
+        style={"position": "relative", "display": "inline-flex", "alignItems": "center"},
+        className="confidence-level-wrap",
+    )
+
+
+def section_confidence_indicator(confidence: float, *, section_key: str = "") -> html.Span:
+    """Enhanced per-section confidence badge: dot + label + optional reason."""
+    if confidence >= 0.75:
+        level, tone_color_val, reason = "High confidence", TONE_POSITIVE_TEXT, ""
+    elif confidence >= 0.55:
+        level, tone_color_val = "Medium", TONE_WARNING_TEXT
+        reason = ""  # reason filled by caller if needed
+    else:
+        level, tone_color_val = "Low", TONE_NEGATIVE_TEXT
+        reason = ""
+    dot = html.Span(style={"width": "7px", "height": "7px", "borderRadius": "50%", "backgroundColor": tone_color_val, "display": "inline-block", "marginRight": "4px", "flexShrink": "0"})
+    label_text = f"{confidence:.0%} {level}"
+    return html.Span(
+        [dot, html.Span(label_text, style={"fontSize": "10px", "fontWeight": "500", "color": tone_color_val})],
+        style={"display": "inline-flex", "alignItems": "center", "padding": "2px 8px 2px 6px", "backgroundColor": f"{tone_color_val}12", "borderRadius": "10px"},
+    )
+
+
 def compact_badge(label: str, value: str, *, tone: str = "neutral") -> html.Span:
     return html.Span(f"{label}: {value}", style=tone_badge_style(tone))
+
+
+def _render_calibrated_narrative(narrative: str, confidence_level: str) -> list:
+    """Split calibration prefix from narrative and style it distinctly."""
+    if confidence_level == "High" or not narrative:
+        return [narrative]
+    # The calibration note starts with "Note:" or "Caution:" and ends before "Overall score"
+    for prefix in ("Caution:", "Note:"):
+        if narrative.startswith(prefix):
+            idx = narrative.find("Overall score")
+            if idx > 0:
+                calibration = narrative[:idx].strip()
+                rest = narrative[idx:]
+                return [
+                    html.Span(calibration + " ", style={"fontStyle": "italic", "color": TEXT_MUTED}),
+                    rest,
+                ]
+    return [narrative]
 
 
 def _fmt_value(value: float | None) -> str:
@@ -262,7 +358,8 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
                     ],
                     style={"marginBottom": "4px"},
                 ),
-                html.Div(narrative[:80] + ("…" if len(narrative) > 80 else ""), style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
+                # Show full lens reasoning text instead of truncated snippet
+                html.Div(narrative, style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.4"}),
                 html.Div("★ BEST FIT", style={"fontSize": "9px", "fontWeight": "700", "color": sc, "marginTop": "4px"}) if recommended else None,
             ],
             style={**CARD_STYLE, "border": border, "textAlign": "center", "padding": "10px 8px"},
@@ -338,7 +435,13 @@ def render_score_header(view: PropertyAnalysisView) -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Div((view.recommendation_tier or "").upper(), style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY}),
+                            html.Div(
+                                [
+                                    html.Span((view.recommendation_tier or "").upper(), style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginRight": "8px"}),
+                                    confidence_level_badge(view),
+                                ],
+                                style={"display": "flex", "alignItems": "center", "justifyContent": "flex-end"},
+                            ),
                             html.Div(view.recommendation_action or "", style={"fontSize": "11px", "color": TEXT_MUTED}),
                         ],
                         style={"textAlign": "right"},
@@ -346,9 +449,9 @@ def render_score_header(view: PropertyAnalysisView) -> html.Div:
                 ],
                 style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "10px"},
             ),
-            # Narrative
+            # Narrative — calibration prefix styled distinctly
             html.Div(
-                view.score_narrative or "",
+                _render_calibrated_narrative(view.score_narrative or "", view.confidence_level),
                 style={"fontSize": "13px", "lineHeight": "1.5", "color": TEXT_PRIMARY, "marginBottom": "12px"},
             ) if view.score_narrative else None,
             # Category mini-bars in 2-column grid
@@ -1390,6 +1493,40 @@ def confidence_component_bars(view: PropertyAnalysisView) -> html.Div:
     return html.Div(bars)
 
 
+def improve_analysis_block(view: PropertyAnalysisView) -> html.Div | None:
+    """Top-3 missing inputs that would most improve analysis confidence."""
+    impacts = view.top_input_impacts
+    if not impacts:
+        return None
+    rows = []
+    for item in impacts:
+        rows.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(item.field_label, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY}),
+                            html.Span(f" → {item.impact_description}", style={"fontSize": "12px", "color": TONE_POSITIVE_TEXT}),
+                        ],
+                        style={"lineHeight": "1.5"},
+                    ),
+                ],
+                style={"padding": "6px 0", "borderBottom": f"1px solid {BORDER_SUBTLE}"},
+            )
+        )
+    return html.Div(
+        [
+            html.Div("Improve This Analysis", style={**SECTION_HEADER_STYLE, "color": ACCENT_BLUE}),
+            html.Div(
+                "Adding these inputs would most improve confidence:",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "6px"},
+            ),
+            html.Div(rows, style={"display": "grid", "gap": "0"}),
+        ],
+        style={**CARD_STYLE, "padding": "10px 12px", "borderLeft": f"3px solid {ACCENT_BLUE}"},
+    )
+
+
 def assumptions_transparency_block(view: PropertyAnalysisView) -> html.Div:
     """Compact distinction between model assumptions and user inputs."""
     items = view.evidence.transparency_items if view.evidence else []
@@ -1703,22 +1840,31 @@ def _compact_lens_badge(label: str, score: float | None, *, inverted: bool = Fal
     )
 
 
-def render_perspective_block(view: PropertyAnalysisView) -> html.Div:
-    """Perspective Block — hero card for best lens, compact badges for others."""
+def render_perspective_block(view: PropertyAnalysisView, selected_lens: str = "auto") -> html.Div:
+    """Perspective Block — hero card for selected/best lens, compact badges for others."""
     ls = view.lens_scores
     if ls is None:
         return html.Div()
 
-    best_key = ls.recommended_lens
+    # Resolve which lens to highlight
+    best_key = selected_lens if selected_lens in {"risk", "investor", "owner", "developer"} else ls.recommended_lens
     lens_name, icon = _LENS_DISPLAY.get(best_key, (best_key.replace("_", " ").title(), "📊"))
 
     # Get best lens score + narrative
-    score_map = {"owner": (ls.owner_score, ls.owner_narrative), "investor": (ls.investor_score, ls.investor_narrative), "developer": (ls.developer_score, ls.developer_narrative)}
+    is_auto = selected_lens == "auto"
+    score_map = {
+        "owner": (ls.owner_score, ls.owner_narrative),
+        "investor": (ls.investor_score, ls.investor_narrative),
+        "developer": (ls.developer_score, ls.developer_narrative),
+        "risk": (ls.risk_score, ls.risk_narrative),
+    }
     best_score, best_narrative = score_map.get(best_key, (view.final_score, ""))
     if best_score is None:
         best_score = view.final_score or 3.0
-    sc = score_color(best_score)
-    sl = score_label(best_score)
+    # Risk uses inverted color: lower = better
+    display_score = (6.0 - best_score) if best_key == "risk" else best_score
+    sc = score_color(display_score)
+    sl = score_label(display_score)
 
     # Other lenses as compact badges
     other_badges = []
@@ -1744,7 +1890,10 @@ def render_perspective_block(view: PropertyAnalysisView) -> html.Div:
                             html.Div(
                                 [
                                     html.Span(icon, style={"fontSize": "16px", "marginRight": "8px"}),
-                                    html.Span(f"BEST FOR: {lens_name.upper()}", style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY}),
+                                    html.Span(
+                        f"{'BEST FOR' if is_auto else 'VIEWING AS'}: {lens_name.upper()}",
+                        style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY},
+                    ),
                                 ],
                             ),
                             html.Div(
@@ -2097,6 +2246,7 @@ def _question_section(
     section_id: str | None = None,
     confidence: float,
     summary: str | None = None,
+    insight_callout: html.Div | None = None,
     metrics_strip: html.Div | None = None,
     chart: html.Div | dcc.Graph | None = None,
     extra_content: html.Div | None = None,
@@ -2105,14 +2255,14 @@ def _question_section(
     default_open: bool = False,
 ) -> html.Div:
     """Collapsible question section. Answer visible in collapsed header."""
-    # Header line: question + confidence badge (always visible)
+    # Header line: question + enhanced confidence indicator (always visible)
     header = html.Summary(
         html.Div(
             [
                 html.Div(
                     [
                         html.Span(question, style={**SECTION_HEADER_STYLE, "marginBottom": "0", "display": "inline", "fontSize": "12px", "letterSpacing": "0.08em"}),
-                        confidence_badge(confidence),
+                        section_confidence_indicator(confidence),
                     ],
                     style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "6px"},
                 ),
@@ -2125,6 +2275,8 @@ def _question_section(
 
     # Expandable body
     body_children: list[object] = []
+    if insight_callout:
+        body_children.append(insight_callout)
     if summary:
         body_children.append(html.Div(summary, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "10px"}))
     if metrics_strip:
@@ -2138,11 +2290,18 @@ def _question_section(
     if extra_content:
         body_children.append(html.Div(extra_content, style={"marginTop": "12px"}))
 
+    # Low-confidence visual treatment
+    section_style = {**CARD_STYLE, "padding": "0", "marginBottom": "12px", "scrollMarginTop": "96px"}
+    section_class = ""
+    if confidence < 0.55:
+        section_class = "section-low-confidence"
+
     return html.Details(
         [header, html.Div(body_children, style={"padding": "0 18px 18px"})],
         id=section_id,
         open=default_open,
-        style={**CARD_STYLE, "padding": "0", "marginBottom": "12px", "scrollMarginTop": "96px"},
+        style=section_style,
+        className=section_class,
     )
 
 
@@ -2586,33 +2745,63 @@ def _decision_summary_block(view: PropertyAnalysisView, report: AnalysisReport) 
     )
 
 
-def _tear_sheet_view_toggle(view_mode: str) -> html.Div:
+def _tear_sheet_view_toggle(view_mode: str, selected_lens: str = "auto") -> html.Div:
     selected_mode = view_mode if view_mode in {"owner", "realtor"} else "owner"
+    selected_lens = selected_lens if selected_lens in {"auto", "risk", "investor", "owner", "developer"} else "auto"
+
+    lens_pill_style = {
+        "display": "inline-flex", "alignItems": "center",
+        "padding": "6px 12px", "borderRadius": "6px",
+        "fontSize": "12px", "fontWeight": "600", "cursor": "pointer",
+        "border": f"1px solid {BORDER}", "backgroundColor": BG_SURFACE_2,
+        "color": TEXT_PRIMARY, "marginRight": "4px",
+    }
+
     return html.Div(
         [
-            html.Div("Presentation Mode", style={**LABEL_STYLE, "marginBottom": "8px"}),
-            dcc.RadioItems(
-                id="tear-sheet-view-toggle",
-                options=[
-                    {"label": "Owner View", "value": "owner"},
-                    {"label": "Realtor View", "value": "realtor"},
+            # Lens selector row
+            html.Div(
+                [
+                    html.Div("Analysis Lens", style={**LABEL_STYLE, "marginBottom": "6px"}),
+                    dcc.RadioItems(
+                        id="tear-sheet-lens-selector",
+                        options=[
+                            {"label": "  Auto", "value": "auto"},
+                            {"label": "  Investor", "value": "investor"},
+                            {"label": "  Owner", "value": "owner"},
+                            {"label": "  Developer", "value": "developer"},
+                            {"label": "  Risk", "value": "risk"},
+                        ],
+                        value=selected_lens,
+                        inline=True,
+                        inputStyle={"marginRight": "4px"},
+                        labelStyle=lens_pill_style,
+                    ),
                 ],
-                value=selected_mode,
-                inline=True,
-                labelStyle={
-                    "display": "inline-flex",
-                    "alignItems": "center",
-                    "marginRight": "10px",
-                    "padding": "8px 12px",
-                    "border": f"1px solid {BORDER}",
-                    "borderRadius": "8px",
-                    "backgroundColor": BG_SURFACE_2,
-                    "color": TEXT_PRIMARY,
-                    "fontSize": "13px",
-                    "fontWeight": "600",
-                    "cursor": "pointer",
-                },
-                inputStyle={"marginRight": "6px"},
+            ),
+            # Presentation mode — secondary, smaller
+            html.Div(
+                [
+                    html.Div("Presentation", style={**LABEL_STYLE, "marginBottom": "6px"}),
+                    dcc.RadioItems(
+                        id="tear-sheet-view-toggle",
+                        options=[
+                            {"label": "  Owner View", "value": "owner"},
+                            {"label": "  Realtor View", "value": "realtor"},
+                        ],
+                        value=selected_mode,
+                        inline=True,
+                        inputStyle={"marginRight": "4px"},
+                        labelStyle={
+                            "display": "inline-flex", "alignItems": "center",
+                            "marginRight": "6px", "padding": "5px 10px",
+                            "border": f"1px solid {BORDER}", "borderRadius": "6px",
+                            "backgroundColor": BG_SURFACE_2, "color": TEXT_SECONDARY,
+                            "fontSize": "11px", "fontWeight": "500", "cursor": "pointer",
+                        },
+                    ),
+                ],
+                style={"marginTop": "8px"},
             ),
         ],
         style={**CARD_STYLE, "padding": "12px 14px", "marginBottom": "16px"},
@@ -2872,6 +3061,28 @@ def _risk_list_block(view: PropertyAnalysisView) -> html.Div | None:
     )
 
 
+def _scarcity_breakdown_strip(view: PropertyAnalysisView) -> html.Div | None:
+    """Show land scarcity vs location scarcity as a split metric strip."""
+    rl = view.risk_location
+    land = getattr(rl, "land_scarcity_score", None)
+    loc = getattr(rl, "location_scarcity_score", None)
+    if land is None and loc is None:
+        return None
+    items = []
+    if land is not None:
+        items.append(("Land Scarcity", f"{land:.0f}", None))
+    if loc is not None:
+        items.append(("Location Scarcity", f"{loc:.0f}", None))
+    items.append(("Composite", f"{rl.scarcity_score:.0f}", None))
+    return html.Div(
+        [
+            html.Div("Scarcity Breakdown", style=SECTION_HEADER_STYLE),
+            inline_metric_strip(items),
+        ],
+        style={**CARD_STYLE, "padding": "10px 12px"},
+    )
+
+
 def _optionality_fact_block(view: PropertyAnalysisView) -> html.Div:
     facts = []
     if view.compare_metrics.get("lot_size") is not None:
@@ -2986,11 +3197,586 @@ def _evidence_summary_strip(view: PropertyAnalysisView) -> html.Div:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# "SO WHAT?" INSIGHT LAYER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _section_insight_callout(text: str, tone: str = "neutral") -> html.Div:
+    """Small interpretive callout block for the top of each section body."""
+    tone_borders = {
+        "positive": TONE_POSITIVE_BORDER,
+        "warning": TONE_WARNING_BORDER,
+        "negative": TONE_NEGATIVE_BORDER,
+        "neutral": TONE_NEUTRAL_BORDER,
+    }
+    tone_bgs = {
+        "positive": TONE_POSITIVE_BG,
+        "warning": TONE_WARNING_BG,
+        "negative": TONE_NEGATIVE_BG,
+        "neutral": TONE_NEUTRAL_BG,
+    }
+    return html.Div(
+        text,
+        style={
+            "fontSize": "13px",
+            "lineHeight": "1.55",
+            "color": TEXT_PRIMARY,
+            "padding": "10px 14px",
+            "backgroundColor": tone_bgs.get(tone, TONE_NEUTRAL_BG),
+            "borderLeft": f"3px solid {tone_borders.get(tone, TONE_NEUTRAL_BORDER)}",
+            "borderRadius": "0 4px 4px 0",
+            "marginBottom": "10px",
+        },
+    )
+
+
+def _get_reno_data(report: AnalysisReport) -> dict | None:
+    """Extract renovation scenario data from report, returns None if unavailable."""
+    reno_result = report.module_results.get("renovation_scenario")
+    if reno_result is None:
+        return None
+    payload = reno_result.payload if isinstance(reno_result.payload, dict) else None
+    if payload and payload.get("enabled"):
+        return payload
+    return None
+
+
+def _insight_hero_text(view: PropertyAnalysisView, report: AnalysisReport) -> tuple[str, str, str]:
+    """Select the most noteworthy insight. Returns (primary, detail, tone)."""
+    ask = view.ask_price
+    bcv = view.bcv
+    mispricing = view.mispricing_pct
+    isr_raw = view.compare_metrics.get("income_support_ratio")
+    isr = float(isr_raw) if isinstance(isr_raw, (int, float)) else None
+    cash_flow = _parse_currency_text(view.income_support.monthly_cash_flow_text)
+    reno = _get_reno_data(report)
+    risk_score = view.risk_location.risk_score
+    final_score = view.final_score
+
+    # 1. Massive mispricing (>15%)
+    if mispricing is not None and ask and bcv:
+        gap = abs(bcv - ask)
+        if mispricing > 0.15:
+            return (
+                f"Listed at {_fmt_compact(ask)}, this property appears undervalued. "
+                f"Our comp-anchored model puts fair value at {_fmt_compact(bcv)} — {mispricing * 100:.0f}% higher.",
+                f"That's ${gap:,.0f} of embedded value before you do anything.",
+                "positive",
+            )
+        if mispricing < -0.15:
+            return (
+                f"This property is listed at {_fmt_compact(ask)}, but our analysis values it at {_fmt_compact(bcv)} — "
+                f"that's {abs(mispricing) * 100:.0f}% above fair value.",
+                f"At this price, you're paying a ${gap:,.0f} premium over what the market supports.",
+                "negative",
+            )
+
+    # 2. Strong renovation opportunity
+    if reno:
+        roi = reno.get("roi_pct", 0)
+        net_creation = reno.get("net_value_creation", 0)
+        budget = reno.get("renovation_budget")
+        renovated_bcv = reno.get("renovated_bcv")
+        if roi > 50 and net_creation > 50_000 and ask and budget and renovated_bcv:
+            return (
+                f"This property is listed at {_fmt_compact(ask)}. Spend {_fmt_compact(budget)} on renovation "
+                f"and it could be worth {_fmt_compact(renovated_bcv)}.",
+                f"That's ${net_creation:,.0f} in created equity, a {roi:.0f}% return on the renovation investment.",
+                "positive",
+            )
+
+    # 3. High score but elevated risk
+    if final_score is not None and final_score >= 3.5 and risk_score >= 65:
+        stress_val = view.stress_case
+        if stress_val and ask:
+            drawdown = (ask - stress_val) / ask * 100
+            return (
+                f"The numbers look good — score of {final_score:.1f}/5 — but the risk profile deserves attention.",
+                f"{view.biggest_risk or 'Risk'} is elevated, and in a stress scenario "
+                f"this property could drop to {_fmt_compact(stress_val)} ({drawdown:.0f}% below ask).",
+                "warning",
+            )
+
+    # 4. Strong income property
+    if isr is not None and isr >= 1.0:
+        rent_text = view.income_support.total_rent_text
+        if isr >= 1.1 and cash_flow and cash_flow > 0:
+            gross_yield = view.income_support.gross_yield_text
+            return (
+                f"This property generates positive cash flow. After all carrying costs, you net ${cash_flow:,.0f}/mo.",
+                f"The {gross_yield} gross yield makes this a legitimate income play.",
+                "positive",
+            )
+        if cash_flow is not None:
+            return (
+                f"At {_fmt_compact(ask)} with rental income of {rent_text}/mo, this property pays for itself.",
+                f"Your net monthly cost is ${abs(cash_flow):,.0f}/mo — effectively break-even. That's rare at this price point.",
+                "positive",
+            )
+
+    # 5. Negative cash flow warning
+    if cash_flow is not None and cash_flow < -3000 and (isr is None or isr < 0.3):
+        annual_burn = abs(cash_flow) * 12
+        return (
+            f"Carrying this property costs ${abs(cash_flow):,.0f}/mo all-in — "
+            f"that's ${annual_burn:,.0f}/yr out of pocket with limited income offset.",
+            "Before renovations or improvements, make sure you can sustain this burn through the hold period.",
+            "warning",
+        )
+
+    # 6. Default insight
+    if ask and bcv and mispricing is not None:
+        direction = "undervalued" if mispricing > 0 else "overvalued"
+        base_text = ""
+        if view.base_case:
+            base_text = f" The base case projects {_fmt_compact(view.base_case)} over the hold period."
+        tone = "positive" if mispricing > 0.04 else "warning" if mispricing < -0.04 else "neutral"
+        return (
+            f"Listed at {_fmt_compact(ask)}, our model values this at {_fmt_compact(bcv)} "
+            f"({direction} by {abs(mispricing) * 100:.0f}%).{base_text}",
+            view.memo_verdict[:120] if view.memo_verdict else "",
+            tone,
+        )
+
+    return ("Analysis in progress.", "", "neutral")
+
+
+def _mini_scenario_bar(view: PropertyAnalysisView) -> html.Div | None:
+    """Compact horizontal range bar showing bear–base–bull with ask marked."""
+    bear = view.bear_case
+    base = view.base_case
+    bull = view.bull_case
+    ask = view.ask_price
+    if bear is None or base is None or bull is None:
+        return None
+    lo = min(bear, ask or bear) * 0.97
+    hi = max(bull, ask or bull) * 1.03
+    span = hi - lo
+    if span <= 0:
+        return None
+
+    def _pct(val: float) -> str:
+        return f"{((val - lo) / span) * 100:.1f}%"
+
+    markers: list = []
+    # Bear–Bull range band
+    markers.append(html.Div(style={
+        "position": "absolute",
+        "left": _pct(bear), "width": f"{((bull - bear) / span) * 100:.1f}%",
+        "top": "18px", "height": "12px",
+        "backgroundColor": "rgba(88, 166, 255, 0.18)",
+        "borderRadius": "3px",
+    }))
+    # Bear marker
+    markers.append(html.Div(
+        [html.Div(f"{_fmt_compact(bear)}", style={"fontSize": "9px", "color": ACCENT_RED, "whiteSpace": "nowrap"})],
+        style={"position": "absolute", "left": _pct(bear), "top": "0", "transform": "translateX(-50%)"},
+    ))
+    # Bull marker
+    markers.append(html.Div(
+        [html.Div(f"{_fmt_compact(bull)}", style={"fontSize": "9px", "color": ACCENT_GREEN, "whiteSpace": "nowrap"})],
+        style={"position": "absolute", "left": _pct(bull), "top": "0", "transform": "translateX(-50%)"},
+    ))
+    # Base marker (larger)
+    markers.append(html.Div(style={
+        "position": "absolute",
+        "left": _pct(base), "top": "16px",
+        "width": "8px", "height": "16px",
+        "backgroundColor": ACCENT_BLUE,
+        "borderRadius": "2px",
+        "transform": "translateX(-50%)",
+    }))
+    markers.append(html.Div(
+        [html.Div(f"Base {_fmt_compact(base)}", style={"fontSize": "9px", "color": ACCENT_BLUE, "fontWeight": "600", "whiteSpace": "nowrap"})],
+        style={"position": "absolute", "left": _pct(base), "top": "34px", "transform": "translateX(-50%)"},
+    ))
+    # Ask marker
+    if ask:
+        markers.append(html.Div(style={
+            "position": "absolute",
+            "left": _pct(ask), "top": "14px",
+            "width": "1px", "height": "20px",
+            "borderLeft": f"2px dashed {TEXT_MUTED}",
+        }))
+        markers.append(html.Div(
+            [html.Div(f"Ask {_fmt_compact(ask)}", style={"fontSize": "9px", "color": TEXT_MUTED, "whiteSpace": "nowrap"})],
+            style={"position": "absolute", "left": _pct(ask), "bottom": "0", "transform": "translateX(-50%)"},
+        ))
+    # Renovation overlay if available
+    reno_bcv = view.compare_metrics.get("renovated_bcv")
+    if isinstance(reno_bcv, (int, float)) and reno_bcv > 0:
+        markers.append(html.Div(style={
+            "position": "absolute",
+            "left": _pct(reno_bcv), "top": "16px",
+            "width": "8px", "height": "16px",
+            "backgroundColor": ACCENT_TEAL,
+            "borderRadius": "2px",
+            "transform": "translateX(-50%)",
+        }))
+        markers.append(html.Div(
+            [html.Div(f"Reno {_fmt_compact(reno_bcv)}", style={"fontSize": "9px", "color": ACCENT_TEAL, "fontWeight": "600", "whiteSpace": "nowrap"})],
+            style={"position": "absolute", "left": _pct(reno_bcv), "top": "34px", "transform": "translateX(-50%)"},
+        ))
+
+    return html.Div(
+        markers,
+        style={
+            "position": "relative",
+            "width": "100%",
+            "height": "56px",
+            "marginTop": "12px",
+        },
+    )
+
+
+def render_insight_hero(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    """Insight hero card — the single most prominent 'so what?' on the page."""
+    primary, detail, tone = _insight_hero_text(view, report)
+    accent = tone_color(tone)
+    mini_chart = _mini_scenario_bar(view)
+
+    children: list = [
+        html.Div(primary, style={"fontSize": "15px", "lineHeight": "1.55", "color": TEXT_PRIMARY, "fontWeight": "500"}),
+    ]
+    if detail:
+        children.append(html.Div(detail, style={"fontSize": "13px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "6px"}))
+    if mini_chart:
+        children.append(mini_chart)
+
+    return html.Div(
+        children,
+        style={
+            **CARD_STYLE,
+            "padding": "16px 18px",
+            "marginBottom": "16px",
+            "borderLeft": f"4px solid {accent}",
+            "backgroundColor": BG_SURFACE_2,
+        },
+    )
+
+
+# ── Per-section insight generators ────────────────────────────────────────────
+
+
+def _price_insight(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div | None:
+    """Interpretive callout for 'Is This a Good Price?'"""
+    pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+    if pct is None:
+        return None
+
+    # Town ppsf context
+    subject_ppsf = view.compare_metrics.get("subject_ppsf")
+    town_ppsf = view.compare_metrics.get("town_baseline_median_ppsf")
+    ppsf_ctx = ""
+    if isinstance(subject_ppsf, (int, float)) and isinstance(town_ppsf, (int, float)) and town_ppsf > 0:
+        ppsf_ctx = f" At this price, you're paying ${subject_ppsf:,.0f}/sqft vs the town median of ${town_ppsf:,.0f}/sqft."
+
+    direction = "discount" if pct > 0 else "premium"
+    text = f"You're buying at a {abs(pct) * 100:.0f}% {direction} to our comp-anchored value.{ppsf_ctx}"
+    tone = "positive" if pct > 0.04 else "warning" if pct < -0.04 else "neutral"
+    return _section_insight_callout(text, tone)
+
+
+def _economics_insight(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div | None:
+    """Interpretive callout for 'Can I Afford to Hold It?'"""
+    cash_flow = _parse_currency_text(view.income_support.monthly_cash_flow_text)
+    isr_raw = view.compare_metrics.get("income_support_ratio")
+    isr = float(isr_raw) if isinstance(isr_raw, (int, float)) else None
+
+    if cash_flow is None:
+        return None
+
+    if cash_flow >= 0:
+        text = (
+            f"Your true monthly cost is effectively zero after rental income. "
+            f"Cash flow is ${cash_flow:,.0f}/mo positive."
+        )
+        tone = "positive"
+    else:
+        abs_cf = abs(cash_flow)
+        if isr is not None and isr > 0:
+            coverage_pct = isr * 100
+            text = (
+                f"Your true monthly cost is ${abs_cf:,.0f}/mo after rental income. "
+                f"The rental income covers {coverage_pct:.0f}% of your carry."
+            )
+        else:
+            text = f"Your true monthly cost is ${abs_cf:,.0f}/mo all-in with no meaningful income offset."
+        tone = "warning" if abs_cf > 2000 else "neutral"
+    return _section_insight_callout(text, tone)
+
+
+def _forward_insight(view: PropertyAnalysisView) -> html.Div | None:
+    """Interpretive callout for 'What Happens If I Buy It?'"""
+    bear = view.bear_case
+    base = view.base_case
+    bull = view.bull_case
+    ask = view.ask_price
+    if bear is None or bull is None or ask is None:
+        return None
+
+    spread_pct = (bull - bear) / ask * 100
+    bear_vs_ask = (bear - ask) / ask * 100
+    base_vs_ask = ((base - ask) / ask * 100) if base else None
+
+    parts = [f"The range of outcomes spans {_fmt_compact(bear)} to {_fmt_compact(bull)} — a {spread_pct:.0f}% spread."]
+    if bear_vs_ask >= 0:
+        parts.append(f"Even in the bear case, you're above your purchase price.")
+        tone = "positive"
+    elif base_vs_ask is not None and base_vs_ask > 0:
+        parts.append(f"The base case shows {base_vs_ask:.0f}% gain — the market supports your price.")
+        tone = "neutral"
+    else:
+        parts.append(f"In the bear case, you'd be {abs(bear_vs_ask):.0f}% below your purchase price.")
+        tone = "warning"
+    return _section_insight_callout(" ".join(parts), tone)
+
+
+def _risk_insight(view: PropertyAnalysisView) -> html.Div | None:
+    """Interpretive callout for 'What Could Go Wrong?'"""
+    risk_bits: list[str] = []
+    if view.biggest_risk:
+        risk_bits.append(view.biggest_risk)
+    elif view.top_risks:
+        risk_bits.append(view.top_risks[0])
+    if not risk_bits:
+        return None
+
+    top_risk = risk_bits[0]
+    liq = view.risk_location.liquidity_label.lower()
+    liq_ctx = ""
+    if "thin" in liq or "low" in liq or "very low" in liq:
+        dom_raw = view.compare_metrics.get("dom")
+        if isinstance(dom_raw, (int, float)):
+            liq_ctx = f" This is a thin market — if you need to sell quickly, expect {dom_raw:.0f}+ days on market."
+
+    text = f"The biggest risk here is {top_risk.lower()}.{liq_ctx}"
+    tone = "warning" if view.risk_location.risk_score >= 55 else "neutral"
+    return _section_insight_callout(text, tone)
+
+
+def _optionality_insight(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div | None:
+    """Interpretive callout for 'Where's the Upside?'"""
+    reno = _get_reno_data(report)
+    if reno:
+        roi = reno.get("roi_pct", 0)
+        if roi > 0:
+            text = f"Renovation ROI of {roi:.0f}% suggests this is a value-add play, not a hold-and-pray."
+            tone = "positive" if roi > 30 else "neutral"
+            return _section_insight_callout(text, tone)
+
+    # Try comp-derived renovation premium
+    from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
+    premium_data = _estimate_comp_renovation_premium(report)
+    premium_pct = premium_data.get("renovation_premium_pct")
+    est_creation = premium_data.get("estimated_value_creation")
+    if premium_pct is not None and premium_pct > 0.05 and est_creation and est_creation > 0:
+        text = (
+            f"Renovated comps in this market trade at a {premium_pct * 100:.0f}% premium. "
+            f"Estimated value creation from renovation: {_fmt_compact(est_creation)}."
+        )
+        tone = "positive" if premium_pct > 0.15 else "neutral"
+        return _section_insight_callout(text, tone)
+
+    category = view.category_scores.get("optionality") if view.category_scores else None
+    if category is not None and category.score >= 3.5:
+        text = "Multiple viable execution paths exist — the property has flexibility beyond its current use."
+        return _section_insight_callout(text, "positive")
+    if category is not None and category.score <= 2.5:
+        text = "Optionality is limited. The upside case depends on a narrow set of conditions being met."
+        return _section_insight_callout(text, "warning")
+    return None
+
+
+def _renovation_value_overlay(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div | None:
+    """Renovation premium section — comp-driven or explicit renovation scenario.
+
+    Shows a bar chart comparing renovated vs dated comp $/sqft, with estimated
+    value creation.  Falls back to explicit renovation data if available, or
+    shows a data-insufficient message for properties that need work.
+    """
+    from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
+
+    condition = view.condition_profile.lower().replace(" ", "_")
+    # Only show for properties where renovation is relevant
+    if condition in ("renovated", "updated"):
+        return None
+
+    bcv = view.bcv
+
+    # Try explicit renovation scenario first
+    reno = _get_reno_data(report)
+    if reno and bcv:
+        renovated_bcv = reno.get("renovated_bcv")
+        budget = reno.get("renovation_budget")
+        net_creation = reno.get("net_value_creation")
+        roi = reno.get("roi_pct", 0)
+        if all([renovated_bcv, budget]):
+            return html.Div(
+                [
+                    html.Div("RENOVATION VALUE", style={**SECTION_HEADER_STYLE, "marginBottom": "6px"}),
+                    html.Div(
+                        [
+                            _reno_metric_cell("Current BCV", f"${bcv:,.0f}", TEXT_PRIMARY),
+                            html.Div(
+                                [
+                                    html.Div(f"+ {_fmt_compact(budget)} reno", style={"fontSize": "10px", "color": ACCENT_TEAL}),
+                                    html.Div("→", style={"fontSize": "20px", "color": ACCENT_TEAL, "fontWeight": "700"}),
+                                ],
+                                style={"textAlign": "center", "display": "flex", "flexDirection": "column", "alignItems": "center", "justifyContent": "center"},
+                            ),
+                            _reno_metric_cell("Renovated BCV", f"${renovated_bcv:,.0f}", ACCENT_TEAL),
+                            _reno_metric_cell(
+                                "Net Equity Created",
+                                f"+${net_creation:,.0f}" if net_creation and net_creation > 0 else f"-${abs(net_creation or 0):,.0f}",
+                                TONE_POSITIVE_TEXT if (net_creation or 0) > 0 else TONE_NEGATIVE_TEXT,
+                            ),
+                        ],
+                        style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr 1fr", "gap": "12px", "alignItems": "center"},
+                    ),
+                ],
+                style={**CARD_STYLE, "padding": "10px 14px", "marginTop": "8px"},
+            )
+
+    # Comp-derived renovation premium
+    premium_data = _estimate_comp_renovation_premium(report)
+    premium_pct = premium_data.get("renovation_premium_pct")
+    reno_ppsf = premium_data.get("median_renovated_ppsf")
+    dated_ppsf = premium_data.get("median_dated_ppsf")
+    reno_count = premium_data.get("renovated_comp_count", 0)
+    dated_count = premium_data.get("dated_comp_count", 0)
+    est_value = premium_data.get("estimated_renovated_value")
+    est_creation = premium_data.get("estimated_value_creation")
+
+    children: list = [
+        html.Div("RENOVATION PREMIUM FROM COMPS", style={**SECTION_HEADER_STYLE, "marginBottom": "6px"}),
+    ]
+
+    if premium_pct is not None and reno_ppsf and dated_ppsf:
+        # Build the comparison bar chart
+        bar_chart = _renovation_premium_bar_chart(
+            reno_ppsf, dated_ppsf, premium_pct, reno_count, dated_count,
+        )
+        children.append(bar_chart)
+
+        # Value estimate strip
+        if bcv and est_value and est_creation:
+            children.append(html.Div(
+                [
+                    _reno_metric_cell("Current BCV", _fmt_compact(bcv), TEXT_PRIMARY),
+                    html.Div("→", style={"fontSize": "18px", "color": ACCENT_TEAL, "fontWeight": "700", "textAlign": "center", "alignSelf": "center"}),
+                    _reno_metric_cell("Est. Renovated Value", _fmt_compact(est_value), ACCENT_TEAL),
+                    _reno_metric_cell(
+                        "Est. Value Creation",
+                        f"+{_fmt_compact(est_creation)}" if est_creation > 0 else _fmt_compact(est_creation),
+                        TONE_POSITIVE_TEXT if est_creation > 0 else TONE_WARNING_TEXT,
+                    ),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "1fr auto 1fr 1fr", "gap": "12px", "alignItems": "center", "marginTop": "10px"},
+            ))
+        children.append(html.Div(
+            f"Based on {reno_count} renovated/updated and {dated_count} dated/needs-work comps in the area. "
+            "Add an explicit renovation budget for a more precise estimate.",
+            style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "8px", "lineHeight": "1.5"},
+        ))
+    else:
+        # Insufficient data
+        children.append(html.Div(
+            [
+                html.Div(
+                    "Insufficient comp data to estimate renovation premium",
+                    style={"fontSize": "13px", "color": TEXT_MUTED, "fontWeight": "500"},
+                ),
+                html.Div(
+                    f"Need comps in both renovated/updated and dated/needs-work condition. "
+                    f"Currently: {reno_count} renovated, {dated_count} dated in this market. "
+                    "Add condition profiles to comps or provide an explicit renovation budget to unlock this analysis.",
+                    style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px", "lineHeight": "1.5"},
+                ),
+            ],
+            style={
+                "padding": "16px",
+                "textAlign": "center",
+                "border": f"1px dashed {BORDER}",
+                "borderRadius": "4px",
+                "marginTop": "4px",
+            },
+        ))
+
+    return html.Div(children, style={**CARD_STYLE, "padding": "10px 14px", "marginTop": "8px"})
+
+
+def _reno_metric_cell(label: str, value: str, color: str) -> html.Div:
+    """Small metric cell for renovation overlays."""
+    return html.Div(
+        [
+            html.Div(label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "letterSpacing": "0.08em"}),
+            html.Div(value, style={"fontSize": "16px", "fontWeight": "700", "color": color}),
+        ],
+        style={"textAlign": "center"},
+    )
+
+
+def _renovation_premium_bar_chart(
+    reno_ppsf: float,
+    dated_ppsf: float,
+    premium_pct: float,
+    reno_count: int,
+    dated_count: int,
+) -> dcc.Graph:
+    """Horizontal bar chart comparing renovated vs dated comp $/sqft."""
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=["Dated / Needs Work"],
+        x=[dated_ppsf],
+        orientation="h",
+        name=f"Dated ({dated_count} comps)",
+        marker_color=ACCENT_ORANGE,
+        text=[f"${dated_ppsf:,.0f}/sqft"],
+        textposition="inside",
+        textfont={"color": "#fff", "size": 12},
+        hovertemplate="Dated/Needs Work<br>$%{x:,.0f}/sqft<extra></extra>",
+    ))
+    fig.add_trace(go.Bar(
+        y=["Renovated / Updated"],
+        x=[reno_ppsf],
+        orientation="h",
+        name=f"Renovated ({reno_count} comps)",
+        marker_color=ACCENT_TEAL,
+        text=[f"${reno_ppsf:,.0f}/sqft"],
+        textposition="inside",
+        textfont={"color": "#fff", "size": 12},
+        hovertemplate="Renovated/Updated<br>$%{x:,.0f}/sqft<extra></extra>",
+    ))
+    # Add premium annotation
+    fig.add_annotation(
+        x=reno_ppsf,
+        y="Renovated / Updated",
+        text=f"+{premium_pct * 100:.0f}% premium",
+        showarrow=False,
+        xanchor="left",
+        xshift=8,
+        font={"size": 11, "color": ACCENT_TEAL},
+    )
+    layout = {**PLOTLY_LAYOUT_COMPACT}
+    layout.update(
+        height=100,
+        margin={"l": 0, "r": 60, "t": 8, "b": 8},
+        xaxis={"visible": False},
+        yaxis={"tickfont": {"size": 11}},
+        barmode="group",
+        showlegend=False,
+    )
+    fig.update_layout(**layout)
+    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "100px"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # TEAR SHEET SECTION RENDERERS (scoring-driven)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, view_mode: str = "owner") -> html.Div:
+def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, view_mode: str = "owner", selected_lens: str = "auto") -> html.Div:
     """Decision-first tear sheet with owner and realtor presentation modes."""
     price_answer, price_summary, _price_label = _price_answer(view)
     economics_answer, economics_summary = _economics_answer(view, report)
@@ -3007,6 +3793,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         section_id="tear-price",
         confidence=_section_confidence(view, "price"),
         default_open="tear-price" in auto_open,
+        insight_callout=_price_insight(view, report),
         summary=price_summary or "Briarwood compares the ask against current value support, comp positioning, basis, and net opportunity delta.",
         metrics_strip=inline_metric_strip([
             ("Ask", _fmt_compact(view.ask_price), None),
@@ -3024,19 +3811,36 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             style={"display": "grid", "gap": "8px"},
         ),
         extra_content=html.Div(
-            [block for block in [_net_opportunity_delta_block(view), _active_listing_block(view)] if block is not None],
+            [block for block in [
+                _net_opportunity_delta_block(view),
+                _renovation_value_overlay(view, report),
+                _active_listing_block(view),
+                _location_context_chips(view),
+            ] if block is not None],
             style={"display": "grid", "gap": "8px"},
         ),
     )
+    # Build investor metrics row (only include metrics that are available)
+    _investor_metrics = [
+        m for m in [
+            ("DSCR", view.income_support.dscr_text, _dscr_tone_label(view.income_support.dscr)) if view.income_support.dscr is not None else None,
+            ("Cash-on-Cash", view.income_support.cash_on_cash_return_text, None) if view.income_support.cash_on_cash_return is not None else None,
+            ("Gross Yield", view.income_support.gross_yield_text, None) if view.income_support.gross_yield is not None else None,
+        ] if m is not None
+    ]
+    _investor_strip = inline_metric_strip(_investor_metrics) if _investor_metrics else None
+    # Rent source label inline with rent value
+    _rent_sublabel = view.income_support.rent_source_label or view.income_support.rent_source_type
     economics_section = _question_section(
         "Can I Afford to Hold It?",
         economics_answer,
         section_id="tear-economics",
         confidence=_section_confidence(view, "economics"),
         default_open="tear-economics" in auto_open,
+        insight_callout=_economics_insight(view, report),
         summary=economics_summary,
         metrics_strip=inline_metric_strip([
-            ("Rent", view.income_support.total_rent_text, view.income_support.rent_source_type),
+            ("Rent", view.income_support.total_rent_text, _rent_sublabel),
             ("PTR", view.income_support.price_to_rent_text, _ptr_benchmark_label(view)),
             ("Cash Flow", view.income_support.monthly_cash_flow_text, _cash_flow_benchmark_label(view)),
             ("Rental Ease", view.income_support.rental_ease_label, None),
@@ -3050,7 +3854,10 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             ],
             style={"display": "grid", "gridTemplateColumns": "1.3fr 0.8fr", "gap": "12px", "alignItems": "start"},
         ),
-        extra_content=_unit_breakdown_block(view),
+        extra_content=html.Div(
+            [block for block in [_investor_strip, _unit_breakdown_block(view)] if block is not None],
+            style={"display": "grid", "gap": "8px"},
+        ) if _investor_metrics or _unit_breakdown_block(view) else _unit_breakdown_block(view),
     )
     forward_section = _question_section(
         "What Happens If I Buy It?",
@@ -3058,6 +3865,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         section_id="tear-forward",
         confidence=_section_confidence(view, "forward"),
         default_open="tear-forward" in auto_open,
+        insight_callout=_forward_insight(view),
         summary=forward_summary,
         metrics_strip=inline_metric_strip([
             ("Bear", view.forward.bear_value_text, view.forward.downside_pct_text),
@@ -3082,13 +3890,16 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         section_id="tear-risk",
         confidence=_section_confidence(view, "risk"),
         default_open="tear-risk" in auto_open if selected_mode == "owner" else False,
+        insight_callout=_risk_insight(view) if selected_mode == "owner" else None,
         summary="Risk combines valuation cushion, execution burden, exit liquidity, income support, and market backdrop. The goal is to show where the thesis can break." if selected_mode == "owner" else "These are the practical issues an agent or buyer should keep in mind so the positioning stays credible.",
-        metrics_strip=inline_metric_strip([
+        metrics_strip=inline_metric_strip([m for m in [
             ("Risk Score", f"{view.risk_location.risk_score:.0f}", _benchmark_sublabel(view.risk_location.risk_score, "risk_score")),
             ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
-            ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label),
+            ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", _momentum_direction_label(view.risk_location)),
             ("Flood", view.risk_location.flood_risk.title(), None),
-        ]),
+            # Stress case value — only show if computed
+            ("Stress Case", view.risk_location.stress_case_text, f"-{view.risk_location.stress_drawdown_pct:.0%} drawdown" if view.risk_location.stress_drawdown_pct else None) if view.risk_location.stress_case_value is not None else None,
+        ] if m is not None]),
         chart=risk_breakdown_bars(view),
         extra_content=html.Div(
             [block for block in [
@@ -3101,11 +3912,12 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         missing_note=_section_missing_note(view, ["liquidity", "capex_load"]),
     )
     optionality_section = _question_section(
-        "What Is the Hidden Upside or Constraint?" if selected_mode == "owner" else "What Needs To Be True",
+        "Where's the Upside?" if selected_mode == "owner" else "What Needs To Be True",
         optionality_answer if selected_mode == "owner" else "The upside case depends on which parts of the story are real, financeable, and supportable during diligence.",
         section_id="tear-optionality",
         confidence=_section_confidence(view, "optionality"),
         default_open="tear-optionality" in auto_open if selected_mode == "owner" else False,
+        insight_callout=_optionality_insight(view, report) if selected_mode == "owner" else None,
         summary=optionality_summary if selected_mode == "owner" else "Use this section to separate real flexibility from things that still need to be proven before leaning on the upside case.",
         metrics_strip=inline_metric_strip([
             ("Condition", view.condition_profile, None),
@@ -3122,6 +3934,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
                 ),
                 _renovation_justification_block(view, report),
                 _optionality_fact_block(view),
+                _scarcity_breakdown_strip(view),
                 _list_block("What Needs To Be True", view.what_changes_call[:3], tone="warning") if selected_mode == "realtor" else None,
             ],
             style={"display": "grid", "gap": "8px"},
@@ -3188,6 +4001,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         ),
         extra_content=html.Div(
             [
+                improve_analysis_block(view),
                 html.Div(
                     [
                         html.Div("Confidence Drivers", style=SECTION_HEADER_STYLE),
@@ -3211,25 +4025,25 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
     )
 
     owner_blocks = [
-        _tear_sheet_view_toggle(selected_mode),
+        _tear_sheet_view_toggle(selected_mode, selected_lens),
         _decision_engine_block(view),
         _decision_summary_block(view, report),
+        render_insight_hero(view, report),
         html.Div("YOUR QUESTIONS", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.12em", "marginBottom": "12px"}),
         price_section,
-        economics_section,
         forward_section,
-        risk_section,
-        html.Div("MORE CONTEXT", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.12em", "marginTop": "20px", "marginBottom": "12px"}),
         optionality_section,
+        economics_section,
+        risk_section,
         market_section,
-        render_perspective_block(view),
+        render_perspective_block(view, selected_lens),
         render_what_if_slider(view),
         evidence_section,
         _owner_decision_close(view, report),
     ]
 
     realtor_blocks = [
-        _tear_sheet_view_toggle(selected_mode),
+        _tear_sheet_view_toggle(selected_mode, selected_lens),
         _realtor_positioning_header(view, report),
         html.Div("REALTOR VIEW", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.12em", "marginBottom": "12px"}),
         _question_section(
@@ -3245,7 +4059,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
                 ("Confidence", f"{view.overall_confidence:.0%}", None),
                 ("Optionality", optionality_answer, None),
             ]),
-            extra_content=render_perspective_block(view),
+            extra_content=render_perspective_block(view, selected_lens),
         ),
         _question_section(
             "Why This Works",
@@ -3316,6 +4130,43 @@ def gap_pct_text(view: PropertyAnalysisView) -> str:
         return ""
     sign = "+" if view.mispricing_pct >= 0 else ""
     return f"{sign}{view.mispricing_pct * 100:.1f}%"
+
+
+def _dscr_tone_label(dscr: float | None) -> str | None:
+    """DSCR color-coded sublabel: green ≥1.25, yellow 1.0–1.25, red <1.0."""
+    if dscr is None:
+        return None
+    if dscr >= 1.25:
+        return "+covers debt"
+    if dscr >= 1.0:
+        return "borderline"
+    return "-below debt service"
+
+
+def _momentum_direction_label(rl: object) -> str:
+    """Combine momentum label with directional arrow from momentum_direction."""
+    label = getattr(rl, "market_momentum_label", "Unknown")
+    direction = getattr(rl, "momentum_direction", "")
+    arrow = {"accelerating": "↑", "steady": "→", "decelerating": "↓"}.get(direction, "")
+    return f"{arrow} {label}" if arrow else label
+
+
+def _location_context_chips(view: PropertyAnalysisView) -> html.Div | None:
+    """School signal badge + coastal profile tag — only shown when data exists."""
+    chips: list[html.Span] = []
+    rl = view.risk_location
+    if rl.school_signal is not None and rl.school_signal_text:
+        tone = "positive" if rl.school_signal >= 7 else "warning" if rl.school_signal >= 5 else "negative"
+        chips.append(compact_badge("School Quality", rl.school_signal_text, tone=tone))
+    if rl.coastal_profile_label:
+        chips.append(compact_badge("Location", rl.coastal_profile_label, tone="positive"))
+    if not chips:
+        return None
+    return html.Div(
+        [html.Span("LOCATION CONTEXT", style={**SECTION_HEADER_STYLE, "fontSize": "10px", "marginBottom": "4px"})]
+        + chips,
+        style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "alignItems": "center"},
+    )
 
 
 def _ptr_benchmark_label(view: PropertyAnalysisView) -> str | None:
@@ -3651,7 +4502,7 @@ def render_tour_trigger_button() -> html.Button:
 
 
 def render_what_if_slider(view: PropertyAnalysisView) -> html.Div:
-    """Interactive what-if slider for ask price scenario modeling."""
+    """Interactive what-if sliders for ask price and mortgage rate scenario modeling."""
     ask = view.ask_price
     if ask is None or ask <= 0:
         return html.Div()
@@ -3660,10 +4511,18 @@ def render_what_if_slider(view: PropertyAnalysisView) -> html.Div:
     max_ask = int(ask * 1.20 / 5000) * 5000
     step = 5000
 
-    marks = {
+    ask_marks = {
         min_ask: {"label": f"${min_ask / 1000:.0f}K", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
         int(ask): {"label": f"${ask / 1000:.0f}K (Ask)", "style": {"color": ACCENT_BLUE, "fontSize": "11px"}},
         max_ask: {"label": f"${max_ask / 1000:.0f}K", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+    }
+
+    rate_marks = {
+        5.0: {"label": "5.0%", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+        6.0: {"label": "6.0%", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+        7.0: {"label": "7.0%", "style": {"color": ACCENT_BLUE, "fontSize": "11px"}},
+        8.0: {"label": "8.0%", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
+        9.0: {"label": "9.0%", "style": {"color": TEXT_MUTED, "fontSize": "11px"}},
     }
 
     return html.Div(
@@ -3671,15 +4530,69 @@ def render_what_if_slider(view: PropertyAnalysisView) -> html.Div:
             html.Div(
                 [
                     html.Span("WHAT-IF SCENARIO", style={**SECTION_HEADER_STYLE, "color": ACCENT_BLUE, "marginBottom": "4px"}),
-                    html.Div("Adjust the ask price to see how the analysis changes", style={"fontSize": "12px", "color": TEXT_MUTED}),
+                    html.Div("Adjust price and rate to see how the analysis changes", style={"fontSize": "12px", "color": TEXT_MUTED}),
                 ],
                 style={"marginBottom": "16px"},
             ),
-            dcc.Slider(
-                id="what-if-ask-slider",
-                min=min_ask, max=max_ask, value=int(ask), step=step,
-                marks=marks,
-                tooltip={"placement": "bottom", "always_visible": True},
+            # Ask price slider
+            html.Div(
+                [
+                    html.Div("Ask Price", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "6px"}),
+                    dcc.Slider(
+                        id="what-if-ask-slider",
+                        min=min_ask, max=max_ask, value=int(ask), step=step,
+                        marks=ask_marks,
+                        tooltip={"placement": "bottom", "always_visible": True},
+                    ),
+                ],
+                style={"marginBottom": "20px"},
+            ),
+            # Rate slider
+            html.Div(
+                [
+                    html.Div("Mortgage Rate", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "6px"}),
+                    dcc.Slider(
+                        id="what-if-rate-slider",
+                        min=5.0, max=9.0, value=7.0, step=0.25,
+                        marks=rate_marks,
+                        tooltip={"placement": "bottom", "always_visible": True},
+                    ),
+                ],
+                style={"marginBottom": "8px"},
+            ),
+            # Vacancy toggle — visible only for coastal/seasonal properties
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Vacancy Assumption", style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase"}),
+                            html.Div(
+                                f"Coastal/seasonal properties have higher vacancy. Default: {15 if view.risk_location.coastal_profile_label else 5}%.",
+                                style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "2px"},
+                            ),
+                        ],
+                        style={"marginBottom": "8px"},
+                    ),
+                    dcc.RadioItems(
+                        id="what-if-vacancy-toggle",
+                        options=[
+                            {"label": "  Standard (5%)", "value": 0.05},
+                            {"label": "  Seasonal (15%)", "value": 0.15},
+                        ],
+                        value=0.15 if view.risk_location.coastal_profile_label else 0.05,
+                        inline=True,
+                        style={"fontSize": "12px", "color": TEXT_SECONDARY},
+                        inputStyle={"marginRight": "4px"},
+                        labelStyle={"marginRight": "16px"},
+                    ),
+                ],
+                id="what-if-vacancy-container",
+                style={
+                    "marginTop": "12px", "marginBottom": "8px",
+                    "padding": "10px", "backgroundColor": BG_SURFACE_2,
+                    "borderRadius": "4px", "border": f"1px solid {BORDER}",
+                    "display": "block" if view.risk_location.coastal_profile_label else "none",
+                },
             ),
             html.Div(id="what-if-metrics", style={"marginTop": "16px"}),
         ],
@@ -3690,60 +4603,86 @@ def render_what_if_slider(view: PropertyAnalysisView) -> html.Div:
     )
 
 
-def render_what_if_metrics(view: PropertyAnalysisView, adjusted_ask: float) -> html.Div:
-    """Render recalculated metrics for a given adjusted ask price."""
+def render_what_if_metrics(view: PropertyAnalysisView, adjusted_ask: float, rate: float = 7.0, vacancy: float = 0.05) -> html.Div:
+    """Render recalculated metrics for a given adjusted ask price, rate, and vacancy."""
     original_ask = view.ask_price or adjusted_ask
     bcv = view.bcv or original_ask
+    default_rate = 7.0
+    default_vacancy = 0.15 if view.risk_location.coastal_profile_label else 0.05
 
     # BCV gap
     gap_orig = ((bcv - original_ask) / original_ask * 100) if original_ask > 0 else 0
     gap_adj = ((bcv - adjusted_ask) / adjusted_ask * 100) if adjusted_ask > 0 else 0
 
-    # PTR
+    # PTR (uses effective rent after vacancy)
     rent_raw = _parse_currency_text(view.income_support.total_rent_text)
-    annual_rent = (rent_raw or 0) * 12
-    ptr_orig = (original_ask / annual_rent) if annual_rent > 0 else 0
+    eff_rent = (rent_raw or 0) * (1 - vacancy)
+    eff_rent_orig = (rent_raw or 0) * (1 - default_vacancy)
+    annual_rent = eff_rent * 12
+    annual_rent_orig = eff_rent_orig * 12
+    ptr_orig = (original_ask / annual_rent_orig) if annual_rent_orig > 0 else 0
     ptr_adj = (adjusted_ask / annual_rent) if annual_rent > 0 else 0
 
-    # Approximate monthly mortgage (20% down, 7% rate, 30yr)
+    # Monthly mortgage at adjusted rate
     loan = adjusted_ask * 0.80
-    r = 0.07 / 12
+    r_adj = rate / 100 / 12
     n = 360
-    pmt = (loan * r * (1 + r) ** n / ((1 + r) ** n - 1)) if r > 0 else loan / n
+    pmt_adj = (loan * r_adj * (1 + r_adj) ** n / ((1 + r_adj) ** n - 1)) if r_adj > 0 else loan / n
 
-    # Cash flow (rent minus mortgage — rough)
-    cf_adj = (rent_raw or 0) - pmt
+    # Monthly mortgage at default rate (for comparison)
+    loan_orig = original_ask * 0.80
+    r_def = default_rate / 100 / 12
+    pmt_orig = (loan_orig * r_def * (1 + r_def) ** n / ((1 + r_def) ** n - 1)) if r_def > 0 else loan_orig / n
+
+    # Cash flow
+    cf_adj = eff_rent - pmt_adj
+    cf_orig = eff_rent_orig - pmt_orig
 
     # Price delta from original
     delta = adjusted_ask - original_ask
     delta_pct = (delta / original_ask * 100) if original_ask > 0 else 0
 
-    def _card(label: str, value: str, *, tone: str = "neutral") -> html.Div:
+    # Rate delta
+    rate_delta = rate - default_rate
+
+    def _card(label: str, value: str, *, tone: str = "neutral", sublabel: str = "") -> html.Div:
         color = TONE_POSITIVE_TEXT if tone == "positive" else TONE_NEGATIVE_TEXT if tone == "negative" else TEXT_PRIMARY
+        children = [
+            html.Div(label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "2px"}),
+            html.Div(value, style={"fontSize": "16px", "fontWeight": "700", "color": color}),
+        ]
+        if sublabel:
+            children.append(html.Div(sublabel, style={"fontSize": "10px", "color": TEXT_MUTED, "marginTop": "2px"}))
         return html.Div(
-            [
-                html.Div(label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginBottom": "2px"}),
-                html.Div(value, style={"fontSize": "16px", "fontWeight": "700", "color": color}),
-            ],
+            children,
             style={"padding": "10px", "backgroundColor": BG_SURFACE_2, "borderRadius": "4px", "border": f"1px solid {BORDER}"},
         )
 
     gap_tone = "positive" if gap_adj > gap_orig else "negative" if gap_adj < gap_orig else "neutral"
     ptr_tone = "positive" if ptr_adj < ptr_orig else "negative" if ptr_adj > ptr_orig else "neutral"
     cf_tone = "positive" if cf_adj > 0 else "negative"
+    pmt_tone = "positive" if pmt_adj < pmt_orig else "negative" if pmt_adj > pmt_orig else "neutral"
+
+    # Summary line
+    summary_parts = [f"${adjusted_ask:,.0f}"]
+    if abs(delta_pct) > 0.1:
+        summary_parts.append(f"({delta_pct:+.1f}% vs ask)")
+    summary_parts.append(f"@ {rate:.2f}%")
+    if abs(rate_delta) > 0.01:
+        summary_parts.append(f"({rate_delta:+.2f}%)")
 
     return html.Div(
         [
             html.Div(
-                f"${adjusted_ask:,.0f}  ({delta_pct:+.1f}% vs ask)",
+                "  ".join(summary_parts),
                 style={"fontSize": "18px", "fontWeight": "700", "textAlign": "center", "marginBottom": "12px", "color": TEXT_PRIMARY},
             ),
             html.Div(
                 [
-                    _card("BCV Gap", f"{gap_adj:+.1f}%  (was {gap_orig:+.1f}%)", tone=gap_tone),
-                    _card("PTR", f"{ptr_adj:.1f}x  (was {ptr_orig:.1f}x)", tone=ptr_tone),
-                    _card("Est. Mortgage", f"${pmt:,.0f}/mo"),
-                    _card("Est. Cash Flow", f"${cf_adj:,.0f}/mo", tone=cf_tone),
+                    _card("BCV Gap", f"{gap_adj:+.1f}%", tone=gap_tone, sublabel=f"was {gap_orig:+.1f}%" if abs(gap_adj - gap_orig) > 0.1 else ""),
+                    _card("PTR", f"{ptr_adj:.1f}x", tone=ptr_tone, sublabel=f"was {ptr_orig:.1f}x" if abs(ptr_adj - ptr_orig) > 0.1 else ""),
+                    _card("Est. Mortgage", f"${pmt_adj:,.0f}/mo", tone=pmt_tone, sublabel=f"was ${pmt_orig:,.0f}/mo" if abs(pmt_adj - pmt_orig) > 10 else ""),
+                    _card("Est. Cash Flow", f"${cf_adj:,.0f}/mo", tone=cf_tone, sublabel=f"was ${cf_orig:,.0f}/mo" if abs(cf_adj - cf_orig) > 10 else ""),
                 ],
                 style={"display": "grid", "gridTemplateColumns": "repeat(2, 1fr)", "gap": "8px"},
             ),
@@ -4103,15 +5042,78 @@ def render_compare_summary(section: str, summary: CompareSummary) -> html.Div | 
     if not summary.rows:
         return None
     metric_filter = _COMPARE_SECTION_METRICS.get(section, set())
-    rows = [{"Metric": row.metric, **row.values} for row in summary.rows if row.metric in metric_filter]
-    if not rows:
+    filtered_rows = [row for row in summary.rows if row.metric in metric_filter]
+    if not filtered_rows:
         return None
     return html.Div(
         [
             html.Div([html.Div("Key Differences", style=SECTION_HEADER_STYLE), html.Ul([html.Li(item, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for item in summary.why_different[:4]])], style=CARD_STYLE),
-            html.Div([html.Div("Compare", style=SECTION_HEADER_STYLE), simple_table(rows, page_size=8)], style=CARD_STYLE),
+            html.Div([html.Div("Compare", style=SECTION_HEADER_STYLE), _render_compare_table(filtered_rows)], style=CARD_STYLE),
         ],
         style={**GRID_2, "marginBottom": "12px"},
+    )
+
+
+def _render_compare_table(rows: list) -> html.Div:
+    """Rich comparison table with relative deltas and winner-per-metric indicators."""
+    if not rows:
+        return html.Div("No metrics to compare.", style={"color": TEXT_MUTED, "fontSize": "13px"})
+
+    # Get all property labels from the first row
+    property_labels = list(rows[0].values.keys())
+
+    # Build header
+    header_cells = [html.Th("Metric", style={**TABLE_STYLE_HEADER, "textAlign": "left", "minWidth": "110px"})]
+    for label in property_labels:
+        header_cells.append(html.Th(label, style={**TABLE_STYLE_HEADER, "textAlign": "right", "minWidth": "120px"}))
+
+    # Build data rows
+    table_rows = []
+    for row in rows:
+        cells = [html.Td(row.metric, style={**TABLE_STYLE_CELL, "fontWeight": "600", "fontSize": "11px", "textTransform": "uppercase", "color": TEXT_MUTED})]
+        for label in property_labels:
+            value_text = row.values.get(label, "—")
+            delta_text = row.deltas.get(label, "")
+            is_winner = label == row.winner
+
+            # Value styling
+            val_style: dict = {"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY}
+            if is_winner and len(property_labels) >= 2:
+                val_style["color"] = ACCENT_GREEN
+
+            # Build cell content
+            cell_children: list = [html.Div(value_text, style=val_style)]
+            if delta_text and delta_text != "best":
+                # Show delta as sublabel — red if worse, muted if neutral
+                delta_color = TONE_NEGATIVE_TEXT if not row.higher_is_better and delta_text.startswith("+") else (
+                    TONE_NEGATIVE_TEXT if row.higher_is_better and delta_text.startswith("-") else TEXT_MUTED
+                )
+                # For lower-is-better metrics, positive delta means worse
+                if not row.higher_is_better and delta_text.startswith("+"):
+                    delta_color = TONE_NEGATIVE_TEXT
+                elif not row.higher_is_better and delta_text.startswith("-"):
+                    delta_color = TONE_POSITIVE_TEXT
+                elif row.higher_is_better and delta_text.startswith("+"):
+                    delta_color = TONE_POSITIVE_TEXT
+                elif row.higher_is_better and delta_text.startswith("-"):
+                    delta_color = TONE_NEGATIVE_TEXT
+                cell_children.append(html.Div(delta_text, style={"fontSize": "10px", "color": delta_color, "marginTop": "1px"}))
+            elif is_winner and len(property_labels) >= 2:
+                cell_children.append(html.Div("★ best", style={"fontSize": "9px", "color": ACCENT_GREEN, "marginTop": "1px", "fontWeight": "600"}))
+
+            cell_style = {**TABLE_STYLE_CELL, "textAlign": "right", "verticalAlign": "top", "padding": "6px 10px"}
+            if is_winner and len(property_labels) >= 2:
+                cell_style["backgroundColor"] = "#1a3a1f"  # subtle green tint
+                cell_style["borderLeft"] = f"2px solid {ACCENT_GREEN}40"
+
+            cells.append(html.Td(cell_children, style=cell_style))
+
+        bg = BG_SURFACE if len(table_rows) % 2 == 0 else BG_SURFACE_2
+        table_rows.append(html.Tr(cells, style={"backgroundColor": bg}))
+
+    return html.Table(
+        [html.Thead(html.Tr(header_cells)), html.Tbody(table_rows)],
+        style={"width": "100%", "borderCollapse": "collapse", "border": f"1px solid {BORDER}", "borderRadius": "4px"},
     )
 
 
@@ -4406,6 +5408,8 @@ def render_compare_decision_mode(mode: str, views: list[PropertyAnalysisView], r
         blocks.append(banner)
     if mode == "heatmap":
         blocks.append(html.Div([html.Div("Score Heatmap", style=SECTION_HEADER_STYLE), score_comparison_heatmap(views)], style=CARD_STYLE))
+        if len(views) >= 2 and summary.rows:
+            blocks.append(html.Div([html.Div("Metric Comparison", style=SECTION_HEADER_STYLE), _render_compare_table(summary.rows)], style=CARD_STYLE))
         blocks.append(html.Div([html.Div("Property Ranking", style=SECTION_HEADER_STYLE), property_ranking_table(views)], style=CARD_STYLE))
         if len(views) >= 2:
             blocks.append(html.Div([html.Div("Why Different", style=SECTION_HEADER_STYLE), html.Ul([html.Li(item, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for item in summary.why_different[:6]])], style=CARD_STYLE))
@@ -4415,6 +5419,8 @@ def render_compare_decision_mode(mode: str, views: list[PropertyAnalysisView], r
         blocks.append(html.Div([html.Div("Category Radar", style=SECTION_HEADER_STYLE), category_comparison_radar(views[0], views[1])], style=CARD_STYLE))
         blocks.append(comparison_explainer(views[0], views[1]))
     elif mode == "table":
+        if len(views) >= 2 and summary.rows:
+            blocks.append(html.Div([html.Div("Metric Comparison", style=SECTION_HEADER_STYLE), _render_compare_table(summary.rows)], style=CARD_STYLE))
         blocks.append(html.Div([html.Div("Ranked Comparison", style=SECTION_HEADER_STYLE), property_ranking_table(views)], style=CARD_STYLE))
         if len(views) >= 2:
             blocks.append(html.Div([html.Div("Decision Notes", style=SECTION_HEADER_STYLE), html.Ul([html.Li(item, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for item in summary.why_different[:6]])], style=CARD_STYLE))

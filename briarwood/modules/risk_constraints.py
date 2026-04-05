@@ -45,13 +45,14 @@ class RiskConstraintsModule:
             elif property_input.taxes <= s.low_tax_credit_threshold:
                 credits["low_taxes"] = s.low_tax_credit
 
-        # --- Vacancy: flat ---
+        # --- Vacancy: Bug 5 — graduated instead of binary threshold ---
         if property_input.vacancy_rate is not None:
             data_present += 1
-            if property_input.vacancy_rate > s.high_vacancy_threshold:
-                penalties["higher_vacancy"] = s.vacancy_penalty
+            vacancy_penalty = _graduated_vacancy_penalty(property_input.vacancy_rate, s)
+            if vacancy_penalty > 0:
+                penalties["higher_vacancy"] = vacancy_penalty
 
-        # --- Days on market: graduated ---
+        # --- Days on market: Bug 4 — smooth ramp starting at 15 days ---
         if property_input.days_on_market is not None:
             data_present += 1
             dom_penalty = _graduated_dom_penalty(property_input.days_on_market, s)
@@ -114,16 +115,31 @@ def _graduated_tax_penalty(taxes: float, s: RiskSettings) -> float:
 
 
 def _graduated_dom_penalty(dom: int, s: RiskSettings) -> float:
-    """Linear interpolation across DOM penalty tiers."""
+    """Bug 4: smooth ramp starting at 15 days instead of cliff at 30.
+    0-14: no penalty. 15-30: ramp 0→5. 31-60: ramp 5→15. 61-90: ramp 15→25. 90+: cap 25."""
     if dom <= s.dom_penalty_start:
         return 0.0
-    if dom <= s.dom_penalty_mid:
-        # 30–60: interpolate 0 → 8
-        return _lerp(dom, s.dom_penalty_start, s.dom_penalty_mid, 0.0, 8.0)
-    if dom <= s.dom_penalty_high:
-        # 60–90: interpolate 8 → 15
-        return _lerp(dom, s.dom_penalty_mid, s.dom_penalty_high, 8.0, 15.0)
+    if dom <= s.dom_penalty_tier1_end:
+        return _lerp(dom, s.dom_penalty_start, s.dom_penalty_tier1_end, 0.0, s.dom_penalty_tier1_max)
+    if dom <= s.dom_penalty_tier2_end:
+        return _lerp(dom, s.dom_penalty_tier1_end, s.dom_penalty_tier2_end, s.dom_penalty_tier1_max, s.dom_penalty_tier2_max)
+    if dom <= s.dom_penalty_tier3_end:
+        return _lerp(dom, s.dom_penalty_tier2_end, s.dom_penalty_tier3_end, s.dom_penalty_tier2_max, s.dom_penalty_cap)
     return s.dom_penalty_cap
+
+
+def _graduated_vacancy_penalty(vacancy_rate: float, s: RiskSettings) -> float:
+    """Bug 5: graduated vacancy penalty instead of binary threshold.
+    0-5%: no penalty. 5-8%: ramp 0→5. 8-12%: ramp 5→10. 12-20%: ramp 10→20. 20+%: cap 20."""
+    if vacancy_rate <= s.vacancy_tier1_start:
+        return 0.0
+    if vacancy_rate <= s.vacancy_tier1_end:
+        return _lerp(vacancy_rate, s.vacancy_tier1_start, s.vacancy_tier1_end, 0.0, s.vacancy_tier1_max_penalty)
+    if vacancy_rate <= s.vacancy_tier2_end:
+        return _lerp(vacancy_rate, s.vacancy_tier1_end, s.vacancy_tier2_end, s.vacancy_tier1_max_penalty, s.vacancy_tier2_max_penalty)
+    if vacancy_rate <= s.vacancy_tier3_end:
+        return _lerp(vacancy_rate, s.vacancy_tier2_end, s.vacancy_tier3_end, s.vacancy_tier2_max_penalty, s.vacancy_tier3_max_penalty)
+    return s.vacancy_penalty_cap
 
 
 def _lerp(value: float, lo: float, hi: float, out_lo: float, out_hi: float) -> float:

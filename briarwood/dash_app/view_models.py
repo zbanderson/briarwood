@@ -65,6 +65,56 @@ def _income_list(income: object, name: str) -> list[float]:
     return value if isinstance(value, list) else []
 
 
+def _cost_val_metric(report: AnalysisReport, key: str) -> float | None:
+    """Extract a metric from the cost_valuation module result."""
+    mod = report.module_results.get("cost_valuation")
+    if mod is None:
+        return None
+    val = mod.metrics.get(key)
+    return float(val) if val is not None else None
+
+
+def _fmt_ratio(value: float | None) -> str:
+    if value is None:
+        return "Unavailable"
+    return f"{value:.2f}x"
+
+
+def _rent_source_label(source_type: str) -> str:
+    """Human-readable label for rent provenance (for trust calibration)."""
+    mapping = {
+        "manual_input": "(user provided)",
+        "provided": "(user provided)",
+        "estimated": "(estimated)",
+        "missing": "(missing — using fallback)",
+    }
+    return mapping.get(source_type, "")
+
+
+def _as_float(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _coastal_profile_label(town_county: object) -> str:
+    """Derive a coastal profile tag from the town_county outlook."""
+    normalized = getattr(town_county, "normalized", None)
+    if normalized is None:
+        return ""
+    inputs = getattr(normalized, "inputs", None)
+    if inputs is None:
+        return ""
+    signal = getattr(inputs, "coastal_profile_signal", None)
+    if signal is None or signal <= 0:
+        return ""
+    if signal >= 0.8:
+        return "Beach Premium"
+    if signal >= 0.5:
+        return "Downtown Premium"
+    return "Coastal"
+
+
 def _module_confidence(report: AnalysisReport, module_name: str) -> float | None:
     module = report.module_results.get(module_name)
     return None if module is None else float(module.confidence)
@@ -211,6 +261,22 @@ class SectionConfidenceItem:
 
 
 @dataclass(slots=True)
+class ConfidenceFactorItem:
+    """One factor contributing to the global confidence level."""
+    label: str
+    detail: str
+    level: str  # "strong", "ok", "weak"
+
+
+@dataclass(slots=True)
+class InputImpactItem:
+    """A missing input and the confidence improvement it would yield."""
+    field_label: str
+    impact_description: str
+    affected_component: str
+
+
+@dataclass(slots=True)
 class ConfidenceComponentItem:
     key: str
     label: str
@@ -280,6 +346,18 @@ class RiskLocationViewModel:
     market_momentum_label: str
     flood_risk: str
     liquidity_view: str
+    # Surfaced risk/market signals (Group 2)
+    stress_case_value: float | None = None
+    stress_case_text: str = "Unavailable"
+    stress_drawdown_pct: float | None = None
+    momentum_direction: str = ""  # "accelerating" / "steady" / "decelerating"
+    # Location context (Group 3)
+    school_signal: float | None = None
+    school_signal_text: str = ""
+    coastal_profile_label: str = ""  # "Beach Premium", "Downtown Premium", or ""
+    # Scarcity breakdown (Group 5)
+    land_scarcity_score: float | None = None
+    location_scarcity_score: float | None = None
     drivers: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -318,6 +396,15 @@ class IncomeSupportViewModel:
     risk_view: str
     price_to_rent_text: str
     ptr_classification: str
+    # Surfaced investor metrics (Group 1)
+    dscr: float | None = None
+    dscr_text: str = "Unavailable"
+    cash_on_cash_return: float | None = None
+    cash_on_cash_return_text: str = "Unavailable"
+    gross_yield: float | None = None
+    gross_yield_text: str = "Unavailable"
+    # Rent source label for trust calibration (Group 4, item 9)
+    rent_source_label: str = ""
     unit_breakdown: list[tuple[str, str]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
@@ -328,6 +415,10 @@ class IncomeSupportViewModel:
 class CompareMetricRow:
     metric: str
     values: dict[str, str]
+    raw_values: dict[str, float | None] = field(default_factory=dict)
+    deltas: dict[str, str] = field(default_factory=dict)  # label → "+$50K (+6.3%)"
+    winner: str = ""  # label of the winning property for this metric
+    higher_is_better: bool = True
 
 
 @dataclass(slots=True)
@@ -444,6 +535,10 @@ class PropertyAnalysisView:
     score_narrative: str | None = None
     category_scores: Any | None = None  # dict[str, CategoryScore] from engine
     lens_scores: Any | None = None  # LensScores from decision_model
+    # Confidence layer
+    confidence_level: str = "Medium"  # "High", "Medium", "Low"
+    confidence_factors: list[ConfidenceFactorItem] = field(default_factory=list)
+    top_input_impacts: list[InputImpactItem] = field(default_factory=list)
 
 
 def _coverage_lists(property_input: PropertyInput | None) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -494,6 +589,127 @@ def _section_confidences(report: AnalysisReport) -> list[SectionConfidenceItem]:
             continue
         items.append(SectionConfidenceItem(label=label, confidence=float(module.confidence)))
     return items
+
+
+def _compute_confidence_level(
+    report: AnalysisReport,
+    overall_confidence: float,
+) -> tuple[str, list[ConfidenceFactorItem]]:
+    """Compute composite confidence level (High/Medium/Low) with factor breakdown."""
+    factors: list[ConfidenceFactorItem] = []
+
+    # 1. Comp quality
+    comp_mod = report.module_results.get("comparable_sales")
+    comp_count = int(comp_mod.metrics.get("comp_count", 0)) if comp_mod else 0
+    if comp_count >= 5:
+        factors.append(ConfidenceFactorItem("Comp quality", f"{comp_count} verified comps", "strong"))
+    elif comp_count >= 3:
+        factors.append(ConfidenceFactorItem("Comp quality", f"{comp_count} comps (limited)", "ok"))
+    else:
+        factors.append(ConfidenceFactorItem("Comp quality", f"{comp_count} comps (thin)", "weak"))
+
+    # 2. Income data
+    cost_val = report.module_results.get("cost_valuation")
+    rent_source = str(cost_val.metrics.get("rent_source_type", "missing")) if cost_val else "missing"
+    if rent_source in ("manual_input", "provided"):
+        factors.append(ConfidenceFactorItem("Income data", "User provided", "strong"))
+    elif rent_source == "estimated":
+        factors.append(ConfidenceFactorItem("Income data", "Estimated", "ok"))
+    else:
+        factors.append(ConfidenceFactorItem("Income data", "Missing — using fallback", "weak"))
+
+    # 3. Town data
+    town_mod = report.module_results.get("town_county_outlook")
+    town_conf = town_mod.confidence if town_mod else 0.0
+    if town_conf >= 0.75:
+        factors.append(ConfidenceFactorItem("Town data", "Full coverage", "strong"))
+    elif town_conf >= 0.50:
+        factors.append(ConfidenceFactorItem("Town data", "Partial coverage", "ok"))
+    else:
+        factors.append(ConfidenceFactorItem("Town data", "Limited or missing", "weak"))
+
+    # 4. Missing inputs
+    pi = report.property_input
+    critical_missing: list[str] = []
+    if pi:
+        if pi.taxes is None:
+            critical_missing.append("taxes")
+        if pi.insurance is None:
+            critical_missing.append("insurance")
+        if pi.estimated_monthly_rent is None:
+            critical_missing.append("rent")
+    non_critical_count = len(critical_missing)
+    if non_critical_count == 0:
+        factors.append(ConfidenceFactorItem("Missing inputs", "None critical", "strong"))
+    elif non_critical_count <= 2:
+        factors.append(ConfidenceFactorItem("Missing inputs", f"{non_critical_count} non-critical ({', '.join(critical_missing)})", "ok"))
+    else:
+        factors.append(ConfidenceFactorItem("Missing inputs", f"{non_critical_count} gaps ({', '.join(critical_missing)})", "weak"))
+
+    # Determine level
+    weak_count = sum(1 for f in factors if f.level == "weak")
+    strong_count = sum(1 for f in factors if f.level == "strong")
+    if weak_count >= 2 or overall_confidence < 0.55:
+        level = "Low"
+    elif strong_count >= 3 and overall_confidence >= 0.75:
+        level = "High"
+    else:
+        level = "Medium"
+
+    return level, factors
+
+
+_INPUT_IMPACT_MAP: dict[str, tuple[str, str]] = {
+    "estimated_monthly_rent": ("Add monthly rent estimate", "income"),
+    "unit_rents": ("Add unit-level rents", "income"),
+    "taxes": ("Add property taxes", "income"),
+    "insurance": ("Add insurance cost", "income"),
+    "repair_capex_budget": ("Add renovation/CapEx budget", "capex"),
+    "condition_profile_override": ("Confirm property condition", "capex"),
+    "condition_confirmed": ("Confirm condition assessment", "capex"),
+    "capex_lane_override": ("Override CapEx lane", "capex"),
+    "down_payment_percent": ("Set down payment %", "income"),
+    "interest_rate": ("Set interest rate", "income"),
+    "loan_term_years": ("Set loan term", "income"),
+    "local_documents": ("Add local market intel", "market"),
+    "market_price_to_rent_benchmark": ("Add price-to-rent benchmark", "income"),
+}
+
+
+def _compute_top_input_impacts(
+    metric_statuses: list[object],
+    confidence_breakdown: object,
+) -> list[InputImpactItem]:
+    """Identify the top 3 missing inputs that would most improve confidence."""
+    # Build a priority list from metric statuses that are estimated/unresolved
+    seen: set[str] = set()
+    candidates: list[InputImpactItem] = []
+    # Map component keys to their current confidence for impact estimation
+    component_conf = {c.key: c.confidence for c in confidence_breakdown.components}
+
+    for status in metric_statuses:
+        if status.status == "fact_based":
+            continue
+        for field_name in status.prompt_fields:
+            if field_name in seen:
+                continue
+            seen.add(field_name)
+            label, component = _INPUT_IMPACT_MAP.get(field_name, (field_name.replace("_", " ").title(), "general"))
+            current_conf = component_conf.get(component, 0.65)
+            # Estimate impact: gap between current and 0.90, scaled
+            gap = max(0.90 - current_conf, 0.0)
+            impact_pct = round(gap * 100 * 0.4, 0)  # ~40% of the gap as realistic improvement
+            if impact_pct < 1:
+                continue
+            candidates.append(InputImpactItem(
+                field_label=label,
+                impact_description=f"+{impact_pct:.0f}% confidence in {component} assessment",
+                affected_component=component,
+            ))
+
+    # Sort by implied impact (descending) and take top 3
+    candidates.sort(key=lambda c: float(c.impact_description.split("%")[0].replace("+", "")), reverse=True)
+    return candidates[:3]
 
 
 def _metric_chips(
@@ -836,6 +1052,15 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             warnings=list(_income_attr(income, "warnings", [])),
             assumptions=list(_income_attr(income, "assumptions", [])),
             unsupported_claims=list(_income_attr(income, "unsupported_claims", [])),
+            # Surfaced investor metrics from cost_valuation module
+            dscr=_cost_val_metric(report, "dscr"),
+            dscr_text=_fmt_ratio(_cost_val_metric(report, "dscr")),
+            cash_on_cash_return=_cost_val_metric(report, "cash_on_cash_return"),
+            cash_on_cash_return_text=_fmt_pct(_cost_val_metric(report, "cash_on_cash_return")),
+            gross_yield=_cost_val_metric(report, "gross_yield"),
+            gross_yield_text=_fmt_pct(_cost_val_metric(report, "gross_yield")),
+            # Rent source trust label
+            rent_source_label=_rent_source_label(str(_income_attr(income, "rent_source_type", "missing"))),
         ),
         risk_location=RiskLocationViewModel(
             risk_summary=risk.summary,
@@ -853,6 +1078,18 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             risks=list(market_momentum_unsupported[:1]) + list(liquidity_unsupported[:1]) + list(town_county.score.demand_risks[:2]) + list(scarcity.scarcity_notes[:1]),
             warnings=list(risk.metrics.get("warnings", [])) if isinstance(risk.metrics.get("warnings"), list) else [],
             unsupported_claims=list(town_county.score.unsupported_claims) + list(scarcity.unsupported_claims),
+            # Surfaced stress scenario and momentum direction
+            stress_case_value=_scenario_stress_value(scenario),
+            stress_case_text=_fmt_currency(_scenario_stress_value(scenario)),
+            stress_drawdown_pct=_as_float(forward_module.metrics.get("stress_macro_shock_pct")),
+            momentum_direction=str(market_momentum_metrics.get("market_momentum_direction", "") or ""),
+            # Location context: school signal and coastal profile
+            school_signal=property_input.school_rating if property_input else None,
+            school_signal_text=f"{property_input.school_rating:.1f}/10" if property_input and property_input.school_rating is not None else "",
+            coastal_profile_label=_coastal_profile_label(town_county),
+            # Scarcity component breakdown
+            land_scarcity_score=getattr(scarcity, "land_scarcity_score", None),
+            location_scarcity_score=getattr(scarcity, "location_scarcity_score", None),
         ),
         evidence=EvidenceViewModel(
             evidence_mode=(property_input.source_metadata.evidence_mode.value.replace("_", " ").title() if property_input and property_input.source_metadata else "Unknown"),
@@ -938,6 +1175,12 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         view.lens_scores = calculate_lens_scores(report, view.category_scores)
     except Exception:
         pass
+
+    # Confidence layer — global level, factors, and input impacts
+    level, factors = _compute_confidence_level(report, overall_confidence)
+    view.confidence_level = level
+    view.confidence_factors = factors
+    view.top_input_impacts = _compute_top_input_impacts(metric_statuses, confidence_breakdown)
 
     view.decision = _build_decision_view(view)
 

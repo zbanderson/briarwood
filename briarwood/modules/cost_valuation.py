@@ -39,13 +39,15 @@ class CostValuationModule:
         monthly_rent = rent_context.rent_estimate
         down_payment_percent = self._normalize_percent(property_input.down_payment_percent)
         interest_rate = self._normalize_percent(property_input.interest_rate)
-        vacancy_rate = (
-            property_input.vacancy_rate
-            if property_input.vacancy_rate is not None
-            else self.settings.default_vacancy_rate
-        )
+
+        # Bug 8: use higher vacancy default for coastal seasonal properties
+        vacancy_rate = self._resolve_vacancy_rate(property_input)
+
         loan_term_years = property_input.loan_term_years or self.settings.loan_term_years
         monthly_hoa = property_input.monthly_hoa if property_input.monthly_hoa is not None else 0.0
+
+        # Bug 7: age/condition-adjusted maintenance reserve
+        maintenance_pct = self._resolve_maintenance_reserve(property_input)
 
         income = self.income_agent.run(
             IncomeAgentInput(
@@ -59,7 +61,7 @@ class CostValuationModule:
                 estimated_monthly_rent=monthly_rent,
                 rent_source_type=rent_context.rent_source_type,
                 vacancy_pct=vacancy_rate,
-                maintenance_pct=self.settings.default_maintenance_reserve_pct,
+                maintenance_pct=maintenance_pct,
             )
         )
 
@@ -153,6 +155,49 @@ class CostValuationModule:
                 notes=["Cost valuation mixes sourced property facts with any user-supplied or estimated rent/financing assumptions."],
             ),
         )
+
+    def _resolve_vacancy_rate(self, property_input: PropertyInput) -> float:
+        """Bug 8: if user provided a vacancy rate, use it. Otherwise, check if
+        property is coastal + seasonal and apply the higher default (15%)."""
+        if property_input.vacancy_rate is not None:
+            return property_input.vacancy_rate
+        # Check for coastal seasonal signal: seasonal rent present, or
+        # coastal_profile_signal available via market_signals
+        is_coastal = False
+        if property_input.market_signals is not None:
+            is_coastal = (property_input.market_signals.coastal_profile_signal or 0) > 0
+        is_seasonal = property_input.seasonal_monthly_rent is not None
+        if is_coastal and is_seasonal:
+            return self.settings.default_coastal_seasonal_vacancy_rate
+        return self.settings.default_vacancy_rate
+
+    def _resolve_maintenance_reserve(self, property_input: PropertyInput) -> float:
+        """Bug 7: maintenance reserve scales with property age and condition.
+        Older/worse-condition properties need higher reserves."""
+        s = self.settings
+        year_built = property_input.year_built
+        if year_built is not None:
+            from briarwood.utils import current_year
+            age = current_year() - year_built
+            if age <= 15:            # built after ~2010
+                pct = s.maintenance_reserve_post_2010
+            elif age <= 35:          # built 1990-2010
+                pct = s.maintenance_reserve_1990_2010
+            elif age <= 55:          # built 1970-1989
+                pct = s.maintenance_reserve_1970_1989
+            elif age <= 75:          # built 1950-1969
+                pct = s.maintenance_reserve_1950_1969
+            else:                    # built before 1950
+                pct = s.maintenance_reserve_pre_1950
+        else:
+            pct = s.default_maintenance_reserve_pct
+
+        # Add condition/capex surcharge for properties in poor shape
+        condition = (property_input.condition_profile or "").lower()
+        capex_lane = (property_input.capex_lane or "").lower()
+        if condition == "needs_work" or capex_lane == "heavy":
+            pct += s.maintenance_reserve_poor_condition_adder
+        return pct
 
     def _normalize_percent(self, value: float | None) -> float | None:
         if value is None:

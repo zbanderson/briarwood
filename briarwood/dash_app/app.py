@@ -36,6 +36,7 @@ from briarwood.dash_app.components import (
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
     export_preset_tear_sheet,
+    export_preset_tear_sheet_pdf,
     list_comp_database_rows,
     list_presets,
     list_saved_properties,
@@ -46,7 +47,8 @@ from briarwood.dash_app.data import (
     register_manual_analysis,
 )
 from briarwood.dash_app.theme import (
-    ACCENT_BLUE, ACCENT_GREEN, BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
+    ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED, ACCENT_YELLOW,
+    BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BORDER, BORDER_SUBTLE, BTN_GHOST, BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO,
     INPUT_STYLE, LABEL_STYLE, PAGE_STYLE, SECTION_HEADER_STYLE,
@@ -452,10 +454,10 @@ def _topbar() -> html.Div:
             ),
             # Add Property toggle
             html.Button("+ Add Property", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
-            # Export button
             html.Div(
                 [
-                    html.Button("Export Tear Sheet", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
+                    html.Button("Export PDF", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
+                    html.Button("Export TXT", id="export-txt-button", n_clicks=0, style={**BTN_GHOST, "opacity": "0.7"}),
                     html.Div(id="export-status", style={"fontSize": "13px", "color": TEXT_MUTED}),
                 ],
                 style={"display": "flex", "alignItems": "center", "gap": "8px"},
@@ -638,15 +640,38 @@ def _add_property_drawer() -> html.Div:
     )
 
 
+def _form_tier_label(text: str, tier: str) -> html.Div:
+    """Section header with tier badge: REQUIRED / RECOMMENDED / OPTIONAL."""
+    tier_colors = {
+        "required": {"bg": "#1a3a1f", "border": "#2d6a35", "text": ACCENT_GREEN},
+        "recommended": {"bg": "#3a2f0d", "border": "#6a4f0e", "text": TONE_WARNING_TEXT},
+        "optional": {"bg": BG_SURFACE_3, "border": BORDER, "text": TEXT_MUTED},
+    }
+    c = tier_colors.get(tier, tier_colors["optional"])
+    return html.Div(
+        [
+            html.Span(text, style={**SECTION_HEADER_STYLE, "marginBottom": "0", "display": "inline"}),
+            html.Span(tier.upper(), style={
+                "fontSize": "9px", "fontWeight": "600", "letterSpacing": "0.08em",
+                "color": c["text"], "backgroundColor": c["bg"], "border": f"1px solid {c['border']}",
+                "padding": "1px 5px", "borderRadius": "3px", "marginLeft": "8px", "verticalAlign": "middle",
+            }),
+        ],
+    )
+
+
+def _impact_hint(text: str) -> html.Div:
+    """Small hint showing what impact adding this data has."""
+    return html.Div(text, style={"fontSize": "10px", "color": TEXT_MUTED, "fontStyle": "italic", "marginTop": "2px"})
+
+
 def _add_property_form_body() -> list:
-    """Form fields grouped into themed cards."""
+    """Form fields grouped into themed cards with progressive disclosure."""
     return [
         # ── Required: Subject Property ──
         html.Div(
             [
-                html.Div(
-                    [html.Span("Subject Property", style={**SECTION_HEADER_STYLE, "marginBottom": "0", "display": "inline"}), _required_dot()],
-                ),
+                _form_tier_label("Subject Property", "required"),
                 _text_input("manual-address", "Street address"),
                 html.Div(
                     [_number_input("manual-price", "Asking price ($)")],
@@ -664,7 +689,6 @@ def _add_property_form_body() -> list:
                     style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
                 ),
                 _text_input("manual-property-id", "Property ID (optional)"),
-                # Validation hint
                 html.Div(
                     id="form-validation-hint",
                     style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "2px"},
@@ -672,10 +696,11 @@ def _add_property_form_body() -> list:
             ],
             style=_DRAWER_CARD,
         ),
-        # ── Property Details (optional) ──
+        # ── Property Details (recommended — improves scoring) ──
         html.Div(
             [
-                html.Div("Property Details", style=SECTION_HEADER_STYLE),
+                _form_tier_label("Property Details", "recommended"),
+                _impact_hint("Adding taxes and condition improves risk scoring by ~15%"),
                 html.Div(
                     [_number_input("manual-lot-size", "Lot (acres)"), _number_input("manual-year-built", "Year built"), _number_input("manual-dom", "Days on market")],
                     style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
@@ -695,48 +720,11 @@ def _add_property_form_body() -> list:
             ],
             style=_DRAWER_CARD,
         ),
-        # ── Physical Features (optional, collapsed feel) ──
+        # ── Income & Carry (recommended — enables income analysis) ──
         html.Div(
             [
-                html.Div("Physical Features", style=SECTION_HEADER_STYLE),
-                html.Div(
-                    [
-                        _number_input("manual-garage-spaces", "Garage spaces"),
-                        _dropdown("manual-garage-type", GARAGE_TYPE_OPTIONS, "Garage type"),
-                    ],
-                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
-                ),
-                html.Div(
-                    [
-                        _dropdown("manual-has-back-house", YES_NO_OPTIONS, "Back house / ADU"),
-                        _dropdown("manual-adu-type", ADU_TYPE_OPTIONS, "ADU type"),
-                        _number_input("manual-adu-sqft", "ADU sqft"),
-                    ],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
-                ),
-                html.Div(
-                    [
-                        _dropdown("manual-has-basement", YES_NO_OPTIONS, "Basement"),
-                        _dropdown("manual-basement-finished", YES_NO_OPTIONS, "Finished"),
-                        _dropdown("manual-has-pool", YES_NO_OPTIONS, "Pool"),
-                    ],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
-                ),
-                html.Div(
-                    [
-                        _number_input("manual-parking-spaces", "Parking spaces"),
-                        _dropdown("manual-corner-lot", YES_NO_OPTIONS, "Corner lot"),
-                        _dropdown("manual-driveway-off-street", YES_NO_OPTIONS, "Off-street"),
-                    ],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
-                ),
-            ],
-            style=_DRAWER_CARD,
-        ),
-        # ── Income & Carry (optional) ──
-        html.Div(
-            [
-                html.Div("Income & Carry", style=SECTION_HEADER_STYLE),
+                _form_tier_label("Income & Carry", "recommended"),
+                _impact_hint("Adding rent estimate improves income confidence by ~12%"),
                 html.Div(
                     [
                         _number_input("manual-estimated-rent", "Market rent ($/mo)"),
@@ -772,43 +760,101 @@ def _add_property_form_body() -> list:
             ],
             style=_DRAWER_CARD,
         ),
+        # ── Physical Features (optional — collapsed by default) ──
+        html.Details(
+            [
+                html.Summary(
+                    _form_tier_label("Physical Features", "optional"),
+                    style={"cursor": "pointer", "listStyle": "none", "outline": "none"},
+                ),
+                html.Div(
+                    [
+                        _impact_hint("ADU and lot features improve optionality scoring"),
+                        html.Div(
+                            [
+                                _number_input("manual-garage-spaces", "Garage spaces"),
+                                _dropdown("manual-garage-type", GARAGE_TYPE_OPTIONS, "Garage type"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [
+                                _dropdown("manual-has-back-house", YES_NO_OPTIONS, "Back house / ADU"),
+                                _dropdown("manual-adu-type", ADU_TYPE_OPTIONS, "ADU type"),
+                                _number_input("manual-adu-sqft", "ADU sqft"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [
+                                _dropdown("manual-has-basement", YES_NO_OPTIONS, "Basement"),
+                                _dropdown("manual-basement-finished", YES_NO_OPTIONS, "Finished"),
+                                _dropdown("manual-has-pool", YES_NO_OPTIONS, "Pool"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [
+                                _number_input("manual-parking-spaces", "Parking spaces"),
+                                _dropdown("manual-corner-lot", YES_NO_OPTIONS, "Corner lot"),
+                                _dropdown("manual-driveway-off-street", YES_NO_OPTIONS, "Off-street"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                        ),
+                    ],
+                    style={"paddingTop": "8px", "display": "grid", "gap": "8px"},
+                ),
+            ],
+            open=False,
+            style={**_DRAWER_CARD, "padding": "12px 16px"},
+        ),
         # ── Notes ──
         dcc.Textarea(
             id="manual-notes", placeholder="Notes or listing description (optional)",
             style={**INPUT_STYLE, "height": "60px", "resize": "vertical"},
         ),
-        # ── Manual Comps (collapsible card) ──
-        html.Div(
+        # ── Manual Comps (optional — collapsed by default) ──
+        html.Details(
             [
-                html.Div("Manual Comps (optional)", style=SECTION_HEADER_STYLE),
-                _text_input("manual-comp-address", "Comp address"),
-                html.Div(
-                    [_number_input("manual-comp-sale-price", "Sale price"), _text_input("manual-comp-sale-date", "Date YYYY-MM-DD")],
-                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
-                ),
-                html.Div(
-                    [_number_input("manual-comp-beds", "Beds"), _number_input("manual-comp-baths", "Baths"), _number_input("manual-comp-sqft", "Sqft")],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
-                ),
-                html.Div(
-                    [_number_input("manual-comp-lot-size", "Lot (acres)"), _number_input("manual-comp-year-built", "Year built"), _number_input("manual-comp-distance", "Distance mi")],
-                    style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                html.Summary(
+                    _form_tier_label("Manual Comps", "optional"),
+                    style={"cursor": "pointer", "listStyle": "none", "outline": "none"},
                 ),
                 html.Div(
                     [
-                        _text_input("manual-comp-property-type", "Type", value="Single Family Residence"),
-                        _dropdown("manual-comp-condition-profile", CONDITION_OPTIONS, "Comp condition"),
+                        _impact_hint("Adding comps improves valuation confidence significantly"),
+                        _text_input("manual-comp-address", "Comp address"),
+                        html.Div(
+                            [_number_input("manual-comp-sale-price", "Sale price"), _text_input("manual-comp-sale-date", "Date YYYY-MM-DD")],
+                            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [_number_input("manual-comp-beds", "Beds"), _number_input("manual-comp-baths", "Baths"), _number_input("manual-comp-sqft", "Sqft")],
+                            style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [_number_input("manual-comp-lot-size", "Lot (acres)"), _number_input("manual-comp-year-built", "Year built"), _number_input("manual-comp-distance", "Distance mi")],
+                            style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
+                        ),
+                        html.Div(
+                            [
+                                _text_input("manual-comp-property-type", "Type", value="Single Family Residence"),
+                                _dropdown("manual-comp-condition-profile", CONDITION_OPTIONS, "Comp condition"),
+                            ],
+                            style={"display": "grid", "gridTemplateColumns": "1.3fr 1fr", "gap": "6px"},
+                        ),
+                        dcc.Textarea(
+                            id="manual-comp-notes", placeholder="Comp notes",
+                            style={**INPUT_STYLE, "height": "50px", "resize": "vertical"},
+                        ),
+                        html.Button("Add Comp", id="manual-add-comp-button", n_clicks=0, style={**BTN_SECONDARY, "width": "100%"}),
+                        html.Div(id="manual-comps-preview", style={"fontSize": "13px", "color": TEXT_MUTED}),
                     ],
-                    style={"display": "grid", "gridTemplateColumns": "1.3fr 1fr", "gap": "6px"},
+                    style={"paddingTop": "8px", "display": "grid", "gap": "8px"},
                 ),
-                dcc.Textarea(
-                    id="manual-comp-notes", placeholder="Comp notes",
-                    style={**INPUT_STYLE, "height": "50px", "resize": "vertical"},
-                ),
-                html.Button("Add Comp", id="manual-add-comp-button", n_clicks=0, style={**BTN_SECONDARY, "width": "100%"}),
-                html.Div(id="manual-comps-preview", style={"fontSize": "13px", "color": TEXT_MUTED}),
             ],
-            style=_DRAWER_CARD,
+            open=False,
+            style={**_DRAWER_CARD, "padding": "12px 16px"},
         ),
         # ── Submit area ──
         html.Div(
@@ -910,6 +956,7 @@ def _build_layout():
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
             dcc.Store(id="tear-sheet-view-mode", storage_type="local", data="owner"),
+            dcc.Store(id="tear-sheet-lens", storage_type="local", data="auto"),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
@@ -1042,6 +1089,24 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
         score_text = f"{view.final_score:.1f}/5"
         sc = score_color(view.final_score)
 
+    # Risk indicator
+    risk_val = view.risk_location.risk_score
+    risk_color = ACCENT_GREEN if risk_val < 35 else ACCENT_YELLOW if risk_val < 55 else ACCENT_ORANGE if risk_val < 70 else ACCENT_RED
+
+    # Monthly net burn/cash flow
+    monthly_cf = view.compare_metrics.get("monthly_cash_flow")
+    if isinstance(monthly_cf, (int, float)):
+        cf_sign = "+" if monthly_cf >= 0 else ""
+        monthly_text = f"{cf_sign}${monthly_cf:,.0f}"
+        monthly_color = TONE_POSITIVE_TEXT if monthly_cf >= 0 else TONE_WARNING_TEXT if monthly_cf >= -500 else TONE_NEGATIVE_TEXT
+    else:
+        monthly_text = "—"
+        monthly_color = TEXT_MUTED
+
+    # Confidence level indicator
+    conf_level = view.confidence_level
+    conf_color = ACCENT_GREEN if conf_level == "High" else ACCENT_YELLOW if conf_level == "Medium" else ACCENT_RED
+
     header_children = html.Div(
         [
             # Left: address + basics
@@ -1058,14 +1123,25 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
                     _header_metric("Ask", _fmt_currency(view.ask_price)),
                     _header_metric("BCV", _fmt_currency(view.bcv)),
                     _header_metric("Gap", gap_text or "—"),
-                    _header_metric("Base", _fmt_currency(view.base_case)),
+                    _header_metric("Net/Mo", monthly_text, color=monthly_color),
+                    _header_metric("Risk", f"{risk_val:.0f}", color=risk_color),
+                    # Compact separator
+                    html.Span(style={"width": "1px", "height": "14px", "backgroundColor": BORDER, "flexShrink": "0"}),
                     _header_metric("Score", score_text or "—", color=sc),
                     html.Span(
                         view.recommendation_tier,
                         style=tone_badge_style("positive" if (view.final_score or 0) >= 3.75 else "warning" if (view.final_score or 0) >= 3.0 else "negative"),
                     ) if view.recommendation_tier else None,
+                    # Confidence dot
+                    html.Span(
+                        [
+                            html.Span("●", style={"color": conf_color, "fontSize": "8px", "marginRight": "3px"}),
+                            html.Span(conf_level, style={"fontSize": "9px", "color": conf_color, "textTransform": "uppercase", "fontWeight": "600"}),
+                        ],
+                        style={"display": "inline-flex", "alignItems": "center"},
+                    ),
                 ],
-                style={"display": "flex", "gap": "12px", "alignItems": "center"},
+                style={"display": "flex", "gap": "10px", "alignItems": "center"},
             ),
         ],
         style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "width": "100%"},
@@ -1401,6 +1477,7 @@ def compare_selected_saved_properties(
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
     Input("tear-sheet-view-mode", "data"),
+    Input("tear-sheet-lens", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -1408,6 +1485,7 @@ def render_main_tab(
     loaded_ids: list[str] | None,
     focus_id: str | None,
     tear_sheet_view_mode: str | None,
+    tear_sheet_lens: str | None,
 ):
     if tab == "tear_sheet":
         report = _focused_report(loaded_ids, focus_id)
@@ -1415,7 +1493,7 @@ def render_main_tab(
             return _empty_state("Add or select a property to begin.")
         view = build_property_analysis_view(report)
         return _centered_main_panel(
-            render_tear_sheet_body(view, report, tear_sheet_view_mode or "owner"),
+            render_tear_sheet_body(view, report, tear_sheet_view_mode or "owner", tear_sheet_lens or "auto"),
             padding="0 20px 24px",
             max_width="1140px",
         )
@@ -1466,6 +1544,18 @@ def update_tear_sheet_view_mode(selected_mode: str | None, current_mode: str | N
     if selected_mode in {"owner", "realtor"}:
         return selected_mode
     return current_mode or "owner"
+
+
+@app.callback(
+    Output("tear-sheet-lens", "data"),
+    Input("tear-sheet-lens-selector", "value"),
+    State("tear-sheet-lens", "data"),
+    prevent_initial_call=True,
+)
+def update_tear_sheet_lens(selected_lens: str | None, current_lens: str | None) -> str:
+    if selected_lens in {"auto", "risk", "investor", "owner", "developer"}:
+        return selected_lens
+    return current_lens or "auto"
 
 
 def _empty_state(message: str) -> html.Div:
@@ -1903,11 +1993,14 @@ def highlight_missing_manual_fields(is_open: bool | None, target_property_id: st
     State("property-selector-dropdown", "value"),
     prevent_initial_call=True,
 )
-def export_tear_sheet(_n_clicks: int, property_id: str | None):
+def export_tear_sheet_pdf(_n_clicks: int, property_id: str | None):
     if not property_id:
         return "Choose a property first."
-    output_path = export_preset_tear_sheet(property_id)
-    return html.Span(str(output_path), style={**{"fontFamily": FONT_MONO, "fontSize": "13px"}})
+    output_path = export_preset_tear_sheet_pdf(property_id)
+    return html.Span(
+        [html.Span("Exported! ", style={"color": ACCENT_GREEN, "fontWeight": "600"}), str(output_path)],
+        style={"fontFamily": FONT_MONO, "fontSize": "13px"},
+    )
 
 
 @app.callback(
@@ -1922,8 +2015,11 @@ def export_lane_tear_sheet(_clicks: list[int]):
     property_id = triggered.get("property_id")
     if not isinstance(property_id, str):
         return "Choose a property first."
-    output_path = export_preset_tear_sheet(property_id)
-    return html.Span(str(output_path), style={"fontFamily": FONT_MONO, "fontSize": "13px"})
+    output_path = export_preset_tear_sheet_pdf(property_id)
+    return html.Span(
+        [html.Span("Exported! ", style={"color": ACCENT_GREEN, "fontWeight": "600"}), str(output_path)],
+        style={"fontFamily": FONT_MONO, "fontSize": "13px"},
+    )
 
 
 # ── Manual comp callbacks ──────────────────────────────────────────────────────
@@ -2420,26 +2516,29 @@ def tour_auto_show(tour_state: dict | None):
 @app.callback(
     Output("what-if-metrics", "children"),
     Input("what-if-ask-slider", "value"),
+    Input("what-if-rate-slider", "value"),
+    Input("what-if-vacancy-toggle", "value"),
     State("property-selector-dropdown", "value"),
     State("loaded-preset-ids", "data"),
     prevent_initial_call=True,
 )
-def update_what_if(adjusted_ask: float | None, focus_id: str | None, loaded_ids: list[str] | None):
+def update_what_if(adjusted_ask: float | None, rate: float | None, vacancy: float | None, focus_id: str | None, loaded_ids: list[str] | None):
     if adjusted_ask is None:
         return no_update
     report = _focused_report(loaded_ids, focus_id)
     if report is None:
         return no_update
     view = build_property_analysis_view(report)
-    return render_what_if_metrics(view, adjusted_ask)
+    vacancy = vacancy if vacancy is not None else 0.05
+    return render_what_if_metrics(view, adjusted_ask, rate, vacancy)
 
 
-# ── PDF/text export callback ─────────────────────────────────────────────────
+# ── TXT export callback ──────────────────────────────────────────────────────
 
 
 @app.callback(
     Output("pdf-download", "data"),
-    Input("export-tear-sheet-button", "n_clicks"),
+    Input("export-txt-button", "n_clicks"),
     State("property-selector-dropdown", "value"),
     State("loaded-preset-ids", "data"),
     prevent_initial_call=True,

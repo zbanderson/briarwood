@@ -331,3 +331,72 @@ def validate_property_input(property_input: PropertyInput) -> None:
         raise ValueError("Property input is missing address.")
     if not property_input.town or not property_input.state:
         raise ValueError("Property input must include town and state.")
+
+
+def write_report_pdf(report: AnalysisReport, output_path: str | Path) -> Path:
+    """Render the analysis report as a PDF tear sheet."""
+    from briarwood.reports.pdf_renderer import write_tear_sheet_pdf
+
+    return write_tear_sheet_pdf(report, output_path)
+
+
+def batch_generate_pdfs(
+    input_dir: str | Path = "data/saved_properties",
+    output_dir: str | Path = "outputs",
+) -> list[Path]:
+    """Generate PDF tear sheets for all saved properties in input_dir."""
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    generated: list[Path] = []
+    for inputs_file in sorted(input_path.glob("*/inputs.json")):
+        preset_id = inputs_file.parent.name
+        try:
+            report = run_report(str(inputs_file))
+            pdf_path = write_report_pdf(report, output_path / f"{preset_id}_tear_sheet.pdf")
+            print(f"  [ok] {pdf_path}")
+            generated.append(pdf_path)
+        except Exception as exc:
+            print(f"  [err] {preset_id}: {exc}")
+    return generated
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Briarwood CLI runner")
+    parser.add_argument("property", nargs="?", help="Path to property JSON input")
+    parser.add_argument("--pdf", action="store_true", help="Generate PDF tear sheet(s)")
+    parser.add_argument("--batch", action="store_true", help="Run for all saved properties")
+    parser.add_argument("-o", "--output", default="outputs", help="Output directory")
+    args = parser.parse_args()
+
+    if args.batch:
+        print(f"Batch generating {'PDF' if args.pdf else 'HTML'} tear sheets...")
+        if args.pdf:
+            results = batch_generate_pdfs(output_dir=args.output)
+        else:
+            out = Path(args.output)
+            out.mkdir(parents=True, exist_ok=True)
+            results = []
+            for inputs_file in sorted(Path("data/saved_properties").glob("*/inputs.json")):
+                preset_id = inputs_file.parent.name
+                try:
+                    report = run_report(str(inputs_file))
+                    html_path = write_report_html(report, out / f"{preset_id}_tear_sheet.html")
+                    print(f"  [ok] {html_path}")
+                    results.append(html_path)
+                except Exception as exc:
+                    print(f"  [err] {preset_id}: {exc}")
+        print(f"\nGenerated {len(results)} file(s).")
+    elif args.property:
+        report = run_report(args.property)
+        if args.pdf:
+            dest = Path(args.output) / f"{Path(args.property).stem}_tear_sheet.pdf"
+            path = write_report_pdf(report, dest)
+        else:
+            dest = Path(args.output) / f"{Path(args.property).stem}_tear_sheet.html"
+            path = write_report_html(report, dest)
+        print(f"Generated: {path}")
+    else:
+        parser.print_help()

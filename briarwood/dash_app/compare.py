@@ -19,6 +19,10 @@ def build_compare_summary(views: list[PropertyAnalysisView]) -> CompareSummary:
     return CompareSummary(rows=rows, why_different=why_different)
 
 
+# Metrics where lower values are better for the buyer
+_LOWER_IS_BETTER = {"ask_price", "risk_score", "taxes", "dom", "price_to_rent"}
+
+
 def _build_rows(views: list[PropertyAnalysisView]) -> list[CompareMetricRow]:
     metric_order = [
         ("Ask", "ask_price"),
@@ -40,9 +44,61 @@ def _build_rows(views: list[PropertyAnalysisView]) -> list[CompareMetricRow]:
     ]
     rows: list[CompareMetricRow] = []
     for label, key in metric_order:
-        values = {view.label: _format_compare_value(view.compare_metrics.get(key), key) for view in views}
-        rows.append(CompareMetricRow(metric=label, values=values))
+        higher_is_better = key not in _LOWER_IS_BETTER
+        raw_values: dict[str, float | None] = {}
+        formatted_values: dict[str, str] = {}
+
+        for view in views:
+            raw = view.compare_metrics.get(key)
+            raw_values[view.label] = float(raw) if isinstance(raw, (int, float)) else None
+            formatted_values[view.label] = _format_compare_value(raw, key)
+
+        # Determine winner
+        scorable = {lbl: v for lbl, v in raw_values.items() if v is not None}
+        winner = ""
+        if len(scorable) >= 2:
+            if higher_is_better:
+                winner = max(scorable, key=scorable.get)  # type: ignore[arg-type]
+            else:
+                winner = min(scorable, key=scorable.get)  # type: ignore[arg-type]
+
+        # Compute deltas (relative to the best/winner value)
+        deltas: dict[str, str] = {}
+        if winner and len(scorable) >= 2:
+            best_val = scorable[winner]
+            for lbl, val in scorable.items():
+                if lbl == winner:
+                    deltas[lbl] = "best"
+                elif best_val != 0:
+                    abs_delta = val - best_val
+                    pct_delta = (abs_delta / abs(best_val)) * 100
+                    deltas[lbl] = _format_delta(abs_delta, pct_delta, key)
+                else:
+                    deltas[lbl] = ""
+
+        rows.append(CompareMetricRow(
+            metric=label,
+            values=formatted_values,
+            raw_values=raw_values,
+            deltas=deltas,
+            winner=winner,
+            higher_is_better=higher_is_better,
+        ))
     return rows
+
+
+def _format_delta(abs_delta: float, pct_delta: float, key: str) -> str:
+    """Format the delta between a property's value and the best value."""
+    sign = "+" if abs_delta >= 0 else ""
+    if key in {"ask_price", "bcv", "bcv_delta", "forward_base_case", "taxes"}:
+        return f"{sign}${abs_delta:,.0f} ({sign}{pct_delta:.1f}%)"
+    if key in {"confidence", "forward_gap_pct"}:
+        return f"{sign}{abs_delta:.1%}"
+    if key in {"lot_size"}:
+        return f"{sign}{abs_delta:.2f} ac ({sign}{pct_delta:.1f}%)"
+    if key in {"income_support_ratio", "price_to_rent"}:
+        return f"{sign}{abs_delta:.1f}x ({sign}{pct_delta:.1f}%)"
+    return f"{sign}{abs_delta:.1f} ({sign}{pct_delta:.1f}%)"
 
 
 def _format_compare_value(value: object, key: str) -> str:
@@ -115,4 +171,3 @@ def _largest_numeric_difference(anchor: PropertyAnalysisView, other: PropertyAna
     if best_key == "lot_size":
         return f"{label} ({anchor.label} {left:.2f} ac vs {other.label} {right:.2f} ac)"
     return f"{label} ({anchor.label} {left:,.0f} vs {other.label} {right:,.0f})"
-
