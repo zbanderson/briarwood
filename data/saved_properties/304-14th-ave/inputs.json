@@ -29,7 +29,7 @@
     "taxes": 9000.0,
     "monthly_hoa": 0.0,
     "days_on_market": 1,
-    "listing_description": "callback-sim-test"
+    "listing_description": "state-save-check"
   },
   "market_signals": {},
   "user_assumptions": {

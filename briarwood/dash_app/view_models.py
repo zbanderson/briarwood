@@ -332,6 +332,22 @@ class CompsViewModel:
 
 
 @dataclass(slots=True)
+class DecisionViewModel:
+    recommendation: str
+    best_fit: str
+    confidence_level: str
+    thesis: str
+    primary_risk: str
+    what_changes_view: str
+    primary_driver: str
+    fit_context: str = ""
+    supporting_factors: list[str] = field(default_factory=list)
+    risks: list[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    disqualifiers: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class PropertyAnalysisView:
     property_id: str
     label: str
@@ -371,6 +387,7 @@ class PropertyAnalysisView:
     income_support: IncomeSupportViewModel
     risk_location: RiskLocationViewModel
     evidence: EvidenceViewModel
+    decision: DecisionViewModel | None = None
     compare_metrics: dict[str, Any] = field(default_factory=dict)
     # Defaults transparency
     defaults_applied: dict[str, str] = field(default_factory=dict)
@@ -596,6 +613,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "dom": property_input.days_on_market if property_input else None,
         "income_support_ratio": income.income_support_ratio,
         "price_to_rent": income.price_to_rent,
+        "monthly_cash_flow": _income_attr(income, "monthly_cash_flow"),
         "forward_gap_pct": forward_gap_pct,
         "risk_score": risk.score,
         "liquidity_score": liquidity_metrics.get("liquidity_score"),
@@ -802,6 +820,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     except Exception:
         pass
 
+    view.decision = _build_decision_view(view)
+
     return view
 
 
@@ -966,3 +986,216 @@ def _assumption_transparency_items(
         )
 
     return items
+
+
+def _confidence_level(confidence: float) -> str:
+    if confidence >= 0.8:
+        return "High"
+    if confidence >= 0.62:
+        return "Moderate"
+    return "Provisional"
+
+
+def _strategy_fit_label(lens_scores: Any | None) -> str:
+    if lens_scores is None:
+        return "Hybrid"
+    recommended = (getattr(lens_scores, "recommended_lens", "") or "").strip().lower()
+    mapping = {
+        "owner": "Primary Residence",
+        "investor": "Rental Investor",
+        "developer": "Redevelopment",
+    }
+    if recommended in mapping:
+        return mapping[recommended]
+
+    owner = getattr(lens_scores, "owner_score", None)
+    investor = getattr(lens_scores, "investor_score", None)
+    developer = getattr(lens_scores, "developer_score", None)
+    scored = {
+        "Primary Residence": owner,
+        "Rental Investor": investor,
+        "Redevelopment": developer,
+    }
+    valid = {label: score for label, score in scored.items() if isinstance(score, (int, float))}
+    if not valid:
+        return "Hybrid"
+    ranked = sorted(valid.items(), key=lambda item: item[1], reverse=True)
+    if len(ranked) >= 2 and abs(ranked[0][1] - ranked[1][1]) <= 0.35 and ranked[0][0] in {"Primary Residence", "Rental Investor"} and ranked[1][0] in {"Primary Residence", "Rental Investor"}:
+        return "Hybrid"
+    return ranked[0][0]
+
+
+def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
+    valuation_pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+    monthly_cash_flow = view.compare_metrics.get("monthly_cash_flow")
+    income_support_ratio = view.compare_metrics.get("income_support_ratio")
+    liquidity_score = view.risk_location.liquidity_score
+    momentum_score = view.risk_location.market_momentum_score
+    confidence_level = _confidence_level(view.overall_confidence)
+    best_fit = _strategy_fit_label(view.lens_scores)
+    display_fit = best_fit
+    fit_context = ""
+    renovated_value = view.compare_metrics.get("renovated_bcv")
+
+    supporting_factors: list[str] = []
+    risks: list[str] = []
+    dependencies: list[str] = []
+    disqualifiers: list[str] = []
+    severe_valuation_gap = False
+    severe_liquidity_issue = False
+    severe_investor_carry_issue = False
+
+    if valuation_pct is not None:
+        if valuation_pct >= 0.12:
+            supporting_factors.append(f"material value cushion of about {valuation_pct * 100:.0f}%")
+        elif valuation_pct >= 0.04:
+            supporting_factors.append(f"modest value cushion of about {valuation_pct * 100:.0f}%")
+        elif valuation_pct <= -0.20:
+            severe_valuation_gap = True
+            disqualifiers.append(f"basis looks rich by about {abs(valuation_pct) * 100:.0f}%")
+        elif valuation_pct <= -0.10:
+            risks.append(f"basis looks rich by about {abs(valuation_pct) * 100:.0f}%")
+        elif valuation_pct <= -0.04:
+            risks.append(f"basis is slightly rich versus current support ({abs(valuation_pct) * 100:.0f}%)")
+    else:
+        dependencies.append("valuation support is still incomplete")
+
+    if isinstance(monthly_cash_flow, (int, float)):
+        if monthly_cash_flow >= 250:
+            supporting_factors.append("rent support materially offsets monthly carry")
+        elif monthly_cash_flow >= -250:
+            supporting_factors.append("carry looks manageable, but only modestly supported")
+        elif monthly_cash_flow >= -750:
+            risks.append("carry still needs meaningful monthly support")
+        elif best_fit == "Rental Investor":
+            severe_investor_carry_issue = True
+            disqualifiers.append("carry is too negative for a pure rental hold")
+        else:
+            risks.append("carry still needs owner subsidy under current assumptions")
+    else:
+        dependencies.append("monthly carry is still estimated")
+
+    if isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.75:
+        if best_fit == "Rental Investor":
+            disqualifiers.append("income support is weak for an investor-led thesis")
+        else:
+            risks.append("income support is weak")
+    elif isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.9:
+        risks.append("income support is only partial")
+
+    if liquidity_score < 35:
+        severe_liquidity_issue = True
+        disqualifiers.append("exit liquidity is thin enough to constrain the thesis")
+    elif liquidity_score < 50:
+        risks.append("exit liquidity is mixed")
+    else:
+        supporting_factors.append("exit liquidity is serviceable")
+
+    if momentum_score >= 65:
+        supporting_factors.append("market backdrop is a constructive tailwind")
+    elif momentum_score < 45:
+        risks.append("market backdrop is not helping much")
+
+    if view.capex_lane.lower() in {"moderate", "heavy"}:
+        capex_confirmed = any(item.source_kind == "confirmed" and item.label == "CapEx" for item in view.evidence.transparency_items)
+        if capex_confirmed:
+            risks.append(f"{view.capex_lane.lower()} capex burden still matters")
+        else:
+            dependencies.append("capex burden is still inferred")
+            risks.append(f"{view.capex_lane.lower()} capex burden is not yet confirmed")
+
+    if confidence_level == "Provisional":
+        dependencies.append("critical inputs still rely on estimates or missing facts")
+
+    if best_fit == "Primary Residence":
+        supporting_factors.append("best lens is owner-occupant rather than pure investor")
+    elif best_fit == "Redevelopment":
+        display_fit = "Value-Add / Renovation"
+        supporting_factors.append("upside is more strategy-driven than hold-driven")
+        if isinstance(renovated_value, (int, float)):
+            fit_context = f"As a renovated case, Briarwood estimates value around {_fmt_currency(renovated_value)}."
+        elif view.bull_case is not None:
+            fit_context = f"This reads more like a renovation/value-add case than a teardown. Briarwood's upside anchor is about {_fmt_currency(view.bull_case)} in the bull case."
+
+    primary_driver = "valuation"
+    if disqualifiers and any("liquidity" in item for item in disqualifiers):
+        primary_driver = "liquidity"
+    elif disqualifiers and any("carry" in item or "income support" in item for item in disqualifiers):
+        primary_driver = "carry"
+    elif valuation_pct is not None and abs(valuation_pct) >= 0.04:
+        primary_driver = "valuation"
+    elif best_fit in {"Primary Residence", "Redevelopment"}:
+        primary_driver = "fit"
+
+    severe_disqualifier = severe_valuation_gap or severe_liquidity_issue or severe_investor_carry_issue
+
+    if disqualifiers:
+        if best_fit in {"Primary Residence", "Redevelopment"} and not severe_disqualifier:
+            recommendation = "Strategy-Specific"
+        elif best_fit == "Hybrid" and not severe_disqualifier:
+            recommendation = "Conditional Buy"
+        else:
+            recommendation = "Avoid"
+    elif confidence_level == "Provisional":
+        recommendation = "Conditional Buy"
+    elif (valuation_pct is not None and valuation_pct >= 0.06 and liquidity_score >= 55 and (monthly_cash_flow is None or monthly_cash_flow >= -500)):
+        recommendation = "Buy" if best_fit in {"Rental Investor", "Hybrid"} else "Strategy-Specific"
+    elif valuation_pct is not None and valuation_pct >= 0.0:
+        recommendation = "Conditional Buy" if best_fit == "Hybrid" else ("Strategy-Specific" if best_fit in {"Primary Residence", "Redevelopment"} else "Conditional Buy")
+    else:
+        recommendation = "Conditional Buy" if best_fit in {"Primary Residence", "Redevelopment", "Hybrid"} else "Avoid"
+
+    if recommendation == "Buy":
+        thesis = "Attractive value support, manageable hold economics, and acceptable exit risk make this actionable under the current assumptions."
+    elif recommendation == "Conditional Buy":
+        thesis = "The setup is directionally attractive, but the decision still depends on one or two unresolved underwriting variables."
+    elif recommendation == "Strategy-Specific":
+        thesis = f"The opportunity is real, but it is best approached as a {best_fit.lower()} case rather than a broad buy."
+    else:
+        thesis = "The current basis, carry, and risk profile do not combine into a strong enough underwriting case."
+
+    if primary_driver == "valuation" and valuation_pct is not None:
+        thesis = (
+            f"Current value support is the main reason this works, with about {abs(valuation_pct) * 100:.0f}% "
+            f"{'upside versus basis' if valuation_pct >= 0 else 'overpricing versus support'} driving the call."
+        )
+    elif primary_driver == "carry":
+        thesis = "Hold economics are the main constraint; the property needs more support from rent or a better basis to be compelling."
+    elif primary_driver == "liquidity":
+        thesis = "Exit liquidity is the main constraint; even a decent price does not fully offset a thin resale path."
+    elif primary_driver == "fit":
+        thesis = f"The main reason this remains interesting is strategic fit as a {display_fit.lower()} case rather than universal attractiveness."
+
+    primary_risk = (
+        disqualifiers[0]
+        if disqualifiers else
+        risks[0]
+        if risks else
+        view.biggest_risk
+        if view.biggest_risk else
+        "No single failure point dominates the thesis."
+    )
+
+    if dependencies:
+        what_changes = dependencies[0].capitalize() + "."
+    elif disqualifiers:
+        what_changes = "A materially better basis or a cleaner risk profile would be needed to change the view."
+    elif recommendation == "Buy":
+        what_changes = "The view would weaken if rent support or capex certainty deteriorates."
+    else:
+        what_changes = "A stronger rent, capex, or liquidity read would clarify whether this can move into a cleaner buy case."
+
+    return DecisionViewModel(
+        recommendation=recommendation,
+        best_fit=display_fit,
+        confidence_level=confidence_level,
+        thesis=thesis,
+        primary_risk=primary_risk,
+        what_changes_view=what_changes,
+        primary_driver=primary_driver.title(),
+        fit_context=fit_context,
+        supporting_factors=supporting_factors[:4],
+        risks=risks[:3],
+        dependencies=dependencies[:3],
+        disqualifiers=disqualifiers[:3],
+    )

@@ -90,12 +90,32 @@ PRESETS: tuple[PropertyPreset, ...] = (
 DEFAULT_PRESET_IDS = ["briarwood-rd-belmar", "belmar-l-street"]
 _REPORT_CACHE: dict[str, AnalysisReport] = {}
 
+# Preset list cache: (catalog_version, preset_list)
+_PRESET_CACHE: tuple[int, list[PropertyPreset]] | None = None
 
-def list_presets() -> list[PropertyPreset]:
+
+def list_presets(catalog_version: int | None = None) -> list[PropertyPreset]:
+    """Return all property presets, memoized by catalog version.
+
+    When *catalog_version* matches the cached value the previous result is
+    returned immediately, avoiding 4 disk-scanning sub-calls.
+    """
+    global _PRESET_CACHE
+    if _PRESET_CACHE is not None and catalog_version is not None and _PRESET_CACHE[0] == catalog_version:
+        return _PRESET_CACHE[1]
     ordered: dict[str, PropertyPreset] = {}
     for preset in list(PRESETS) + _saved_property_presets() + _saved_property_directory_presets() + _comp_database_presets() + _legacy_manual_presets():
         ordered[preset.preset_id] = preset
-    return list(ordered.values())
+    result = list(ordered.values())
+    if catalog_version is not None:
+        _PRESET_CACHE = (catalog_version, result)
+    return result
+
+
+def invalidate_preset_cache() -> None:
+    """Clear the preset cache so the next list_presets() call re-scans."""
+    global _PRESET_CACHE
+    _PRESET_CACHE = None
 
 
 def list_saved_properties() -> list[SavedPropertySummary]:
@@ -165,8 +185,13 @@ def load_report_for_preset(preset_id: str) -> AnalysisReport:
 
 
 def load_reports(preset_ids: list[str]) -> dict[str, AnalysisReport]:
-    preset_map = {preset.preset_id: preset for preset in list_presets()}
-    return {preset_id: load_report_for_preset(preset_id) for preset_id in preset_ids if preset_id in preset_map}
+    results: dict[str, AnalysisReport] = {}
+    for preset_id in preset_ids:
+        try:
+            results[preset_id] = load_report_for_preset(preset_id)
+        except KeyError:
+            continue
+    return results
 
 
 def export_preset_tear_sheet(preset_id: str) -> Path:
@@ -322,6 +347,7 @@ def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, o
     _write_saved_report(property_dir / "report.pkl", report)
     _write_saved_summary(property_dir, report)
     _REPORT_CACHE[property_id] = report
+    invalidate_preset_cache()
     return property_id, tear_sheet_path
 
 

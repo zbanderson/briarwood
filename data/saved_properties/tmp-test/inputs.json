@@ -1,22 +1,22 @@
 {
-  "property_id": "briarwood-rd-belmar",
+  "property_id": "tmp-test",
   "facts": {
-    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "address": "123 Test St",
     "town": "Belmar",
     "state": "NJ",
     "county": "Monmouth",
     "beds": 3,
     "baths": 2.0,
-    "sqft": 1196,
-    "lot_size": 0.32,
+    "sqft": 1500,
+    "lot_size": null,
     "property_type": null,
-    "condition_profile": "needs_work",
-    "capex_lane": "heavy",
-    "year_built": 1965,
-    "garage_spaces": 1,
+    "condition_profile": null,
+    "capex_lane": null,
+    "year_built": null,
+    "garage_spaces": null,
     "garage_type": null,
-    "has_detached_garage": false,
-    "has_back_house": false,
+    "has_detached_garage": null,
+    "has_back_house": null,
     "adu_type": null,
     "adu_sqft": null,
     "has_basement": null,
@@ -25,20 +25,20 @@
     "parking_spaces": null,
     "corner_lot": null,
     "driveway_off_street": null,
-    "purchase_price": 674200.0,
-    "taxes": 8000.0,
+    "purchase_price": 500000.0,
+    "taxes": null,
     "monthly_hoa": null,
     "days_on_market": null,
     "listing_description": null
   },
   "market_signals": {},
   "user_assumptions": {
-    "estimated_monthly_rent": 2800.0,
+    "estimated_monthly_rent": null,
     "back_house_monthly_rent": null,
     "seasonal_monthly_rent": null,
     "unit_rents": [],
     "rent_confidence_override": null,
-    "insurance": 2400.0,
+    "insurance": null,
     "monthly_maintenance_reserve_override": null,
     "condition_profile_override": null,
     "condition_confirmed": null,
@@ -73,11 +73,11 @@
         "source_name": "manual entry"
       },
       "lot_size": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "taxes": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "hoa": {
@@ -89,7 +89,7 @@
         "source_name": "manual entry"
       },
       "rent_estimate": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "rent_confidence": {
@@ -97,7 +97,7 @@
         "source_name": "manual entry"
       },
       "insurance_estimate": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "comp_support": {

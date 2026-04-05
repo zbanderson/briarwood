@@ -67,13 +67,17 @@ class DashViewModelTests(unittest.TestCase):
         report = self.reports["briarwood-rd-belmar"]
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
-        self.assertIn("DECISION SUMMARY", _flatten_text(body))
-        self.assertIn("Is This a Good Price?", _flatten_text(body))
-        self.assertIn("Can I Afford to Hold It?", _flatten_text(body))
-        self.assertIn("What Could Go Wrong?", _flatten_text(body))
-        self.assertIn("Current Competition", _flatten_text(body))
-        self.assertIn("Confidence Drivers", _flatten_text(body))
-        self.assertIn("Metric Basis & Gaps", _flatten_text(body))
+        text = _flatten_text(body)
+        # Compact verdict strip (replaced the old 6-card decision summary)
+        self.assertIn("/ 5", text)
+        # Question sections
+        self.assertIn("Is This a Good Price?", text)
+        self.assertIn("Can I Afford to Hold It?", text)
+        self.assertIn("What Could Go Wrong?", text)
+        # Deep-dive content still present
+        self.assertIn("Current Competition", text)
+        self.assertIn("Confidence Drivers", text)
+        self.assertIn("Metric Basis & Gaps", text)
 
     def test_compare_decision_mode_renders_heatmap_view(self) -> None:
         reports = list(self.reports.values())

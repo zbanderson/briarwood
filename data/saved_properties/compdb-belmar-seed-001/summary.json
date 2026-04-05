@@ -1,12 +1,12 @@
 {
   "property_id": "compdb-belmar-seed-001",
-  "address": "1620 H Street",
-  "label": "1620 H Street",
-  "ask_price": 905000.0,
-  "bcv": 898743.58,
-  "pricing_view": "appears fairly priced",
-  "confidence": 0.66,
-  "comp_trust": "Seed / Review Only",
-  "missing_input_count": 8,
-  "timestamp": "2026-04-03T17:07:04"
+  "address": "304 8th Ave",
+  "label": "304 8th Ave",
+  "ask_price": 1899000.0,
+  "bcv": 1032799.74,
+  "pricing_view": "appears overpriced",
+  "confidence": 0.55,
+  "comp_trust": "No Active Comps",
+  "missing_input_count": 9,
+  "timestamp": "2026-04-04T07:08:44"
 }
