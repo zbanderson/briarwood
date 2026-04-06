@@ -61,7 +61,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
     town_score_val = _number(scenario_module.metrics.get("inputs_town_score"))
 
     bull_case = ScenarioCase(
-        name="Bull Case",
+        name="Upside Case",
         scenario_value=scenario.bull_case_value,
         implied_move_text=f"{_ratio(scenario.bull_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
@@ -69,7 +69,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"12M value change lands near {bull_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Fair value anchor ${bcv_anchor:,.0f}.",
             f"Market drift: {bull_market_drift:+.1%}  |  Location: {bull_location:+.1%}  |  Risk: {bull_risk:+.1%}  |  Optionality: {bull_optionality:+.1%}",
             location_driver,
         ],
@@ -88,11 +88,11 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         scenario_value=scenario.base_case_value,
         implied_move_text=f"{_ratio(scenario.base_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
-            f"BCV anchor holds near ${current_value.briarwood_current_value:,.0f}.",
+            f"Fair value anchor holds near ${current_value.briarwood_current_value:,.0f}.",
             f"12M value change lands near {base_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Fair value anchor ${bcv_anchor:,.0f}.",
             f"Market drift: {base_market_drift:+.1%}  |  Location: {base_location:+.1%}  |  Risk: {base_risk:+.1%}  |  Optionality: {base_optionality:+.1%}",
             f"ZHVI trailing 1yr: {trailing_1yr:+.1%}  |  Town score: {town_score_val:.0f}/100",
         ],
@@ -107,7 +107,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
         ),
     )
     bear_case = ScenarioCase(
-        name="Bear Case",
+        name="Downside Case",
         scenario_value=scenario.bear_case_value,
         implied_move_text=f"{_ratio(scenario.bear_case_value - ask_price, ask_price):+.1%} vs ask",
         assumptions=[
@@ -115,7 +115,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             f"12M value change lands near {bear_growth_rate:.1%}.",
         ],
         key_drivers=[
-            f"BCV anchor ${bcv_anchor:,.0f}.",
+            f"Fair value anchor ${bcv_anchor:,.0f}.",
             f"Market drift: {bear_market_drift:+.1%}  |  Location: {bear_location:+.1%}  |  Risk: {bear_risk:+.1%}",
             "Risk penalties and location discounts fully materialize in the downside scenario.",
         ],
@@ -145,7 +145,7 @@ def build_bull_base_bear_section(report: AnalysisReport) -> BullBaseBearSection:
             ],
             key_drivers=[
                 "Demand collapses following a macro shock (rates spike, recession, or similar).",
-                "Exit pricing falls sharply below BCV.",
+                "Exit pricing falls sharply below fair value.",
             ],
             risk_factors=[
                 "Negative carry accelerates losses.",

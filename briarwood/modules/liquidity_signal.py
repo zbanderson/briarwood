@@ -52,7 +52,7 @@ class LiquiditySignalModule:
         liquidity_score = (
             sum(score * weight for _, score, weight in weighted_components) / total_weight
             if total_weight
-            else 50.0
+            else 42.0
         )
         liquidity_score = round(max(0.0, min(liquidity_score, 100.0)), 1)
         liquidity_label = _liquidity_label(liquidity_score)
@@ -122,36 +122,36 @@ def _dom_score(days_on_market: int | None) -> float | None:
     if days_on_market is None:
         return None
     if days_on_market <= 7:
-        return 92.0
+        return 96.0
     if days_on_market <= 21:
         return 82.0
     if days_on_market <= 45:
-        return 66.0
+        return 60.0
     if days_on_market <= 90:
-        return 42.0
-    return 24.0
+        return 32.0
+    return 12.0
 
 
 def _comp_depth_score(comp_count: int, comp_confidence: float) -> float | None:
     if comp_count <= 0:
         return None
     if comp_count >= 6:
-        base = 84.0
+        base = 90.0
     elif comp_count >= 4:
-        base = 72.0
+        base = 74.0
     elif comp_count >= 2:
-        base = 58.0
+        base = 52.0
     else:
-        base = 42.0
-    return max(25.0, min((0.75 * base) + (0.25 * comp_confidence * 100), 92.0))
+        base = 28.0
+    return max(18.0, min((0.70 * base) + (0.30 * comp_confidence * 100), 96.0))
 
 
 def _liquidity_label(score: float) -> str:
-    if score >= 78:
+    if score >= 80:
         return "Strong Exit Liquidity"
     if score >= 62:
         return "Normal Exit Liquidity"
-    if score >= 45:
+    if score >= 40:
         return "Mixed Exit Liquidity"
     return "Thin Exit Liquidity"
 

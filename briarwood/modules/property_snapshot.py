@@ -18,11 +18,37 @@ class PropertySnapshotModule:
         if property_input.year_built:
             age = current_year() - property_input.year_built
 
-        score = 70.0
+        score = 52.0
         if age is not None:
-            score -= min(age / 2, 20)
-        if property_input.days_on_market is not None and property_input.days_on_market < 30:
-            score += 5
+            if age <= 15:
+                score += 20.0
+            elif age <= 35:
+                score += 12.0
+            elif age <= 60:
+                score += 4.0
+            elif age <= 90:
+                score -= 8.0
+            else:
+                score -= 18.0
+        if property_input.days_on_market is not None:
+            if property_input.days_on_market <= 14:
+                score += 14.0
+            elif property_input.days_on_market <= 30:
+                score += 7.0
+            elif property_input.days_on_market >= 120:
+                score -= 16.0
+            elif property_input.days_on_market >= 60:
+                score -= 8.0
+        if property_input.sqft is not None:
+            if property_input.sqft < 900:
+                score -= 6.0
+            elif property_input.sqft > 3500:
+                score += 4.0
+        if property_input.lot_size is not None:
+            if property_input.lot_size >= 0.20:
+                score += 4.0
+            elif property_input.lot_size < 0.07:
+                score -= 4.0
 
         metrics = {
             "beds": property_input.beds,

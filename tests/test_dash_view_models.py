@@ -41,6 +41,8 @@ class DashViewModelTests(unittest.TestCase):
             [item.key for item in view.evidence.confidence_components],
             ["rent", "capex", "market", "liquidity"],
         )
+        self.assertTrue(view.evidence.assumption_statuses)
+        self.assertTrue(any(item.key == "rent" for item in view.evidence.assumption_statuses))
         self.assertEqual(len(view.evidence.metric_statuses), 8)
         self.assertGreater(view.overall_confidence, 0)
         self.assertIn("town_context_confidence", view.compare_metrics)
@@ -71,13 +73,19 @@ class DashViewModelTests(unittest.TestCase):
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
         text = _flatten_text(body)
-        # Compact verdict strip (replaced the old 6-card decision summary)
+        # The top-level Tear Sheet structure now uses a presentation toggle and sub-tabs.
+        self.assertIn("Presentation", text)
+        # Summary content remains visible in the default overview.
         self.assertIn("/ 5", text)
-        # Question sections
-        self.assertIn("Is This a Good Price?", text)
-        self.assertIn("Can I Afford to Hold It?", text)
-        self.assertIn("What Could Go Wrong?", text)
+        self.assertIn("DECISION SUMMARY", text)
+        self.assertIn("ASSUMPTION SUMMARY", text)
+        self.assertIn("Current Value Snapshot", text)
+        self.assertIn("Option 1 Buy As-Is", text)
+        self.assertIn("Option 2 Buy + Renovate", text)
         # Deep-dive content still present
+        self.assertIn("Is the Price Right?", text)
+        self.assertIn("What Does It Cost to Own?", text)
+        self.assertIn("What Could Break the Thesis?", text)
         self.assertIn("Current Competition", text)
         self.assertIn("Confidence Drivers", text)
         self.assertIn("Metric Basis & Gaps", text)

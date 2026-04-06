@@ -115,7 +115,7 @@ class RentalEaseAgent:
         prior: RentalEasePrior | None,
         assumptions: list[str],
     ) -> float:
-        prior_score = prior.liquidity * 100 if prior else 55.0
+        prior_score = prior.liquidity * 100 if prior else 50.0
         score = prior_score
 
         liquidity_view_score = liquidity_view_to_score(inputs.liquidity_view)
@@ -125,8 +125,12 @@ class RentalEaseAgent:
             assumptions.append("Liquidity score leans more heavily on town prior because no live liquidity view was available.")
 
         if inputs.days_on_market is not None:
-            if inputs.days_on_market <= 21:
+            if inputs.days_on_market <= 14:
+                score += 10.0
+            elif inputs.days_on_market <= 30:
                 score += 4.0
+            elif inputs.days_on_market > 90:
+                score -= 14.0
             elif inputs.days_on_market > 60:
                 score -= 8.0
         if inputs.zillow_renter_demand_index is not None:
@@ -178,15 +182,15 @@ class RentalEaseAgent:
         if score is not None:
             if inputs.zillow_rent_forecast_one_year is not None:
                 if inputs.zillow_rent_forecast_one_year >= 0.03:
-                    score += 4.0
+                    score += 6.0
                 elif inputs.zillow_rent_forecast_one_year < 0:
-                    score -= 5.0
+                    score -= 8.0
             return score
 
         assumptions.append("Rent support score is provisional because property-specific rent support inputs are incomplete.")
         unsupported_claims.append("Rent support could not be measured directly from rent and carry economics.")
         warnings.append("Estimated days to rent and absorption quality should be treated cautiously without property-level rent support.")
-        return 38.0
+        return 28.0
 
     def _structural_support_score(
         self,
@@ -254,12 +258,21 @@ class RentalEaseAgent:
 
         total_weight = sum(weights.values())
         normalized = {key: value / total_weight for key, value in weights.items()}
-        return clamp_score(
+        final_score = clamp_score(
             normalized["liquidity"] * liquidity_score
             + normalized["demand_depth"] * demand_depth_score
             + normalized["rent_support"] * rent_support_score
             + normalized["structural_support"] * structural_support_score
         )
+        if rent_support_score >= 80 and liquidity_score >= 72:
+            final_score += 6.0
+        if rent_support_score <= 35:
+            final_score -= 8.0
+        if liquidity_score <= 40 and demand_depth_score <= 45:
+            final_score -= 6.0
+        if structural_support_score >= 75 and demand_depth_score >= 70:
+            final_score += 4.0
+        return clamp_score(final_score)
 
     def _confidence(self, inputs: RentalEaseInput, prior: RentalEasePrior | None) -> float:
         confidence = 0.22

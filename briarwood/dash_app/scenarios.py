@@ -76,7 +76,7 @@ def _render_historic_forward_outlook(report: AnalysisReport) -> html.Div:
         spread_text = f"${low:,.0f} to ${high:,.0f}"
 
     metrics = [
-        metric_card("BCV Anchor", _currency(current_value.briarwood_current_value), tone="positive"),
+        metric_card("Fair Value Anchor", _currency(current_value.briarwood_current_value), tone="positive"),
         metric_card("12M Base", _currency(scenario.base_case_value)),
         metric_card("12M Range", spread_text),
         metric_card("Stress Case", _currency(_stress_value(scenario)), tone="negative" if _stress_value(scenario) is not None else "neutral"),
@@ -255,9 +255,9 @@ def _build_historic_forward_chart(report: AnalysisReport) -> dict[str, object]:
                     x=[anchor_x, horizon_x],
                     y=[anchor_value, scenario.bull_case_value],
                     mode="lines",
-                    name="Bull",
+                    name="Upside",
                     line={"color": ACCENT_GREEN, "width": 2, "dash": "dash"},
-                    hovertemplate="%{x|%b %Y}<br>Bull: %{y:$,.0f}<extra></extra>",
+                    hovertemplate="%{x|%b %Y}<br>Upside: %{y:$,.0f}<extra></extra>",
                 )
             )
         if scenario.bear_case_value is not None:
@@ -266,9 +266,9 @@ def _build_historic_forward_chart(report: AnalysisReport) -> dict[str, object]:
                     x=[anchor_x, horizon_x],
                     y=[anchor_value, scenario.bear_case_value],
                     mode="lines",
-                    name="Bear",
+                    name="Downside",
                     line={"color": ACCENT_RED, "width": 2, "dash": "dash"},
-                    hovertemplate="%{x|%b %Y}<br>Bear: %{y:$,.0f}<extra></extra>",
+                    hovertemplate="%{x|%b %Y}<br>Downside: %{y:$,.0f}<extra></extra>",
                 )
             )
         if scenario.base_case_value is not None:
@@ -490,9 +490,9 @@ def _render_renovation(payload: dict, confidence: float) -> html.Div:
             # Metric row
             html.Div(
                 [
-                    metric_card("Current BCV", f"${current_bcv:,.0f}"),
+                    metric_card("Current Fair Value", f"${current_bcv:,.0f}"),
                     metric_card("Renovation Cost", f"${budget:,.0f}"),
-                    metric_card("Renovated BCV", f"${renovated_bcv:,.0f}", tone="positive"),
+                    metric_card("Renovated Fair Value", f"${renovated_bcv:,.0f}", tone="positive"),
                     metric_card("Net Value Creation", f"${net_vc:,.0f}", tone=roi_tone),
                     metric_card("ROI", f"{roi_pct:.1f}%", tone=roi_tone),
                     metric_card("Cost Efficiency", cpd_text, tone=roi_tone),

@@ -26,6 +26,7 @@ except ImportError:  # pragma: no cover - lightweight fallback for local v1 usag
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.components import (
+    _TOUR_STEPS,
     render_compare_decision_mode,
     render_portfolio_dashboard,
     render_tear_sheet_body,
@@ -202,7 +203,7 @@ def _saved_property_rows() -> list[dict[str, str]]:
                 "property_id": item.property_id,
                 "Address": item.address,
                 "Ask": _fmt_currency(item.ask_price),
-                "BCV": _fmt_currency(item.bcv),
+                "Fair Value": _fmt_currency(item.bcv),
                 "Pricing View": item.pricing_view.replace("_", " ").title(),
                 "Confidence": f"{item.confidence:.0%}",
                 "Comp Trust": item.comp_trust,
@@ -560,7 +561,7 @@ def _add_property_drawer() -> html.Div:
                             columns=[
                                 {"name": "Address", "id": "Address"},
                                 {"name": "Ask", "id": "Ask"},
-                                {"name": "BCV", "id": "BCV"},
+                                {"name": "Fair Value", "id": "Fair Value"},
                                 {"name": "Pricing View", "id": "Pricing View"},
                                 {"name": "Confidence", "id": "Confidence"},
                                 {"name": "Missing", "id": "Missing"},
@@ -999,9 +1000,9 @@ def _build_layout():
 
             # Tour: step store drives the overlay content
             dcc.Store(id="tour-step", data=-1),
-            html.Div(id="tour-overlay-container"),
+            html.Div(id="tour-overlay-container", style={"pointerEvents": "none"}),
 
-            # Tour trigger button (always visible)
+            # Tour trigger button (always visible, isolated from flex layout)
             render_tour_trigger_button(),
         ],
         style={**PAGE_STYLE, "display": "flex", "flexDirection": "column"},
@@ -1121,7 +1122,7 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
             html.Div(
                 [
                     _header_metric("Ask", _fmt_currency(view.ask_price)),
-                    _header_metric("BCV", _fmt_currency(view.bcv)),
+                    _header_metric("Fair Value", _fmt_currency(view.bcv)),
                     _header_metric("Gap", gap_text or "—"),
                     _header_metric("Net/Mo", monthly_text, color=monthly_color),
                     _header_metric("Risk", f"{risk_val:.0f}", color=risk_color),
@@ -2469,7 +2470,7 @@ def tour_navigate(_trig: int, _nxt: int, _prv: int, step: int, tour_state: dict 
         return 0, {"completed": False, "step": 0}
 
     if triggered == "tour-next-btn":
-        if step >= 5:
+        if step >= len(_TOUR_STEPS) - 1:
             return -1, {"completed": True, "step": 0}
         return step + 1, {"completed": False, "step": step + 1}
 

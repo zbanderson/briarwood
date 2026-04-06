@@ -63,22 +63,22 @@ def build_scenario_chart_section(report: AnalysisReport) -> ScenarioChartSection
         forward_year_label="12M outlook",
         forward_base_value=base_value,
         fan_bands=[
-            ScenarioFanBand(label="Bull", value=bull_value),
+            ScenarioFanBand(label="Upside", value=bull_value),
             ScenarioFanBand(label="Base", value=base_value),
-            ScenarioFanBand(label="Bear", value=bear_value),
+            ScenarioFanBand(label="Downside", value=bear_value),
         ],
         points=[
             ScenarioPoint(label="Ask", value=ask_price),
-            ScenarioPoint(label="BCV", value=briarwood_current_value),
+            ScenarioPoint(label="Fair Value", value=briarwood_current_value),
             ScenarioPoint(label="Market Reference", value=market_reference_value),
-            ScenarioPoint(label="Bear", value=bear_value),
+            ScenarioPoint(label="Downside", value=bear_value),
             ScenarioPoint(label="Base", value=base_value),
-            ScenarioPoint(label="Bull", value=bull_value),
+            ScenarioPoint(label="Upside", value=bull_value),
         ],
         plot_html=plot_html,
         secondary_plot_html=secondary_plot_html,
         caption=(
-            f"BCV anchors today; the fan shows the 12-month range."
+            f"Fair value anchors today; the fan shows the 12-month range."
         ),
     )
 
@@ -185,7 +185,7 @@ def _build_plotly_chart(
             x=[forward_date],
             y=[bull_value],
             mode="markers",
-            name="Bull Case",
+            name="Upside Case",
             marker={"size": 10, "symbol": "diamond", "color": "#1f2937"},
         )
     )
@@ -203,7 +203,7 @@ def _build_plotly_chart(
             x=[forward_date],
             y=[bear_value],
             mode="markers",
-            name="Bear Case",
+            name="Downside Case",
             marker={"size": 10, "symbol": "diamond", "color": "#1f2937"},
         )
     )
@@ -212,7 +212,7 @@ def _build_plotly_chart(
             x=[historical_dates[-1]],
             y=[current_value],
             mode="markers",
-            name="Current BCV",
+            name="Current Fair Value",
             marker={"size": 12, "symbol": "circle", "color": "#ff5a3c", "line": {"width": 3, "color": "#fffdf8"}},
         )
     )
@@ -399,7 +399,7 @@ def _build_plotly_scenario_zoom_chart(
             y=[current_value],
             mode="markers",
             marker={"size": 12, "symbol": "circle", "color": "#ff5a3c", "line": {"width": 3, "color": "#fffdf8"}},
-            name="Current BCV",
+            name="Current Fair Value",
         )
     )
     fig.add_trace(
@@ -446,7 +446,7 @@ def _build_plotly_scenario_zoom_chart(
         {
             "x": future_label,
             "y": bull_value,
-            "text": f"Bull ${bull_value:,.0f} ({bull_pct_vs_bcv:+.1%})",
+            "text": f"Upside ${bull_value:,.0f} ({bull_pct_vs_bcv:+.1%})",
             "showarrow": False,
             "xanchor": "left",
             "xshift": 10,
@@ -464,7 +464,7 @@ def _build_plotly_scenario_zoom_chart(
         {
             "x": future_label,
             "y": bear_value,
-            "text": f"Bear ${bear_value:,.0f} ({bear_pct_vs_bcv:+.1%})",
+            "text": f"Downside ${bear_value:,.0f} ({bear_pct_vs_bcv:+.1%})",
             "showarrow": False,
             "xanchor": "left",
             "xshift": 10,

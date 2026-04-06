@@ -414,6 +414,68 @@ def _safe_ratio(value: float | None, baseline: float | None) -> float | None:
     return float(value) / float(baseline)
 
 
+def _critical_input_penalty(m: dict[str, Any]) -> float:
+    penalty = 0.0
+    rent_source_type = str(m.get("rent_source_type") or "missing").lower()
+    if m.get("income_support_ratio") is None:
+        penalty += 0.14
+    if rent_source_type == "missing":
+        penalty += 0.12
+    elif rent_source_type == "estimated":
+        penalty += 0.06
+    if not m.get("financing_complete", False):
+        penalty += 0.08
+    if not m.get("carrying_cost_complete", False):
+        penalty += 0.08
+    if int(m.get("comp_count") or 0) < 2:
+        penalty += 0.10
+    elif int(m.get("comp_count") or 0) < 4 and float(m.get("comp_confidence") or 0.0) < 0.60:
+        penalty += 0.05
+    if not m.get("condition_profile") and m.get("repair_capex_budget") is None:
+        penalty += 0.08
+    if bool(m.get("town_low_confidence_flag")) and int(m.get("comp_count") or 0) < 3:
+        penalty += 0.07
+    return min(penalty, 0.45)
+
+
+def _conviction_adjustment(categories: dict[str, CategoryScore], m: dict[str, Any]) -> float:
+    scores = {name: cat.score for name, cat in categories.items()}
+    values = list(scores.values())
+    if not values:
+        return 0.0
+
+    strongest = max(values)
+    weakest = min(values)
+    strong_count = sum(score >= 4.2 for score in values)
+    very_strong_count = sum(score >= 4.5 for score in values)
+    weak_count = sum(score <= 2.0 for score in values)
+    very_weak_count = sum(score <= 1.7 for score in values)
+
+    adjustment = 0.0
+    if strong_count >= 2:
+        adjustment += 0.16
+    if very_strong_count >= 2:
+        adjustment += 0.10
+    if weak_count >= 2:
+        adjustment -= 0.16
+    if very_weak_count >= 1:
+        adjustment -= 0.10
+    if strongest - weakest >= 2.2 and weakest <= 2.2:
+        adjustment -= 0.12
+    if scores.get("price_context", NEUTRAL_SCORE) >= 4.2 and scores.get("economic_support", NEUTRAL_SCORE) >= 3.7:
+        adjustment += 0.14
+    if scores.get("price_context", NEUTRAL_SCORE) <= 2.1 and scores.get("economic_support", NEUTRAL_SCORE) <= 2.5:
+        adjustment -= 0.18
+
+    valuation_gap = m.get("net_opportunity_delta_pct")
+    if valuation_gap is not None:
+        if valuation_gap >= 0.12:
+            adjustment += 0.12
+        elif valuation_gap <= -0.12:
+            adjustment -= 0.12
+    return max(-0.45, min(adjustment, 0.40))
+
+
 def _ppsf_benchmark_signal(
     ask_ppsf: float,
     benchmark_ppsf: float | None,
@@ -422,14 +484,16 @@ def _ppsf_benchmark_signal(
     if benchmark_ppsf in (None, 0):
         return None
     delta_pct = ((benchmark_ppsf - ask_ppsf) / ask_ppsf) * 100
-    if delta_pct >= 10:
+    if delta_pct >= 18:
         return 5.0, f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — {delta_pct:.0f}% below benchmark", delta_pct
-    if delta_pct >= 3:
-        return 4.0, f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — slightly below benchmark", delta_pct
-    if delta_pct >= -5:
-        return 3.0, f"Ask $/SF ${ask_ppsf:.0f} roughly in line with {label} ${benchmark_ppsf:.0f}", delta_pct
-    if delta_pct >= -15:
-        return 2.0, f"Ask $/SF ${ask_ppsf:.0f} above {label} ${benchmark_ppsf:.0f} — premium pricing", delta_pct
+    if delta_pct >= 8:
+        return _clamp(_lerp_score(delta_pct, 8, 18, 4.2, 5.0)), f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — clearly below benchmark", delta_pct
+    if delta_pct >= 0:
+        return _clamp(_lerp_score(delta_pct, 0, 8, 3.2, 4.2)), f"Ask $/SF ${ask_ppsf:.0f} vs {label} ${benchmark_ppsf:.0f} — below benchmark", delta_pct
+    if delta_pct >= -8:
+        return _clamp(_lerp_score(delta_pct, -8, 0, 2.0, 3.2)), f"Ask $/SF ${ask_ppsf:.0f} roughly in line with {label} ${benchmark_ppsf:.0f}", delta_pct
+    if delta_pct >= -18:
+        return _clamp(_lerp_score(delta_pct, -18, -8, 1.0, 2.0)), f"Ask $/SF ${ask_ppsf:.0f} above {label} ${benchmark_ppsf:.0f} — premium pricing", delta_pct
     return 1.0, f"Ask $/SF ${ask_ppsf:.0f} significantly above {label} ${benchmark_ppsf:.0f}", delta_pct
 
 
@@ -526,28 +590,32 @@ def _score_price_vs_comps(m: dict) -> tuple[float, str, float | None]:
             "inferred_condition": "with condition-implied zero capex",
             "unknown": "before capex could be fully established",
         }.get(str(capex_source), "using all-in basis")
-        if delta >= 10:
+        if delta >= 18:
             return 5.0, f"Net opportunity delta {delta:.1f}% (+${abs(net_delta_value or 0):,.0f}) {source_note}", delta
-        if delta >= 5:
-            return 4.0, f"Net opportunity delta {delta:.1f}% — modest upside {source_note}", delta
-        if delta >= -5:
-            return 3.0, f"Net opportunity delta {delta:+.1f}% — roughly in line {source_note}", delta
-        if delta >= -15:
-            return 2.0, f"Net opportunity delta {delta:+.1f}% — thin after capex", delta
+        if delta >= 8:
+            return _clamp(_lerp_score(delta, 8, 18, 4.2, 5.0)), f"Net opportunity delta {delta:.1f}% — compelling upside {source_note}", delta
+        if delta >= 0:
+            return _clamp(_lerp_score(delta, 0, 8, 3.2, 4.2)), f"Net opportunity delta {delta:.1f}% — positive spread {source_note}", delta
+        if delta >= -8:
+            return _clamp(_lerp_score(delta, -8, 0, 2.2, 3.2)), f"Net opportunity delta {delta:+.1f}% — roughly in line {source_note}", delta
+        if delta >= -18:
+            return _clamp(_lerp_score(delta, -18, -8, 1.0, 2.2)), f"Net opportunity delta {delta:+.1f}% — upside looks thin after basis", delta
         return 1.0, f"Net opportunity delta {delta:+.1f}% — upside disappears after basis", delta
 
     pct = m.get("mispricing_pct")
     if pct is None:
         return NEUTRAL_SCORE, "No comp-based valuation available", None
     delta = pct * 100  # convert to percentage points
-    if delta >= 10:
+    if delta >= 18:
         return 5.0, f"Priced {delta:.1f}% below model value — significant discount", delta
-    if delta >= 5:
-        return 4.0, f"Priced {delta:.1f}% below model — modest discount", delta
-    if delta >= -5:
-        return 3.0, f"Within ±5% of model value ({delta:+.1f}%)", delta
-    if delta >= -15:
-        return 2.0, f"Priced {abs(delta):.1f}% above model value — overpriced", delta
+    if delta >= 8:
+        return _clamp(_lerp_score(delta, 8, 18, 4.2, 5.0)), f"Priced {delta:.1f}% below model — attractive discount", delta
+    if delta >= 0:
+        return _clamp(_lerp_score(delta, 0, 8, 3.2, 4.2)), f"Priced {delta:.1f}% below model — modest discount", delta
+    if delta >= -8:
+        return _clamp(_lerp_score(delta, -8, 0, 2.2, 3.2)), f"Within ±8% of model value ({delta:+.1f}%)", delta
+    if delta >= -18:
+        return _clamp(_lerp_score(delta, -18, -8, 1.0, 2.2)), f"Priced {abs(delta):.1f}% above model value — overpriced", delta
     return 1.0, f"Priced {abs(delta):.1f}% above model — significant overprice", delta
 
 
@@ -591,14 +659,14 @@ def _score_historical_pricing(m: dict) -> tuple[float, str, float | None]:
     trend = yr3 if yr3 is not None else yr1
     trend_pct = (trend or 0) * 100
     label = "3yr CAGR" if yr3 is not None else "1yr change"
-    if trend_pct >= 6:
+    if trend_pct >= 8:
         return 5.0, f"{label} {trend_pct:+.1f}% — strong appreciation momentum", trend_pct
     if trend_pct >= 3:
-        return 4.0, f"{label} {trend_pct:+.1f}% — healthy appreciation", trend_pct
-    if trend_pct >= 0:
-        return 3.0, f"{label} {trend_pct:+.1f}% — flat to modest growth", trend_pct
-    if trend_pct >= -5:
-        return 2.0, f"{label} {trend_pct:+.1f}% — declining market", trend_pct
+        return _clamp(_lerp_score(trend_pct, 3, 8, 4.0, 5.0)), f"{label} {trend_pct:+.1f}% — healthy appreciation", trend_pct
+    if trend_pct >= -1:
+        return _clamp(_lerp_score(trend_pct, -1, 3, 2.8, 4.0)), f"{label} {trend_pct:+.1f}% — flat to modest growth", trend_pct
+    if trend_pct >= -6:
+        return _clamp(_lerp_score(trend_pct, -6, -1, 1.5, 2.8)), f"{label} {trend_pct:+.1f}% — declining market", trend_pct
     return 1.0, f"{label} {trend_pct:+.1f}% — significant depreciation", trend_pct
 
 
@@ -652,17 +720,18 @@ def _score_rent_support(m: dict) -> tuple[float | None, str, float | None]:
     if ratio is None:
         return None, "Income support ratio unavailable — no financing or rent data", None
     # Continuous scoring — avoids all-same-bucket at 0.45-0.60 ISR range
-    if ratio >= 1.3:
-        return 5.0, f"ISR {ratio:.2f}x — strong positive cash flow", ratio
-    if ratio >= 1.0:
-        return _lerp_score(ratio, 1.0, 1.3, 4.0, 5.0), f"ISR {ratio:.2f}x — positive cash flow", ratio
-    if ratio >= 0.85:
-        return _lerp_score(ratio, 0.85, 1.0, 3.0, 4.0), f"ISR {ratio:.2f}x — near break-even", ratio
-    if ratio >= 0.6:
-        return _lerp_score(ratio, 0.6, 0.85, 2.0, 3.0), f"ISR {ratio:.2f}x — negative carry", ratio
-    if ratio >= 0.4:
-        return _lerp_score(ratio, 0.4, 0.6, 1.0, 2.0), f"ISR {ratio:.2f}x — heavy negative carry", ratio
-    return 1.0, f"ISR {ratio:.2f}x — severe negative carry", ratio
+    coverage_pct = ratio * 100
+    if ratio >= 1.4:
+        return 5.0, f"Rent coverage {coverage_pct:.0f}% — strong positive cash flow", ratio
+    if ratio >= 1.10:
+        return _lerp_score(ratio, 1.10, 1.40, 4.2, 5.0), f"Rent coverage {coverage_pct:.0f}% — clearly positive cash flow", ratio
+    if ratio >= 0.90:
+        return _lerp_score(ratio, 0.90, 1.10, 3.0, 4.2), f"Rent coverage {coverage_pct:.0f}% — near break-even", ratio
+    if ratio >= 0.70:
+        return _lerp_score(ratio, 0.70, 0.90, 1.8, 3.0), f"Rent coverage {coverage_pct:.0f}% — negative carry", ratio
+    if ratio >= 0.50:
+        return _lerp_score(ratio, 0.50, 0.70, 1.0, 1.8), f"Rent coverage {coverage_pct:.0f}% — heavy negative carry", ratio
+    return 1.0, f"Rent coverage {coverage_pct:.0f}% — severe negative carry", ratio
 
 
 def _score_carry_efficiency(m: dict) -> tuple[float | None, str, float | None]:
@@ -671,14 +740,14 @@ def _score_carry_efficiency(m: dict) -> tuple[float | None, str, float | None]:
     if ptr is None:
         return None, "Price-to-rent unavailable — no rent or price data", None
     # Continuous scoring via interpolation — avoids bucket collapse at NJ coastal PTR levels
-    if ptr <= 12:
+    if ptr <= 10:
         return 5.0, f"PTR {ptr:.1f}x — exceptional rent yield", ptr
-    if ptr <= 16:
-        return _lerp_score(ptr, 12, 16, 5.0, 4.0), f"PTR {ptr:.1f}x — strong rent support", ptr
-    if ptr <= 20:
-        return _lerp_score(ptr, 16, 20, 4.0, 3.0), f"PTR {ptr:.1f}x — typical for coastal NJ", ptr
-    if ptr <= 25:
-        return _lerp_score(ptr, 20, 25, 3.0, 1.5), f"PTR {ptr:.1f}x — rent doesn't justify price", ptr
+    if ptr <= 14:
+        return _lerp_score(ptr, 10, 14, 5.0, 4.2), f"PTR {ptr:.1f}x — strong rent support", ptr
+    if ptr <= 18:
+        return _lerp_score(ptr, 14, 18, 4.2, 3.2), f"PTR {ptr:.1f}x — workable carry", ptr
+    if ptr <= 23:
+        return _lerp_score(ptr, 18, 23, 3.2, 1.8), f"PTR {ptr:.1f}x — rent doesn't justify price cleanly", ptr
     return 1.0, f"PTR {ptr:.1f}x — pure appreciation play, no rent support", ptr
 
 
@@ -689,15 +758,15 @@ def _score_downside_protection(m: dict) -> tuple[float, str, float | None]:
     if bcv is None or ask is None or ask == 0:
         return NEUTRAL_SCORE, "Cannot calculate downside buffer", None
     buffer_pct = ((bcv - ask) / ask) * 100
-    if buffer_pct >= 10:
-        return 5.0, f"BCV {buffer_pct:+.1f}% above ask — strong equity cushion", buffer_pct
-    if buffer_pct >= 3:
-        return 4.0, f"BCV {buffer_pct:+.1f}% above ask — modest cushion", buffer_pct
+    if buffer_pct >= 15:
+        return 5.0, f"Fair value {buffer_pct:+.1f}% above ask — strong equity cushion", buffer_pct
+    if buffer_pct >= 5:
+        return _clamp(_lerp_score(buffer_pct, 5, 15, 4.0, 5.0)), f"Fair value {buffer_pct:+.1f}% above ask — modest cushion", buffer_pct
     if buffer_pct >= -3:
-        return 3.0, f"BCV within ±3% of ask ({buffer_pct:+.1f}%)", buffer_pct
-    if buffer_pct >= -10:
-        return 2.0, f"BCV {buffer_pct:+.1f}% below ask — limited protection", buffer_pct
-    return 1.0, f"BCV {buffer_pct:+.1f}% below ask — buying at a premium", buffer_pct
+        return _clamp(_lerp_score(buffer_pct, -3, 5, 2.6, 4.0)), f"Fair value within a tight band of ask ({buffer_pct:+.1f}%)", buffer_pct
+    if buffer_pct >= -12:
+        return _clamp(_lerp_score(buffer_pct, -12, -3, 1.2, 2.6)), f"Fair value {buffer_pct:+.1f}% below ask — limited protection", buffer_pct
+    return 1.0, f"Fair value {buffer_pct:+.1f}% below ask — buying at a premium", buffer_pct
 
 
 def _score_replacement_cost(m: dict) -> tuple[float, str, float | None]:
@@ -957,20 +1026,20 @@ def _score_dom_signal(m: dict) -> tuple[float, str, float | None]:
     town_liquidity_index = m.get("town_liquidity_index")
     if dom is None:
         if town_liquidity_index is not None:
-            score = _lerp_score(float(town_liquidity_index), 80, 120, 2.0, 4.5)
+            score = _lerp_score(float(town_liquidity_index), 75, 120, 1.8, 4.6)
             return score, f"DOM unavailable — using town liquidity index {float(town_liquidity_index):.0f}", town_liquidity_index
         return NEUTRAL_SCORE, "Days on market unavailable", None
     if dom <= 7:
         base_score = 5.0
         evidence = f"{dom} DOM — hot demand, absorbing immediately"
     elif dom <= 21:
-        base_score = 4.0
+        base_score = 4.2
         evidence = f"{dom} DOM — healthy demand"
     elif dom <= 45:
         base_score = 3.0
         evidence = f"{dom} DOM — normal absorption"
     elif dom <= 90:
-        base_score = 2.0
+        base_score = 1.8
         evidence = f"{dom} DOM — slow absorption, possible issues"
     else:
         base_score = 1.0
@@ -989,12 +1058,12 @@ def _score_inventory_tightness(m: dict) -> tuple[float | None, str, float | None
 
     # Primary: scarcity score (reliable, from town/county data)
     if scarcity is not None:
-        score = _lerp_score(scarcity, 25, 80, 1.5, 5.0)
+        score = _lerp_score(scarcity, 20, 85, 1.0, 5.0)
         return score, f"Inventory tightness from scarcity ({scarcity:.0f}/100)", scarcity
 
     # Secondary: infer from DOM
     if dom is not None:
-        score = _lerp_score(dom, 120, 7, 1.5, 5.0)
+        score = _lerp_score(dom, 120, 7, 1.0, 5.0)
         return score, f"Inventory tightness inferred from {dom} DOM", dom
 
     return None, "Inventory tightness unknown — no scarcity or DOM data", None
@@ -1097,22 +1166,22 @@ def _score_liquidity_risk(m: dict) -> tuple[float, str, float | None]:
     town_liquidity_index = m.get("town_liquidity_index")
 
     if liq is not None:
-        score = _town_liquidity_adjusted_score(float(liq), town_liquidity_index)
-        if liq >= 75:
+        score = _town_liquidity_adjusted_score(_lerp_score(float(liq), 15, 90, 1.0, 5.0), town_liquidity_index, use_normalized_input=False)
+        if liq >= 82:
             return score, f"High liquidity (score {liq:.0f}) — quick exit possible", liq
-        if liq >= 55:
+        if liq >= 65:
             return score, f"Good liquidity ({liq:.0f})", liq
-        if liq >= 40:
+        if liq >= 45:
             return score, f"Moderate liquidity ({liq:.0f})", liq
-        if liq >= 25:
+        if liq >= 28:
             return score, f"Low liquidity ({liq:.0f}) — exit may take time", liq
         return score, f"Very low liquidity ({liq:.0f}) — illiquid market", liq
 
     if rental_liq is not None:
-        score = _town_liquidity_adjusted_score(float(rental_liq), town_liquidity_index)
-        if rental_liq >= 75:
+        score = _town_liquidity_adjusted_score(_lerp_score(float(rental_liq), 15, 90, 1.0, 5.0), town_liquidity_index, use_normalized_input=False)
+        if rental_liq >= 80:
             return score, f"Liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
-        if rental_liq >= 55:
+        if rental_liq >= 60:
             return score, f"Moderate liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
         return score, f"Thin liquidity inferred from rental absorption ({rental_liq:.0f})", rental_liq
 
@@ -1207,12 +1276,12 @@ def _score_income_stability(m: dict) -> tuple[float, str, float | None]:
 
     # Start from rental ease as a 1-5 scale (most direct stability signal)
     if rental_ease_score is not None:
-        base = _lerp_score(rental_ease_score, 20, 80, 1.5, 4.5)
+        base = _lerp_score(rental_ease_score, 15, 90, 1.0, 5.0)
     elif isr is not None:
         # Fallback: ISR as stability proxy
-        base = _lerp_score(isr, 0.3, 1.3, 1.0, 4.5)
+        base = _lerp_score(isr, 0.3, 1.35, 1.0, 4.8)
     else:
-        base = NEUTRAL_SCORE
+        base = 2.6
 
     notes: list[str] = []
     adj = 0.0
@@ -1220,20 +1289,20 @@ def _score_income_stability(m: dict) -> tuple[float, str, float | None]:
     # Downside burden adjustment
     if burden is not None:
         if burden <= 200:
-            adj += 0.3
+            adj += 0.4
             notes.append(f"low burden (${burden:,.0f}/mo)")
         elif burden >= 2000:
-            adj -= 0.4
+            adj -= 0.7
             notes.append(f"high burden (${burden:,.0f}/mo)")
         elif burden >= 1000:
-            adj -= 0.2
+            adj -= 0.4
             notes.append(f"moderate burden (${burden:,.0f}/mo)")
 
     # Risk view from income module
     if "strong" in risk_view:
-        adj += 0.2
+        adj += 0.25
     elif "negative" in risk_view or "weak" in risk_view:
-        adj -= 0.2
+        adj -= 0.35
 
     score = _clamp(base + adj)
     detail = "; ".join(notes) if notes else ""
@@ -1299,19 +1368,19 @@ def get_recommendation_tier(score: float) -> tuple[str, str]:
     for threshold, tier, action in RECOMMENDATION_TIERS:
         if score >= threshold:
             return tier, action
-    return "Avoid", "Does not meet investment criteria on current information."
+    return "Pass", "Does not meet investment criteria on current information."
 
 
 def _generate_narrative(
     score: float,
     categories: dict[str, CategoryScore],
     *,
-    confidence_level: str = "High",
+    confidence_level: str = "Grounded",
     top_missing_input: str = "",
     top_two_missing: str = "",
 ) -> str:
     """Generate a 2-3 sentence narrative summarizing the score, with
-    confidence calibration when data quality is Medium or Low."""
+    confidence calibration when data quality is Estimated or Provisional."""
     tier, _ = get_recommendation_tier(score)
     ranked = sorted(categories.values(), key=lambda c: c.score, reverse=True)
     strongest = ranked[0]
@@ -1320,25 +1389,25 @@ def _generate_narrative(
     parts: list[str] = []
 
     # Confidence calibration prefix
-    if confidence_level == "Low":
-        caveat = "Caution: This analysis has significant data gaps. Key assumptions are estimated."
+    if confidence_level == "Provisional":
+        caveat = "Provisional: Major data gaps. Key assumptions are estimated."
         if top_two_missing:
-            caveat += f" Consider this a preliminary assessment — add {top_two_missing} for a more reliable recommendation."
+            caveat += f" Add {top_two_missing} before treating this as actionable."
         parts.append(caveat)
-    elif confidence_level == "Medium":
-        caveat = "Note: This analysis is based on partially estimated data."
+    elif confidence_level == "Estimated":
+        caveat = "Estimated: Key inputs are inferred. Direction is likely right; precision is not."
         if top_missing_input:
-            caveat += f" The recommendation confidence would improve with {top_missing_input.lower()}."
+            caveat += f" Add {top_missing_input.lower()} to sharpen the view."
         parts.append(caveat)
 
     parts.append(f"Overall score {score:.2f}/5.0 — {tier}.")
 
     if strongest.score >= 4.0:
-        parts.append(f"Strongest dimension is {strongest.category_name} ({strongest.score:.1f}/5).")
+        parts.append(f"Strongest dimension: {strongest.category_name} ({strongest.score:.1f}/5).")
     if weakest.score <= 2.5:
-        parts.append(f"Weakest dimension is {weakest.category_name} ({weakest.score:.1f}/5) — this is the primary risk to the thesis.")
+        parts.append(f"Weakest dimension: {weakest.category_name} ({weakest.score:.1f}/5) — primary risk to the thesis.")
     elif weakest.score <= 3.0:
-        parts.append(f"{weakest.category_name} ({weakest.score:.1f}/5) is the area most worth investigating further.")
+        parts.append(f"{weakest.category_name} ({weakest.score:.1f}/5) is worth investigating further.")
 
     return " ".join(parts)
 
@@ -1355,7 +1424,10 @@ def calculate_final_score(report: AnalysisReport) -> FinalScore:
         "risk_layer": _calculate_risk_layer(m),
     }
 
-    final = _clamp(sum(cat.contribution for cat in categories.values()))
+    final = sum(cat.contribution for cat in categories.values())
+    final += _conviction_adjustment(categories, m)
+    final -= _critical_input_penalty(m)
+    final = _clamp(final)
     final = round(final, 2)
     tier, action = get_recommendation_tier(final)
 
@@ -1409,11 +1481,11 @@ def _extract_confidence_for_narrative(report: AnalysisReport) -> tuple[str, str,
         strong_count += 1
 
     if weak_count >= 2 or overall < 0.55:
-        level = "Low"
+        level = "Provisional"
     elif strong_count >= 3 and overall >= 0.75:
-        level = "High"
+        level = "Grounded"
     else:
-        level = "Medium"
+        level = "Estimated"
 
     # Collect top missing inputs from metric statuses
     _impact_labels = {

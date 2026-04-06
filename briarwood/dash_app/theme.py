@@ -322,25 +322,31 @@ def score_color(score: float) -> str:
 def score_label(score: float) -> str:
     """Return human-readable label for a 1-5 score value."""
     if score >= 4.5:
-        return "Excellent"
+        return "Clear"
     if score >= 4.0:
-        return "Strong"
+        return "Supported"
     if score >= 3.0:
-        return "Fair"
+        return "Mixed"
     if score >= 2.0:
-        return "Weak"
-    return "Poor"
+        return "Thin"
+    return "Unsupported"
 
 
 def verdict_color(verdict: str) -> str:
     """Return accent color for a recommendation tier string."""
     v = (verdict or "").upper()
-    if "HIGH CONVICTION" in v or "ATTRACTIVE" in v:
+    if "STRONG BUY" in v:
         return ACCENT_GREEN
-    if "NEUTRAL" in v:
+    if v == "BUY" or v.startswith("BUY"):
+        return ACCENT_GREEN
+    if "LEAN BUY" in v:
+        return ACCENT_YELLOW
+    if "HOLD" in v or "DIG DEEPER" in v:
         return ACCENT_BLUE
-    if "CAUTION" in v:
+    if "LEAN AWAY" in v:
         return ACCENT_ORANGE
+    if "PASS" in v:
+        return ACCENT_RED
     return ACCENT_RED
 
 

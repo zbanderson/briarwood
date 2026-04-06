@@ -107,7 +107,7 @@ def _build_net_opportunity_delta(report: AnalysisReport) -> SignalMetric | None:
         value_text=value_text,
         classification=classification,
         context=(
-            f"BCV minus all-in basis is {delta_pct_val:+.1%}{basis_context}, using {source_text}. "
+            f"Fair value minus all-in basis is {delta_pct_val:+.1%}{basis_context}, using {source_text}. "
             "This is the clearest current-value opportunity check after required work."
         ),
     )

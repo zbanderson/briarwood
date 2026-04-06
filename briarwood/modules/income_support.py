@@ -161,7 +161,17 @@ class IncomeSupportModule:
         ratio = output.income_support_ratio
         if ratio is None:
             return 0.0
-        return max(0.0, min(ratio * 95, 100.0))
+        if ratio >= 1.40:
+            return 100.0
+        if ratio >= 1.10:
+            return max(0.0, min(78.0 + ((ratio - 1.10) / 0.30) * 22.0, 100.0))
+        if ratio >= 0.90:
+            return max(0.0, min(55.0 + ((ratio - 0.90) / 0.20) * 23.0, 100.0))
+        if ratio >= 0.70:
+            return max(0.0, min(30.0 + ((ratio - 0.70) / 0.20) * 25.0, 100.0))
+        if ratio >= 0.50:
+            return max(0.0, min(12.0 + ((ratio - 0.50) / 0.20) * 18.0, 100.0))
+        return max(0.0, min((ratio / 0.50) * 12.0, 12.0))
 
 
 def get_income_support_payload(result: ModuleResult) -> IncomeAgentOutput:

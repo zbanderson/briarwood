@@ -1,0 +1,12 @@
+{
+  "property_id": "1302-l-street",
+  "address": "1302 L Street",
+  "label": "1302 L Street",
+  "ask_price": 850000.0,
+  "bcv": 959399.27,
+  "pricing_view": "appears undervalued",
+  "confidence": 0.67,
+  "comp_trust": "Seed / Review Only",
+  "missing_input_count": 8,
+  "timestamp": "2026-04-05T12:50:46"
+}

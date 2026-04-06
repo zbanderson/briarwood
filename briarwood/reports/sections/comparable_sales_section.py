@@ -27,7 +27,7 @@ def build_comparable_sales_section(report: AnalysisReport) -> ComparableSalesSec
             assessment=SectionAssessment(
                 score=module.score,
                 confidence=module.confidence,
-                summary="BCV is leaning more heavily on non-comp anchors because the comparable-sale set is thin.",
+                summary="Fair value is leaning more heavily on non-comp anchors because the comparable-sale set is thin.",
             ),
         )
 
@@ -71,7 +71,7 @@ def build_comparable_sales_section(report: AnalysisReport) -> ComparableSalesSec
         assessment=SectionAssessment(
             score=module.score,
             confidence=module.confidence,
-            summary="BCV now has a real property-level sale-comp anchor instead of relying only on town-level context.",
+            summary="Fair value now has a real property-level sale-comp anchor instead of relying only on town-level context.",
         ),
     )
 

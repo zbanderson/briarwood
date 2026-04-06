@@ -179,7 +179,13 @@ class BullBaseBearModule:
 
         # --- Score ---
         spread_pct = spread / price if price > 0 else 0.0
-        score = clamp_score(s.base_score + spread_pct * 25.0)
+        score = clamp_score(
+            48.0
+            + (base_growth_rate * 130.0)
+            + (bull_growth_rate * 35.0)
+            - (max(0.0, -bear_growth_rate) * 90.0)
+            + min(max(spread_pct, 0.0), 0.60) * 18.0
+        )
 
         # --- Stress rationale ---
         if stress_drawdown_pct is not None:

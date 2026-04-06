@@ -67,7 +67,7 @@ class MarketMomentumSignalModule:
         score = (
             sum(component_score * weight for _, component_score, weight in weighted_components) / total_weight
             if total_weight
-            else 50.0
+            else 45.0
         )
         score = round(max(0.0, min(score, 100.0)), 1)
         label = _momentum_label(score)
@@ -130,11 +130,11 @@ class MarketMomentumSignalModule:
 def _history_trend_score(one_year_change_pct: float | None, three_year_change_pct: float | None) -> float | None:
     if one_year_change_pct is None and three_year_change_pct is None:
         return None
-    score = 50.0
+    score = 45.0
     if one_year_change_pct is not None:
-        score += max(-25.0, min(one_year_change_pct * 400.0, 25.0))
+        score += max(-35.0, min(one_year_change_pct * 650.0, 35.0))
     if three_year_change_pct is not None:
-        score += max(-15.0, min(three_year_change_pct * 250.0, 15.0))
+        score += max(-25.0, min(three_year_change_pct * 350.0, 25.0))
     return max(0.0, min(score, 100.0))
 
 
@@ -174,15 +174,15 @@ def _local_activity_score(
 def _scenario_drift_score(base_market_drift_pct: float | None) -> float | None:
     if base_market_drift_pct is None:
         return None
-    return max(0.0, min(50.0 + (float(base_market_drift_pct) * 500.0), 100.0))
+    return max(0.0, min(45.0 + (float(base_market_drift_pct) * 900.0), 100.0))
 
 
 def _momentum_label(score: float) -> str:
-    if score >= 72:
+    if score >= 78:
         return "Supportive Momentum"
-    if score >= 58:
+    if score >= 60:
         return "Constructive Momentum"
-    if score >= 45:
+    if score >= 40:
         return "Mixed Momentum"
     return "Weak Momentum"
 

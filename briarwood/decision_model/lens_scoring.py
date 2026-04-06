@@ -119,15 +119,15 @@ def _investor_lens(mods: dict[str, ModuleResult]) -> LensDetail:
 
     # PTR scoring
     if ptr < 12:
-        ptr_s, ptr_v = 5.0, f"Excellent PTR ({ptr:.1f}x)"
+        ptr_s, ptr_v = 5.0, f"Strong price-to-rent ({ptr:.1f}x)"
     elif ptr < 15:
-        ptr_s, ptr_v = 4.0, f"Good PTR ({ptr:.1f}x)"
+        ptr_s, ptr_v = 4.0, f"Favorable price-to-rent ({ptr:.1f}x)"
     elif ptr < 20:
-        ptr_s, ptr_v = 3.0, f"Fair PTR ({ptr:.1f}x)"
+        ptr_s, ptr_v = 3.0, f"Moderate price-to-rent ({ptr:.1f}x)"
     elif ptr < 25:
-        ptr_s, ptr_v = 2.0, f"Poor PTR ({ptr:.1f}x)"
+        ptr_s, ptr_v = 2.0, f"Stretched price-to-rent ({ptr:.1f}x)"
     else:
-        ptr_s, ptr_v = 1.0, f"Very poor PTR ({ptr:.1f}x)"
+        ptr_s, ptr_v = 1.0, f"Disconnected price-to-rent ({ptr:.1f}x)"
 
     ease_s = _clamp(ease)
     ease_v = f"Rental ease {_get(re, 'rental_ease_score', 50):.0f}/100"
@@ -135,13 +135,13 @@ def _investor_lens(mods: dict[str, ModuleResult]) -> LensDetail:
     score = _clamp(cf_s * 0.50 + ptr_s * 0.30 + ease_s * 0.20)
 
     if score >= 4.0:
-        rec = "Strong buy for cash flow investors."
+        rec = "The cash flow math works — this property carries itself as a rental."
     elif score >= 3.0:
-        rec = "Marginal investment case — only with strong appreciation thesis."
+        rec = "The investment case is thin — only viable with an appreciation thesis."
     elif score >= 2.0:
-        rec = "Not recommended for income investors."
+        rec = "The numbers don't support a rental hold at this price."
     else:
-        rec = "Avoid for rental income purposes."
+        rec = "Pass for income investors — the carry overwhelms the return."
 
     narr = f"{cf_v}. {ptr_v}. {rec}"
 
@@ -166,13 +166,13 @@ def _owner_lens(cats: dict[str, CategoryScore], mods: dict[str, ModuleResult], p
 
     location_s = _clamp(market.score if market else 3.0)
     if location_s >= 4.5:
-        loc_v = "Premier location"
+        loc_v = "Premier location — hard to replicate"
     elif location_s >= 4.0:
-        loc_v = "Excellent location"
+        loc_v = "Strong location fundamentals"
     elif location_s >= 3.5:
-        loc_v = "Good location"
+        loc_v = "Solid location — above average"
     else:
-        loc_v = "Average location"
+        loc_v = "Location is serviceable but unremarkable"
 
     # Appreciation from bull case
     ask = _get(bbb, "ask_price")
@@ -200,13 +200,13 @@ def _owner_lens(cats: dict[str, CategoryScore], mods: dict[str, ModuleResult], p
     score = _clamp(location_s * 0.35 + app_s * 0.35 + scarcity_s * 0.30)
 
     if score >= 4.0:
-        rec = "Excellent for primary residence or vacation home."
+        rec = "This property makes sense to live in — the location and trajectory support the price."
     elif score >= 3.5:
-        rec = "Good lifestyle value — location and appreciation support the price."
+        rec = "Lifestyle value is present — location and appreciation support the basis."
     elif score >= 3.0:
-        rec = "Average lifestyle proposition — compare alternatives."
+        rec = "Livable but unremarkable — compare alternatives before committing."
     else:
-        rec = "Limited lifestyle appeal at this price point."
+        rec = "The lifestyle case is thin at this price point."
 
     narr = f"{loc_v}. {app_v}. {rec}"
 
@@ -230,13 +230,13 @@ def _developer_lens(cats: dict[str, CategoryScore], mods: dict[str, ModuleResult
 
     opt_s = _clamp(opt.score if opt else 3.0)
     if opt_s >= 4.5:
-        opt_v = "Exceptional development potential"
+        opt_v = "High optionality — multiple development paths available"
     elif opt_s >= 4.0:
-        opt_v = "Strong value-add opportunities"
+        opt_v = "Clear value-add opportunities"
     elif opt_s >= 3.0:
-        opt_v = "Moderate development upside"
+        opt_v = "Some development upside, but selective"
     else:
-        opt_v = "Limited development options"
+        opt_v = "Limited development options at this basis"
 
     # Bull upside
     ask = _get(bbb, "ask_price")
@@ -271,11 +271,11 @@ def _developer_lens(cats: dict[str, CategoryScore], mods: dict[str, ModuleResult
     score = _clamp(opt_s * 0.45 + bull_s * 0.35 + lot_s * 0.20)
 
     if score >= 4.0:
-        rec = "Good candidate for renovation or expansion."
+        rec = "The property can physically become more — renovation or expansion pencils."
     elif score >= 3.0:
-        rec = "Consider for hold-and-develop strategy."
+        rec = "Development upside exists but isn't commanding — consider hold-and-develop."
     else:
-        rec = "Limited development potential — better suited for buy-and-hold."
+        rec = "Limited development potential — better suited for a buy-and-hold thesis."
 
     narr = f"{opt_v}. {bull_v}. {rec}"
 
@@ -316,21 +316,21 @@ def _recommend(inv: float | None, own: float | None, dev: float | None) -> tuple
     others = sorted(((k, v) for k, v in candidates.items() if k != best_key), key=lambda x: -x[1])
 
     best_label = _LENS_LABELS.get(best_key, best_key)
-    reason = f"Best suited for {best_label} ({best_val:.1f}/5)."
+    reason = f"Most compelling as {best_label} ({best_val:.1f}/5)."
 
     if others:
         second_key, second_val = others[0]
         gap = best_val - second_val
-        strength = "strongly" if gap > 1.0 else "moderately" if gap > 0.5 else "slightly"
+        strength = "clearly" if gap > 1.0 else "moderately" if gap > 0.5 else "slightly"
         second_label = _LENS_LABELS.get(second_key, second_key)
         reason += f" {strength.title()} ahead of {second_label} ({second_val:.1f}/5)."
 
     if best_key == "investor":
-        reason += " Strong cash flow fundamentals make this a good rental income opportunity."
+        reason += " The cash flow fundamentals carry the thesis."
     elif best_key == "owner":
-        reason += " Location quality and appreciation potential outweigh carry costs for lifestyle buyers."
+        reason += " Location and appreciation outweigh carry costs for lifestyle buyers."
     elif best_key == "developer":
-        reason += " Value-add potential and development upside justify acquisition."
+        reason += " The value-add potential justifies the basis."
 
     return best_key, reason
 

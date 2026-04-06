@@ -134,8 +134,8 @@ def _so_what(
         f"Pricing reads {pricing_view.replace('appears ', '')}.",
         f"Cap rate is {_percent_or_na(cap_rate)}; {carry_text}",
         (
-            f"Margin for error is limited with BCV {_percent_or_na(premium_discount)} versus ask."
+            f"Margin for error is limited with fair value {_percent_or_na(premium_discount)} versus ask."
             if premium_discount < 0
-            else f"BCV shows {_percent_or_na(premium_discount)} support versus ask."
+            else f"Fair value shows {_percent_or_na(premium_discount)} support versus ask."
         ),
     ]

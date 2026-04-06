@@ -171,8 +171,8 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
     marker_y = y_for(chart.market_reference_value)
     base_y = y_for(chart.forward_base_value)
     band_map = {band.label: band.value for band in chart.fan_bands}
-    bull_y = y_for(band_map.get("Bull", chart.forward_base_value))
-    bear_y = y_for(band_map.get("Bear", chart.forward_base_value))
+    bull_y = y_for(band_map.get("Upside", chart.forward_base_value))
+    bear_y = y_for(band_map.get("Downside", chart.forward_base_value))
 
     return (
         '<div class="scenario-chart-wrap">'
@@ -197,8 +197,8 @@ def _render_scenario_chart(chart: ScenarioChartSection) -> str:
         f'<text class="chart-annotation" x="{x_left - 12}" y="{ask_y + 22:.1f}" text-anchor="end">Ask {_currency(chart.current_ask)}</text>'
         f'<text class="chart-annotation" x="{x_left - 12}" y="{bcv_y + 4:.1f}" text-anchor="end">{escape(chart.current_value_label)} {_currency(chart.current_value)}</text>'
         f'<text class="chart-annotation base-text" x="{x_right + 14}" y="{base_y + 4:.1f}">Base {_currency(chart.forward_base_value)}</text>'
-        f'<text class="chart-annotation bull-text" x="{x_right + 14}" y="{bull_y + 4:.1f}">Bull {_currency(band_map.get("Bull", chart.forward_base_value))}</text>'
-        f'<text class="chart-annotation bear-text" x="{x_right + 14}" y="{bear_y + 4:.1f}">Bear {_currency(band_map.get("Bear", chart.forward_base_value))}</text>'
+        f'<text class="chart-annotation bull-text" x="{x_right + 14}" y="{bull_y + 4:.1f}">Upside {_currency(band_map.get("Upside", chart.forward_base_value))}</text>'
+        f'<text class="chart-annotation bear-text" x="{x_right + 14}" y="{bear_y + 4:.1f}">Downside {_currency(band_map.get("Downside", chart.forward_base_value))}</text>'
         "</svg>"
         "</div>"
     )

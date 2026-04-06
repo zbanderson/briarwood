@@ -13,7 +13,7 @@ def build_header_section(report: AnalysisReport) -> HeaderSection:
     if score < 45:
         stance = "Cautious"
     elif score > 65:
-        stance = "Attractive"
+        stance = "Constructive"
 
     spread = scenario.spread
     subtitle = (

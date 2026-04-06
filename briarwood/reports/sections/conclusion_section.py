@@ -40,7 +40,7 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
         scarcity_label=scarcity_label,
     )
     key_line = (
-        f"Ask: {_currency(ask_price)} | BCV: {_currency(briarwood_current_value)} | "
+        f"Ask: {_currency(ask_price)} | Fair Value: {_currency(briarwood_current_value)} | "
         f"Gap: {_format_percent(premium_discount_to_ask)} | "
         f"Cash Flow: {_cash_flow_text(cash_flow)}"
     )
@@ -82,12 +82,12 @@ def build_conclusion_section(report: AnalysisReport) -> ConclusionSection:
         why_it_matters=why_it_matters,
         decision_fit=decision_fit,
         what_changes_call=what_changes_call,
-        explanation="BCV anchors today; scenarios show the 12-month range.",
+        explanation="Fair value anchors today; scenarios show the 12-month range.",
         assessment=SectionAssessment(
             score=current_value_module.score,
             confidence=current_value_module.confidence,
             summary=(
-                f"BCV is {_format_percent(premium_discount_to_ask)} versus ask. "
+                f"Fair value is {_format_percent(premium_discount_to_ask)} versus ask. "
                 f"12M range: {_format_percent(downside_to_bear)} to {_format_percent(upside_to_bull)}."
             ),
         ),
@@ -156,7 +156,7 @@ def _build_verdict(
             return "Valuation support with constructive location backdrop"
         if ptr_value:
             return "Below-market valuation with income support — monitor location risk"
-        return "Undervalued on BCV — location and carry quality determine conviction"
+        return "Undervalued on fair value — location and carry quality determine conviction"
 
     # Fully valued
     return f"{pricing_view.replace('appears ', '').capitalize()} with {location_label} location support"
@@ -171,9 +171,9 @@ def _build_why_it_matters(
 ) -> list[str]:
     bullets: list[str] = []
     if premium_discount_to_ask < 0:
-        bullets.append(f"Ask is {abs(premium_discount_to_ask):.1%} above BCV.")
+        bullets.append(f"Ask is {abs(premium_discount_to_ask):.1%} above fair value.")
     else:
-        bullets.append(f"BCV is {premium_discount_to_ask:.1%} above ask.")
+        bullets.append(f"Fair value is {premium_discount_to_ask:.1%} above ask.")
 
     if cash_flow is None:
         bullets.append("Rental fallback is unverified.")
@@ -188,7 +188,7 @@ def _build_why_it_matters(
         bullets.append(f"Location reads {location_label}.")
 
     if downside_to_bear < -0.08 and len(bullets) < 3:
-        bullets.append("Bear case still shows real downside.")
+        bullets.append("Downside case still shows real downside.")
     return bullets[:3]
 
 
@@ -233,7 +233,7 @@ def _build_top_risk(
     if cash_flow < 0:
         return f"Negative carry runs {_cash_flow_text(cash_flow)}."
     if premium_discount_to_ask < 0:
-        return f"Pricing still sits {abs(premium_discount_to_ask):.1%} above BCV."
+        return f"Pricing still sits {abs(premium_discount_to_ask):.1%} above fair value."
     if location_label != "supportive":
         return f"Location support reads only {location_label}."
     return "Main risk is execution rather than obvious carry stress."
@@ -248,9 +248,9 @@ def _build_what_changes_call(
 ) -> list[str]:
     bullets: list[str] = []
     if premium_discount_to_ask < 0:
-        bullets.append(f"Ask moves closer to BCV by roughly {abs(premium_discount_to_ask):.1%}.")
+        bullets.append(f"Ask moves closer to fair value by roughly {abs(premium_discount_to_ask):.1%}.")
     else:
-        bullets.append("BCV support remains intact instead of fading.")
+        bullets.append("Fair value support remains intact instead of fading.")
 
     if cash_flow is None:
         bullets.append("Rental fallback gets verified with real rent and financing inputs.")

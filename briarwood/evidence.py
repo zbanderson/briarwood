@@ -70,6 +70,17 @@ class MetricInputStatus:
     prompt_fields: list[str] = field(default_factory=list)
 
 
+@dataclass(slots=True)
+class CriticalAssumptionStatus:
+    key: str
+    label: str
+    status: str  # confirmed / estimated / missing
+    value: str
+    source_label: str
+    note: str = ""
+    affected_components: list[str] = field(default_factory=list)
+
+
 CONFIDENCE_COMPONENT_WEIGHTS: dict[str, float] = {
     "rent": 0.30,
     "capex": 0.25,
@@ -81,6 +92,7 @@ CONFIDENCE_COMPONENT_WEIGHTS: dict[str, float] = {
 def compute_confidence_breakdown(report: AnalysisReport) -> ConfidenceBreakdown:
     property_input = report.property_input
     metric_statuses = compute_metric_input_statuses(report)
+    critical_assumptions = compute_critical_assumption_statuses(report)
     status_map = {status.key: status for status in metric_statuses}
     components = [
         _rent_confidence_component(report, property_input),
@@ -89,6 +101,7 @@ def compute_confidence_breakdown(report: AnalysisReport) -> ConfidenceBreakdown:
         _liquidity_confidence_component(report, property_input),
     ]
     components = _apply_metric_status_caps(components, status_map)
+    components = _apply_assumption_quality_caps(components, critical_assumptions)
     components = _apply_town_context_caps(components, property_input)
     total_weight = sum(component.weight for component in components if component.confidence is not None)
     if total_weight <= 0:
@@ -112,6 +125,216 @@ def compute_confidence_breakdown(report: AnalysisReport) -> ConfidenceBreakdown:
         components=components,
         notes=notes[:4],
     )
+
+
+def compute_critical_assumption_statuses(report: AnalysisReport) -> list[CriticalAssumptionStatus]:
+    property_input = report.property_input
+    if property_input is None:
+        return []
+
+    income_module = report.module_results.get("income_support")
+    income_metrics = income_module.metrics if income_module is not None else {}
+    assumptions = property_input.user_assumptions
+    statuses: list[CriticalAssumptionStatus] = []
+
+    def _status_from_coverage(category: str) -> str:
+        coverage = property_input.coverage_for(category).status
+        if coverage in {InputCoverageStatus.SOURCED, InputCoverageStatus.USER_SUPPLIED}:
+            return "confirmed"
+        if coverage is InputCoverageStatus.ESTIMATED:
+            return "estimated"
+        return "missing"
+
+    rent_source_type = str(income_metrics.get("rent_source_type") or "missing")
+    rent_value = income_metrics.get("monthly_rent_estimate") or income_metrics.get("effective_monthly_rent")
+    if assumptions and assumptions.unit_rents:
+        rent_status = "confirmed"
+        rent_value_text = f"${sum(assumptions.unit_rents):,.0f}/mo"
+        rent_source = "User Confirmed"
+        rent_note = "Unit-level rent schedule is driving the underwriting."
+    elif assumptions and assumptions.estimated_monthly_rent is not None:
+        rent_status = "confirmed"
+        rent_value_text = f"${assumptions.estimated_monthly_rent:,.0f}/mo"
+        rent_source = "User Confirmed"
+        rent_note = "User-entered rent is driving the underwriting."
+    elif rent_source_type == "provided" and rent_value is not None:
+        rent_status = "confirmed"
+        rent_value_text = f"${rent_value:,.0f}/mo"
+        rent_source = "Property Input"
+        rent_note = "Property-level rent was supplied directly."
+    elif rent_source_type == "estimated" and rent_value is not None:
+        rent_status = "estimated"
+        rent_value_text = f"${rent_value:,.0f}/mo"
+        rent_source = "Model Estimated"
+        rent_note = "Rent is still estimated from market context rather than confirmed."
+    else:
+        rent_status = "missing"
+        rent_value_text = "Missing"
+        rent_source = "Missing"
+        rent_note = "No property-level rent assumption is available."
+    statuses.append(
+        CriticalAssumptionStatus(
+            key="rent",
+            label="Rent",
+            status=rent_status,
+            value=rent_value_text,
+            source_label=rent_source,
+            note=rent_note,
+            affected_components=["rent", "liquidity"],
+        )
+    )
+
+    taxes_status = _status_from_coverage("taxes")
+    statuses.append(
+        CriticalAssumptionStatus(
+            key="taxes",
+            label="Taxes",
+            status=taxes_status if property_input.taxes is not None else "missing",
+            value=f"${property_input.taxes:,.0f}/yr" if property_input.taxes is not None else "Missing",
+            source_label=(
+                "User Confirmed"
+                if property_input.coverage_for("taxes").status is InputCoverageStatus.USER_SUPPLIED
+                else "Sourced"
+                if property_input.coverage_for("taxes").status is InputCoverageStatus.SOURCED
+                else "Model Estimated"
+                if property_input.coverage_for("taxes").status is InputCoverageStatus.ESTIMATED
+                else "Missing"
+            ),
+            note="Property taxes feed carry, downside burden, and investor return metrics.",
+            affected_components=["rent"],
+        )
+    )
+
+    insurance_status = "missing"
+    insurance_source = "Missing"
+    if property_input.insurance is not None:
+        if assumptions and assumptions.insurance is not None:
+            insurance_status = "confirmed"
+            insurance_source = "User Confirmed"
+        elif _status_from_coverage("insurance_estimate") == "estimated" or "insurance" in getattr(property_input, "defaults_applied", {}):
+            insurance_status = "estimated"
+            insurance_source = "Model Estimated"
+        else:
+            insurance_status = "confirmed"
+            insurance_source = "Sourced"
+    statuses.append(
+        CriticalAssumptionStatus(
+            key="insurance",
+            label="Insurance",
+            status=insurance_status,
+            value=f"${property_input.insurance:,.0f}/yr" if property_input.insurance is not None else "Missing",
+            source_label=insurance_source,
+            note="Insurance feeds monthly carry and downside support.",
+            affected_components=["rent"],
+        )
+    )
+
+    financing_fields = {
+        "down_payment_percent": property_input.down_payment_percent,
+        "interest_rate": property_input.interest_rate,
+        "loan_term_years": property_input.loan_term_years,
+    }
+    financing_present = sum(value is not None for value in financing_fields.values())
+    financing_status = "confirmed" if financing_present == 3 else "estimated" if financing_present > 0 else "missing"
+    financing_source = "User Confirmed" if financing_present > 0 else "Missing"
+    statuses.extend(
+        [
+            CriticalAssumptionStatus(
+                key="down_payment_percent",
+                label="Down Payment",
+                status="confirmed" if property_input.down_payment_percent is not None else "missing",
+                value=f"{property_input.down_payment_percent * 100:.0f}%" if property_input.down_payment_percent is not None else "Missing",
+                source_label="User Confirmed" if property_input.down_payment_percent is not None else "Missing",
+                note="Down payment affects leverage, cash invested, and monthly carry.",
+                affected_components=["rent"],
+            ),
+            CriticalAssumptionStatus(
+                key="interest_rate",
+                label="Interest Rate",
+                status="confirmed" if property_input.interest_rate is not None else "missing",
+                value=f"{property_input.interest_rate * 100:.2f}%" if property_input.interest_rate is not None else "Missing",
+                source_label="User Confirmed" if property_input.interest_rate is not None else "Missing",
+                note="Interest rate drives debt service and cash flow.",
+                affected_components=["rent"],
+            ),
+            CriticalAssumptionStatus(
+                key="loan_term_years",
+                label="Loan Term",
+                status="confirmed" if property_input.loan_term_years is not None else "missing",
+                value=f"{property_input.loan_term_years} years" if property_input.loan_term_years is not None else "Missing",
+                source_label="User Confirmed" if property_input.loan_term_years is not None else "Missing",
+                note="Loan term shapes monthly carry and amortization.",
+                affected_components=["rent"],
+            ),
+            CriticalAssumptionStatus(
+                key="financing",
+                label="Financing",
+                status=financing_status,
+                value=(
+                    " / ".join(
+                        [
+                            f"{property_input.down_payment_percent * 100:.0f}% down" if property_input.down_payment_percent is not None else "down payment missing",
+                            f"{property_input.interest_rate * 100:.2f}% rate" if property_input.interest_rate is not None else "rate missing",
+                            f"{property_input.loan_term_years}y term" if property_input.loan_term_years is not None else "term missing",
+                        ]
+                    )
+                ),
+                source_label=financing_source,
+                note="Financing is only fully underwritten when all three fields are present.",
+                affected_components=["rent"],
+            ),
+        ]
+    )
+
+    condition_status = "missing"
+    condition_source = "Missing"
+    if property_input.condition_profile:
+        if bool(getattr(property_input, "condition_confirmed", False)) or bool(getattr(assumptions, "condition_profile_override", None)):
+            condition_status = "confirmed"
+            condition_source = "User Confirmed"
+        else:
+            condition_status = "estimated"
+            condition_source = "Model Estimated"
+    statuses.append(
+        CriticalAssumptionStatus(
+            key="condition_profile",
+            label="Condition",
+            status=condition_status,
+            value=property_input.condition_profile.replace("_", " ").title() if property_input.condition_profile else "Missing",
+            source_label=condition_source,
+            note="Condition influences CapEx burden and renovation confidence.",
+            affected_components=["capex"],
+        )
+    )
+
+    capex_status = "missing"
+    capex_source = "Missing"
+    capex_value = "Missing"
+    if property_input.repair_capex_budget is not None:
+        capex_status = "confirmed"
+        capex_source = "User Confirmed"
+        capex_value = f"${property_input.repair_capex_budget:,.0f}"
+    elif property_input.capex_lane:
+        if bool(getattr(property_input, "capex_confirmed", False)) or bool(getattr(assumptions, "capex_lane_override", None)):
+            capex_status = "confirmed"
+            capex_source = "User Confirmed"
+        else:
+            capex_status = "estimated"
+            capex_source = "Model Estimated"
+        capex_value = property_input.capex_lane.replace("_", " ").title()
+    statuses.append(
+        CriticalAssumptionStatus(
+            key="capex",
+            label="CapEx",
+            status=capex_status,
+            value=capex_value,
+            source_label=capex_source,
+            note="CapEx should be explicit before leaning hard on value-add or downside protection.",
+            affected_components=["capex"],
+        )
+    )
+
+    return statuses
 
 
 def compute_metric_input_statuses(report: AnalysisReport) -> list[MetricInputStatus]:
@@ -810,6 +1033,49 @@ def _apply_metric_status_caps(
             if cap is not None and confidence > cap:
                 confidence = cap
                 reason = f"{reason} Confidence reduced because {status.label.lower()} is {status.status.replace('_', ' ')}."
+        updated.append(
+            ConfidenceComponent(
+                key=component.key,
+                label=component.label,
+                confidence=_clamp_confidence(confidence),
+                weight=component.weight,
+                reason=reason,
+            )
+        )
+    return updated
+
+
+def _apply_assumption_quality_caps(
+    components: list[ConfidenceComponent],
+    assumption_statuses: list[CriticalAssumptionStatus],
+) -> list[ConfidenceComponent]:
+    status_map = {item.key: item for item in assumption_statuses}
+    component_caps: dict[str, list[tuple[str, float, float]]] = {
+        "rent": [
+            ("rent", 0.76, 0.42),
+            ("insurance", 0.76, 0.48),
+            ("taxes", 0.80, 0.52),
+            ("financing", 0.74, 0.46),
+        ],
+        "capex": [
+            ("condition_profile", 0.74, 0.50),
+            ("capex", 0.68, 0.40),
+        ],
+    }
+    updated: list[ConfidenceComponent] = []
+    for component in components:
+        confidence = component.confidence
+        reason = component.reason
+        for status_key, estimated_cap, missing_cap in component_caps.get(component.key, []):
+            status = status_map.get(status_key)
+            if status is None:
+                continue
+            if status.status == "estimated" and confidence > estimated_cap:
+                confidence = estimated_cap
+                reason = f"{reason} Confidence reduced because {status.label.lower()} is estimated."
+            elif status.status == "missing" and confidence > missing_cap:
+                confidence = missing_cap
+                reason = f"{reason} Confidence reduced because {status.label.lower()} is missing."
         updated.append(
             ConfidenceComponent(
                 key=component.key,
