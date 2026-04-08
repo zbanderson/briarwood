@@ -6,9 +6,26 @@ from briarwood.dash_app.view_models import CompareMetricRow, PropertyAnalysisVie
 
 
 @dataclass(slots=True)
+class ComparisonReasonItem:
+    factor_name: str
+    weighted_delta_pct: int
+    explanation: str
+
+
+@dataclass(slots=True)
+class ComparisonSummaryViewModel:
+    winner: str
+    confidence: int
+    reasons_for_winner: list[ComparisonReasonItem] = field(default_factory=list)
+    strengths_of_loser: list[ComparisonReasonItem] = field(default_factory=list)
+    flip_condition: str = ""
+
+
+@dataclass(slots=True)
 class CompareSummary:
     rows: list[CompareMetricRow] = field(default_factory=list)
     why_different: list[str] = field(default_factory=list)
+    comparison_summary: ComparisonSummaryViewModel | None = None
 
 
 def build_compare_summary(views: list[PropertyAnalysisView]) -> CompareSummary:
@@ -16,11 +33,20 @@ def build_compare_summary(views: list[PropertyAnalysisView]) -> CompareSummary:
         return CompareSummary()
     rows = _build_rows(views)
     why_different = _build_difference_notes(views)
-    return CompareSummary(rows=rows, why_different=why_different)
+    comparison_summary = _build_comparison_summary(views)
+    return CompareSummary(rows=rows, why_different=why_different, comparison_summary=comparison_summary)
 
 
 # Metrics where lower values are better for the buyer
 _LOWER_IS_BETTER = {"ask_price", "risk_score", "taxes", "dom", "price_to_rent"}
+_COMPARISON_WEIGHTS: dict[str, float] = {
+    "entry_basis": 0.25,
+    "income_support": 0.20,
+    "capex_load": 0.15,
+    "liquidity_profile": 0.15,
+    "optionality": 0.15,
+    "risk_skew": 0.10,
+}
 
 
 def _build_rows(views: list[PropertyAnalysisView]) -> list[CompareMetricRow]:
@@ -171,3 +197,97 @@ def _largest_numeric_difference(anchor: PropertyAnalysisView, other: PropertyAna
     if best_key == "lot_size":
         return f"{label} ({anchor.label} {left:.2f} ac vs {other.label} {right:.2f} ac)"
     return f"{label} ({anchor.label} {left:,.0f} vs {other.label} {right:,.0f})"
+
+
+def _comparison_explanation(factor_name: str, winner: PropertyAnalysisView, loser: PropertyAnalysisView) -> str:
+    if factor_name == "entry_basis":
+        return f"{winner.label} has the better pricing setup: {winner.entry_basis_label} versus {loser.entry_basis_label}."
+    if factor_name == "income_support":
+        return f"{winner.label} has the stronger rent-support profile: {winner.income_support_label} versus {loser.income_support_label}."
+    if factor_name == "capex_load":
+        return f"{winner.label} carries the lighter capex burden: {winner.capex_load_label} versus {loser.capex_load_label}."
+    if factor_name == "liquidity_profile":
+        return f"{winner.label} has the cleaner exit profile: {winner.liquidity_profile_label} versus {loser.liquidity_profile_label}."
+    if factor_name == "optionality":
+        return f"{winner.label} offers the better upside structure: {winner.optionality_label} versus {loser.optionality_label}."
+    return f"{winner.label} has the more favorable downside profile: {winner.risk_skew_label} versus {loser.risk_skew_label}."
+
+
+def _flip_condition_from_factor(factor_name: str, winner: PropertyAnalysisView, loser: PropertyAnalysisView) -> str:
+    if factor_name == "income_support":
+        return f"Rent support would need to compress enough to erase {winner.label}'s current income edge over {loser.label}."
+    if factor_name == "capex_load":
+        return f"Capex would need to come in materially worse for {winner.label}, or cleaner for {loser.label}, to reverse the ranking."
+    if factor_name in {"liquidity_profile", "risk_skew"}:
+        return f"Liquidity would need to tighten for {winner.label}, or improve for {loser.label}, to flip the ranking."
+    return f"Pricing would need to move enough to erase {winner.label}'s current entry-basis edge over {loser.label}."
+
+
+def _build_comparison_summary(views: list[PropertyAnalysisView]) -> ComparisonSummaryViewModel | None:
+    if len(views) < 2:
+        return None
+
+    view_a, view_b = views[0], views[1]
+    factors_a = view_a.report_card.factor_scores if view_a.report_card is not None else {}
+    factors_b = view_b.report_card.factor_scores if view_b.report_card is not None else {}
+    if not factors_a or not factors_b:
+        return None
+
+    weighted_deltas: dict[str, float] = {}
+    for factor_name, weight in _COMPARISON_WEIGHTS.items():
+        weighted_deltas[factor_name] = (float(factors_a.get(factor_name, 0.0)) - float(factors_b.get(factor_name, 0.0))) * weight
+
+    total_delta = sum(weighted_deltas.values())
+    winner = view_a if total_delta >= 0 else view_b
+    loser = view_b if winner is view_a else view_a
+    winner_sign = 1 if winner is view_a else -1
+
+    winner_edges: list[tuple[float, ComparisonReasonItem]] = []
+    loser_edges: list[tuple[float, ComparisonReasonItem]] = []
+    for factor_name, weighted_delta in weighted_deltas.items():
+        signed_for_winner = weighted_delta * winner_sign
+        impact_pct = int(round(abs(weighted_delta) * 100))
+        if impact_pct == 0:
+            continue
+        item = ComparisonReasonItem(
+            factor_name=factor_name,
+            weighted_delta_pct=impact_pct,
+            explanation=_comparison_explanation(factor_name, winner if signed_for_winner > 0 else loser, loser if signed_for_winner > 0 else winner),
+        )
+        if signed_for_winner > 0:
+            winner_edges.append((abs(weighted_delta), item))
+        elif signed_for_winner < 0:
+            loser_edges.append((abs(weighted_delta), item))
+
+    winner_edges.sort(key=lambda item: item[0], reverse=True)
+    loser_edges.sort(key=lambda item: item[0], reverse=True)
+
+    conviction_a = view_a.decision.conviction_score if view_a.decision is not None else 50
+    conviction_b = view_b.decision.conviction_score if view_b.decision is not None else 50
+    avg_conviction = (conviction_a + conviction_b) / 2.0
+    score_gap = abs(float(view_a.final_score or 0.0) - float(view_b.final_score or 0.0))
+    confidence = avg_conviction
+    if avg_conviction < 60:
+        confidence -= 12
+    elif avg_conviction < 70:
+        confidence -= 6
+    if score_gap < 0.20:
+        confidence -= 18
+    elif score_gap < 0.40:
+        confidence -= 10
+    elif score_gap < 0.60:
+        confidence -= 5
+    comparison_confidence = max(0, min(int(round(confidence)), 100))
+
+    flip_factor_order = ["income_support", "capex_load", "entry_basis", "liquidity_profile", "risk_skew", "optionality"]
+    flip_factor = next((name for name in flip_factor_order if abs(weighted_deltas.get(name, 0.0)) > 0), None)
+    if flip_factor is None:
+        flip_factor = max(weighted_deltas, key=lambda key: abs(weighted_deltas[key]))
+
+    return ComparisonSummaryViewModel(
+        winner=winner.label,
+        confidence=comparison_confidence,
+        reasons_for_winner=[item for _, item in winner_edges[:3]],
+        strengths_of_loser=[item for _, item in loser_edges[:3]],
+        flip_condition=_flip_condition_from_factor(flip_factor, winner, loser),
+    )

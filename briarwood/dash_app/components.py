@@ -1569,6 +1569,69 @@ def compact_assumption_summary_block(view: PropertyAnalysisView) -> html.Div | N
     )
 
 
+def _assumption_quality_snapshot(view: PropertyAnalysisView) -> tuple[str, str, str, list[html.Span]]:
+    items = view.evidence.assumption_statuses if view.evidence else []
+    if not items:
+        return ("No assumption read", TEXT_MUTED, "No critical underwriting assumptions were classified.", [])
+
+    confirmed = sum(1 for item in items if item.status == "confirmed")
+    estimated = sum(1 for item in items if item.status == "estimated")
+    missing = sum(1 for item in items if item.status == "missing")
+
+    if missing:
+        summary = f"{missing} missing"
+        color = TONE_NEGATIVE_TEXT
+        detail = "Critical inputs still missing"
+    elif estimated:
+        summary = f"{estimated} estimated"
+        color = TONE_WARNING_TEXT
+        detail = "Core underwriting still leans on estimates"
+    else:
+        summary = "Mostly confirmed"
+        color = TONE_POSITIVE_TEXT
+        detail = "Critical underwriting inputs are mostly confirmed"
+
+    chips = []
+    priority_keys = ["rent", "financing", "condition_profile", "capex", "insurance", "taxes"]
+    lookup = {item.key: item for item in items}
+    for key in priority_keys:
+        item = lookup.get(key)
+        if item is None:
+            continue
+        tone, status_label = _assumption_status_tone(item.status)
+        chip_color = {
+            "positive": TONE_POSITIVE_TEXT,
+            "warning": TONE_WARNING_TEXT,
+            "negative": TONE_NEGATIVE_TEXT,
+        }[tone]
+        chips.append(
+            html.Span(
+                f"{item.label}: {status_label}",
+                style={
+                    "padding": "4px 8px",
+                    "borderRadius": "999px",
+                    "fontSize": "11px",
+                    "fontWeight": "600",
+                    "letterSpacing": "0.02em",
+                    "backgroundColor": f"{chip_color}18",
+                    "border": f"1px solid {chip_color}33",
+                    "color": chip_color,
+                },
+            )
+        )
+    return (summary, color, f"{confirmed} confirmed · {estimated} estimated · {missing} missing", chips)
+
+
+def _header_pricing_snapshot(view: PropertyAnalysisView) -> list[tuple[str, str, str | None]]:
+    metrics = [("Ask", _fmt_compact(view.ask_price), None)]
+    if view.bcv is not None:
+        delta_hint = gap_pct_text(view) if view.mispricing_pct is not None else None
+        metrics.append(("BCV", _fmt_compact(view.bcv), delta_hint))
+    if view.base_case is not None:
+        metrics.append(("Base", _fmt_compact(view.base_case), None))
+    return metrics
+
+
 def improve_analysis_block(view: PropertyAnalysisView) -> html.Div | None:
     """Top-3 missing inputs that would most improve analysis confidence."""
     impacts = view.top_input_impacts
@@ -2678,8 +2741,8 @@ def _decision_engine_block(view: PropertyAnalysisView) -> html.Div:
         return html.Div()
 
     tone = (
-        "positive" if decision.recommendation in {"Strong Buy", "Buy"} else
-        "warning" if decision.recommendation in {"Lean Buy", "Hold / Dig Deeper"} else
+        "positive" if decision.recommendation in {"Buy"} else
+        "warning" if decision.recommendation in {"Lean Buy", "Neutral"} else
         "negative"
     )
     tone_color_map = {
@@ -2688,14 +2751,7 @@ def _decision_engine_block(view: PropertyAnalysisView) -> html.Div:
         "negative": TONE_NEGATIVE_TEXT,
     }
     badge_color = tone_color_map[tone]
-
-    primary_factors = [
-        ("Recommendation", decision.recommendation),
-        ("Best Fit", decision.best_fit),
-        ("Confidence", decision.confidence_level),
-        ("Conviction", f"{decision.conviction_score}/100"),
-        ("Decisive Driver", decision.decisive_driver),
-    ]
+    assumption_summary, assumption_color, assumption_detail, assumption_chips = _assumption_quality_snapshot(view)
 
     supporting = decision.supporting_factors or view.top_reasons[:3]
     dependencies = decision.dependencies or view.what_changes_call[:2]
@@ -2715,47 +2771,100 @@ def _decision_engine_block(view: PropertyAnalysisView) -> html.Div:
             style={**CARD_STYLE, "padding": "10px 12px"},
         )
 
+    memo_metric_cards = [
+        ("Conviction", f"{decision.conviction_score}/100", TEXT_PRIMARY),
+        ("Confidence", decision.confidence_level, badge_color),
+        ("Trust", assumption_summary, assumption_color),
+    ]
+
     return html.Div(
         [
-            html.Div("DECISION ENGINE", style={**SECTION_HEADER_STYLE, "fontSize": "12px", "letterSpacing": "0.12em", "marginBottom": "12px"}),
+            html.Div("DECISION MEMO", style={**SECTION_HEADER_STYLE, "fontSize": "12px", "letterSpacing": "0.12em", "marginBottom": "12px"}),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Span(decision.recommendation, style={"fontSize": "28px", "fontWeight": "700", "color": badge_color}),
-                            html.Span(f" · {decision.best_fit}", style={"fontSize": "14px", "color": TEXT_SECONDARY, "marginLeft": "8px"}),
+                            html.Div(
+                                [
+                                    html.Span(decision.recommendation, style={"fontSize": "32px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": badge_color}),
+                                    html.Span(f" · {decision.best_fit}", style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_SECONDARY, "marginLeft": "8px"}),
+                                ],
+                                style={"display": "flex", "alignItems": "baseline", "flexWrap": "wrap"},
+                            ),
+                            html.Div(
+                                "Top-line call anchored to Briarwood's current score, risk, and trust read.",
+                                style={"fontSize": "12px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginTop": "6px"},
+                            ),
                         ],
-                        style={"display": "flex", "alignItems": "baseline", "gap": "0"},
+                        style={"display": "flex", "flexDirection": "column", "gap": "0"},
                     ),
-                    html.Span(decision.confidence_level.upper(), style=tone_badge_style(tone)),
+                    html.Div(
+                        [
+                            html.Span(decision.confidence_level.upper(), style=tone_badge_style(tone)),
+                        ],
+                        style={"display": "flex", "flexDirection": "column", "alignItems": "flex-end", "justifyContent": "flex-start"},
+                    ),
                 ],
-                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "flex-start", "marginBottom": "12px", "gap": "16px"},
             ),
-            html.Div(decision.thesis, style={"fontSize": "15px", "lineHeight": "1.65", "color": TEXT_PRIMARY, "marginBottom": "10px"}),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(label, style={**LABEL_STYLE, "marginBottom": "4px"}),
+                            html.Div(value, style={"fontSize": "15px", "fontWeight": "700", "lineHeight": "1.2", "color": color}),
+                        ],
+                        style={
+                            **CARD_STYLE,
+                            "padding": "10px 12px",
+                            "backgroundColor": BG_SURFACE_2,
+                            "border": f"1px solid {BORDER}",
+                        },
+                    )
+                    for label, value, color in memo_metric_cards
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "10px", "marginBottom": "12px"},
+            ),
+            html.Div(decision.thesis, style={"fontSize": "15px", "lineHeight": "1.58", "color": TEXT_PRIMARY, "marginBottom": "8px", "maxWidth": "88ch"}),
             html.Div(
                 decision.fit_context,
-                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+                style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "10px"},
             ) if decision.fit_context else None,
+            html.Div(
+                assumption_detail,
+                style={"fontSize": "12px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginBottom": "10px"},
+            ),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Div("Break Condition", style={**LABEL_STYLE, "marginBottom": "4px"}),
+                            html.Div("Why This Works", style={**LABEL_STYLE, "marginBottom": "4px"}),
+                            html.Div(decision.decisive_driver, style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_PRIMARY}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("What Breaks It", style={**LABEL_STYLE, "marginBottom": "4px"}),
                             html.Div(decision.break_condition, style={"fontSize": "13px", "lineHeight": "1.55", "color": TONE_WARNING_TEXT}),
                         ],
                         style={**CARD_STYLE, "padding": "12px 14px"},
                     ),
                     html.Div(
                         [
-                            html.Div("Required Belief", style={**LABEL_STYLE, "marginBottom": "4px"}),
+                            html.Div("What Must Be True", style={**LABEL_STYLE, "marginBottom": "4px"}),
                             html.Div(decision.required_belief, style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
                         ],
                         style={**CARD_STYLE, "padding": "12px 14px"},
                     ),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "10px", "marginBottom": "12px"},
+                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "10px", "marginBottom": "12px"},
             ),
-            inline_metric_strip([(label, value, None) for label, value in primary_factors]),
+            inline_metric_strip(_header_pricing_snapshot(view)),
+            html.Div(
+                assumption_chips,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "8px", "marginTop": "10px", "marginBottom": "2px"},
+            ) if assumption_chips else None,
             html.Div(
                 [block for block in [
                     _bullet_block("Supporting Factors", supporting),
@@ -2913,12 +3022,11 @@ def _list_block(title: str, items: list[str], *, tone: str = "neutral") -> html.
 
 def _soft_recommendation_label(recommendation: str) -> str:
     mapping = {
-        "Strong Buy": "Strongly Positioned",
         "Buy": "Well Positioned",
         "Lean Buy": "Leaning Positive",
-        "Hold / Dig Deeper": "Needs More Signal",
-        "Lean Away": "Leaning Negative",
-        "Pass": "Does Not Meet Criteria",
+        "Neutral": "Needs More Signal",
+        "Lean Avoid": "Leaning Negative",
+        "Avoid": "Does Not Meet Criteria",
     }
     return mapping.get(recommendation, recommendation)
 
@@ -2983,6 +3091,12 @@ def _realtor_positioning_header(view: PropertyAnalysisView, report: AnalysisRepo
         return html.Div()
     talking_points = _realtor_talking_points(view, report)
     watchouts = _realtor_watchouts(view)
+    assumption_summary, assumption_color, assumption_detail, assumption_chips = _assumption_quality_snapshot(view)
+    positioning_cards = [
+        ("Best for", decision.best_fit, TEXT_PRIMARY),
+        ("Positioning", _soft_recommendation_label(decision.recommendation), TEXT_PRIMARY),
+        ("Trust", assumption_summary, assumption_color),
+    ]
     return html.Div(
         [
             html.Div("POSITIONING HEADER", style={**SECTION_HEADER_STYLE, "fontSize": "12px", "letterSpacing": "0.12em", "marginBottom": "12px"}),
@@ -2990,45 +3104,54 @@ def _realtor_positioning_header(view: PropertyAnalysisView, report: AnalysisRepo
                 [
                     html.Div(
                         [
-                            html.Span(decision.best_fit, style={"fontSize": "26px", "fontWeight": "700", "color": TEXT_PRIMARY}),
-                            html.Span(f" · {_soft_recommendation_label(decision.recommendation)}", style={"fontSize": "14px", "color": TEXT_SECONDARY, "marginLeft": "8px"}),
+                            html.Span(decision.best_fit, style={"fontSize": "28px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
+                            html.Span(f" · {_soft_recommendation_label(decision.recommendation)}", style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_SECONDARY, "marginLeft": "8px"}),
                         ],
                         style={"display": "flex", "alignItems": "baseline", "flexWrap": "wrap"},
                     ),
-                    html.Span(decision.confidence_level.upper(), style=tone_badge_style("neutral")),
+                    html.Div(
+                        "Buyer-fit framing backed by the same underwriting and trust signals as Owner View.",
+                        style={"fontSize": "12px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginTop": "6px"},
+                    ),
+                    html.Div(
+                        [
+                            html.Span(decision.confidence_level.upper(), style=tone_badge_style("neutral")),
+                        ],
+                        style={"display": "flex", "flexDirection": "column", "alignItems": "flex-end", "justifyContent": "flex-start"},
+                    ),
                 ],
-                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "gap": "12px", "marginBottom": "12px"},
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "flex-start", "gap": "12px", "marginBottom": "12px"},
             ),
             html.Div(
                 decision.thesis,
-                style={"fontSize": "15px", "lineHeight": "1.65", "color": TEXT_PRIMARY, "marginBottom": "10px"},
+                style={"fontSize": "15px", "lineHeight": "1.58", "color": TEXT_PRIMARY, "marginBottom": "10px", "maxWidth": "88ch"},
             ),
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Div("Best for", style={**LABEL_STYLE, "marginBottom": "4px"}),
-                            html.Div(decision.best_fit, style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_PRIMARY}),
+                            html.Div(label, style={**LABEL_STYLE, "marginBottom": "4px"}),
+                            html.Div(value, style={"fontSize": "14px", "fontWeight": "700", "lineHeight": "1.25", "color": color}),
                         ],
-                        style={**CARD_STYLE, "padding": "12px 14px"},
-                    ),
-                    html.Div(
-                        [
-                            html.Div("Positioning", style={**LABEL_STYLE, "marginBottom": "4px"}),
-                            html.Div(_soft_recommendation_label(decision.recommendation), style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_PRIMARY}),
-                        ],
-                        style={**CARD_STYLE, "padding": "12px 14px"},
-                    ),
-                    html.Div(
-                        [
-                            html.Div("Conviction", style={**LABEL_STYLE, "marginBottom": "4px"}),
-                            html.Div(f"{decision.conviction_score}/100", style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_PRIMARY}),
-                        ],
-                        style={**CARD_STYLE, "padding": "12px 14px"},
-                    ),
+                        style={
+                            **CARD_STYLE,
+                            "padding": "10px 12px",
+                            "backgroundColor": BG_SURFACE_2,
+                            "border": f"1px solid {BORDER}",
+                        },
+                    )
+                    for label, value, color in positioning_cards
                 ],
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr 1fr", "gap": "10px", "marginBottom": "12px"},
+                style={"display": "grid", "gridTemplateColumns": "repeat(3, minmax(0, 1fr))", "gap": "10px", "marginBottom": "10px"},
             ),
+            html.Div(
+                assumption_detail,
+                style={"fontSize": "12px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginBottom": "10px"},
+            ),
+            html.Div(
+                assumption_chips,
+                style={"display": "flex", "flexWrap": "wrap", "gap": "8px", "marginBottom": "10px"},
+            ) if assumption_chips else None,
             html.Div(
                 [block for block in [
                     _list_block("Talking Points", talking_points, tone="positive"),
@@ -3392,6 +3515,71 @@ def _strategy_fit_block(view: PropertyAnalysisView) -> html.Div:
             ),
         ],
         style={**CARD_STYLE, "padding": "12px 14px"},
+    )
+
+
+def _report_card_block(view: PropertyAnalysisView) -> html.Div | None:
+    report_card = view.report_card
+    if report_card is None:
+        return None
+
+    def _contribution_list(title: str, items: list, tone_color: str) -> html.Div:
+        if not items:
+            return html.Div(
+                [
+                    html.Div(title, style=SECTION_HEADER_STYLE),
+                    html.Div("No material contribution in this direction.", style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_MUTED}),
+                ],
+                style={**CARD_STYLE, "padding": "10px 12px"},
+            )
+        return html.Div(
+            [
+                html.Div(title, style=SECTION_HEADER_STYLE),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(
+                                    [
+                                        html.Span(item.factor_name.replace("_", " ").title(), style={"fontSize": "12px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                                        html.Span(f"{item.percentage_impact}%", style={"fontSize": "12px", "fontWeight": "700", "color": tone_color}),
+                                    ],
+                                    style={"display": "flex", "justifyContent": "space-between", "gap": "8px"},
+                                ),
+                                html.Div(item.explanation, style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+                            ],
+                            style={"paddingBottom": "8px", "borderBottom": f"1px solid {BORDER_SUBTLE}"} if idx < len(items) - 1 else {},
+                        )
+                        for idx, item in enumerate(items)
+                    ],
+                    style={"display": "grid", "gap": "8px"},
+                ),
+            ],
+            style={**CARD_STYLE, "padding": "10px 12px"},
+        )
+
+    contribution_pairs = [
+        (factor.replace("_", " ").title(), value)
+        for factor, value in sorted(report_card.factor_contributions.items(), key=lambda item: abs(item[1]), reverse=True)
+    ]
+
+    return html.Div(
+        [
+            html.Div("Score Report Card", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "This is the deterministic score breakdown behind Briarwood's investment read.",
+                style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginBottom": "10px"},
+            ),
+            inline_metric_strip([(label, f"{value:+d}%", None) for label, value in contribution_pairs[:4]]),
+            html.Div(
+                [
+                    _contribution_list("Positive Contributions", report_card.positive, TONE_POSITIVE_TEXT),
+                    _contribution_list("Negative Contributions", report_card.negative, TONE_NEGATIVE_TEXT),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "10px", "marginTop": "10px"},
+            ),
+        ],
+        style={**CARD_STYLE_ELEVATED, "padding": "16px 18px"},
     )
 
 
@@ -4268,7 +4456,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             [
                 _decision_engine_block(view),
                 _decision_summary_block(view, report),
-                compact_assumption_summary_block(view),
+                _report_card_block(view),
                 _value_snapshot_block(view, report),
                 _renovation_path_summary(view, report),
                 render_insight_hero(view, report),
@@ -4315,6 +4503,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             "Support / Diagnostics",
             [
                 evidence_section,
+                _report_card_block(view),
                 market_section,
                 _owner_decision_close(view, report),
             ],
@@ -4396,6 +4585,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             [
                 _realtor_positioning_header(view, report),
                 _decision_summary_block(view, report),
+                _report_card_block(view),
                 _value_snapshot_block(view, report),
                 _renovation_path_summary(view, report),
             ],
@@ -5427,12 +5617,57 @@ def render_compare_summary(section: str, summary: CompareSummary) -> html.Div | 
     filtered_rows = [row for row in summary.rows if row.metric in metric_filter]
     if not filtered_rows:
         return None
+    comparison_block = _comparison_summary_block(summary)
     return html.Div(
         [
+            comparison_block,
             html.Div([html.Div("Key Differences", style=SECTION_HEADER_STYLE), html.Ul([html.Li(item, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for item in summary.why_different[:4]])], style=CARD_STYLE),
             html.Div([html.Div("Compare", style=SECTION_HEADER_STYLE), _render_compare_table(filtered_rows)], style=CARD_STYLE),
         ],
-        style={**GRID_2, "marginBottom": "12px"},
+        style={"display": "grid", "gap": "12px", "marginBottom": "12px"},
+    )
+
+
+def _comparison_summary_block(summary: CompareSummary) -> html.Div | None:
+    if summary.comparison_summary is None:
+        return None
+    cs = summary.comparison_summary
+
+    def _reason_list(title: str, items: list, tone_color: str) -> html.Div:
+        return html.Div(
+            [
+                html.Div(title, style=SECTION_HEADER_STYLE),
+                html.Ul(
+                    [
+                        html.Li(
+                            f"{item.factor_name.replace('_', ' ').title()} ({item.weighted_delta_pct}%): {item.explanation}",
+                            style={"fontSize": "11px", "lineHeight": "1.55", "color": tone_color},
+                        )
+                        for item in items
+                    ] or [html.Li("No material edge identified.", style={"fontSize": "11px", "lineHeight": "1.55", "color": TEXT_MUTED})],
+                    style={"margin": "4px 0 0 0", "paddingLeft": "16px"},
+                ),
+            ],
+            style={**CARD_STYLE, "padding": "10px 12px"},
+        )
+
+    return html.Div(
+        [
+            html.Div("Why One Property Wins", style=SECTION_HEADER_STYLE),
+            inline_metric_strip([
+                ("Winner", cs.winner, None),
+                ("Compare Confidence", f"{cs.confidence}/100", None),
+                ("Flip Condition", cs.flip_condition, None),
+            ]),
+            html.Div(
+                [
+                    _reason_list("Reasons For Winner", cs.reasons_for_winner, TONE_POSITIVE_TEXT),
+                    _reason_list("Strengths Of Loser", cs.strengths_of_loser, TONE_WARNING_TEXT),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "10px", "marginTop": "10px"},
+            ),
+        ],
+        style={**CARD_STYLE_ELEVATED, "padding": "14px 16px"},
     )
 
 
@@ -5788,6 +6023,9 @@ def render_compare_decision_mode(mode: str, views: list[PropertyAnalysisView], r
     banner = compare_winner_banner(views)
     if banner is not None:
         blocks.append(banner)
+    comparison_summary_block = _comparison_summary_block(summary)
+    if comparison_summary_block is not None:
+        blocks.append(comparison_summary_block)
     if mode == "heatmap":
         blocks.append(html.Div([html.Div("Score Heatmap", style=SECTION_HEADER_STYLE), score_comparison_heatmap(views)], style=CARD_STYLE))
         if len(views) >= 2 and summary.rows:

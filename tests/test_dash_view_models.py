@@ -48,12 +48,49 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("town_context_confidence", view.compare_metrics)
         self.assertIn("subject_ppsf_vs_town", view.compare_metrics)
         self.assertIn("town_relative_opportunity_score", view.compare_metrics)
+        self.assertIsNotNone(view.decision)
+        assert view.decision is not None
+        self.assertIn(view.decision.recommendation, {"Buy", "Lean Buy", "Neutral", "Lean Avoid", "Avoid"})
+        self.assertGreaterEqual(view.decision.conviction_score, 0)
+        self.assertLessEqual(view.decision.conviction_score, 100)
+        self.assertIn("positive", view.decision.decision_drivers)
+        self.assertIn("negative", view.decision.decision_drivers)
+        self.assertTrue(view.entry_basis_label)
+        self.assertTrue(view.income_support_label)
+        self.assertTrue(view.capex_load_label)
+        self.assertTrue(view.liquidity_profile_label)
+        self.assertTrue(view.optionality_label)
+        self.assertTrue(view.risk_skew_label)
+        self.assertIsNotNone(view.positioning_summary)
+        self.assertTrue(view.decision.risk_statement.startswith("Risk stance:"))
+        self.assertTrue(view.decision.summary_view.startswith("Positioning:"))
+        self.assertIsNotNone(view.report_card)
+        assert view.report_card is not None
+        self.assertEqual(
+            set(view.report_card.factor_scores.keys()),
+            {"entry_basis", "income_support", "capex_load", "liquidity_profile", "optionality", "risk_skew"},
+        )
+        for value in view.report_card.factor_scores.values():
+            self.assertGreaterEqual(value, -1.0)
+            self.assertLessEqual(value, 1.0)
+        self.assertLessEqual(len(view.report_card.positive), 3)
+        self.assertLessEqual(len(view.report_card.negative), 3)
+        total_abs = sum(abs(value) for value in view.report_card.factor_contributions.values())
+        self.assertGreaterEqual(total_abs, 98)
+        self.assertLessEqual(total_abs, 102)
 
     def test_compare_summary_explains_differences(self) -> None:
         views = [build_property_analysis_view(report) for report in self.reports.values()]
         summary = build_compare_summary(views)
         self.assertGreaterEqual(len(summary.rows), 5)
         self.assertTrue(summary.why_different)
+        self.assertIsNotNone(summary.comparison_summary)
+        assert summary.comparison_summary is not None
+        self.assertTrue(summary.comparison_summary.winner)
+        self.assertGreaterEqual(summary.comparison_summary.confidence, 0)
+        self.assertLessEqual(summary.comparison_summary.confidence, 100)
+        self.assertTrue(summary.comparison_summary.reasons_for_winner or summary.comparison_summary.strengths_of_loser)
+        self.assertTrue(summary.comparison_summary.flip_condition)
 
     def test_evidence_rows_include_source_coverage(self) -> None:
         report = self.reports["briarwood-rd-belmar"]
@@ -78,6 +115,7 @@ class DashViewModelTests(unittest.TestCase):
         # Summary content remains visible in the default overview.
         self.assertIn("/ 5", text)
         self.assertIn("DECISION SUMMARY", text)
+        self.assertIn("Score Report Card", text)
         self.assertIn("ASSUMPTION SUMMARY", text)
         self.assertIn("Current Value Snapshot", text)
         self.assertIn("Option 1 Buy As-Is", text)
@@ -97,6 +135,7 @@ class DashViewModelTests(unittest.TestCase):
         section = render_compare_decision_mode("heatmap", views, reports, summary, "overview")
         self.assertIn("Score Heatmap", _flatten_text(section))
         self.assertIn("Compare Decision Read", _flatten_text(section))
+        self.assertIn("Why One Property Wins", _flatten_text(section))
 
 
 def _flatten_text(node: object) -> str:
