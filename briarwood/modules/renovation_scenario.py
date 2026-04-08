@@ -38,14 +38,21 @@ class RenovationScenarioModule:
     ) -> ModuleResult:
         scenario = property_input.renovation_scenario
         if not scenario or not scenario.get("enabled"):
-            return ModuleResult(module_name=self.name, summary="Renovation scenario not enabled.")
+            return _blocked_result(
+                module_name=self.name,
+                status="not_enabled",
+                summary="Renovation scenario is not configured for this property.",
+            )
 
         budget = float(scenario.get("renovation_budget") or 0.0)
         s = self.settings
         if budget < s.min_renovation_budget:
-            return ModuleResult(
+            return _blocked_result(
                 module_name=self.name,
-                summary=f"Renovation budget ${budget:,.0f} is below minimum ${s.min_renovation_budget:,.0f} — scenario skipped.",
+                status="missing_inputs",
+                summary=f"Renovation budget ${budget:,.0f} is below the minimum modeled threshold of ${s.min_renovation_budget:,.0f}.",
+                missing_inputs=["renovation_budget"],
+                warnings=["Increase the renovation budget or remove the scenario toggle if this path is not intended."],
             )
 
         # Pull current BCV from prior_results if available
@@ -54,7 +61,14 @@ class RenovationScenarioModule:
         else:
             current_value_result = self.current_value_module.run(property_input)
         current_cv = get_current_value_payload(current_value_result)
-        current_bcv = current_cv.briarwood_current_value
+        current_bcv = float(current_cv.briarwood_current_value or property_input.purchase_price or 0.0)
+        if current_bcv <= 0:
+            return _blocked_result(
+                module_name=self.name,
+                status="missing_anchor",
+                summary="Renovation scenario could not run because Briarwood could not establish a current value anchor.",
+                missing_inputs=["purchase_price"],
+            )
 
         # Build renovated input
         target_condition = str(scenario.get("target_condition") or "renovated")
@@ -64,9 +78,9 @@ class RenovationScenarioModule:
         adds_adu = bool(scenario.get("adds_adu"))
         adds_garage = bool(scenario.get("adds_garage"))
 
-        new_sqft = property_input.sqft + int(sqft_addition or 0)
-        new_beds = int(beds_after) if beds_after is not None else property_input.beds
-        new_baths = float(baths_after) if baths_after is not None else property_input.baths
+        new_sqft = int(property_input.sqft or 0) + int(sqft_addition or 0)
+        new_beds = int(beds_after) if beds_after is not None else int(property_input.beds or 0)
+        new_baths = float(baths_after) if baths_after is not None else float(property_input.baths or 0.0)
         new_garage_spaces = property_input.garage_spaces
         if adds_garage and (new_garage_spaces is None or new_garage_spaces == 0):
             new_garage_spaces = 1
@@ -90,7 +104,14 @@ class RenovationScenarioModule:
         renovated_comp_result = self.comparable_sales_module.run(renovated_input)
         renovated_cv_result = self.current_value_module.run(renovated_input)
         renovated_cv = get_current_value_payload(renovated_cv_result)
-        renovated_bcv = renovated_cv.briarwood_current_value
+        renovated_bcv = float(renovated_cv.briarwood_current_value or 0.0)
+        if renovated_bcv <= 0:
+            return _blocked_result(
+                module_name=self.name,
+                status="insufficient_support",
+                summary="Renovation scenario could not estimate a post-renovation value from the available comps and value support.",
+                warnings=["Add more renovated-condition comp support or provide a stronger current valuation anchor."],
+            )
 
         # Economics
         gross_value_creation = renovated_bcv - current_bcv
@@ -173,6 +194,29 @@ class RenovationScenarioModule:
             summary=summary,
             payload=payload,
         )
+
+
+def _blocked_result(
+    *,
+    module_name: str,
+    status: str,
+    summary: str,
+    missing_inputs: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> ModuleResult:
+    payload = {
+        "enabled": False,
+        "status": status,
+        "summary": summary,
+        "missing_inputs": list(missing_inputs or []),
+        "warnings": list(warnings or []),
+    }
+    return ModuleResult(
+        module_name=module_name,
+        metrics={"enabled": False, "status": status},
+        summary=summary,
+        payload=payload,
+    )
 
 
 def _comp_range_text(comp_payload) -> str:

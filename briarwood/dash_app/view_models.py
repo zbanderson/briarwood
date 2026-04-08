@@ -3,12 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote_plus
 
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore
 from briarwood.evidence import (
     compute_confidence_breakdown,
     compute_critical_assumption_statuses,
     compute_metric_input_statuses,
+)
+from briarwood.recommendations import (
+    cap_recommendation,
+    downgrade_recommendation,
+    recommendation_label_from_score,
+    recommendation_rank,
 )
 from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.reports.section_helpers import (
@@ -32,6 +39,44 @@ def _fmt_currency(value: float | None) -> str:
     if value is None:
         return "Unavailable"
     return f"${value:,.0f}"
+
+
+def _clean_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _property_identity(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
+    raw_address = _clean_text(address)
+    parts = [part.strip() for part in raw_address.split(",") if part.strip()]
+    street = parts[0] if parts else "Unknown Address"
+    locality_town = _clean_text(town) or (parts[1] if len(parts) > 1 else "")
+    locality_state = _clean_text(state)
+    if not locality_state and len(parts) > 2:
+        locality_state = parts[2].split()[0].strip()
+    locality = ", ".join(part for part in [locality_town, locality_state] if part) or "Unknown Location"
+    return {
+        "street": street,
+        "locality": locality,
+        "town": locality_town,
+        "state": locality_state,
+        "full_address": raw_address or ", ".join(part for part in [street, locality] if part),
+    }
+
+
+def _maps_links(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
+    identity = _property_identity(address, town, state)
+    query = quote_plus(identity["full_address"])
+    return {
+        "google": f"https://www.google.com/maps/search/?api=1&query={query}",
+        "apple": f"https://maps.apple.com/?q={query}",
+    }
+
+
+def _maybe_external_url(value: str | None) -> str | None:
+    normalized = _clean_text(value)
+    if normalized.lower().startswith(("http://", "https://")):
+        return normalized
+    return None
 
 
 def _fmt_currency_delta(value: float | None) -> str:
@@ -440,6 +485,8 @@ class CompareMetricRow:
 @dataclass(slots=True)
 class CompReviewRow:
     address: str
+    street: str
+    locality: str
     sale_price: str
     adjusted_price: str
     fit: str
@@ -448,13 +495,19 @@ class CompReviewRow:
     condition: str
     capex_lane: str
     source_ref: str
+    google_maps_url: str
+    apple_maps_url: str
     why_comp: str
     cautions: str
+    external_url: str | None = None
+    thumbnail_url: str | None = None
 
 
 @dataclass(slots=True)
 class ActiveListingViewRow:
     address: str
+    street: str
+    locality: str
     list_price: str
     status: str
     beds: str
@@ -463,6 +516,10 @@ class ActiveListingViewRow:
     dom: str
     condition: str
     source_ref: str
+    google_maps_url: str
+    apple_maps_url: str
+    external_url: str | None = None
+    thumbnail_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -838,9 +895,13 @@ def _comp_rows(report: AnalysisReport) -> list[CompReviewRow]:
     output = get_comparable_sales(report)
     rows: list[CompReviewRow] = []
     for comp in output.comps_used:
+        identity = _property_identity(getattr(comp, "address", None), getattr(comp, "town", None), getattr(comp, "state", None))
+        maps = _maps_links(identity["full_address"], identity["town"], identity["state"])
         rows.append(
             CompReviewRow(
-                address=comp.address,
+                address=identity["full_address"],
+                street=identity["street"],
+                locality=identity["locality"],
                 sale_price=_fmt_currency(comp.sale_price),
                 adjusted_price=_fmt_currency(comp.adjusted_price),
                 fit=comp.fit_label.title(),
@@ -849,6 +910,9 @@ def _comp_rows(report: AnalysisReport) -> list[CompReviewRow]:
                 condition=(comp.condition_profile or "Unavailable").replace("_", " ").title(),
                 capex_lane=(comp.capex_lane or "Unavailable").replace("_", " ").title(),
                 source_ref=comp.source_ref or "Unavailable",
+                google_maps_url=maps["google"],
+                apple_maps_url=maps["apple"],
+                external_url=_maybe_external_url(comp.source_ref),
                 why_comp="; ".join(comp.why_comp) or "Unavailable",
                 cautions="; ".join(comp.cautions) or "",
             )
@@ -896,9 +960,13 @@ def _active_listing_rows(report: AnalysisReport) -> list[ActiveListingViewRow]:
     filtered.sort(key=lambda item: (item[0], item[1], item[2]))
     rows: list[ActiveListingViewRow] = []
     for _, _, _, listing in filtered:
+        identity = _property_identity(getattr(listing, "address", None), getattr(listing, "town", None), getattr(listing, "state", None))
+        maps = _maps_links(identity["full_address"], identity["town"], identity["state"])
         rows.append(
             ActiveListingViewRow(
-                address=listing.address,
+                address=identity["full_address"],
+                street=identity["street"],
+                locality=identity["locality"],
                 list_price=_fmt_currency(listing.list_price),
                 status=listing.listing_status.replace("_", " ").title(),
                 beds=_fmt_number(listing.beds),
@@ -907,6 +975,9 @@ def _active_listing_rows(report: AnalysisReport) -> list[ActiveListingViewRow]:
                 dom=_fmt_number(listing.days_on_market, " days"),
                 condition=(listing.condition_profile or "Unavailable").replace("_", " ").title(),
                 source_ref=listing.source_ref or "Unavailable",
+                google_maps_url=maps["google"],
+                apple_maps_url=maps["apple"],
+                external_url=_maybe_external_url(listing.source_ref),
             )
         )
     return rows
@@ -1493,35 +1564,19 @@ def _confidence_level(confidence: float) -> str:
 
 
 def _deterministic_recommendation_from_score(final_score: float) -> str:
-    if final_score >= 3.8:
-        return "Buy"
-    if final_score >= 3.3:
-        return "Lean Buy"
-    if final_score >= 2.5:
-        return "Neutral"
-    if final_score >= 2.0:
-        return "Lean Avoid"
-    return "Avoid"
+    return recommendation_label_from_score(final_score)
 
 
 def _recommendation_rank(label: str) -> int:
-    return {
-        "Avoid": 0,
-        "Lean Avoid": 1,
-        "Neutral": 2,
-        "Lean Buy": 3,
-        "Buy": 4,
-    }.get(label, 2)
+    return recommendation_rank(label)
 
 
 def _downgrade_recommendation(label: str, steps: int = 1) -> str:
-    ordered = ["Avoid", "Lean Avoid", "Neutral", "Lean Buy", "Buy"]
-    idx = _recommendation_rank(label)
-    return ordered[max(0, idx - steps)]
+    return downgrade_recommendation(label, steps)
 
 
 def _cap_recommendation(label: str, cap: str) -> str:
-    return label if _recommendation_rank(label) <= _recommendation_rank(cap) else cap
+    return cap_recommendation(label, cap)
 
 
 def _driver_strength(score: float) -> str:
@@ -2058,7 +2113,7 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
     if critical_missing:
         recommendation = _cap_recommendation(recommendation, "Neutral")
     if high_risk_flags:
-        recommendation = _cap_recommendation(recommendation, "Lean Buy")
+        recommendation = _cap_recommendation(recommendation, "Neutral")
 
     major_positive = [item for score, item in positive_candidates if score >= 18]
     major_negative = [item for score, item in negative_candidates if score >= 18]

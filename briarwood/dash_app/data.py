@@ -525,6 +525,11 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
     def manual_status(value: object) -> str:
         return "user_supplied" if value not in (None, "", []) else "missing"
 
+    condition_profile = subject.get("condition_profile")
+    capex_lane = subject.get("capex_lane")
+    condition_confirmed = True if condition_profile not in (None, "") else None
+    capex_confirmed = True if capex_lane not in (None, "") else None
+
     return {
         "property_id": property_id,
         "facts": {
@@ -567,10 +572,10 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
             "rent_confidence_override": subject.get("rent_confidence_override"),
             "insurance": _optional_float(subject.get("insurance")),
             "monthly_maintenance_reserve_override": _optional_float(subject.get("monthly_maintenance_reserve_override")),
-            "condition_profile_override": subject.get("condition_profile_override"),
-            "condition_confirmed": _optional_bool(subject.get("condition_confirmed")),
-            "capex_lane_override": subject.get("capex_lane_override"),
-            "capex_confirmed": _optional_bool(subject.get("capex_confirmed")),
+            "condition_profile_override": condition_profile,
+            "condition_confirmed": condition_confirmed,
+            "capex_lane_override": capex_lane,
+            "capex_confirmed": capex_confirmed,
             "repair_capex_budget": _optional_float(subject.get("repair_capex_budget")),
             "strategy_intent": subject.get("strategy_intent"),
             "hold_period_years": _optional_int(subject.get("hold_period_years")),
@@ -596,8 +601,8 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
                 "rent_confidence": {"status": manual_status(subject.get("rent_confidence_override")), "source_name": "manual entry"},
                 "insurance_estimate": {"status": manual_status(subject.get("insurance")), "source_name": "manual entry"},
                 "comp_support": {"status": "user_supplied" if comps else "missing", "source_name": "manual entry"},
-                "condition_assumption": {"status": manual_status(subject.get("condition_profile_override")), "source_name": "manual entry"},
-                "capex_assumption": {"status": manual_status(subject.get("capex_lane_override")), "source_name": "manual entry"},
+                "condition_assumption": {"status": manual_status(condition_profile), "source_name": "manual entry"},
+                "capex_assumption": {"status": manual_status(capex_lane), "source_name": "manual entry"},
                 "capex_budget": {"status": manual_status(subject.get("repair_capex_budget")), "source_name": "manual entry"},
                 "strategy_intent": {"status": manual_status(subject.get("strategy_intent")), "source_name": "manual entry"},
                 "scarcity_inputs": {"status": "user_supplied", "source_name": "manual entry"},

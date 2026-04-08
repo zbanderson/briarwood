@@ -141,7 +141,7 @@ def _investor_lens(mods: dict[str, ModuleResult]) -> LensDetail:
     elif score >= 2.0:
         rec = "The numbers don't support a rental hold at this price."
     else:
-        rec = "Pass for income investors — the carry overwhelms the return."
+        rec = "Avoid for income investors — the carry overwhelms the return."
 
     narr = f"{cf_v}. {ptr_v}. {rec}"
 

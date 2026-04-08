@@ -1,12 +1,13 @@
 """
 Briarwood — Investment Research Platform
-Dark-theme, 4-tab layout: Tear Sheet | Scenarios | Compare | Data Quality
+Light, retail-friendly shell with analytical property analysis surfaces.
 """
 from __future__ import annotations
 
 import os
 import traceback
 from datetime import datetime
+from urllib.parse import quote_plus
 
 import dash
 from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no_update
@@ -25,6 +26,7 @@ except ImportError:  # pragma: no cover - lightweight fallback for local v1 usag
     dbc = _DBCShim()
 
 from briarwood.dash_app.compare import build_compare_summary
+from briarwood.evidence import has_known_optionality_detail
 from briarwood.dash_app.components import (
     _TOUR_STEPS,
     render_compare_decision_mode,
@@ -58,7 +60,7 @@ from briarwood.dash_app.theme import (
     TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
     TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE,
-    tone_badge_style, score_color,
+    tone_badge_style, score_color, verdict_color,
 )
 from briarwood.dash_app.view_models import build_property_analysis_view
 
@@ -74,7 +76,8 @@ server = app.server
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 MAIN_TABS = [
-    ("tear_sheet", "Tear Sheet"),
+    ("opportunities", "Opportunities"),
+    ("tear_sheet", "Property Analysis"),
     ("scenarios", "Scenarios"),
     ("compare", "Compare"),
     ("portfolio", "Portfolio"),
@@ -137,10 +140,18 @@ PROPERTY_TYPE_OPTIONS = [
     {"label": "Multi Family", "value": "multi_family"},
 ]
 
+DISCOVERY_PRICE_BANDS = [
+    {"label": "Any Price", "value": "all"},
+    {"label": "Under $700K", "value": "under_700"},
+    {"label": "$700K-$1.0M", "value": "700_1000"},
+    {"label": "$1.0M-$1.5M", "value": "1000_1500"},
+    {"label": "$1.5M+", "value": "over_1500"},
+]
+
 # ── Style helpers ──────────────────────────────────────────────────────────────
 
 _TAB_STYLE = {
-    "padding": "10px 18px",
+    "padding": "12px 18px",
     "fontSize": "13px",
     "fontWeight": "500",
     "fontFamily": FONT_FAMILY,
@@ -162,19 +173,20 @@ _TAB_SELECTED_STYLE = {
 }
 
 _TAB_BAR_STYLE = {
-    "backgroundColor": BG_SURFACE,
+    "backgroundColor": "rgba(255,253,248,0.72)",
     "borderBottom": f"1px solid {BORDER}",
     "display": "flex",
     "padding": "0 24px",
+    "backdropFilter": "blur(8px)",
 }
 
     # Section-level sub-tabs removed — tear sheet is now one scrollable page.
 
 _DROPDOWN_STYLE = {
-    "backgroundColor": BG_SURFACE_3,
+    "backgroundColor": BG_SURFACE,
     "color": TEXT_PRIMARY,
     "border": f"1px solid {BORDER}",
-    "borderRadius": "6px",
+    "borderRadius": "10px",
     "fontSize": "13px",
     "fontFamily": FONT_FAMILY,
 }
@@ -186,10 +198,14 @@ def _property_options() -> list[dict[str, str]]:
     saved_by_id = {item.property_id: item for item in list_saved_properties()}
     options: list[dict[str, str]] = []
     for preset in list_presets():
+        if preset.preset_id.startswith("compdb-"):
+            continue
         saved = saved_by_id.get(preset.preset_id)
         if saved is not None:
-            label = f"{saved.label} | {_fmt_currency(saved.ask_price)} | saved"
+            label = _property_selector_label(saved.address, None, None, price=saved.ask_price, suffix="saved")
         else:
+            # Keep startup fast: the app shell should not run full analysis or
+            # geocoding just to build dropdown labels.
             label = preset.label
         options.append({"label": label, "value": preset.preset_id})
     return options
@@ -201,7 +217,7 @@ def _saved_property_rows() -> list[dict[str, str]]:
         rows.append(
             {
                 "property_id": item.property_id,
-                "Address": item.address,
+                "Property": _property_selector_label(item.address, None, None),
                 "Ask": _fmt_currency(item.ask_price),
                 "Fair Value": _fmt_currency(item.bcv),
                 "Pricing View": item.pricing_view.replace("_", " ").title(),
@@ -217,6 +233,48 @@ def _fmt_currency(value: float | None) -> str:
     if value is None:
         return "—"
     return f"${value:,.0f}"
+
+
+def _clean_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _property_identity(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
+    raw_address = _clean_text(address)
+    parts = [part.strip() for part in raw_address.split(",") if part.strip()]
+    street = parts[0] if parts else "Unknown Address"
+    locality_town = _clean_text(town) or (parts[1] if len(parts) > 1 else "")
+    locality_state = _clean_text(state)
+    if not locality_state and len(parts) > 2:
+        locality_state = parts[2].split()[0].strip()
+    locality = ", ".join(part for part in [locality_town, locality_state] if part) or "Unknown Location"
+    return {
+        "street": street,
+        "locality": locality,
+        "town": locality_town,
+        "state": locality_state,
+        "full_address": raw_address or ", ".join(part for part in [street, locality] if part),
+    }
+
+
+def _property_selector_label(address: str | None, town: str | None, state: str | None, *, price: float | None = None, suffix: str | None = None) -> str:
+    identity = _property_identity(address, town, state)
+    parts = [identity["locality"], identity["street"]]
+    if price is not None:
+        parts.append(_fmt_currency(price))
+    if suffix:
+        parts.append(suffix)
+    return " • ".join(part for part in parts if part)
+
+
+def _maps_links(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
+    identity = _property_identity(address, town, state)
+    query = quote_plus(identity["full_address"])
+    return {
+        "google": f"https://www.google.com/maps/search/?api=1&query={query}",
+        "apple": f"https://maps.apple.com/?q={query}",
+        "maps_query": identity["full_address"],
+    }
 
 
 def _labeled(label: str, child) -> html.Div:
@@ -440,6 +498,7 @@ def _topbar() -> html.Div:
             # Property selector
             html.Div(
                 [
+                    html.Div("Quick Jump", style={**LABEL_STYLE, "marginBottom": "2px"}),
                     dcc.Dropdown(
                         id="property-selector-dropdown",
                         options=options,
@@ -447,11 +506,11 @@ def _topbar() -> html.Div:
                         clearable=False,
                         searchable=True,
                         persistence=True,
-                        placeholder="Search property…",
+                        placeholder="Search address or jump to a property…",
                         style={"minWidth": "280px", "fontSize": "13px"},
                     ),
                 ],
-                style={"flex": "1", "maxWidth": "360px"},
+                style={"flex": "1", "maxWidth": "340px"},
             ),
             # Add Property toggle
             html.Button("+ Add Property", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
@@ -472,6 +531,415 @@ def _topbar() -> html.Div:
     )
 
 
+def _recommendation_weight(label: str | None) -> int:
+    return {
+        "Buy": 2,
+        "Neutral": 1,
+        "Avoid": 0,
+    }.get(label or "", -1)
+
+
+def _discoverable_property_ids(loaded_ids: list[str] | None) -> list[str]:
+    ordered: dict[str, None] = {}
+    for property_id in loaded_ids or []:
+        ordered[property_id] = None
+    for preset in list_presets():
+        if preset.preset_id.startswith("compdb-"):
+            continue
+        ordered[preset.preset_id] = None
+    return list(ordered.keys())
+
+
+def _opportunity_signal(view) -> tuple[str, str, float]:
+    pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+    value = view.net_opportunity_delta_value if view.net_opportunity_delta_value is not None else view.mispricing_amount
+    label = "Net Delta" if view.net_opportunity_delta_value is not None else "BCV Gap"
+    if value is None and pct is None:
+        return label, "No clear edge yet", 0.0
+    parts: list[str] = []
+    if value is not None:
+        sign = "+" if value >= 0 else "-"
+        parts.append(f"{sign}${abs(value):,.0f}")
+    if pct is not None:
+        sign = "+" if pct >= 0 else "-"
+        parts.append(f"{sign}{abs(pct) * 100:.1f}%")
+    return label, " | ".join(parts), float(pct or 0.0)
+
+
+def _strategy_tags(view) -> list[str]:
+    tags: list[str] = []
+    best_fit = (view.decision.best_fit if view.decision is not None else "").lower()
+    town_score = view.town_context.get("town_relative_opportunity_score")
+    price_to_rent = view.compare_metrics.get("price_to_rent")
+
+    if "renovation" in best_fit or "value-add" in best_fit or "value-add" in view.optionality_label.lower():
+        tags.append("Renovation Upside")
+    if (
+        view.income_support_label in {"Self-Supporting", "Partially Supported", "Support-Light"}
+        or (isinstance(price_to_rent, (int, float)) and price_to_rent <= 18)
+    ):
+        tags.append("Income Potential")
+    if isinstance(town_score, (int, float)) and town_score >= 3.5:
+        tags.append("Town Premium")
+    if view.entry_basis_label in {"Discounted Entry", "Supported Entry"}:
+        tags.append("Value Gap")
+    if view.liquidity_profile_label in {"High Liquidity", "Functional Liquidity"}:
+        tags.append("Liquid Exit")
+    if not tags and view.decision is not None and view.decision.best_fit:
+        tags.append(view.decision.best_fit)
+    if not tags and view.optionality_label:
+        tags.append(view.optionality_label)
+    return tags[:2]
+
+
+def _opportunity_records(loaded_ids: list[str] | None) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    for property_id in _discoverable_property_ids(loaded_ids):
+        try:
+            report = load_report_for_preset(property_id)
+        except Exception:
+            continue
+        try:
+            view = build_property_analysis_view(report)
+        except Exception:
+            continue
+        signal_label, signal_text, signal_strength = _opportunity_signal(view)
+        records.append(
+            {
+                "property_id": property_id,
+                "address": view.address,
+                "identity": _property_identity(
+                    view.address,
+                    getattr(report.property_input, "town", None),
+                    getattr(report.property_input, "state", None),
+                ),
+                "town": getattr(report.property_input, "town", None) or "Unknown",
+                "state": getattr(report.property_input, "state", None) or "",
+                "recommendation": view.recommendation_tier or "Neutral",
+                "score": float(view.final_score or 0.0),
+                "ask_price": view.ask_price,
+                "signal_label": signal_label,
+                "signal_text": signal_text,
+                "signal_strength": signal_strength,
+                "tags": _strategy_tags(view),
+                "maps": _maps_links(
+                    view.address,
+                    getattr(report.property_input, "town", None),
+                    getattr(report.property_input, "state", None),
+                ),
+                "selected": False,
+            }
+        )
+    records.sort(
+        key=lambda item: (
+            -_recommendation_weight(str(item["recommendation"])),
+            -float(item["score"]),
+            -float(item["signal_strength"]),
+            str(item["town"]).lower(),
+            str(item["identity"]["street"]).lower(),
+        ),
+    )
+    return records
+
+
+def _matches_price_band(price: float | None, band: str | None) -> bool:
+    if band in (None, "", "all"):
+        return True
+    if price is None:
+        return False
+    if band == "under_700":
+        return price < 700_000
+    if band == "700_1000":
+        return 700_000 <= price < 1_000_000
+    if band == "1000_1500":
+        return 1_000_000 <= price < 1_500_000
+    if band == "over_1500":
+        return price >= 1_500_000
+    return True
+
+
+def _filtered_opportunity_records(
+    records: list[dict[str, object]],
+    *,
+    town: str | None,
+    recommendation: str | None,
+    strategy: str | None,
+    price_band: str | None,
+) -> list[dict[str, object]]:
+    filtered: list[dict[str, object]] = []
+    for item in records:
+        item_town = str(item["town"])
+        item_rec = str(item["recommendation"])
+        item_tags = [str(tag) for tag in item["tags"]]
+        if town not in (None, "", "all") and item_town != town:
+            continue
+        if recommendation not in (None, "", "all") and item_rec != recommendation:
+            continue
+        if strategy not in (None, "", "all") and strategy not in item_tags:
+            continue
+        if not _matches_price_band(item["ask_price"] if isinstance(item["ask_price"], (int, float)) else None, price_band):
+            continue
+        filtered.append(item)
+    return filtered
+
+
+def _opportunity_badge(label: str, value: str, *, tone: str = "neutral") -> html.Span:
+    return html.Span(f"{label}: {value}", style={**tone_badge_style(tone), "fontSize": "10px"})
+
+
+def _opportunity_button(item: dict[str, object], *, scope: str, selected: bool = False) -> html.Div:
+    recommendation = str(item["recommendation"])
+    score = float(item["score"])
+    tags = [str(tag) for tag in item["tags"]]
+    identity = item["identity"]
+    maps = item["maps"]
+    border_color = verdict_color(recommendation)
+    recommendation_tone = (
+        "positive" if recommendation == "Buy" else
+        "warning" if recommendation == "Neutral" else
+        "negative"
+    )
+    background = BG_SURFACE_2 if selected else BG_SURFACE
+    return html.Div(
+        [
+            html.Button(
+                [
+                    html.Div(
+                        [
+                            html.Div(str(identity["locality"]), style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": border_color}),
+                            html.Div(str(identity["street"]), style={"fontSize": "17px", "fontWeight": "700", "color": TEXT_PRIMARY, "letterSpacing": "-0.02em", "marginTop": "2px"}),
+                        ]
+                    ),
+                    html.Div(
+                        [
+                            _opportunity_badge("Recommendation", recommendation, tone=recommendation_tone),
+                            _opportunity_badge("Score", f"{score:.2f}/5", tone="neutral"),
+                        ],
+                        style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "marginTop": "10px"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div(str(item["signal_label"]), style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "letterSpacing": "0.06em"}),
+                            html.Div(str(item["signal_text"]), style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginTop": "2px"}),
+                        ],
+                        style={"marginTop": "12px"},
+                    ),
+                    html.Div(
+                        [html.Span(tag, style={**tone_badge_style("neutral"), "fontSize": "10px"}) for tag in tags],
+                        style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "marginTop": "12px"},
+                    ) if tags else None,
+                ],
+                id={"type": "opportunity-open-button", "property_id": str(item["property_id"]), "scope": scope},
+                n_clicks=0,
+                style={
+                    "width": "100%",
+                    "textAlign": "left",
+                    "backgroundColor": background,
+                    "border": f"1px solid {border_color}" if selected else f"1px solid {BORDER}",
+                    "borderLeft": f"4px solid {border_color}",
+                    "borderRadius": "6px",
+                    "padding": "14px 16px",
+                    "cursor": "pointer",
+                    "display": "grid",
+                    "gap": "0",
+                    "fontFamily": FONT_FAMILY,
+                },
+            ),
+            html.Div(
+                [
+                    html.A("Open in Google Maps", href=str(maps["google"]), target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": ACCENT_BLUE, "textDecoration": "none"}),
+                    html.A("Apple Maps", href=str(maps["apple"]), target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": TEXT_SECONDARY, "textDecoration": "none"}),
+                ],
+                style={"display": "flex", "gap": "12px", "padding": "8px 4px 0 4px"},
+            ),
+        ]
+    )
+
+
+def _opportunity_discovery_section(
+    *,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+    town_filter: str | None,
+    recommendation_filter: str | None,
+    strategy_filter: str | None,
+    price_band_filter: str | None,
+) -> html.Div:
+    records = _opportunity_records(loaded_ids)
+    recommendation_counts = {
+        "Buy": sum(1 for item in records if item["recommendation"] == "Buy"),
+        "Neutral": sum(1 for item in records if item["recommendation"] == "Neutral"),
+        "Avoid": sum(1 for item in records if item["recommendation"] == "Avoid"),
+    }
+    filtered = _filtered_opportunity_records(
+        records,
+        town=town_filter,
+        recommendation=recommendation_filter,
+        strategy=strategy_filter,
+        price_band=price_band_filter,
+    )
+
+    towns = sorted({str(item["town"]) for item in records if item["town"]})
+    strategy_tags = sorted({tag for item in records for tag in item["tags"]})
+    best_now = filtered[:4]
+
+    summary_cards = html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Buy Right Now", style=SECTION_HEADER_STYLE),
+                    html.Div(str(recommendation_counts["Buy"]), style={"fontSize": "26px", "fontWeight": "800", "color": ACCENT_GREEN}),
+                ],
+                style={**CARD_STYLE, "borderLeft": f"4px solid {ACCENT_GREEN}"},
+            ),
+            html.Div(
+                [
+                    html.Div("Neutral Watchlist", style=SECTION_HEADER_STYLE),
+                    html.Div(str(recommendation_counts["Neutral"]), style={"fontSize": "26px", "fontWeight": "800", "color": ACCENT_YELLOW}),
+                ],
+                style={**CARD_STYLE, "borderLeft": f"4px solid {ACCENT_YELLOW}"},
+            ),
+            html.Div(
+                [
+                    html.Div("Avoid For Now", style=SECTION_HEADER_STYLE),
+                    html.Div(str(recommendation_counts["Avoid"]), style={"fontSize": "26px", "fontWeight": "800", "color": ACCENT_RED}),
+                ],
+                style={**CARD_STYLE, "borderLeft": f"4px solid {ACCENT_RED}"},
+            ),
+            html.Div(
+                [
+                    html.Div("Visible Opportunities", style=SECTION_HEADER_STYLE),
+                    html.Div(str(len(filtered)), style={"fontSize": "26px", "fontWeight": "800", "color": TEXT_PRIMARY}),
+                ],
+                style=CARD_STYLE,
+            ),
+        ],
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "10px"},
+    )
+
+    filters = html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Town", style=LABEL_STYLE),
+                    dcc.Dropdown(
+                        id="opportunity-town-filter",
+                        options=[{"label": "All Towns", "value": "all"}] + [{"label": town, "value": town} for town in towns],
+                        value=town_filter or "all",
+                        clearable=False,
+                        searchable=False,
+                        style={"fontSize": "13px"},
+                    ),
+                ]
+            ),
+            html.Div(
+                [
+                    html.Div("Recommendation", style=LABEL_STYLE),
+                    dcc.Dropdown(
+                        id="opportunity-recommendation-filter",
+                        options=[
+                            {"label": "All Recommendations", "value": "all"},
+                            {"label": "Buy", "value": "Buy"},
+                            {"label": "Neutral", "value": "Neutral"},
+                            {"label": "Avoid", "value": "Avoid"},
+                        ],
+                        value=recommendation_filter or "all",
+                        clearable=False,
+                        searchable=False,
+                        style={"fontSize": "13px"},
+                    ),
+                ]
+            ),
+            html.Div(
+                [
+                    html.Div("Strategy", style=LABEL_STYLE),
+                    dcc.Dropdown(
+                        id="opportunity-strategy-filter",
+                        options=[{"label": "All Strategies", "value": "all"}] + [{"label": tag, "value": tag} for tag in strategy_tags],
+                        value=strategy_filter or "all",
+                        clearable=False,
+                        searchable=False,
+                        style={"fontSize": "13px"},
+                    ),
+                ]
+            ),
+            html.Div(
+                [
+                    html.Div("Price Band", style=LABEL_STYLE),
+                    dcc.Dropdown(
+                        id="opportunity-price-filter",
+                        options=DISCOVERY_PRICE_BANDS,
+                        value=price_band_filter or "all",
+                        clearable=False,
+                        searchable=False,
+                        style={"fontSize": "13px"},
+                    ),
+                ]
+            ),
+        ],
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "10px"},
+    )
+
+    shortlist = (
+        html.Div(
+            [_opportunity_button(item, scope="hero", selected=str(item["property_id"]) == focus_id) for item in best_now],
+            style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(240px, 1fr))", "gap": "12px"},
+        )
+        if best_now
+        else html.Div("No opportunities match the current filters.", style={"color": TEXT_MUTED, "fontSize": "13px"})
+    )
+
+    all_rows = (
+        html.Div(
+            [_opportunity_button(item, scope="list", selected=str(item["property_id"]) == focus_id) for item in filtered[:12]],
+            style={"display": "grid", "gap": "10px"},
+        )
+        if filtered
+        else html.Div("No opportunities match the current filters.", style={"color": TEXT_MUTED, "fontSize": "13px"})
+    )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Best Opportunities Right Now", style={"fontSize": "26px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
+                    html.Div(
+                        "Start with the strongest opportunities, narrow by town or strategy, then jump into the full property analysis below.",
+                        style={"fontSize": "14px", "color": TEXT_SECONDARY, "maxWidth": "760px", "marginTop": "6px"},
+                    ),
+                ]
+            ),
+            summary_cards,
+            html.Div(
+                [
+                    html.Div("Discovery Filters", style=SECTION_HEADER_STYLE),
+                    filters,
+                ],
+                style={**CARD_STYLE, "padding": "14px 16px"},
+            ),
+            html.Div(
+                [
+                    html.Div("Top Picks", style=SECTION_HEADER_STYLE),
+                    shortlist,
+                ],
+                style={"display": "grid", "gap": "10px"},
+            ),
+            html.Div(
+                [
+                    html.Div("All Surfaced Opportunities", style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        "Search is still available in the top bar, but the primary workflow now starts with the visible shortlist below.",
+                        style={"fontSize": "13px", "color": TEXT_MUTED, "marginBottom": "8px"},
+                    ),
+                    all_rows,
+                ],
+                style={"display": "grid", "gap": "0"},
+            ),
+        ],
+        style={"display": "grid", "gap": "16px", "padding": "16px 0 20px"},
+    )
+
+
 def _feedback_banner() -> html.Div:
     return html.Div(id="analysis-feedback-banner", style={"flexShrink": "0"})
 
@@ -479,7 +947,7 @@ def _feedback_banner() -> html.Div:
 def _main_tab_bar() -> dcc.Tabs:
     return dcc.Tabs(
         id="main-tabs",
-        value="tear_sheet",
+        value="opportunities",
         children=[
             dcc.Tab(
                 label=label,
@@ -559,7 +1027,7 @@ def _add_property_drawer() -> html.Div:
                         dash_table.DataTable(
                             id="saved-properties-table",
                             columns=[
-                                {"name": "Address", "id": "Address"},
+                                {"name": "Property", "id": "Property"},
                                 {"name": "Ask", "id": "Ask"},
                                 {"name": "Fair Value", "id": "Fair Value"},
                                 {"name": "Pricing View", "id": "Pricing View"},
@@ -887,6 +1355,7 @@ def _add_property_form_body() -> list:
 
 
 def _compare_controls() -> html.Div:
+    options = _property_options()
     return html.Div(
         [
             html.Div(
@@ -894,6 +1363,7 @@ def _compare_controls() -> html.Div:
                     html.Div("Compare Properties", style=SECTION_HEADER_STYLE),
                     dcc.Dropdown(
                         id="compare-selector-dropdown",
+                        options=options,
                         multi=True,
                         searchable=True,
                         persistence=True,
@@ -957,7 +1427,6 @@ def _build_layout():
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
             dcc.Store(id="tear-sheet-view-mode", storage_type="local", data="owner"),
-            dcc.Store(id="tear-sheet-lens", storage_type="local", data="auto"),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
@@ -1018,28 +1487,23 @@ app.layout = _build_layout()
 @app.callback(
     Output("property-selector-dropdown", "options"),
     Output("property-selector-dropdown", "value"),
-    Output("compare-selector-dropdown", "options"),
-    Output("compare-selector-dropdown", "value"),
     Output("saved-properties-table", "data"),
     Output("comp-database-table", "data"),
     Input("property-catalog-version", "data"),
     Input("loaded-preset-ids", "data"),
     State("property-selector-dropdown", "value"),
-    State("compare-selector-dropdown", "value"),
 )
 def refresh_property_controls(
     _catalog_version: int,
     loaded_ids: list[str] | None,
     current_property_id: str | None,
-    current_compare_ids: list[str] | None,
 ):
     options = _property_options()
     allowed = {option["value"] for option in options}
     loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
     default_value = loaded_ids[0] if loaded_ids else (options[0]["value"] if options else None)
     property_value = current_property_id if current_property_id in allowed else default_value
-    compare_values = [pid for pid in (current_compare_ids or []) if pid in allowed][:4]
-    return options, property_value, options, compare_values, _saved_property_rows(), list_comp_database_rows()
+    return options, property_value, _saved_property_rows(), list_comp_database_rows()
 
 
 @app.callback(
@@ -1061,12 +1525,18 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
     except KeyError:
         return "Unavailable", None, hidden
     view = build_property_analysis_view(report)
+    pi = report.property_input
+    identity = _property_identity(
+        view.address,
+        getattr(pi, "town", None),
+        getattr(pi, "state", None),
+    )
+    maps = _maps_links(view.address, getattr(pi, "town", None), getattr(pi, "state", None))
 
     # Top bar status (compact)
-    status = f"{view.address}  ·  {_fmt_currency(view.ask_price)}  ·  {view.overall_confidence:.0%}"
+    status = f"{identity['locality']}  ·  {identity['street']}  ·  {_fmt_currency(view.ask_price)}"
 
     # Sticky property header
-    pi = report.property_input
     basics_parts = []
     if pi:
         if pi.beds:
@@ -1075,8 +1545,6 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
             basics_parts.append(f"{pi.baths}ba")
         if pi.sqft:
             basics_parts.append(f"{pi.sqft:,}sf")
-        if pi.town:
-            basics_parts.append(f"{pi.town}")
     basics_text = " · ".join(basics_parts)
 
     gap_text = ""
@@ -1113,10 +1581,17 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
             # Left: address + basics
             html.Div(
                 [
-                    html.Span(view.address, style={"fontSize": "13px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginRight": "12px"}),
-                    html.Span(basics_text, style={"fontSize": "13px", "color": TEXT_MUTED}),
+                    html.Div(
+                        [
+                            html.Div(identity["locality"], style={"fontSize": "10px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": TEXT_MUTED}),
+                            html.Div(identity["street"], style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY, "marginTop": "1px"}),
+                        ],
+                        style={"display": "grid", "gap": "0"},
+                    ),
+                    html.Span(basics_text, style={"fontSize": "13px", "color": TEXT_MUTED}) if basics_text else None,
+                    html.A("Google Maps", href=maps["google"], target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": ACCENT_BLUE, "textDecoration": "none"}),
                 ],
-                style={"display": "flex", "alignItems": "baseline", "gap": "0"},
+                style={"display": "flex", "alignItems": "center", "gap": "12px"},
             ),
             # Right: key metrics inline
             html.Div(
@@ -1131,7 +1606,7 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
                     _header_metric("Score", score_text or "—", color=sc),
                     html.Span(
                         view.recommendation_tier,
-                        style=tone_badge_style("positive" if (view.final_score or 0) >= 3.75 else "warning" if (view.final_score or 0) >= 3.0 else "negative"),
+                        style=tone_badge_style("positive" if (view.final_score or 0) >= 3.30 else "warning" if (view.final_score or 0) >= 2.50 else "negative"),
                     ) if view.recommendation_tier else None,
                     # Confidence dot
                     html.Span(
@@ -1352,7 +1827,7 @@ def edit_selected_saved_property(_n_clicks: int, rows: list[dict[str, str]] | No
     if not isinstance(index, int) or index < 0 or index >= len(rows):
         return html.Span("Select one saved property first.", style={"color": TONE_WARNING_TEXT}), no_update, no_update, no_update
     property_id = rows[index].get("property_id")
-    address = rows[index].get("Address") or property_id
+    address = rows[index].get("Property") or property_id
     if not property_id:
         return html.Span("Selected record is missing a property id.", style={"color": TONE_WARNING_TEXT}), no_update, no_update, no_update
     return (
@@ -1367,6 +1842,12 @@ def _core_missing_fields(report) -> list[str]:
     property_input = report.property_input
     if property_input is None:
         return []
+
+    def _known(value: object) -> bool:
+        return value is not None and value != ""
+
+    optionality_known = has_known_optionality_detail(property_input)
+
     fields: list[tuple[str, object]] = [
         ("Square footage", property_input.sqft),
         ("Lot size", property_input.lot_size),
@@ -1374,8 +1855,8 @@ def _core_missing_fields(report) -> list[str]:
         ("CapEx lane", property_input.capex_lane),
         ("Taxes", property_input.taxes),
         ("Insurance", property_input.insurance),
-        ("Garage details", property_input.garage_spaces or property_input.garage_type),
-        ("ADU / back house", property_input.has_back_house or property_input.adu_type or property_input.adu_sqft),
+        ("Garage details", "known" if any(_known(getattr(property_input, field_name)) for field_name in ("garage_spaces", "garage_type")) else None),
+        ("ADU / back house", "known" if optionality_known else None),
     ]
     missing = [label for label, value in fields if value in (None, "", [])]
     status_map = {item.key: item for item in build_property_analysis_view(report).evidence.metric_statuses}
@@ -1416,6 +1897,23 @@ def select_property(property_id: str | None):
         return no_update
     load_reports([property_id])
     return [property_id]
+
+
+@app.callback(
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Input({"type": "opportunity-open-button", "property_id": ALL, "scope": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def open_property_from_discovery(_clicks: list[int] | None):
+    trigger = ctx.triggered_id
+    if not isinstance(trigger, dict):
+        raise dash.exceptions.PreventUpdate
+    property_id = trigger.get("property_id")
+    if not property_id:
+        raise dash.exceptions.PreventUpdate
+    load_reports([property_id])
+    return property_id, [property_id]
 
 
 @app.callback(
@@ -1478,7 +1976,6 @@ def compare_selected_saved_properties(
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
     Input("tear-sheet-view-mode", "data"),
-    Input("tear-sheet-lens", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -1486,15 +1983,34 @@ def render_main_tab(
     loaded_ids: list[str] | None,
     focus_id: str | None,
     tear_sheet_view_mode: str | None,
-    tear_sheet_lens: str | None,
 ):
+    if tab == "opportunities":
+        return _centered_main_panel(
+            _opportunity_discovery_section(
+                loaded_ids=loaded_ids,
+                focus_id=focus_id,
+                town_filter="all",
+                recommendation_filter="all",
+                strategy_filter="all",
+                price_band_filter="all",
+            ),
+            padding="0 20px 24px",
+            max_width="1140px",
+        )
+
     if tab == "tear_sheet":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
             return _empty_state("Add or select a property to begin.")
         view = build_property_analysis_view(report)
         return _centered_main_panel(
-            render_tear_sheet_body(view, report, tear_sheet_view_mode or "owner", tear_sheet_lens or "auto"),
+            html.Div(
+                [
+                    html.Div("Selected Property Analysis", style=SECTION_HEADER_STYLE),
+                    render_tear_sheet_body(view, report, tear_sheet_view_mode or "owner"),
+                ],
+                style={"display": "grid", "gap": "10px"},
+            ),
             padding="0 20px 24px",
             max_width="1140px",
         )
@@ -1547,18 +2063,6 @@ def update_tear_sheet_view_mode(selected_mode: str | None, current_mode: str | N
     return current_mode or "owner"
 
 
-@app.callback(
-    Output("tear-sheet-lens", "data"),
-    Input("tear-sheet-lens-selector", "value"),
-    State("tear-sheet-lens", "data"),
-    prevent_initial_call=True,
-)
-def update_tear_sheet_lens(selected_lens: str | None, current_lens: str | None) -> str:
-    if selected_lens in {"auto", "risk", "investor", "owner", "developer"}:
-        return selected_lens
-    return current_lens or "auto"
-
-
 def _empty_state(message: str) -> html.Div:
     return html.Div(
         html.P(message, style={"color": TEXT_MUTED, "fontSize": "13px"}),
@@ -1577,11 +2081,21 @@ def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> Analy
     property_ids = loaded_ids or []
     if not property_ids:
         return None
-    reports = load_reports(property_ids)
-    if not reports:
-        return None
-    resolved_focus_id = focus_id if focus_id in reports else next(iter(reports.keys()))
-    return reports[resolved_focus_id]
+    candidates: list[str] = []
+    if focus_id and focus_id in property_ids:
+        candidates.append(focus_id)
+    for property_id in property_ids:
+        if property_id not in candidates:
+            candidates.append(property_id)
+
+    for property_id in candidates:
+        try:
+            return load_report_for_preset(property_id)
+        except KeyError:
+            continue
+        except Exception:
+            continue
+    return None
 
 
 @app.callback(
@@ -2415,7 +2929,7 @@ def run_manual_analysis(
                     "Changed fields: " + (", ".join(changed_fields[:8]) if changed_fields else "no material field changes detected; analysis was re-run on the current record."),
                     style={"color": TEXT_SECONDARY, "fontSize": "12px", "marginTop": "4px"},
                 ) if is_edit_mode else None,
-                html.Div(f"Tear sheet: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "13px", "marginTop": "4px"}),
+                html.Div(f"Property analysis: {tear_sheet_path}", style={"color": TEXT_MUTED, "fontSize": "13px", "marginTop": "4px"}),
                 html.Ul(
                     [html.Li(note, style={"color": TONE_WARNING_TEXT if "fell back" in note else TEXT_SECONDARY, "fontSize": "13px"}) for note in inline_notes],
                     style={"margin": "6px 0 0", "paddingLeft": "18px"},

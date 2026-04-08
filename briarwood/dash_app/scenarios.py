@@ -31,27 +31,8 @@ from briarwood.schemas import AnalysisReport
 def render_scenarios_section(report: AnalysisReport) -> html.Div:
     blocks: list = [_render_historic_forward_outlook(report)]
 
-    reno_result = report.module_results.get("renovation_scenario")
-    if reno_result and isinstance(reno_result.payload, dict) and reno_result.payload.get("enabled"):
-        blocks.append(_render_renovation(reno_result.payload, reno_result.confidence))
-
-    td_result = report.module_results.get("teardown_scenario")
-    if td_result and isinstance(td_result.payload, dict) and td_result.payload.get("enabled"):
-        blocks.append(_render_teardown(td_result.payload, td_result.confidence))
-
-    if len(blocks) == 1:
-        blocks.append(
-            html.Div(
-                [
-                    html.Div("Optional Investment Scenarios", style=SECTION_HEADER_STYLE),
-                    html.P(
-                        "Forward outlook is available below. Add renovation_scenario or teardown_scenario inputs to activate project-specific strategy analysis.",
-                        style=BODY_TEXT_STYLE,
-                    ),
-                ],
-                style=CARD_STYLE,
-            )
-        )
+    blocks.append(_render_scenario_state_card(report, "renovation_scenario"))
+    blocks.append(_render_scenario_state_card(report, "teardown_scenario"))
 
     return html.Div(blocks, style={"display": "grid", "gap": "32px"})
 
@@ -421,6 +402,102 @@ def _currency(value: float | None) -> str:
     if value is None:
         return "—"
     return f"${value:,.0f}"
+
+
+def _scenario_status_payload(report: AnalysisReport, scenario_key: str) -> dict[str, object]:
+    result = report.module_results.get(scenario_key)
+    property_input = report.property_input
+    configured = bool(getattr(property_input, scenario_key, None)) if property_input is not None else False
+
+    if result is None:
+        return {
+            "enabled": False,
+            "status": "not_run",
+            "summary": "Scenario module result was not present in this report.",
+            "missing_inputs": [],
+            "warnings": [],
+            "confidence": 0.0,
+            "configured": configured,
+        }
+
+    payload = result.payload if isinstance(result.payload, dict) else {}
+    enabled = bool(payload.get("enabled"))
+    status = str(payload.get("status") or ("ready" if enabled else "not_configured"))
+    summary = str(payload.get("summary") or result.summary or "")
+    missing_inputs = list(payload.get("missing_inputs") or [])
+    warnings = list(payload.get("warnings") or [])
+    return {
+        "enabled": enabled,
+        "status": status,
+        "summary": summary,
+        "missing_inputs": missing_inputs,
+        "warnings": warnings,
+        "confidence": float(result.confidence or 0.0),
+        "payload": payload,
+        "configured": configured,
+    }
+
+
+def _scenario_state_card(title: str, subtitle: str, tone: str, body_children: list[object]) -> html.Div:
+    accent = tone_color(tone)
+    return html.Div(
+        [
+            html.Div(title, style=SECTION_HEADER_STYLE),
+            html.Div(subtitle, style={"fontSize": "18px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginBottom": "8px"}),
+            *body_children,
+        ],
+        style={**CARD_STYLE, "borderLeft": f"4px solid {accent}"},
+    )
+
+
+def _render_missing_scenario(title: str, status_payload: dict[str, object], *, scenario_type: str) -> html.Div:
+    summary = str(status_payload.get("summary") or "Scenario unavailable.")
+    missing_inputs = list(status_payload.get("missing_inputs") or [])
+    warnings = list(status_payload.get("warnings") or [])
+    configured = bool(status_payload.get("configured"))
+    status = str(status_payload.get("status") or "unavailable")
+
+    if status == "not_enabled" or (not configured and status == "not_configured"):
+        subtitle = "This scenario has not been configured on the property yet."
+        tone = "neutral"
+    elif status in {"missing_inputs", "missing_anchor"}:
+        subtitle = "Briarwood found the scenario request, but key inputs are still missing."
+        tone = "warning"
+    else:
+        subtitle = "Briarwood could not compute a reliable scenario output from the current support."
+        tone = "warning"
+
+    next_steps = {
+        "renovation_scenario": "Best next inputs: renovation budget, target finished condition, and any planned sqft/bed/bath changes.",
+        "teardown_scenario": "Best next inputs: purchase price, target new-build sqft, and total construction cost.",
+    }
+
+    content = [
+        html.Div(summary, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_PRIMARY}),
+        html.Div(next_steps.get(scenario_type, ""), style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "8px"}),
+    ]
+    if missing_inputs:
+        content.append(
+            html.Div(
+                [html.Span("Missing inputs: ", style={"fontWeight": "600", "color": TEXT_SECONDARY}), html.Span(", ".join(item.replace("_", " ") for item in missing_inputs), style={"color": TEXT_PRIMARY})],
+                style={"fontSize": "12px", "marginTop": "8px"},
+            )
+        )
+    if warnings:
+        content.append(_warning_block(warnings))
+    return _scenario_state_card(title, subtitle, tone, content)
+
+
+def _render_scenario_state_card(report: AnalysisReport, scenario_key: str) -> html.Div:
+    status_payload = _scenario_status_payload(report, scenario_key)
+    title = "Renovation Scenario" if scenario_key == "renovation_scenario" else "Knockdown / New-Build Scenario"
+    if status_payload.get("enabled"):
+        payload = dict(status_payload.get("payload") or {})
+        confidence = float(status_payload.get("confidence") or 0.0)
+        if scenario_key == "renovation_scenario":
+            return _render_renovation(payload, confidence)
+        return _render_teardown(payload, confidence)
+    return _render_missing_scenario(title, status_payload, scenario_type=scenario_key)
 
 
 # ── Renovation Scenario ────────────────────────────────────────────────────────

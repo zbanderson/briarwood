@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from briarwood.modules.bull_base_bear import BullBaseBearModule
+from briarwood.schemas import AnalysisReport, ModuleResult
 from briarwood.dash_app.components import (
     render_compare_decision_mode,
     render_tear_sheet_body,
@@ -50,7 +52,7 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("town_relative_opportunity_score", view.compare_metrics)
         self.assertIsNotNone(view.decision)
         assert view.decision is not None
-        self.assertIn(view.decision.recommendation, {"Buy", "Lean Buy", "Neutral", "Lean Avoid", "Avoid"})
+        self.assertIn(view.decision.recommendation, {"Buy", "Neutral", "Avoid"})
         self.assertGreaterEqual(view.decision.conviction_score, 0)
         self.assertLessEqual(view.decision.conviction_score, 100)
         self.assertIn("positive", view.decision.decision_drivers)
@@ -104,6 +106,56 @@ class DashViewModelTests(unittest.TestCase):
         section = render_scenarios_section(report)
         self.assertEqual(section.__class__.__name__, "Div")
         self.assertGreaterEqual(len(section.children), 1)
+
+    def test_scenarios_section_surfaces_missing_scenario_reasons(self) -> None:
+        property_input = self.reports["briarwood-rd-belmar"].property_input
+        assert property_input is not None
+        property_input = property_input.__class__(**property_input.to_dict())
+        property_input.renovation_scenario = {"enabled": True, "renovation_budget": 5_000}
+        property_input.teardown_scenario = {"enabled": True}
+        bbb_result = BullBaseBearModule().run(property_input)
+        report = AnalysisReport(
+            property_id=property_input.property_id,
+            address=property_input.address,
+            property_input=property_input,
+            module_results={
+                "bull_base_bear": bbb_result,
+                "current_value": self.reports["briarwood-rd-belmar"].module_results["current_value"],
+                "market_value_history": self.reports["briarwood-rd-belmar"].module_results["market_value_history"],
+                "renovation_scenario": ModuleResult(
+                    module_name="renovation_scenario",
+                    metrics={"enabled": False, "status": "missing_inputs"},
+                    summary="Renovation budget $5,000 is below the minimum modeled threshold of $10,000.",
+                    payload={
+                        "enabled": False,
+                        "status": "missing_inputs",
+                        "summary": "Renovation budget $5,000 is below the minimum modeled threshold of $10,000.",
+                        "missing_inputs": ["renovation_budget"],
+                        "warnings": [],
+                    },
+                ),
+                "teardown_scenario": ModuleResult(
+                    module_name="teardown_scenario",
+                    metrics={"enabled": False, "status": "missing_inputs"},
+                    summary="Knockdown / new-build scenario needs both a construction budget and a target new-build size before Briarwood can model project economics.",
+                    payload={
+                        "enabled": False,
+                        "status": "missing_inputs",
+                        "summary": "Knockdown / new-build scenario needs both a construction budget and a target new-build size before Briarwood can model project economics.",
+                        "missing_inputs": ["new_construction_cost", "new_construction_sqft"],
+                        "warnings": [],
+                    },
+                ),
+            },
+        )
+
+        section = render_scenarios_section(report)
+        text = _flatten_text(section)
+        self.assertIn("Renovation Scenario", text)
+        self.assertIn("Knockdown / New-Build Scenario", text)
+        self.assertIn("Missing inputs:", text)
+        self.assertIn("renovation budget", text)
+        self.assertIn("new construction cost", text)
 
     def test_tear_sheet_body_surfaces_current_competition_block(self) -> None:
         report = self.reports["briarwood-rd-belmar"]

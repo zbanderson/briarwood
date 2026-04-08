@@ -11,9 +11,11 @@ from briarwood.modules.local_intelligence import LocalIntelligenceModule
 from briarwood.modules.market_momentum_signal import MarketMomentumSignalModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
+from briarwood.modules.renovation_scenario import RenovationScenarioModule
 from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
+from briarwood.modules.teardown_scenario import TeardownScenarioModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import EvidenceMode, PropertyInput, ScenarioOutput, ValuationOutput
 from briarwood.settings import CostValuationSettings
@@ -217,6 +219,31 @@ class ModuleTests(unittest.TestCase):
 
         self.assertGreater(result.metrics["effective_monthly_rent"], baseline_result.metrics["effective_monthly_rent"])
         self.assertGreater(result.metrics["income_support_ratio"], baseline_result.metrics["income_support_ratio"])
+
+    def test_renovation_scenario_returns_structured_blocked_payload_when_budget_missing(self) -> None:
+        property_input = sample_property()
+        property_input.renovation_scenario = {"enabled": True, "renovation_budget": 5_000}
+
+        result = RenovationScenarioModule().run(property_input)
+
+        self.assertFalse(result.metrics["enabled"])
+        self.assertEqual(result.metrics["status"], "missing_inputs")
+        self.assertIsInstance(result.payload, dict)
+        assert isinstance(result.payload, dict)
+        self.assertIn("renovation_budget", result.payload["missing_inputs"])
+
+    def test_teardown_scenario_returns_structured_blocked_payload_when_build_inputs_missing(self) -> None:
+        property_input = sample_property()
+        property_input.teardown_scenario = {"enabled": True, "hold_years": 5}
+
+        result = TeardownScenarioModule().run(property_input)
+
+        self.assertFalse(result.metrics["enabled"])
+        self.assertEqual(result.metrics["status"], "missing_inputs")
+        self.assertIsInstance(result.payload, dict)
+        assert isinstance(result.payload, dict)
+        self.assertIn("new_construction_cost", result.payload["missing_inputs"])
+        self.assertIn("new_construction_sqft", result.payload["missing_inputs"])
 
     def test_income_support_uses_manual_unit_rents_when_provided(self) -> None:
         baseline_input = sample_property()

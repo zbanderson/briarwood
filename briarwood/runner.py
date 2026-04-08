@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from briarwood.engine import AnalysisEngine
@@ -118,6 +119,11 @@ def _prepare_property_input(property_input: PropertyInput) -> None:
     # Apply smart defaults for missing financing, costs, and condition
     defaults_result = apply_smart_defaults(property_input)
     property_input.defaults_applied = defaults_result.fields
+
+    # Geocoding is opt-in for app responsiveness. It can introduce slow
+    # network waits during report loading, especially in Dash callbacks.
+    if os.environ.get("BRIARWOOD_ENABLE_GEOCODING", "").strip().lower() not in {"1", "true", "yes"}:
+        return
 
     # Geocode address if lat/lon missing (enables location_intelligence module)
     try:

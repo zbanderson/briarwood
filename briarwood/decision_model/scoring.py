@@ -8,6 +8,8 @@ Metric extraction → sub-factor scoring → category aggregation → final scor
 """
 from __future__ import annotations
 
+from briarwood.recommendations import recommendation_action_from_score, recommendation_label_from_score
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -1368,7 +1370,7 @@ def get_recommendation_tier(score: float) -> tuple[str, str]:
     for threshold, tier, action in RECOMMENDATION_TIERS:
         if score >= threshold:
             return tier, action
-    return "Pass", "Does not meet investment criteria on current information."
+    return recommendation_label_from_score(score), recommendation_action_from_score(score)
 
 
 def _generate_narrative(

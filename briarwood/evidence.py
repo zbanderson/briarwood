@@ -10,7 +10,6 @@ from briarwood.schemas import (
     SectionEvidence,
     SourceCoverageItem,
 )
-from briarwood.modules.town_aggregation_diagnostics import get_town_context
 
 
 def build_section_evidence(
@@ -87,6 +86,17 @@ CONFIDENCE_COMPONENT_WEIGHTS: dict[str, float] = {
     "market": 0.25,
     "liquidity": 0.20,
 }
+
+
+def _is_known_detail(value: object) -> bool:
+    return value is not None and value != ""
+
+
+def has_known_optionality_detail(property_input: PropertyInput) -> bool:
+    return any(
+        _is_known_detail(getattr(property_input, field_name))
+        for field_name in ("has_back_house", "adu_type", "adu_sqft", "has_basement", "garage_spaces", "garage_type")
+    )
 
 
 def compute_confidence_breakdown(report: AnalysisReport) -> ConfidenceBreakdown:
@@ -885,19 +895,22 @@ def _optionality_status(property_input: PropertyInput, report: AnalysisReport) -
         ("property_type", "property type"),
     ]:
         value = getattr(property_input, field_name)
-        if value not in (None, False, "", 0):
+        if _is_known_detail(value):
             facts_used.append(label)
     if getattr(property_input, "strategy_intent", None):
         user_inputs_used.append("strategy intent")
     if getattr(property_input, "hold_period_years", None) is not None:
         user_inputs_used.append("hold period")
 
-    if not facts_used:
-        missing_inputs.extend(["lot size", "ADU/basement/garage detail"])
+    has_lot_size = _is_known_detail(getattr(property_input, "lot_size", None))
+    if not has_lot_size:
+        missing_inputs.append("lot size")
+    if not has_known_optionality_detail(property_input):
+        missing_inputs.append("ADU/basement/garage detail")
     if report.module_results.get("renovation_scenario") is None and report.module_results.get("teardown_scenario") is None:
         assumptions_used.append("strategy flexibility is inferred without project scenarios")
 
-    status = "unresolved" if not facts_used else "estimated" if assumptions_used else "user_confirmed" if user_inputs_used else "fact_based"
+    status = "unresolved" if missing_inputs else "estimated" if assumptions_used else "user_confirmed" if user_inputs_used else "fact_based"
     impact = (
         "optionality is weakly grounded until physical upside features are confirmed"
         if status == "unresolved"
@@ -1094,6 +1107,8 @@ def _apply_town_context_caps(
 ) -> list[ConfidenceComponent]:
     if property_input is None:
         return components
+    from briarwood.modules.town_aggregation_diagnostics import get_town_context
+
     town_context = get_town_context(property_input.town)
     if town_context is None:
         return components

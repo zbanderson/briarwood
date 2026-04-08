@@ -42,14 +42,23 @@ class TeardownScenarioModule:
     ) -> ModuleResult:
         scenario = property_input.teardown_scenario
         if not scenario or not scenario.get("enabled"):
-            return ModuleResult(module_name=self.name, summary="Teardown scenario not enabled.")
+            return _blocked_result(
+                module_name=self.name,
+                status="not_enabled",
+                summary="Knockdown / new-build scenario is not configured for this property.",
+            )
 
         s = self.settings
 
         # --- Extract scenario parameters ---
         purchase_price = float(scenario.get("purchase_price") or property_input.purchase_price or 0.0)
         if purchase_price <= 0:
-            return ModuleResult(module_name=self.name, summary="Teardown scenario requires a purchase price.")
+            return _blocked_result(
+                module_name=self.name,
+                status="missing_inputs",
+                summary="Knockdown / new-build scenario requires a purchase price.",
+                missing_inputs=["purchase_price"],
+            )
 
         closing_costs_pct = float(scenario.get("closing_costs_pct") or s.default_closing_costs_pct)
         down_payment_pct = float(scenario.get("down_payment_pct") or s.default_down_payment_pct)
@@ -69,13 +78,32 @@ class TeardownScenarioModule:
         new_construction_beds = int(scenario.get("new_construction_beds") or property_input.beds or 3)
         new_construction_baths = float(scenario.get("new_construction_baths") or property_input.baths or 2.0)
         construction_months = int(scenario.get("construction_duration_months") or s.default_construction_duration_months)
+        missing_inputs: list[str] = []
+        if new_construction_cost <= 0:
+            missing_inputs.append("new_construction_cost")
+        if new_construction_sqft <= 0:
+            missing_inputs.append("new_construction_sqft")
+        if missing_inputs:
+            return _blocked_result(
+                module_name=self.name,
+                status="missing_inputs",
+                summary="Knockdown / new-build scenario needs both a construction budget and a target new-build size before Briarwood can model project economics.",
+                missing_inputs=missing_inputs,
+            )
 
         # --- Pull BCV and drift from prior_results ---
         if prior_results and "current_value" in prior_results:
             current_cv = get_current_value_payload(prior_results["current_value"])
         else:
             current_cv = get_current_value_payload(self.current_value_module.run(property_input))
-        current_bcv = current_cv.briarwood_current_value
+        current_bcv = float(current_cv.briarwood_current_value or purchase_price or 0.0)
+        if current_bcv <= 0:
+            return _blocked_result(
+                module_name=self.name,
+                status="missing_anchor",
+                summary="Knockdown / new-build scenario could not run because Briarwood could not establish a current value anchor.",
+                missing_inputs=["purchase_price"],
+            )
 
         # BBB base drift for appreciation
         base_drift = 0.03  # fallback
@@ -207,6 +235,14 @@ class TeardownScenarioModule:
                 warnings.append("No comps found for new construction profile — new build value is estimated from market history only.")
         else:
             warnings.append("No new construction sqft specified — Phase 2 value estimate unavailable.")
+
+        if new_build_bcv <= 0:
+            return _blocked_result(
+                module_name=self.name,
+                status="insufficient_support",
+                summary="Knockdown / new-build scenario could not estimate a credible completed-home value from the available comp support.",
+                warnings=warnings or ["Add more new-construction or renovated comp support for this town and product type."],
+            )
 
         # Apply market appreciation for hold period + construction
         total_appreciation_years = hold_years + construction_months / 12.0
@@ -340,6 +376,29 @@ class TeardownScenarioModule:
             summary=project_narrative,
             payload=payload,
         )
+
+
+def _blocked_result(
+    *,
+    module_name: str,
+    status: str,
+    summary: str,
+    missing_inputs: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> ModuleResult:
+    payload = {
+        "enabled": False,
+        "status": status,
+        "summary": summary,
+        "missing_inputs": list(missing_inputs or []),
+        "warnings": list(warnings or []),
+    }
+    return ModuleResult(
+        module_name=module_name,
+        metrics={"enabled": False, "status": status},
+        summary=summary,
+        payload=payload,
+    )
 
 
 def _phase1_narrative(

@@ -85,11 +85,9 @@ SUB_FACTOR_QUESTIONS: dict[str, str] = {
 # Evaluated top-down: first match wins.
 
 RECOMMENDATION_TIERS: list[tuple[float, str, str]] = [
-    (3.80, "Buy", "The setup is favorable. Move forward while validating the weakest condition."),
-    (3.30, "Lean Buy", "More right than wrong, with enough support to keep advancing."),
-    (2.50, "Hold / Dig Deeper", "The thesis is mixed. Resolve the top gap before taking a position."),
-    (2.00, "Lean Away", "The weight of evidence tilts negative."),
-    (0.00, "Pass", "Does not meet investment criteria on current information."),
+    (3.30, "Buy", "The setup is favorable enough to keep moving with focused diligence on the weakest point."),
+    (2.50, "Neutral", "The thesis is mixed. Resolve the top gap before taking a position."),
+    (0.00, "Avoid", "The current evidence does not support moving forward."),
 ]
 
 # ── Human-readable sub-factor labels (user-facing) ──────────────────────
