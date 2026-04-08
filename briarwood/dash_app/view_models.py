@@ -16,8 +16,6 @@ from briarwood.evidence import (
     compute_metric_input_statuses,
 )
 from briarwood.recommendations import (
-    cap_recommendation,
-    downgrade_recommendation,
     recommendation_label_from_score,
     recommendation_rank,
 )
@@ -914,8 +912,8 @@ def _compute_confidence_level(
         factors.append(ConfidenceFactorItem("Comp quality", f"{comp_count} comps (thin)", "weak"))
 
     # 2. Income data
-    cost_val = report.module_results.get("cost_valuation")
-    rent_source = str(cost_val.metrics.get("rent_source_type", "missing")) if cost_val else "missing"
+    income_mod = report.module_results.get("income_support")
+    rent_source = str(income_mod.metrics.get("rent_source_type", "missing")) if income_mod else "missing"
     if rent_source in ("manual_input", "provided"):
         factors.append(ConfidenceFactorItem("Income data", "User provided", "strong"))
     elif rent_source == "estimated":
@@ -1871,11 +1869,11 @@ def _optionality_label(best_fit: str, renovated_value: float | None, bull_case: 
 
 
 def _risk_skew_label(risk_score: float, confidence_score: int) -> str:
-    if risk_score >= 85 or confidence_score < 40:
+    if risk_score <= 30 or confidence_score < 40:
         return "High Downside Skew"
-    if risk_score >= 70 or confidence_score < 60:
+    if risk_score <= 45 or confidence_score < 60:
         return "Guarded Downside Skew"
-    if risk_score >= 55:
+    if risk_score <= 60:
         return "Balanced Risk Skew"
     return "Constructive Risk Skew"
 
@@ -1975,7 +1973,7 @@ def _optionality_factor_score(best_fit: str, renovated_value: float | None, bull
 
 
 def _risk_skew_factor_score(risk_score: float, confidence_score: int) -> float:
-    risk_component = _clamp_unit((55.0 - risk_score) / 30.0)
+    risk_component = _clamp_unit((risk_score - 55.0) / 30.0)
     confidence_component = _clamp_unit((confidence_score - 60.0) / 40.0)
     return _clamp_unit((risk_component * 0.7) + (confidence_component * 0.3))
 
@@ -2085,7 +2083,7 @@ def _strategy_fit_label(lens_scores: Any | None) -> str:
 
 
 def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
-    score_tier = recommendation_label_from_score(float(view.final_score or 0.0))
+    score_tier = view.recommendation_tier or recommendation_label_from_score(float(view.final_score or 0.0))
     final_score = float(view.final_score or 0.0)
     confidence_score = max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100))
     valuation_pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
@@ -2272,7 +2270,7 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
         hard_constraints.append("major income support failure")
     if isinstance(valuation_pct, (int, float)) and valuation_pct <= -0.20:
         hard_constraints.append("severe downside risk")
-    if risk_score >= 85:
+    if risk_score <= 30:
         hard_constraints.append("severe downside risk")
 
     high_risk_flags: list[str] = []
@@ -2284,18 +2282,12 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
         high_risk_flags.append("carry")
     if isinstance(valuation_pct, (int, float)) and valuation_pct <= -0.10:
         high_risk_flags.append("valuation")
-    if risk_score >= 75:
+    if risk_score <= 40:
         high_risk_flags.append("risk")
     if view.capex_lane.lower() in {"heavy"} and capex_assumption is not None and capex_assumption.status != "confirmed":
         high_risk_flags.append("capex")
 
     recommendation = score_tier
-    if confidence_score < 60:
-        recommendation = downgrade_recommendation(recommendation, 1)
-    if critical_missing:
-        recommendation = cap_recommendation(recommendation, "Neutral")
-    if high_risk_flags:
-        recommendation = cap_recommendation(recommendation, "Neutral")
 
     major_positive = [item for score, item in positive_candidates if score >= 18]
     major_negative = [item for score, item in negative_candidates if score >= 18]

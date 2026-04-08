@@ -1907,6 +1907,9 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
         report = load_report_for_preset(property_id)
     except KeyError:
         return "Unavailable", None, hidden
+    except Exception as exc:
+        logger.warning("Active property %s failed to load: %s", property_id, exc)
+        return "Selected property failed to load", None, hidden
     view = build_property_analysis_view(report)
     pi = report.property_input
     identity = _property_identity(
@@ -1943,7 +1946,7 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
 
     # Risk indicator
     risk_val = view.risk_location.risk_score
-    risk_color = ACCENT_GREEN if risk_val < 35 else ACCENT_YELLOW if risk_val < 55 else ACCENT_ORANGE if risk_val < 70 else ACCENT_RED
+    risk_color = ACCENT_RED if risk_val < 35 else ACCENT_ORANGE if risk_val < 55 else ACCENT_YELLOW if risk_val < 70 else ACCENT_GREEN
 
     # Monthly net burn/cash flow
     monthly_cf = view.compare_metrics.get("monthly_cash_flow")
@@ -2468,7 +2471,11 @@ def render_main_tab(
     if tab == "tear_sheet":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
-            return _empty_state("Add or select a property to begin.")
+            return _empty_state(
+                "The selected property could not be loaded. Re-select it from the property picker or check the saved inputs/report logs."
+                if focus_id
+                else "Add or select a property to begin."
+            )
         view = build_property_analysis_view(report)
         identity = _property_identity(
             report.address,
@@ -2491,7 +2498,11 @@ def render_main_tab(
     if tab == "scenarios":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
-            return _empty_state("Select a property to view investment scenarios.")
+            return _empty_state(
+                "The selected property could not be loaded, so scenarios are unavailable right now."
+                if focus_id
+                else "Select a property to view investment scenarios."
+            )
         from briarwood.dash_app.scenarios import render_scenarios_section
         return _build_page_container(
             eyebrow="Decision Paths",
@@ -2533,7 +2544,11 @@ def render_main_tab(
     if tab == "data_quality":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
-            return _empty_state("Select a property to view diagnostics.")
+            return _empty_state(
+                "The selected property could not be loaded, so diagnostics are unavailable right now."
+                if focus_id
+                else "Select a property to view diagnostics."
+            )
         from briarwood.dash_app.data_quality import render_data_quality_section
         return _build_page_container(
             eyebrow="Transparency",
@@ -2597,19 +2612,23 @@ def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> Analy
     property_ids = loaded_ids or []
     if not property_ids and not focus_id:
         return None
-    candidates: list[str] = []
     if focus_id:
-        candidates.append(focus_id)
-    for property_id in property_ids:
-        if property_id not in candidates:
-            candidates.append(property_id)
+        try:
+            return load_report_for_preset(focus_id)
+        except KeyError:
+            logger.warning("Focused property %s is not in the preset catalog.", focus_id)
+            return None
+        except Exception as exc:
+            logger.warning("Focused property %s failed to load: %s", focus_id, exc)
+            return None
 
-    for property_id in candidates:
+    for property_id in property_ids:
         try:
             return load_report_for_preset(property_id)
         except KeyError:
             continue
-        except Exception:
+        except Exception as exc:
+            logger.warning("Loaded property %s failed to load: %s", property_id, exc)
             continue
     return None
 

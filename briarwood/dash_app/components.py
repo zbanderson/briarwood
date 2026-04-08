@@ -1455,7 +1455,7 @@ def location_metrics_bars(view: PropertyAnalysisView, report: AnalysisReport) ->
         metrics = [
             ("Town / County", float(view.risk_location.town_score), neutral_benchmark),
             ("Scarcity", float(view.risk_location.scarcity_score), neutral_benchmark),
-            ("Risk Adjusted", max(0.0, 100.0 - float(view.risk_location.risk_score)), neutral_benchmark),
+            ("Risk Resilience", float(view.risk_location.risk_score), neutral_benchmark),
         ]
 
     labels = [item[0] for item in metrics[:5]]
@@ -2907,7 +2907,7 @@ def get_smart_defaults(view: PropertyAnalysisView) -> list[str]:
         expanded.append("tear-price")
 
     # High risk → surface warnings
-    if view.risk_location.risk_score > 65:
+    if view.risk_location.risk_score < 45:
         expanded.append("tear-risk")
 
     # Net opportunity delta is big → show optionality/value-add
@@ -4680,7 +4680,7 @@ def _market_position_sentiment_chart(view: PropertyAnalysisView, *, signal_filte
     confidence_bonus = {"High": 10.0, "Medium": 4.0, "Low": 0.0}.get(getattr(pulse, "confidence_label", "Low"), 0.0)
 
     catalysts_score = min(100.0, bullish_count * 28.0 + confidence_bonus + max(0.0, (rl.market_momentum_score - 50.0) * 0.25))
-    risk_score = min(100.0, bearish_count * 28.0 + max(0.0, (rl.risk_score - 50.0) * 0.45))
+    risk_score = min(100.0, bearish_count * 28.0 + max(0.0, (50.0 - rl.risk_score) * 0.45))
     watch_score = min(100.0, watch_count * 24.0 + (8.0 if watch_count else 0.0))
     backdrop_score = max(0.0, min(100.0, (rl.town_score * 0.35) + (rl.market_momentum_score * 0.35) + (rl.scarcity_score * 0.15) + (rl.liquidity_score * 0.15)))
 
@@ -4999,7 +4999,7 @@ def _insight_hero_text(view: PropertyAnalysisView, report: AnalysisReport) -> tu
             )
 
     # 3. High score but elevated risk
-    if final_score is not None and final_score >= 3.5 and risk_score >= 65:
+    if final_score is not None and final_score >= 3.5 and risk_score <= 40:
         stress_val = view.stress_case
         if stress_val and ask:
             drawdown = (ask - stress_val) / ask * 100
@@ -5264,7 +5264,7 @@ def _risk_insight(view: PropertyAnalysisView) -> html.Div | None:
             liq_ctx = f" This is a thin market — if you need to sell quickly, expect {dom_raw:.0f}+ days on market."
 
     text = f"The biggest risk here is {top_risk.lower()}.{liq_ctx}"
-    tone = "warning" if view.risk_location.risk_score >= 55 else "neutral"
+    tone = "warning" if view.risk_location.risk_score <= 55 else "neutral"
     return _section_insight_callout(text, tone)
 
 

@@ -1463,8 +1463,8 @@ def _extract_confidence_for_narrative(report: AnalysisReport) -> tuple[str, str,
     # Determine level using same logic as view_models._compute_confidence_level
     comp_mod = report.module_results.get("comparable_sales")
     comp_count = int(comp_mod.metrics.get("comp_count", 0)) if comp_mod else 0
-    cost_val = report.module_results.get("cost_valuation")
-    rent_source = str(cost_val.metrics.get("rent_source_type", "missing")) if cost_val else "missing"
+    income_mod = report.module_results.get("income_support")
+    rent_source = str(income_mod.metrics.get("rent_source_type", "missing")) if income_mod else "missing"
     town_mod = report.module_results.get("town_county_outlook")
     town_conf = town_mod.confidence if town_mod else 0.0
 

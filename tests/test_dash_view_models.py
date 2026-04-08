@@ -53,6 +53,7 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIsNotNone(view.decision)
         assert view.decision is not None
         self.assertIn(view.decision.recommendation, {"Buy", "Neutral", "Avoid"})
+        self.assertEqual(view.decision.recommendation, view.recommendation_tier)
         self.assertGreaterEqual(view.decision.conviction_score, 0)
         self.assertLessEqual(view.decision.conviction_score, 100)
         self.assertIn("positive", view.decision.decision_drivers)
