@@ -347,7 +347,10 @@ def _extract_property_history_points(report: AnalysisReport) -> list[dict[str, o
     raw_entries: list[dict[str, object]] = []
     raw_entries.extend(list(property_input.price_history or []))
     if property_input.facts is not None:
-        raw_entries.extend(list(property_input.facts.sale_history or []))
+        if isinstance(property_input.facts, dict):
+            raw_entries.extend(list(property_input.facts.get("sale_history", []) or []))
+        else:
+            raw_entries.extend(list(property_input.facts.sale_history or []))
 
     points: list[dict[str, object]] = []
     seen: set[tuple[date, float, str]] = set()

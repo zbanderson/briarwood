@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ from briarwood.recommendations import (
     recommendation_rank,
 )
 from briarwood.modules.town_aggregation_diagnostics import get_town_context
+from briarwood.local_intelligence.classification import bucket_town_signals
+from briarwood.local_intelligence.models import ImpactDirection, SignalStatus, TownSignal
+from briarwood.local_intelligence.summarize import build_town_summary
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
     get_current_value,
@@ -294,6 +298,156 @@ def _market_momentum_metrics(report: AnalysisReport) -> tuple[dict[str, Any], li
     }, drivers, unsupported
 
 
+def build_town_pulse_view_model_from_payload(
+    payload: object,
+    *,
+    town: str,
+    state: str,
+) -> TownPulseViewModel | None:
+    signals = _town_pulse_signals(payload, town=town, state=state)
+    if not signals:
+        return None
+    summary = build_town_summary(town=town, state=state, signals=signals)
+    buckets = bucket_town_signals(signals)
+    bullish = [_town_pulse_item(signal) for signal in buckets["bullish"][:2]]
+    bearish = [_town_pulse_item(signal) for signal in buckets["bearish"][:2]]
+    watch = [_town_pulse_item(signal) for signal in buckets["watch"][:2]]
+    key_signals = (bullish[:2] + bearish[:1] + watch[:1])[:4]
+    return TownPulseViewModel(
+        section_title="Town Pulse",
+        confidence_label=summary.confidence_label,
+        narrative_summary=summary.narrative_summary,
+        bullish_signals=bullish,
+        bearish_signals=bearish,
+        watch_items=watch,
+        key_signals=key_signals,
+    )
+
+
+def _town_pulse_signals(payload: object, *, town: str, state: str) -> list[TownSignal]:
+    raw_signals = getattr(payload, "signals", None)
+    signals: list[TownSignal] = []
+    if isinstance(raw_signals, list):
+        for raw_signal in raw_signals:
+            if isinstance(raw_signal, TownSignal):
+                signals.append(raw_signal)
+    if signals:
+        return signals
+
+    projects = getattr(payload, "projects", None)
+    if not isinstance(projects, list):
+        return []
+
+    fallback_signals: list[TownSignal] = []
+    for index, project in enumerate(projects):
+        title = _clean_text(getattr(project, "name", ""))
+        if not title:
+            continue
+        confidence = float(getattr(project, "confidence", 0.0) or 0.0)
+        status = _signal_status_from_text(getattr(project, "status", None))
+        impact_direction = _impact_direction_from_text(getattr(project, "impact_direction", None), status=status)
+        excerpt = _clean_text(getattr(project, "evidence_excerpt", None) or getattr(project, "notes", None) or title)
+        now = datetime.now(timezone.utc)
+        fallback_signals.append(
+            TownSignal(
+                id=f"fallback-town-pulse-{index}-{title.lower().replace(' ', '-')[:24]}",
+                town=town,
+                state=state,
+                signal_type=_signal_type_from_text(getattr(project, "type", None)),
+                title=title,
+                source_document_id=f"fallback-{index}",
+                source_type=_source_type_from_project_type(getattr(project, "type", None)),
+                source_date=now,
+                status=status,
+                time_horizon=_time_horizon_from_text(getattr(project, "time_horizon", None), status=status),
+                impact_direction=impact_direction,
+                impact_magnitude=3,
+                confidence=max(0.1, min(confidence, 1.0)),
+                facts=list(getattr(project, "facts", []) or []),
+                inference=_clean_text(getattr(project, "notes", None)) or None,
+                affected_dimensions=[],
+                evidence_excerpt=excerpt,
+                created_at=now,
+                updated_at=now,
+                metadata={"location": _clean_text(getattr(project, "location", None)) or None},
+            )
+        )
+    return fallback_signals
+def _town_pulse_item(signal: TownSignal) -> TownPulseSignalViewModel:
+    tone = (
+        "positive" if signal.impact_direction == ImpactDirection.POSITIVE else
+        "negative" if signal.impact_direction == ImpactDirection.NEGATIVE else
+        "warning"
+    )
+    status_tag = signal.status.value.replace("_", " ").title()
+    confidence_tag = "High" if signal.confidence >= 0.75 else "Medium" if signal.confidence >= 0.55 else "Low"
+    description = signal.inference or (signal.facts[0] if signal.facts else signal.evidence_excerpt)
+    return TownPulseSignalViewModel(
+        title=signal.title,
+        status_tag=status_tag,
+        confidence_tag=confidence_tag,
+        tone=tone,
+        description=description,
+        evidence_excerpt=signal.evidence_excerpt,
+        source_type=signal.source_type.value.replace("_", " ").title(),
+        source_date_text=signal.source_date.strftime("%b %d, %Y") if signal.source_date is not None else "",
+        source_url=signal.source_url,
+        reconciliation_tag=(
+            signal.reconciliation_status.value.replace("_", " ").title()
+            if signal.reconciliation_status is not None
+            else None
+        ),
+    )
+
+
+def _signal_status_from_text(value: object) -> SignalStatus:
+    text = _clean_text(value).lower().replace(" ", "_")
+    for status in SignalStatus:
+        if status.value == text:
+            return status
+    return SignalStatus.MENTIONED
+
+
+def _impact_direction_from_text(value: object, *, status: SignalStatus) -> ImpactDirection:
+    text = _clean_text(value).lower()
+    for direction in ImpactDirection:
+        if direction.value == text:
+            return direction
+    if status == SignalStatus.REJECTED:
+        return ImpactDirection.NEGATIVE
+    if status in {SignalStatus.APPROVED, SignalStatus.FUNDED, SignalStatus.IN_PROGRESS, SignalStatus.COMPLETED}:
+        return ImpactDirection.POSITIVE
+    return ImpactDirection.MIXED
+
+
+def _signal_type_from_text(value: object):
+    text = _clean_text(value).lower().replace("-", "_").replace(" ", "_")
+    for signal_type in SignalType:
+        if signal_type.value == text:
+            return signal_type
+    return SignalType.OTHER
+
+
+def _source_type_from_project_type(value: object):
+    from briarwood.local_intelligence.models import SourceType
+    text = _clean_text(value).lower()
+    if "zoning" in text:
+        return SourceType.ZONING_BOARD_MINUTES
+    if "ordinance" in text or "regulation" in text:
+        return SourceType.ORDINANCE
+    return SourceType.OTHER
+
+
+def _time_horizon_from_text(value: object, *, status: SignalStatus):
+    from briarwood.local_intelligence.models import TimeHorizon
+    text = _clean_text(value).lower().replace(" ", "_")
+    if text in {TimeHorizon.NEAR_TERM.value, TimeHorizon.MEDIUM_TERM.value, TimeHorizon.LONG_TERM.value}:
+        return TimeHorizon(text)
+    if status in {SignalStatus.APPROVED, SignalStatus.FUNDED, SignalStatus.IN_PROGRESS, SignalStatus.COMPLETED}:
+        return TimeHorizon.NEAR_TERM
+    return TimeHorizon.MEDIUM_TERM
+
+
 def _coverage_status_label(status: InputCoverageStatus) -> str:
     return status.value.replace("_", " ").title()
 
@@ -426,6 +580,32 @@ class RiskLocationViewModel:
     risks: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
+    town_pulse: TownPulseViewModel | None = None
+
+
+@dataclass(slots=True)
+class TownPulseSignalViewModel:
+    title: str
+    status_tag: str
+    confidence_tag: str
+    tone: str
+    description: str
+    evidence_excerpt: str
+    source_type: str = ""
+    source_date_text: str = ""
+    source_url: str | None = None
+    reconciliation_tag: str | None = None
+
+
+@dataclass(slots=True)
+class TownPulseViewModel:
+    section_title: str
+    confidence_label: str
+    narrative_summary: str
+    bullish_signals: list[TownPulseSignalViewModel] = field(default_factory=list)
+    bearish_signals: list[TownPulseSignalViewModel] = field(default_factory=list)
+    watch_items: list[TownPulseSignalViewModel] = field(default_factory=list)
+    key_signals: list[TownPulseSignalViewModel] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -1002,6 +1182,12 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     risk = report.get_module("risk_constraints")
     liquidity_metrics, liquidity_supporting, liquidity_unsupported = _liquidity_metrics(report)
     market_momentum_metrics, market_momentum_drivers, market_momentum_unsupported = _market_momentum_metrics(report)
+    local_module = report.module_results.get("local_intelligence")
+    town_pulse = build_town_pulse_view_model_from_payload(
+        local_module.payload if local_module is not None else None,
+        town=property_input.town if property_input else report.address,
+        state=property_input.state if property_input else "",
+    )
     forward_module = report.get_module("bull_base_bear")
     conclusion = build_conclusion_section(report)
     thesis = build_thesis_section(report)
@@ -1278,6 +1464,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             # Scarcity component breakdown
             land_scarcity_score=getattr(scarcity, "land_scarcity_score", None),
             location_scarcity_score=getattr(scarcity, "location_scarcity_score", None),
+            town_pulse=town_pulse,
         ),
         evidence=EvidenceViewModel(
             evidence_mode=(property_input.source_metadata.evidence_mode.value.replace("_", " ").title() if property_input and property_input.source_metadata else "Unknown"),

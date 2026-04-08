@@ -166,12 +166,15 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("Presentation", text)
         # Summary content remains visible in the default overview.
         self.assertIn("/ 5", text)
-        self.assertIn("DECISION SUMMARY", text)
+        self.assertTrue("DECISION SUMMARY" in text or "DECISION MEMO" in text)
         self.assertIn("Score Report Card", text)
         self.assertIn("ASSUMPTION SUMMARY", text)
-        self.assertIn("Current Value Snapshot", text)
+        self.assertTrue("Current Value Snapshot" in text or "Section A - Value Snapshot" in text)
         self.assertIn("Option 1 Buy As-Is", text)
         self.assertIn("Option 2 Buy + Renovate", text)
+        self.assertIn("Town Pulse", text)
+        self.assertIn("Scenario View", text)
+        self.assertIn("Risk & Constraints", text)
         # Deep-dive content still present
         self.assertIn("Is the Price Right?", text)
         self.assertIn("What Does It Cost to Own?", text)
@@ -179,6 +182,14 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("Current Competition", text)
         self.assertIn("Confidence Drivers", text)
         self.assertIn("Metric Basis & Gaps", text)
+
+    def test_tear_sheet_body_can_filter_town_pulse_rows(self) -> None:
+        report = self.reports["briarwood-rd-belmar"]
+        view = build_property_analysis_view(report)
+        body = render_tear_sheet_body(view, report, town_pulse_filter="bearish")
+        text = _flatten_text(body)
+        self.assertIn("500 River Road residential project with 12 units was denied", text)
+        self.assertNotIn("1201 Main Street mixed-use redevelopment with 24 residential units was approved", text)
 
     def test_compare_decision_mode_renders_heatmap_view(self) -> None:
         reports = list(self.reports.values())

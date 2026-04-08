@@ -9,21 +9,33 @@ from briarwood.recommendations import normalize_recommendation_label
 
 # ── Color palette ──────────────────────────────────────────────────────────────
 
-BG_BASE = "#f5f1e8"
-BG_SURFACE = "#fffdf8"
-BG_SURFACE_2 = "#f8f4ec"
-BG_SURFACE_3 = "#efe8dc"
-BG_SURFACE_4 = "#e4d8c7"
+BRAND_NAVY = "#023E8A"
+BRAND_OCEAN = "#0077B6"
+BRAND_CYAN = "#90E0EF"
+BRAND_PALE = "#CAF0F8"
+WHITE = "#FFFFFF"
+LIGHT_GRAY = "#F5F7FA"
+MEDIUM_GRAY = "#6B7280"
+DARK_GRAY = "#1F2937"
 
-BORDER = "#d8ccbc"
-BORDER_SUBTLE = "#e8dfd2"
+BG_BASE = LIGHT_GRAY
+BG_SURFACE = WHITE
+BG_SURFACE_2 = "#F8FBFE"
+BG_SURFACE_3 = "#EEF6FB"
+BG_SURFACE_4 = "#DCEEF6"
 
-TEXT_PRIMARY = "#1f2a37"
-TEXT_SECONDARY = "#526071"
-TEXT_MUTED = "#7a8795"
-TEXT_LINK = "#285ea8"
+BORDER = "#D6E2EE"
+BORDER_SUBTLE = "#E8EFF6"
 
-ACCENT_BLUE = "#2f6fb2"
+TEXT_PRIMARY = DARK_GRAY
+TEXT_SECONDARY = "#334155"
+TEXT_MUTED = MEDIUM_GRAY
+TEXT_LINK = BRAND_OCEAN
+TEXT_INVERSE = WHITE
+
+ACCENT_NAVY = BRAND_NAVY
+ACCENT_BLUE = BRAND_OCEAN
+ACCENT_CYAN = BRAND_CYAN
 ACCENT_GREEN = "#1f8a56"
 ACCENT_YELLOW = "#b78818"
 ACCENT_RED = "#c44a3d"
@@ -42,9 +54,9 @@ TONE_NEGATIVE_TEXT = "#b53f34"
 TONE_NEGATIVE_BG = "#faece9"
 TONE_NEGATIVE_BORDER = "#e6b7b1"
 
-TONE_NEUTRAL_TEXT = "#617181"
-TONE_NEUTRAL_BG = "#f1ece3"
-TONE_NEUTRAL_BORDER = "#d7cab8"
+TONE_NEUTRAL_TEXT = BRAND_NAVY
+TONE_NEUTRAL_BG = BRAND_PALE
+TONE_NEUTRAL_BORDER = "#A9DCE9"
 
 # ── Typography ─────────────────────────────────────────────────────────────────
 
@@ -56,6 +68,16 @@ FONT_DISPLAY = "'Source Serif 4', Georgia, serif"
 
 TOPBAR_HEIGHT = "48px"
 PROPERTY_HEADER_HEIGHT = "40px"
+RADIUS_SM = "12px"
+RADIUS_MD = "16px"
+RADIUS_LG = "18px"
+SPACE_1 = "4px"
+SPACE_2 = "8px"
+SPACE_3 = "12px"
+SPACE_4 = "16px"
+SPACE_5 = "20px"
+SHADOW_SOFT = "0 10px 24px rgba(15, 23, 42, 0.05)"
+SHADOW_ELEVATED = "0 16px 36px rgba(2, 62, 138, 0.08)"
 
 # ── Chart heights ──────────────────────────────────────────────────────────────
 
@@ -72,12 +94,12 @@ PAGE_STYLE: dict = {
     "minHeight": "100vh",
     "lineHeight": "1.45",
     "fontSize": "13px",
-    "backgroundImage": "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(245,241,232,0.95) 30%, rgba(245,241,232,1) 100%)",
+    "backgroundImage": "linear-gradient(180deg, rgba(202,240,248,0.30) 0%, rgba(245,247,250,0.96) 18%, rgba(245,247,250,1) 100%)",
 }
 
 TOPBAR_STYLE: dict = {
-    "backgroundColor": "rgba(255,253,248,0.92)",
-    "borderBottom": f"1px solid {BORDER}",
+    "backgroundColor": BRAND_NAVY,
+    "borderBottom": f"1px solid rgba(255,255,255,0.12)",
     "padding": "0 20px",
     "height": TOPBAR_HEIGHT,
     "display": "flex",
@@ -88,12 +110,12 @@ TOPBAR_STYLE: dict = {
     "zIndex": "200",
     "flexShrink": "0",
     "backdropFilter": "blur(12px)",
-    "boxShadow": "0 8px 24px rgba(77, 60, 32, 0.05)",
+    "boxShadow": "0 12px 32px rgba(2, 62, 138, 0.22)",
 }
 
 PROPERTY_HEADER_STYLE: dict = {
-    "backgroundColor": "rgba(248,244,236,0.94)",
-    "borderBottom": f"1px solid {BORDER_SUBTLE}",
+    "backgroundColor": "rgba(255,255,255,0.96)",
+    "borderBottom": f"1px solid {BORDER}",
     "padding": "6px 20px",
     "height": PROPERTY_HEADER_HEIGHT,
     "display": "flex",
@@ -104,36 +126,37 @@ PROPERTY_HEADER_STYLE: dict = {
     "zIndex": "190",
     "flexShrink": "0",
     "backdropFilter": "blur(10px)",
+    "boxShadow": "0 8px 22px rgba(15, 23, 42, 0.05)",
 }
 
 CARD_STYLE: dict = {
     "backgroundColor": BG_SURFACE,
     "border": f"1px solid {BORDER}",
-    "borderRadius": "12px",
-    "padding": "10px 12px",
-    "boxShadow": "0 8px 24px rgba(76, 57, 30, 0.05)",
+    "borderRadius": RADIUS_MD,
+    "padding": "12px 14px",
+    "boxShadow": SHADOW_SOFT,
 }
 
 CARD_STYLE_ELEVATED: dict = {
-    "backgroundColor": BG_SURFACE_2,
+    "backgroundColor": BG_SURFACE,
     "border": f"1px solid {BORDER}",
-    "borderRadius": "14px",
-    "padding": "10px 12px",
-    "boxShadow": "0 12px 32px rgba(76, 57, 30, 0.07)",
+    "borderRadius": RADIUS_LG,
+    "padding": "14px 16px",
+    "boxShadow": SHADOW_ELEVATED,
 }
 
 SECTION_HEADER_STYLE: dict = {
     "fontSize": "11px",
-    "fontWeight": "600",
+    "fontWeight": "700",
     "letterSpacing": "0.10em",
     "textTransform": "uppercase",
-    "color": TEXT_MUTED,
+    "color": BRAND_NAVY,
     "marginBottom": "8px",
 }
 
 LABEL_STYLE: dict = {
     "fontSize": "11px",
-    "fontWeight": "500",
+    "fontWeight": "600",
     "textTransform": "uppercase",
     "letterSpacing": "0.06em",
     "color": TEXT_MUTED,
@@ -161,7 +184,7 @@ HEADING_XL_STYLE: dict = {
     "fontWeight": "700",
     "letterSpacing": "-0.02em",
     "lineHeight": "1.15",
-    "color": TEXT_PRIMARY,
+    "color": BRAND_NAVY,
     "margin": "0",
 }
 
@@ -171,7 +194,7 @@ HEADING_L_STYLE: dict = {
     "fontWeight": "600",
     "letterSpacing": "-0.01em",
     "lineHeight": "1.2",
-    "color": TEXT_PRIMARY,
+    "color": BRAND_NAVY,
     "margin": "0",
 }
 
@@ -180,14 +203,14 @@ HEADING_M_STYLE: dict = {
     "fontSize": "20px",
     "fontWeight": "600",
     "lineHeight": "1.25",
-    "color": TEXT_PRIMARY,
+    "color": BRAND_NAVY,
     "margin": "0",
 }
 
 BODY_TEXT_STYLE: dict = {
     "fontSize": "13px",
     "color": TEXT_SECONDARY,
-    "lineHeight": "1.6",
+    "lineHeight": "1.65",
 }
 
 MONO_STYLE: dict = {
@@ -200,23 +223,23 @@ MONO_STYLE: dict = {
 
 BTN_PRIMARY: dict = {
     "backgroundColor": ACCENT_BLUE,
-    "color": "#fffdf8",
+    "color": WHITE,
     "border": "none",
-    "borderRadius": "10px",
+    "borderRadius": RADIUS_SM,
     "padding": "8px 14px",
     "fontSize": "13px",
     "fontWeight": "600",
     "cursor": "pointer",
     "fontFamily": FONT_FAMILY,
     "whiteSpace": "nowrap",
-    "boxShadow": "0 6px 16px rgba(47, 111, 178, 0.18)",
+    "boxShadow": "0 10px 20px rgba(0, 119, 182, 0.24)",
 }
 
 BTN_SECONDARY: dict = {
     "backgroundColor": BG_SURFACE,
     "color": TEXT_SECONDARY,
     "border": f"1px solid {BORDER}",
-    "borderRadius": "10px",
+    "borderRadius": RADIUS_SM,
     "padding": "7px 12px",
     "fontSize": "13px",
     "fontWeight": "500",
@@ -227,7 +250,7 @@ BTN_SECONDARY: dict = {
 
 BTN_GHOST: dict = {
     "backgroundColor": "transparent",
-    "color": TEXT_MUTED,
+    "color": BRAND_PALE,
     "border": "none",
     "borderRadius": "8px",
     "padding": "4px 10px",
@@ -243,14 +266,14 @@ INPUT_STYLE: dict = {
     "backgroundColor": BG_SURFACE,
     "color": TEXT_PRIMARY,
     "border": f"1px solid {BORDER}",
-    "borderRadius": "10px",
+    "borderRadius": RADIUS_SM,
     "padding": "8px 10px",
     "fontSize": "13px",
     "fontFamily": FONT_FAMILY,
     "width": "100%",
     "boxSizing": "border-box",
     "outline": "none",
-    "boxShadow": "inset 0 1px 2px rgba(76, 57, 30, 0.04)",
+    "boxShadow": "inset 0 1px 2px rgba(2, 62, 138, 0.04)",
 }
 
 # ── Responsive grid helpers ────────────────────────────────────────────────────
@@ -264,12 +287,12 @@ GRID_5: dict = {"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minm
 
 PLOTLY_LAYOUT: dict = {
     "paper_bgcolor": BG_SURFACE,
-    "plot_bgcolor": BG_SURFACE_2,
+    "plot_bgcolor": LIGHT_GRAY,
     "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 12},
     "title": {"font": {"color": TEXT_PRIMARY, "family": FONT_DISPLAY, "size": 16}},
-    "margin": {"l": 44, "r": 16, "t": 24, "b": 36},
+    "margin": {"l": 44, "r": 16, "t": 22, "b": 32},
     "xaxis": {
-        "gridcolor": BORDER_SUBTLE,
+        "gridcolor": "#E6EEF6",
         "linecolor": BORDER,
         "tickcolor": TEXT_MUTED,
         "tickfont": {"color": TEXT_MUTED, "size": 11},
@@ -277,7 +300,7 @@ PLOTLY_LAYOUT: dict = {
         "zeroline": False,
     },
     "yaxis": {
-        "gridcolor": BORDER_SUBTLE,
+        "gridcolor": "#E6EEF6",
         "linecolor": BORDER,
         "tickcolor": TEXT_MUTED,
         "tickfont": {"color": TEXT_MUTED, "size": 11},
@@ -307,7 +330,7 @@ TABLE_STYLE_CELL: dict = {
     "backgroundColor": BG_SURFACE,
     "color": TEXT_PRIMARY,
     "border": f"1px solid {BORDER_SUBTLE}",
-    "padding": "6px 10px",
+    "padding": "8px 10px",
     "fontFamily": FONT_FAMILY,
     "fontSize": "13px",
     "textAlign": "left",
@@ -321,7 +344,7 @@ TABLE_STYLE_HEADER: dict = {
     "textTransform": "uppercase",
     "letterSpacing": "0.06em",
     "border": f"1px solid {BORDER}",
-    "padding": "6px 10px",
+    "padding": "8px 10px",
 }
 
 TABLE_STYLE_DATA_ODD: dict = {
@@ -334,7 +357,7 @@ TABLE_STYLE_DATA_EVEN: dict = {
 
 TABLE_STYLE_TABLE: dict = {
     "overflowX": "auto",
-    "borderRadius": "12px",
+    "borderRadius": RADIUS_MD,
     "border": f"1px solid {BORDER}",
     "overflowY": "hidden",
 }
@@ -356,7 +379,7 @@ def score_color(score: float) -> str:
     if score >= 4.0:
         return ACCENT_GREEN
     if score >= 3.0:
-        return ACCENT_YELLOW
+        return ACCENT_BLUE
     if score >= 2.0:
         return ACCENT_ORANGE
     return ACCENT_RED
@@ -381,7 +404,7 @@ def verdict_color(verdict: str) -> str:
     if v == "Buy":
         return ACCENT_GREEN
     if v == "Neutral":
-        return ACCENT_ORANGE
+        return ACCENT_BLUE
     return ACCENT_RED
 
 
@@ -394,11 +417,12 @@ def tone_badge_style(tone: str) -> dict:
         "neutral": {"backgroundColor": TONE_NEUTRAL_BG, "color": TONE_NEUTRAL_TEXT, "border": f"1px solid {TONE_NEUTRAL_BORDER}"},
     }
     base = {
-        "padding": "3px 8px",
+        "padding": "4px 9px",
         "borderRadius": "999px",
-        "fontSize": "11px",
+        "fontSize": "10px",
         "fontWeight": "600",
         "display": "inline-block",
         "whiteSpace": "nowrap",
+        "letterSpacing": "0.01em",
     }
     return {**base, **styles.get(tone, styles["neutral"])}

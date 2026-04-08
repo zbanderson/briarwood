@@ -56,14 +56,15 @@ from briarwood.dash_app.data import (
     register_manual_analysis,
 )
 from briarwood.dash_app.theme import (
-    ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED, ACCENT_YELLOW,
+    ACCENT_BLUE, ACCENT_CYAN, ACCENT_GREEN, ACCENT_NAVY, ACCENT_ORANGE, ACCENT_RED, ACCENT_YELLOW,
     BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BORDER, BORDER_SUBTLE, BTN_GHOST, BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO,
+    HEADING_L_STYLE, HEADING_XL_STYLE, BODY_TEXT_STYLE,
     INPUT_STYLE, LABEL_STYLE, PAGE_STYLE, SECTION_HEADER_STYLE,
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
-    TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+    TEXT_INVERSE, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
     TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE,
     tone_badge_style, score_color, verdict_color,
@@ -102,12 +103,13 @@ server = app.server
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 MAIN_TABS = [
-    ("opportunities", "Opportunities"),
+    ("opportunities", "Dashboard"),
     ("tear_sheet", "Property Analysis"),
-    ("scenarios", "Scenarios"),
     ("compare", "Compare"),
-    ("portfolio", "Portfolio"),
+    ("portfolio", "Markets"),
+    ("scenarios", "Scenarios"),
     ("data_quality", "Diagnostics"),
+    ("settings", "Settings"),
 ]
 
 # Compare view still uses section-based rendering
@@ -215,6 +217,67 @@ _DROPDOWN_STYLE = {
     "borderRadius": "10px",
     "fontSize": "13px",
     "fontFamily": FONT_FAMILY,
+}
+
+_SHELL_SIDEBAR_STYLE = {
+    "width": "264px",
+    "minWidth": "264px",
+    "backgroundColor": ACCENT_NAVY,
+    "borderRight": "none",
+    "padding": "20px 16px 22px",
+    "display": "flex",
+    "flexDirection": "column",
+    "gap": "18px",
+    "position": "sticky",
+    "top": "0",
+    "height": "100vh",
+    "alignSelf": "start",
+    "backdropFilter": "blur(14px)",
+    "boxShadow": "24px 0 48px rgba(2, 62, 138, 0.18)",
+}
+
+_SHELL_MAIN_COLUMN_STYLE = {
+    "minWidth": "0",
+    "flex": "1",
+    "display": "flex",
+    "flexDirection": "column",
+    "minHeight": "100vh",
+}
+
+_SHELL_CONTEXT_BAR_STYLE = {
+    "padding": "20px 26px 18px",
+    "borderBottom": f"1px solid {BORDER}",
+    "backgroundColor": "rgba(255,255,255,0.88)",
+    "backdropFilter": "blur(10px)",
+    "display": "flex",
+    "justifyContent": "space-between",
+    "alignItems": "start",
+    "gap": "18px",
+    "flexWrap": "wrap",
+}
+
+_PAGE_CONTAINER_STYLE = {
+    "width": "100%",
+    "display": "flex",
+    "justifyContent": "center",
+    "padding": "28px 28px 36px",
+}
+
+_PAGE_HEADER_STACK_STYLE = {
+    "display": "grid",
+    "gap": "10px",
+    "marginBottom": "20px",
+}
+
+_PAGE_KICKER_STYLE = {
+    **LABEL_STYLE,
+    "marginBottom": "0",
+    "color": ACCENT_BLUE,
+}
+
+_PAGE_SUBTITLE_STYLE = {
+    **BODY_TEXT_STYLE,
+    "maxWidth": "720px",
 }
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -506,25 +569,273 @@ def _changed_property_fields(source_subject: dict[str, object], new_subject: dic
 # ── Layout builders ────────────────────────────────────────────────────────────
 
 
+def _shell_nav_groups() -> list[tuple[str, list[dict[str, str]]]]:
+    return [
+        (
+            "Workspace",
+            [
+                {"tab": "opportunities", "label": "Dashboard", "description": "Best opportunities and current shortlist."},
+                {"tab": "tear_sheet", "label": "Property Analysis", "description": "Decision-first underwriting for the active property."},
+                {"tab": "compare", "label": "Compare", "description": "Line up multiple properties side by side."},
+                {"tab": "portfolio", "label": "Markets", "description": "Cross-property and market-level patterns."},
+            ],
+        ),
+        (
+            "Tools",
+            [
+                {"tab": "scenarios", "label": "Scenarios", "description": "Pressure-test renovate, knockdown, and hold paths."},
+                {"tab": "data_quality", "label": "Diagnostics", "description": "Evidence, assumptions, and data quality."},
+            ],
+        ),
+        (
+            "Admin",
+            [
+                {"tab": "settings", "label": "Settings", "description": "Workspace preferences and system configuration."},
+            ],
+        ),
+    ]
+
+
+def _nav_button_style(active: bool) -> dict:
+    return {
+        "width": "100%",
+        "textAlign": "left",
+        "padding": "10px 12px",
+        "borderRadius": "12px",
+        "border": f"1px solid {ACCENT_CYAN if active else 'rgba(255,255,255,0.12)'}",
+        "backgroundColor": ACCENT_BLUE if active else "rgba(255,255,255,0.04)",
+        "boxShadow": "0 10px 22px rgba(0, 119, 182, 0.24)" if active else "none",
+        "cursor": "pointer",
+    }
+
+
+def _build_shell_sidebar(active_tab: str | None) -> html.Div:
+    active_tab = active_tab or "opportunities"
+    sections: list[html.Div] = []
+    for group_label, items in _shell_nav_groups():
+        sections.append(
+            html.Div(
+                [
+                    html.Div(group_label, style={**SECTION_HEADER_STYLE, "color": "rgba(255,255,255,0.62)"}),
+                    html.Div(
+                        [
+                            html.Button(
+                                [
+                                    html.Div(item["label"], style={"fontSize": "13px", "fontWeight": "700", "color": TEXT_INVERSE}),
+                                    html.Div(item["description"], style={"fontSize": "11px", "lineHeight": "1.45", "color": "rgba(255,255,255,0.72)", "marginTop": "3px"}),
+                                ],
+                                id={"type": "shell-nav-button", "tab": item["tab"]},
+                                n_clicks=0,
+                                style=_nav_button_style(item["tab"] == active_tab),
+                            )
+                            for item in items
+                        ],
+                        style={"display": "grid", "gap": "8px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "8px"},
+            )
+        )
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Briarwood", style={"fontSize": "22px", "fontWeight": "700", "letterSpacing": "-0.03em", "color": TEXT_INVERSE}),
+                    html.Div("Real estate decision workspace", style={"fontSize": "12px", "color": "rgba(255,255,255,0.72)", "marginTop": "4px"}),
+                ]
+            ),
+            html.Div(
+                [
+                    html.Div("Workspace", style={**SECTION_HEADER_STYLE, "color": "rgba(255,255,255,0.62)"}),
+                    html.Div(
+                        "Use the shell to move between discovery, analysis, comparison, and market context without losing your active property.",
+                        style={"fontSize": "12px", "lineHeight": "1.55", "color": "rgba(255,255,255,0.76)"},
+                    ),
+                ],
+                style={
+                    **CARD_STYLE,
+                    "padding": "14px 14px",
+                    "backgroundColor": "rgba(255,255,255,0.08)",
+                    "border": "1px solid rgba(255,255,255,0.12)",
+                    "boxShadow": "none",
+                },
+            ),
+        *sections,
+        ],
+        style=_SHELL_SIDEBAR_STYLE,
+    )
+
+
+def _context_metric(label: str, value: str, detail: str | None = None) -> html.Div:
+    return html.Div(
+        [
+            html.Div(label, style={**LABEL_STYLE, "marginBottom": "4px"}),
+            html.Div(value, style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+            html.Div(detail, style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "2px"}) if detail else None,
+        ],
+        style={**CARD_STYLE, "padding": "10px 12px", "minWidth": "148px"},
+    )
+
+
+def _shell_context_for_tab(
+    tab: str | None,
+    *,
+    report: object | None,
+    focus_id: str | None,
+    loaded_ids: list[str] | None,
+    compare_ids: list[str] | None,
+) -> tuple[str, str, str, list[html.Div]]:
+    tab = tab or "opportunities"
+    loaded_count = len(loaded_ids or [])
+    compare_count = len(compare_ids or [])
+    report_view = build_property_analysis_view(report) if report is not None else None
+
+    if tab == "opportunities":
+        return (
+            "Discovery Workspace",
+            "Dashboard",
+            "Start from surfaced opportunities instead of hunting through an address-first workflow.",
+            [
+                _context_metric("Surfaced", str(len(_discoverable_property_ids(loaded_ids))), "visible opportunity universe"),
+                _context_metric("Loaded", str(loaded_count), "properties in this session"),
+            ],
+        )
+    if tab == "tear_sheet":
+        identity = _property_identity(
+            getattr(report, "address", None),
+            getattr(getattr(report, "property_input", None), "town", None),
+            getattr(getattr(report, "property_input", None), "state", None),
+        ) if report is not None else {"locality": "No property selected", "street": "Property Analysis"}
+        return (
+            identity["locality"],
+            "Property Analysis",
+            "Stay focused on one property at a time, with the selected asset carrying through the workspace.",
+            [
+                _context_metric("Property", identity["street"]),
+                _context_metric("Recommendation", getattr(report_view, "recommendation_tier", "—") or "—", getattr(report_view, "pricing_view", None) if report_view is not None else None),
+                _context_metric("Score", f"{getattr(report_view, 'final_score', 0):.1f}/5" if getattr(report_view, "final_score", None) is not None else "—"),
+            ],
+        )
+    if tab == "compare":
+        return (
+            "Decision Review",
+            "Compare",
+            "Compare a short list once you know which opportunities deserve side-by-side attention.",
+            [
+                _context_metric("Selected", str(compare_count), "properties confirmed for compare"),
+                _context_metric("Mode", "Heatmap-first", "switch into detail when needed"),
+            ],
+        )
+    if tab == "portfolio":
+        return (
+            "Cross-Property Read",
+            "Markets",
+            "Read market and portfolio patterns across the currently loaded property set.",
+            [
+                _context_metric("Loaded", str(loaded_count), "properties contributing to the market read"),
+            ],
+        )
+    if tab == "scenarios":
+        return (
+            "Execution Paths",
+            "Scenarios",
+            "Stress-test renovation, knockdown, and forward cases without losing the core underwriting view.",
+            [
+                _context_metric("Focus", "Scenario testing"),
+            ],
+        )
+    if tab == "data_quality":
+        return (
+            "Model Transparency",
+            "Diagnostics",
+            "Inspect evidence quality, assumptions, and missing-input risk behind the current recommendation.",
+            [
+                _context_metric("Focus", "Assumptions"),
+            ],
+        )
+    return (
+        "Workspace Configuration",
+        "Settings",
+        "This is the shell landing area for workspace preferences and admin controls as Briarwood grows beyond a single analysis flow.",
+        [
+            _context_metric("Status", "Stub"),
+        ],
+    )
+
+
+def _build_shell_context_bar(
+    tab: str | None,
+    *,
+    report: object | None,
+    focus_id: str | None,
+    loaded_ids: list[str] | None,
+    compare_ids: list[str] | None,
+) -> html.Div:
+    eyebrow, title, subtitle, metrics = _shell_context_for_tab(
+        tab,
+        report=report,
+        focus_id=focus_id,
+        loaded_ids=loaded_ids,
+        compare_ids=compare_ids,
+    )
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(eyebrow, style=_PAGE_KICKER_STYLE),
+                    html.H1(title, style=HEADING_XL_STYLE),
+                    html.Div(subtitle, style=_PAGE_SUBTITLE_STYLE),
+                ],
+                style={"display": "grid", "gap": "6px", "minWidth": "280px"},
+            ),
+            html.Div(metrics, style={"display": "flex", "gap": "10px", "flexWrap": "wrap", "justifyContent": "flex-end"}),
+        ],
+        style=_SHELL_CONTEXT_BAR_STYLE,
+    )
+
+
+def _build_page_container(
+    *,
+    title: str,
+    subtitle: str,
+    content,
+    eyebrow: str | None = None,
+    max_width: str = "1180px",
+) -> html.Div:
+    header_children = []
+    if eyebrow:
+        header_children.append(html.Div(eyebrow, style=_PAGE_KICKER_STYLE))
+    header_children.append(html.H2(title, style=HEADING_L_STYLE))
+    header_children.append(html.Div(subtitle, style=_PAGE_SUBTITLE_STYLE))
+    return html.Div(
+        html.Div(
+            [
+                html.Div(header_children, style=_PAGE_HEADER_STACK_STYLE),
+                content,
+            ],
+            style={"width": "100%", "maxWidth": max_width},
+        ),
+        style=_PAGE_CONTAINER_STYLE,
+    )
+
+
 def _topbar() -> html.Div:
     options = _property_options()
     initial_value = DEFAULT_PRESET_IDS[0] if DEFAULT_PRESET_IDS else (options[0]["value"] if options else None)
     return html.Div(
         [
-            # Logo / wordmark
             html.Div(
                 [
-                    html.Span("Briarwood", style={"fontWeight": "700", "fontSize": "16px", "color": TEXT_PRIMARY, "letterSpacing": "-0.02em"}),
-                    html.Span("Research Platform", style={"fontSize": "13px", "color": TEXT_MUTED, "marginLeft": "8px"}),
+                    html.Span("Active Workspace", style={"fontWeight": "700", "fontSize": "13px", "color": TEXT_INVERSE, "letterSpacing": "-0.02em"}),
+                    html.Span("Property and export controls", style={"fontSize": "12px", "color": "rgba(255,255,255,0.72)", "marginLeft": "8px"}),
                 ],
                 style={"display": "flex", "alignItems": "baseline", "gap": "0", "flexShrink": "0"},
             ),
-            # Separator
-            html.Div(style={"width": "1px", "height": "24px", "backgroundColor": BORDER, "flexShrink": "0"}),
-            # Property selector
+            html.Div(style={"width": "1px", "height": "24px", "backgroundColor": "rgba(255,255,255,0.18)", "flexShrink": "0"}),
             html.Div(
                 [
-                    html.Div("Quick Jump", style={**LABEL_STYLE, "marginBottom": "2px"}),
+                    html.Div("Active Property", style={**LABEL_STYLE, "marginBottom": "2px", "color": "rgba(255,255,255,0.72)"}),
                     dcc.Dropdown(
                         id="property-selector-dropdown",
                         options=options,
@@ -538,20 +849,19 @@ def _topbar() -> html.Div:
                 ],
                 style={"flex": "1", "maxWidth": "340px"},
             ),
-            # Add Property toggle
             html.Button("+ Add Property", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
             html.Div(
                 [
                     html.Button("Export PDF", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
                     html.Button("Export TXT", id="export-txt-button", n_clicks=0, style={**BTN_GHOST, "opacity": "0.7"}),
-                    html.Div(id="export-status", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                    html.Div(id="export-status", style={"fontSize": "13px", "color": "rgba(255,255,255,0.72)"}),
                 ],
                 style={"display": "flex", "alignItems": "center", "gap": "8px"},
             ),
             # Spacer
             html.Div(style={"flex": "1"}),
             # Active property status
-            html.Div(id="active-property-status", style={"fontSize": "13px", "color": TEXT_MUTED, "flexShrink": "0"}),
+            html.Div(id="active-property-status", style={"fontSize": "13px", "color": "rgba(255,255,255,0.78)", "flexShrink": "0"}),
         ],
         style=TOPBAR_STYLE,
     )
@@ -1017,10 +1327,11 @@ def _main_tab_bar() -> html.Nav:
                 )
                 for value, label in MAIN_TABS
             ],
-            style=_TAB_BAR_STYLE,
+            style={"display": "none"},
             colors={"border": "transparent", "primary": ACCENT_BLUE, "background": BG_SURFACE},
         ),
         **{"aria-label": "Main navigation"},
+        style={"display": "none"},
     )
 
 
@@ -1490,6 +1801,7 @@ def _build_layout():
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
             dcc.Store(id="tear-sheet-view-mode", storage_type="local", data="owner"),
+            dcc.Store(id="town-pulse-filter", data="all"),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
@@ -1503,42 +1815,44 @@ def _build_layout():
             }),
             # PDF download target
             dcc.Download(id="pdf-download"),
-
-            # Top bar
-            _topbar(),
-
-            # Sticky property header (populated by callback)
-            html.Div(id="property-header-bar", style={"display": "none"}),
-
-            # Feedback banner (only shown after analysis)
-            _feedback_banner(),
-
-            # Main tab bar
-            _main_tab_bar(),
-
-            # Main content area (wrapped in Loading for property-switch feedback)
-            dcc.Loading(
-                id="main-content-loading",
-                type="default",
-                color=ACCENT_BLUE,
-                children=html.Main(
-                    id="main-tab-content",
-                    style={"flex": "1", "minHeight": "0"},
-                    **{"aria-label": "Property analysis content"},
-                ),
-                style={"flex": "1", "minHeight": "0"},
+            html.Div(
+                [
+                    html.Aside(
+                        id="app-shell-sidebar",
+                        children=_build_shell_sidebar("opportunities"),
+                        style={"flexShrink": "0"},
+                    ),
+                    html.Div(
+                        [
+                            _topbar(),
+                            html.Div(id="property-header-bar", style={"display": "none"}),
+                            html.Div(id="app-shell-context-bar"),
+                            _feedback_banner(),
+                            _main_tab_bar(),
+                            dcc.Loading(
+                                id="main-content-loading",
+                                type="default",
+                                color=ACCENT_BLUE,
+                                children=html.Main(
+                                    id="main-tab-content",
+                                    style={"flex": "1", "minHeight": "0"},
+                                    **{"aria-label": "Property analysis content"},
+                                ),
+                                style={"flex": "1", "minHeight": "0"},
+                            ),
+                        ],
+                        style=_SHELL_MAIN_COLUMN_STYLE,
+                    ),
+                ],
+                style={"display": "flex", "alignItems": "stretch", "minHeight": "100vh"},
             ),
 
             _add_property_drawer(),
-
-            # Tour: step store drives the overlay content
             dcc.Store(id="tour-step", data=-1),
             html.Div(id="tour-overlay-container", style={"pointerEvents": "none"}),
-
-            # Tour trigger button (always visible, isolated from flex layout)
             render_tour_trigger_button(),
         ],
-        style={**PAGE_STYLE, "display": "flex", "flexDirection": "column"},
+        style=PAGE_STYLE,
     )
 
 
@@ -1566,7 +1880,12 @@ def refresh_property_controls(
     allowed = {option["value"] for option in options}
     loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
     default_value = loaded_ids[0] if loaded_ids else (options[0]["value"] if options else None)
-    property_value = current_property_id if current_property_id in allowed else default_value
+    if len(loaded_ids) == 1:
+        property_value = loaded_ids[0]
+    elif current_property_id in allowed:
+        property_value = current_property_id
+    else:
+        property_value = default_value
     return options, property_value, _saved_property_rows(), list_comp_database_rows()
 
 
@@ -1688,6 +2007,54 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
     )
 
     return status, header_children, PROPERTY_HEADER_STYLE
+
+
+@app.callback(
+    Output("main-tabs", "value", allow_duplicate=True),
+    Input({"type": "shell-nav-button", "tab": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def select_shell_destination(_clicks: list[int] | None):
+    trigger = ctx.triggered_id
+    if not isinstance(trigger, dict):
+        raise dash.exceptions.PreventUpdate
+    tab = trigger.get("tab")
+    if not tab:
+        raise dash.exceptions.PreventUpdate
+    return tab
+
+
+@app.callback(
+    Output("app-shell-sidebar", "children"),
+    Input("main-tabs", "value"),
+)
+def render_shell_sidebar(tab: str | None):
+    return _build_shell_sidebar(tab)
+
+
+@app.callback(
+    Output("app-shell-context-bar", "children"),
+    Input("main-tabs", "value"),
+    Input("loaded-preset-ids", "data"),
+    Input("property-selector-dropdown", "value"),
+    Input("compare-confirmed-ids", "data"),
+)
+def render_shell_context_bar(
+    tab: str | None,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+    compare_ids: list[str] | None,
+):
+    report = None
+    if tab in {"tear_sheet", "scenarios", "data_quality"}:
+        report = _focused_report(loaded_ids, focus_id)
+    return _build_shell_context_bar(
+        tab,
+        report=report,
+        focus_id=focus_id,
+        loaded_ids=loaded_ids,
+        compare_ids=compare_ids,
+    )
 
 
 def _header_metric(label: str, value: str, *, color: str = TEXT_PRIMARY) -> html.Span:
@@ -2030,6 +2397,38 @@ def compare_selected_saved_properties(
     )
 
 
+@app.callback(
+    Output("town-pulse-filter", "data"),
+    Input("market-position-sentiment-chart", "clickData"),
+    Input("town-pulse-clear-filter", "n_clicks"),
+    Input("property-selector-dropdown", "value"),
+    Input("main-tabs", "value"),
+    State("town-pulse-filter", "data"),
+    prevent_initial_call=True,
+)
+def sync_town_pulse_filter(
+    click_data: dict | None,
+    _clear_clicks: int | None,
+    _property_id: str | None,
+    tab: str | None,
+    current_filter: str | None,
+):
+    trigger = ctx.triggered_id
+    if trigger == "market-position-sentiment-chart":
+        point = (click_data or {}).get("points", [{}])[0]
+        label = point.get("y")
+        next_filter = {
+            "Catalysts": "bullish",
+            "Risks": "bearish",
+            "Watch": "watch",
+            "Backdrop": "all",
+        }.get(label, "all")
+        return "all" if current_filter == next_filter else next_filter
+    if trigger in {"town-pulse-clear-filter", "property-selector-dropdown", "main-tabs"}:
+        return "all"
+    raise dash.exceptions.PreventUpdate
+
+
 # ── Main tab content ───────────────────────────────────────────────────────────
 
 
@@ -2040,6 +2439,7 @@ def compare_selected_saved_properties(
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
     Input("tear-sheet-view-mode", "data"),
+    Input("town-pulse-filter", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -2047,10 +2447,14 @@ def render_main_tab(
     loaded_ids: list[str] | None,
     focus_id: str | None,
     tear_sheet_view_mode: str | None,
+    town_pulse_filter: str | None,
 ):
     if tab == "opportunities":
-        return _centered_main_panel(
-            _opportunity_discovery_section(
+        return _build_page_container(
+            eyebrow="Discovery",
+            title="Dashboard",
+            subtitle="Start with the best opportunities on the board right now, then jump into a property when something deserves closer attention.",
+            content=_opportunity_discovery_section(
                 loaded_ids=loaded_ids,
                 focus_id=focus_id,
                 town_filter="all",
@@ -2058,7 +2462,6 @@ def render_main_tab(
                 strategy_filter="all",
                 price_band_filter="all",
             ),
-            padding="0 20px 24px",
             max_width="1140px",
         )
 
@@ -2067,15 +2470,21 @@ def render_main_tab(
         if report is None:
             return _empty_state("Add or select a property to begin.")
         view = build_property_analysis_view(report)
-        return _centered_main_panel(
-            html.Div(
-                [
-                    html.Div("Selected Property Analysis", style=SECTION_HEADER_STYLE),
-                    render_tear_sheet_body(view, report, tear_sheet_view_mode or "owner"),
-                ],
-                style={"display": "grid", "gap": "10px"},
+        identity = _property_identity(
+            report.address,
+            getattr(report.property_input, "town", None),
+            getattr(report.property_input, "state", None),
+        )
+        return _build_page_container(
+            eyebrow=identity["locality"],
+            title="Property Analysis",
+            subtitle=f"Working read on {identity['street']}. The page stays decision-first, while deeper diagnostics remain available further down.",
+            content=render_tear_sheet_body(
+                view,
+                report,
+                tear_sheet_view_mode or "owner",
+                town_pulse_filter=town_pulse_filter or "all",
             ),
-            padding="0 20px 24px",
             max_width="1140px",
         )
 
@@ -2084,17 +2493,27 @@ def render_main_tab(
         if report is None:
             return _empty_state("Select a property to view investment scenarios.")
         from briarwood.dash_app.scenarios import render_scenarios_section
-        return _centered_main_panel(render_scenarios_section(report))
+        return _build_page_container(
+            eyebrow="Decision Paths",
+            title="Scenarios",
+            subtitle="Evaluate alternate execution paths without leaving the current workspace or losing the base underwriting read.",
+            content=render_scenarios_section(report),
+        )
 
     if tab == "compare":
-        return html.Div(
-            [
-                _compare_controls(),
-                html.Div(
-                    id="compare-content",
-                    style={"width": "100%", "maxWidth": "1180px", "padding": "16px 20px 24px", "margin": "0 auto"},
-                ),
-            ]
+        return _build_page_container(
+            eyebrow="Shortlist Review",
+            title="Compare",
+            subtitle="Bring two to four properties into one decision frame, then move between heatmap, radar, table, and detail views as needed.",
+            content=html.Div(
+                [
+                    html.Div(_compare_controls(), style={**CARD_STYLE, "padding": "16px 18px", "marginBottom": "16px"}),
+                    html.Div(
+                        id="compare-content",
+                        style={"width": "100%"},
+                    ),
+                ]
+            ),
         )
 
     if tab == "portfolio":
@@ -2103,14 +2522,47 @@ def render_main_tab(
             return _empty_state("Load properties to view portfolio dashboard.")
         reports = load_reports(loaded_ids)
         views = [build_property_analysis_view(r) for r in reports.values()]
-        return _centered_main_panel(render_portfolio_dashboard(views), max_width="1200px")
+        return _build_page_container(
+            eyebrow="Cross-Property",
+            title="Markets",
+            subtitle="Use the loaded property set as a lightweight market workspace until Briarwood grows into dedicated town and market pages.",
+            content=render_portfolio_dashboard(views),
+            max_width="1200px",
+        )
 
     if tab == "data_quality":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
             return _empty_state("Select a property to view diagnostics.")
         from briarwood.dash_app.data_quality import render_data_quality_section
-        return _centered_main_panel(render_data_quality_section(report))
+        return _build_page_container(
+            eyebrow="Transparency",
+            title="Diagnostics",
+            subtitle="Inspect confidence, assumptions, and evidence quality without cluttering the main decision flow.",
+            content=render_data_quality_section(report),
+        )
+
+    if tab == "settings":
+        return _build_page_container(
+            eyebrow="Workspace",
+            title="Settings",
+            subtitle="This area is intentionally lightweight for now. It establishes a stable home for future preferences, connectors, and admin controls.",
+            content=html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Settings / Admin is not fully built yet.", style={"fontSize": "15px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                            html.Div(
+                                "This shell pass creates a safe destination for future workspace settings instead of scattering admin controls across analysis pages.",
+                                style=_PAGE_SUBTITLE_STYLE,
+                            ),
+                        ],
+                        style={**CARD_STYLE, "padding": "18px 20px", "display": "grid", "gap": "8px"},
+                    )
+                ]
+            ),
+            max_width="860px",
+        )
 
     return _empty_state("Select a tab.")
 
@@ -2143,10 +2595,10 @@ def _centered_main_panel(content, *, padding: str = "16px 20px 24px", max_width:
 
 def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> AnalysisReport | None:
     property_ids = loaded_ids or []
-    if not property_ids:
+    if not property_ids and not focus_id:
         return None
     candidates: list[str] = []
-    if focus_id and focus_id in property_ids:
+    if focus_id:
         candidates.append(focus_id)
     for property_id in property_ids:
         if property_id not in candidates:

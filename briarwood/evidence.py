@@ -31,8 +31,16 @@ def build_section_evidence(
         for item in extra_estimated_inputs:
             if item not in estimated_inputs:
                 estimated_inputs.append(item)
+    evidence_mode = EvidenceMode.PUBLIC_RECORD
+    if property_input.source_metadata:
+        if isinstance(property_input.source_metadata, dict):
+            raw_mode = property_input.source_metadata.get("evidence_mode")
+            if raw_mode:
+                evidence_mode = raw_mode if isinstance(raw_mode, EvidenceMode) else EvidenceMode(str(raw_mode))
+        else:
+            evidence_mode = property_input.source_metadata.evidence_mode
     return SectionEvidence(
-        evidence_mode=(property_input.source_metadata.evidence_mode if property_input.source_metadata else EvidenceMode.PUBLIC_RECORD),
+        evidence_mode=evidence_mode,
         categories=coverage_items,
         major_missing_inputs=missing_inputs,
         estimated_inputs=estimated_inputs,

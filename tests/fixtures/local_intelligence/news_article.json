@@ -1,0 +1,13 @@
+{
+  "id": "fixture-news-001",
+  "town": "Belmar",
+  "state": "NJ",
+  "source_type": "news",
+  "title": "Belmar approves boardwalk resiliency grant",
+  "published_at": "2026-03-18T00:00:00+00:00",
+  "raw_text": "Belmar officials said a $4.2 million state resiliency grant was approved to elevate portions of the boardwalk and improve stormwater drainage near Ocean Avenue. The mayor said construction could begin next year if final engineering is completed.",
+  "cleaned_text": "Belmar officials said a $4.2 million state resiliency grant was approved to elevate portions of the boardwalk and improve stormwater drainage near Ocean Avenue. The mayor said construction could begin next year if final engineering is completed.",
+  "metadata": {
+    "publisher": "Coastal Ledger"
+  }
+}

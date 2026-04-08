@@ -1,0 +1,13 @@
+{
+  "id": "fixture-minutes-001",
+  "town": "Belmar",
+  "state": "NJ",
+  "source_type": "planning_board_minutes",
+  "title": "Planning Board Minutes - 1201 Main Street",
+  "published_at": "2026-02-11T00:00:00+00:00",
+  "raw_text": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved. Board members found the project consistent with the master plan and noted streetscape improvements.",
+  "cleaned_text": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved. Board members found the project consistent with the master plan and noted streetscape improvements.",
+  "metadata": {
+    "meeting_type": "planning board"
+  }
+}

@@ -303,8 +303,23 @@ class PropertyInput:
         )
 
     def coverage_for(self, category: str) -> SourceCoverageItem:
-        if self.source_metadata and category in self.source_metadata.source_coverage:
-            return self.source_metadata.source_coverage[category]
+        if self.source_metadata:
+            if isinstance(self.source_metadata, dict):
+                source_coverage = self.source_metadata.get("source_coverage", {})
+                if category in source_coverage:
+                    item = source_coverage[category]
+                    if isinstance(item, SourceCoverageItem):
+                        return item
+                    if isinstance(item, dict):
+                        return SourceCoverageItem(
+                            category=item.get("category", category),
+                            status=InputCoverageStatus(item.get("status", InputCoverageStatus.MISSING.value)),
+                            source_name=item.get("source_name"),
+                            freshness=item.get("freshness"),
+                            note=item.get("note"),
+                        )
+            elif category in self.source_metadata.source_coverage:
+                return self.source_metadata.source_coverage[category]
         return SourceCoverageItem(category=category, status=InputCoverageStatus.MISSING)
 
 
@@ -457,6 +472,10 @@ class LocalIntelligenceProject:
     location: str | None = None
     notes: str | None = None
     confidence: float = 0.0
+    impact_direction: str | None = None
+    evidence_excerpt: str | None = None
+    time_horizon: str | None = None
+    facts: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -525,6 +544,7 @@ class LocalIntelligenceOutput:
     scores: LocalIntelligenceScores = field(default_factory=LocalIntelligenceScores)
     narrative: list[str] = field(default_factory=list)
     confidence: LocalIntelligenceConfidence = field(default_factory=LocalIntelligenceConfidence)
+    signals: list[Any] = field(default_factory=list)
 
 
 @dataclass(slots=True)

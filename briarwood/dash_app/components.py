@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 
 from briarwood.dash_app.compare import CompareSummary
 from briarwood.dash_app.theme import (
-    ACCENT_BLUE, ACCENT_GREEN, ACCENT_ORANGE, ACCENT_RED, ACCENT_TEAL, ACCENT_YELLOW,
+    ACCENT_BLUE, ACCENT_CYAN, ACCENT_GREEN, ACCENT_NAVY, ACCENT_ORANGE, ACCENT_RED, ACCENT_TEAL, ACCENT_YELLOW,
     BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BODY_TEXT_STYLE, BORDER, BORDER_SUBTLE,
     BTN_PRIMARY, BTN_SECONDARY,
@@ -23,7 +23,7 @@ from briarwood.dash_app.theme import (
     SECTION_HEADER_STYLE,
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
-    TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+    TEXT_INVERSE, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
     TONE_NEGATIVE_BG, TONE_NEGATIVE_BORDER, TONE_NEGATIVE_TEXT,
     TONE_NEUTRAL_BG, TONE_NEUTRAL_BORDER, TONE_NEUTRAL_TEXT,
     TONE_POSITIVE_BG, TONE_POSITIVE_BORDER, TONE_POSITIVE_TEXT,
@@ -128,18 +128,18 @@ def inline_metric_strip(metrics: list[tuple[str, str, str | None]]) -> html.Div:
     items = []
     for i, (label, value, sublabel) in enumerate(metrics):
         if i > 0:
-            items.append(html.Span(" | ", style={"margin": "0 10px", "color": BORDER}))
+            items.append(html.Span("•", style={"margin": "0 8px", "color": BORDER}))
         children = [
-            html.Span(label, style={"fontSize": "11px", "color": TEXT_MUTED, "textTransform": "uppercase", "marginRight": "5px"}),
-            html.Span(value, style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY}),
+            html.Span(label, style={"fontSize": "10px", "color": TEXT_MUTED, "textTransform": "uppercase", "letterSpacing": "0.06em", "marginRight": "5px"}),
+            html.Span(value, style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY}),
         ]
         if sublabel:
             is_positive = sublabel.startswith("+")
             is_negative = sublabel.startswith("-") or sublabel.startswith("−")
             sub_color = TONE_POSITIVE_TEXT if is_positive else TONE_NEGATIVE_TEXT if is_negative else TEXT_MUTED
-            children.append(html.Span(f" {sublabel}", style={"fontSize": "11px", "color": sub_color}))
+            children.append(html.Span(f" {sublabel}", style={"fontSize": "10px", "color": sub_color}))
         items.append(html.Span(children, style={"display": "inline-flex", "alignItems": "baseline", "gap": "0"}))
-    return html.Div(items, style={"padding": "8px 0", "lineHeight": "1.4"})
+    return html.Div(items, style={"padding": "6px 0", "lineHeight": "1.45", "flexWrap": "wrap"})
 
 
 def confidence_badge(confidence: float) -> html.Span:
@@ -218,7 +218,7 @@ def section_confidence_indicator(confidence: float, *, section_key: str = "") ->
     label_text = f"{confidence:.0%} {level}"
     return html.Span(
         [dot, html.Span(label_text, style={"fontSize": "10px", "fontWeight": "500", "color": tone_color_val})],
-        style={"display": "inline-flex", "alignItems": "center", "padding": "2px 8px 2px 6px", "backgroundColor": f"{tone_color_val}12", "borderRadius": "10px"},
+        style={"display": "inline-flex", "alignItems": "center", "padding": "3px 8px 3px 6px", "backgroundColor": f"{tone_color_val}10", "borderRadius": "999px", "border": f"1px solid {tone_color_val}22"},
     )
 
 
@@ -3146,6 +3146,373 @@ def _decision_summary_block(view: PropertyAnalysisView, report: AnalysisReport) 
     )
 
 
+def _property_header_identity(report: AnalysisReport) -> tuple[str, str]:
+    address = getattr(report, "address", "") or ""
+    parts = [part.strip() for part in str(address).split(",") if part.strip()]
+    street = parts[0] if parts else "Unknown Address"
+    property_input = getattr(report, "property_input", None)
+    town = getattr(property_input, "town", None)
+    state = getattr(property_input, "state", None)
+    locality = ", ".join(part for part in [town, state] if part) or ", ".join(parts[1:3]).strip() or "Unknown Location"
+    return locality, street
+
+
+def _property_header_basics(report: AnalysisReport) -> str:
+    property_input = getattr(report, "property_input", None)
+    if property_input is None:
+        return ""
+    items: list[str] = []
+    beds = getattr(property_input, "beds", None)
+    baths = getattr(property_input, "baths", None)
+    sqft = getattr(property_input, "sqft", None)
+    property_type = getattr(property_input, "property_type", None)
+    if beds:
+        items.append(f"{beds} bd")
+    if baths:
+        items.append(f"{baths:g} ba" if isinstance(baths, (int, float)) else f"{baths} ba")
+    if sqft:
+        items.append(f"{int(sqft):,} sf")
+    if property_type:
+        items.append(str(property_type).replace("_", " ").title())
+    return " · ".join(items)
+
+
+def _premium_property_header(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    locality, street = _property_header_identity(report)
+    basics = _property_header_basics(report)
+    pricing_panel = html.Div(
+        [
+            html.Div("Asking Price", style={**LABEL_STYLE, "color": ACCENT_BLUE, "marginBottom": "6px"}),
+            html.Div(_fmt_compact(view.ask_price), style={"fontSize": "34px", "fontWeight": "800", "lineHeight": "1.0", "color": ACCENT_NAVY}),
+            html.Div(
+                "Current listing basis",
+                style={"fontSize": "12px", "color": TEXT_MUTED, "marginTop": "4px"},
+            ),
+            html.Div(
+                inline_metric_strip([
+                    ("Fair Value", _fmt_compact(view.bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
+                    ("12M Base", _fmt_compact(view.base_case), None),
+                ]),
+                style={"marginTop": "10px"},
+            ),
+        ],
+        style={
+            **CARD_STYLE,
+            "padding": "18px 18px",
+            "backgroundColor": BG_SURFACE_3,
+            "border": f"1px solid {BG_SURFACE_4}",
+            "boxShadow": "none",
+        },
+    )
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(locality, style={**SECTION_HEADER_STYLE, "fontSize": "12px", "marginBottom": "6px", "color": ACCENT_BLUE}),
+                    html.Div(street, style={"fontSize": "34px", "fontWeight": "800", "letterSpacing": "-0.03em", "lineHeight": "1.05", "color": ACCENT_NAVY}),
+                    html.Div(
+                        "High-conviction investment read anchored in current value, path to upside, town backdrop, and evidence quality.",
+                        style={"fontSize": "14px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginTop": "8px", "maxWidth": "72ch"},
+                    ),
+                    html.Div(basics, style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "8px"}) if basics else None,
+                ],
+                style={"display": "grid", "gap": "0"},
+            ),
+            pricing_panel,
+        ],
+        style={
+            **CARD_STYLE_ELEVATED,
+            "padding": "22px 24px",
+            "display": "grid",
+            "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))",
+            "gap": "18px",
+            "alignItems": "start",
+            "background": "linear-gradient(180deg, rgba(202,240,248,0.32) 0%, rgba(255,255,255,1) 42%)",
+            "border": f"1px solid {BG_SURFACE_4}",
+        },
+    )
+
+
+def _premium_decision_strip(view: PropertyAnalysisView) -> html.Div:
+    decision = view.decision
+    recommendation = decision.recommendation if decision is not None else (view.recommendation_tier or "—")
+    confidence = decision.confidence_level if decision is not None else view.confidence_level
+    fit = decision.best_fit if decision is not None else _fit_label(view)
+    confidence_tone = (
+        "positive" if confidence == "High" else
+        "warning" if confidence == "Medium" else
+        "negative"
+    )
+    summary_line = decision.decisive_driver if decision is not None and decision.decisive_driver else (decision.thesis if decision is not None else "Briarwood's current underwriting view.")
+    lead_card = html.Div(
+        [
+            html.Div("Decision Read", style={**LABEL_STYLE, "color": "rgba(255,255,255,0.78)"}),
+            html.Div(recommendation, style={"fontSize": "34px", "fontWeight": "800", "lineHeight": "1.0", "color": TEXT_INVERSE}),
+            html.Div(summary_line, style={"fontSize": "14px", "lineHeight": "1.55", "color": "rgba(255,255,255,0.82)", "marginTop": "10px", "maxWidth": "58ch"}),
+        ],
+        style={
+            "padding": "18px 20px",
+            "borderRadius": "18px",
+            "background": f"linear-gradient(135deg, {ACCENT_NAVY} 0%, {ACCENT_BLUE} 100%)",
+            "boxShadow": "0 18px 34px rgba(2, 62, 138, 0.24)",
+            "gridColumn": "span 2",
+        },
+    )
+    return html.Div(
+        [
+            lead_card,
+            html.Div(
+                [
+                    html.Div("Score", style=LABEL_STYLE),
+                    html.Div(f"{view.final_score:.1f}/5" if view.final_score is not None else "—", style={"fontSize": "30px", "fontWeight": "800", "lineHeight": "1.05", "color": score_color(view.final_score)}),
+                ],
+                style={**CARD_STYLE, "padding": "18px 18px", "boxShadow": "none", "borderColor": BORDER_SUBTLE, "minHeight": "118px"},
+            ),
+            html.Div(
+                [
+                    html.Div("Confidence", style=LABEL_STYLE),
+                    html.Div(
+                        [
+                            html.Span(confidence, style={"fontSize": "20px", "fontWeight": "700", "color": _confidence_level_color(confidence)}),
+                            html.Span(confidence.upper(), style=tone_badge_style(confidence_tone)),
+                        ],
+                        style={"display": "flex", "gap": "8px", "alignItems": "center", "flexWrap": "wrap"},
+                    ),
+                ],
+                style={**CARD_STYLE, "padding": "18px 18px", "boxShadow": "none", "borderColor": BORDER_SUBTLE, "minHeight": "118px"},
+            ),
+            html.Div(
+                [
+                    html.Div("Best Fit", style=LABEL_STYLE),
+                    html.Div(fit, style={"fontSize": "18px", "fontWeight": "700", "lineHeight": "1.25", "color": TEXT_PRIMARY}),
+                ],
+                style={**CARD_STYLE, "padding": "18px 18px", "boxShadow": "none", "borderColor": BORDER_SUBTLE, "minHeight": "118px"},
+            ),
+        ],
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "12px"},
+    )
+
+
+def _premium_key_metrics_row(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    metrics = _economics_inputs(report, view)
+    key_cards = [
+        ("Net Monthly Cost", _fmt_value(metrics.get("net_monthly_cost")) or view.income_support.monthly_cash_flow_text, "carry after rent support"),
+        ("Price-to-Rent", view.income_support.price_to_rent_text, view.income_support.ptr_classification),
+        ("CapEx Load", view.capex_lane, _capex_basis_source_label(view.capex_basis_source)),
+        ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
+        ("Optionality", view.optionality_label, view.decision.best_fit if view.decision is not None else None),
+    ]
+    return html.Div(
+        [
+            html.Div("Key Metrics", style=SECTION_HEADER_STYLE),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(label, style=LABEL_STYLE),
+                            html.Div(value, style={"fontSize": "20px", "fontWeight": "800", "lineHeight": "1.1", "color": TEXT_PRIMARY}),
+                            html.Div(subtitle, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginTop": "6px"}) if subtitle else None,
+                        ],
+                        style={**CARD_STYLE, "padding": "16px 16px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
+                    )
+                    for label, value, subtitle in key_cards
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(170px, 1fr))", "gap": "10px"},
+            ),
+        ],
+        style={**CARD_STYLE, "padding": "18px 20px", "boxShadow": "none"},
+    )
+
+
+def _premium_scenario_workspace(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    return html.Div(
+        [
+            html.Div("Scenario View", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "Use this section to move from current value to strategic path, then to forward value and break-even timing. The goal is to see whether the deal works today, through execution, and over time.",
+                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            _renovation_path_summary(view, report),
+            _property_analysis_top_stack(view, report, include_market_position=False),
+        ],
+        style={**CARD_STYLE_ELEVATED, "padding": "20px 22px", "display": "grid", "gap": "14px"},
+    )
+
+
+def _premium_risk_constraints_section(
+    view: PropertyAnalysisView,
+    risk_section: html.Div,
+    optionality_section: html.Div,
+) -> html.Div:
+    decision = view.decision
+    required_belief = decision.required_belief if decision is not None else "The current assumptions need to hold close to the base case."
+    break_condition = decision.break_condition if decision is not None else (view.top_risks[0] if view.top_risks else "No primary break condition available.")
+    dependencies = (decision.dependencies if decision is not None and decision.dependencies else view.what_changes_call[:3]) or []
+    return html.Div(
+        [
+            html.Div("Risk & Constraints", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "This is the fast read on what can break the thesis, what still has to be believed, and which constraints deserve attention before acting.",
+                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Key Risk", style=LABEL_STYLE),
+                            html.Div(break_condition, style={"fontSize": "14px", "fontWeight": "700", "lineHeight": "1.45", "color": TONE_WARNING_TEXT}),
+                        ],
+                        style={**CARD_STYLE, "padding": "14px 16px"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Required Belief", style=LABEL_STYLE),
+                            html.Div(required_belief, style={"fontSize": "14px", "fontWeight": "700", "lineHeight": "1.45", "color": TEXT_PRIMARY}),
+                        ],
+                        style={**CARD_STYLE, "padding": "14px 16px"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Dependencies", style=LABEL_STYLE),
+                            html.Ul(
+                                [html.Li(item, style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_SECONDARY}) for item in dependencies[:3]],
+                                style={"margin": "0", "paddingLeft": "16px"},
+                            ) if dependencies else html.Div("No explicit dependency list available.", style={"fontSize": "12px", "color": TEXT_MUTED}),
+                        ],
+                        style={**CARD_STYLE, "padding": "14px 16px"},
+                    ),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(240px, 1fr))", "gap": "10px"},
+            ),
+            html.Div(
+                [
+                    risk_section,
+                    optionality_section,
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px", "alignItems": "start"},
+            ),
+        ],
+        style={**CARD_STYLE_ELEVATED, "padding": "20px 22px", "display": "grid", "gap": "14px"},
+    )
+
+
+def _premium_town_pulse_section(view: PropertyAnalysisView, report: AnalysisReport, *, town_pulse_filter: str = "all") -> html.Div:
+    metrics = inline_metric_strip([
+        ("Town", f"{view.risk_location.town_score:.0f}", _benchmark_sublabel(view.risk_location.town_score, "town_score") or view.risk_location.town_label.replace("_", " ").title()),
+        ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", _benchmark_sublabel(view.risk_location.market_momentum_score, "momentum") or view.risk_location.market_momentum_label),
+        ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", _benchmark_sublabel(view.risk_location.scarcity_score, "scarcity")),
+        ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", _benchmark_sublabel(view.risk_location.liquidity_score, "liquidity") or view.risk_location.liquidity_label),
+    ])
+    pulse_block = _town_pulse_block(view, signal_filter=town_pulse_filter)
+    content: list[object] = [
+        html.Div("Town Pulse", style=SECTION_HEADER_STYLE),
+        html.Div(
+            "This is the local intelligence layer: what may be changing in the town before comps and listing data fully catch up.",
+            style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY},
+        ),
+        metrics,
+        _market_position_sentiment_chart(view, signal_filter=town_pulse_filter),
+    ]
+    if pulse_block is not None:
+        content.append(pulse_block)
+    else:
+        content.append(
+            html.Div(
+                "No local intelligence is currently available for this town.",
+                style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_MUTED},
+            )
+        )
+    return html.Div(
+        content,
+        style={
+            **CARD_STYLE_ELEVATED,
+            "padding": "20px 22px",
+            "display": "grid",
+            "gap": "12px",
+            "background": "linear-gradient(180deg, rgba(202,240,248,0.26) 0%, rgba(255,255,255,1) 40%)",
+            "border": f"1px solid {BG_SURFACE_4}",
+        },
+    )
+
+
+def _premium_supporting_details(children: list[object]) -> html.Details:
+    visible_children = [child for child in children if child is not None]
+    return html.Details(
+        [
+            html.Summary(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div("Supporting Detail", style=SECTION_HEADER_STYLE),
+                                html.Div(
+                                    "Underlying section-level analysis, scorecards, assumptions, and evidence remain available here when you need to audit the thesis.",
+                                    style={"fontSize": "13px", "lineHeight": "1.5", "color": TEXT_SECONDARY},
+                                ),
+                            ],
+                            style={"display": "grid", "gap": "4px"},
+                        ),
+                        html.Span("Expand", style=tone_badge_style("neutral")),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "center"},
+                ),
+                style={"cursor": "pointer", "listStyle": "none", "padding": "16px 18px"},
+            ),
+            html.Div(visible_children, style={"display": "grid", "gap": "12px", "padding": "0 18px 18px"}),
+        ],
+        style={
+            **CARD_STYLE,
+            "padding": "0",
+            "backgroundColor": BG_SURFACE_2,
+            "borderStyle": "dashed",
+            "boxShadow": "none",
+            "opacity": "0.94",
+        },
+    )
+
+
+def _premium_owner_page(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    town_pulse_filter: str = "all",
+    decision_memo: html.Div,
+    risk_section: html.Div,
+    optionality_section: html.Div,
+    evidence_section: html.Div,
+    report_card_block: html.Div | None,
+    price_section: html.Div,
+    economics_section: html.Div,
+    forward_section: html.Div,
+    market_section: html.Div,
+) -> html.Div:
+    return html.Div(
+        [
+            _premium_property_header(view, report),
+            _premium_decision_strip(view),
+            decision_memo,
+            _premium_key_metrics_row(view, report),
+            _premium_scenario_workspace(view, report),
+            _premium_risk_constraints_section(view, risk_section, optionality_section),
+            _premium_town_pulse_section(view, report, town_pulse_filter=town_pulse_filter),
+            _premium_supporting_details(
+                [
+                    render_insight_hero(view, report),
+                    price_section,
+                    economics_section,
+                    forward_section,
+                    market_section,
+                    evidence_section,
+                    report_card_block,
+                    compact_assumption_summary_block(view),
+                    _owner_decision_close(view, report),
+                ]
+            ),
+        ],
+        style={"display": "grid", "gap": "14px"},
+    )
+
+
 def _tear_sheet_view_toggle(view_mode: str) -> html.Div:
     selected_mode = view_mode if view_mode in {"owner", "realtor"} else "owner"
 
@@ -4220,15 +4587,148 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
     )
 
 
-def _property_analysis_top_stack(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def _property_analysis_top_stack(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    town_pulse_filter: str = "all",
+    include_market_position: bool = True,
+) -> html.Div:
+    sections = [
+        _value_snapshot_top_section(view, report),
+        _strategic_paths_top_section(view, report),
+        _forward_scenarios_top_section(view),
+        _rent_ramp_break_even_section(view, report),
+    ]
+    if include_market_position:
+        sections.append(_market_position_top_section(view, report, town_pulse_filter=town_pulse_filter))
     return html.Div(
-        [
-            _value_snapshot_top_section(view, report),
-            _strategic_paths_top_section(view, report),
-            _forward_scenarios_top_section(view),
-            _rent_ramp_break_even_section(view, report),
-        ],
+        sections,
         style={"display": "grid", "gap": "12px"},
+    )
+
+
+def _market_position_top_section(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    town_pulse_filter: str = "all",
+) -> html.Div:
+    rl = view.risk_location
+    summary = (
+        "This answers whether the town backdrop is helping, neutral, or fighting the property thesis, using current momentum plus local intelligence signals."
+    )
+    metrics = inline_metric_strip([
+        ("Town", f"{rl.town_score:.0f}", _benchmark_sublabel(rl.town_score, "town_score") or rl.town_label.replace("_", " ").title()),
+        ("Momentum", f"{rl.market_momentum_score:.0f}/100", _benchmark_sublabel(rl.market_momentum_score, "momentum") or rl.market_momentum_label),
+        ("Scarcity", f"{rl.scarcity_score:.0f}", _benchmark_sublabel(rl.scarcity_score, "scarcity")),
+        ("Liquidity", f"{rl.liquidity_score:.0f}/100", _benchmark_sublabel(rl.liquidity_score, "liquidity") or rl.liquidity_label),
+    ])
+    sentiment_chart = _market_position_sentiment_chart(view, signal_filter=town_pulse_filter)
+    content_blocks = [
+        html.Div(
+            [
+                html.Div("Backdrop Read", style={**LABEL_STYLE, "marginBottom": "6px"}),
+                metrics,
+                html.Div(
+                    "Town-level positioning blends valuation support, momentum, scarcity, liquidity, and Town Pulse catalysts into a quick market read.",
+                    style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "6px"},
+                ),
+                html.Div(
+                    "Catalysts are confirmed positive local signals. Risks are confirmed negative local signals. Watch items are early-stage, mixed, or lower-confidence signals.",
+                    style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "6px"},
+                ),
+                html.Div(sentiment_chart, style={"marginTop": "8px"}),
+            ],
+            style={**CARD_STYLE, "padding": "14px 16px"},
+        ),
+    ]
+    pulse_block = _town_pulse_block(view, signal_filter=town_pulse_filter)
+    if pulse_block is not None:
+        content_blocks.append(pulse_block)
+    else:
+        content_blocks.append(
+            html.Div(
+                [
+                    html.Div("Town Pulse", style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        "No local intelligence is currently available for this town.",
+                        style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_MUTED},
+                    ),
+                ],
+                style={**CARD_STYLE, "padding": "14px 16px"},
+            )
+        )
+    return _property_analysis_section(
+        "Section E - Market Position",
+        summary,
+        [
+            html.Div(
+                content_blocks,
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(320px, 1fr))", "gap": "12px", "alignItems": "start"},
+            ),
+        ],
+    )
+
+
+def _market_position_sentiment_chart(view: PropertyAnalysisView, *, signal_filter: str = "all") -> dcc.Graph:
+    rl = view.risk_location
+    pulse = rl.town_pulse
+    bullish_count = len(pulse.bullish_signals) if pulse is not None else 0
+    bearish_count = len(pulse.bearish_signals) if pulse is not None else 0
+    watch_count = len(pulse.watch_items) if pulse is not None else 0
+    confidence_bonus = {"High": 10.0, "Medium": 4.0, "Low": 0.0}.get(getattr(pulse, "confidence_label", "Low"), 0.0)
+
+    catalysts_score = min(100.0, bullish_count * 28.0 + confidence_bonus + max(0.0, (rl.market_momentum_score - 50.0) * 0.25))
+    risk_score = min(100.0, bearish_count * 28.0 + max(0.0, (rl.risk_score - 50.0) * 0.45))
+    watch_score = min(100.0, watch_count * 24.0 + (8.0 if watch_count else 0.0))
+    backdrop_score = max(0.0, min(100.0, (rl.town_score * 0.35) + (rl.market_momentum_score * 0.35) + (rl.scarcity_score * 0.15) + (rl.liquidity_score * 0.15)))
+
+    labels = ["Catalysts", "Risks", "Watch", "Backdrop"]
+    values = [round(catalysts_score, 1), round(risk_score, 1), round(watch_score, 1), round(backdrop_score, 1)]
+    base_colors = [ACCENT_GREEN, ACCENT_RED, ACCENT_YELLOW, ACCENT_BLUE]
+    filter_to_label = {"bullish": "Catalysts", "bearish": "Risks", "watch": "Watch"}
+    active_label = filter_to_label.get(signal_filter)
+    colors = [color if active_label in {None, label} else BG_SURFACE_4 for label, color in zip(labels, base_colors)]
+    line_widths = [2 if active_label == label else 1 for label in labels]
+
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=labels,
+            orientation="h",
+            marker={"color": colors, "line": {"color": BORDER_SUBTLE, "width": line_widths}},
+            text=[f"{value:.0f}" for value in values],
+            textposition="outside",
+            hovertemplate="%{y}: %{x:.0f}<extra></extra>",
+        )
+    )
+    layout = dict(PLOTLY_LAYOUT_COMPACT)
+    layout["height"] = 230
+    layout["margin"] = {"l": 88, "r": 20, "t": 8, "b": 16}
+    layout["xaxis"] = {
+        **layout.get("xaxis", {}),
+        "range": [0, 100],
+        "showgrid": True,
+        "gridcolor": BG_SURFACE_4,
+        "title": "",
+    }
+    layout["yaxis"] = {
+        **layout.get("yaxis", {}),
+        "title": "",
+        "categoryorder": "array",
+        "categoryarray": labels[::-1],
+    }
+    layout["showlegend"] = False
+    layout["clickmode"] = "event"
+    layout["paper_bgcolor"] = BG_SURFACE
+    layout["plot_bgcolor"] = BG_SURFACE_2
+    fig.update_layout(**layout)
+    return dcc.Graph(
+        id="market-position-sentiment-chart",
+        figure=fig,
+        config={"displayModeBar": False, "responsive": True},
+        clear_on_unhover=False,
     )
 
 
@@ -4989,7 +5489,13 @@ def _renovation_premium_bar_chart(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, view_mode: str = "owner") -> html.Div:
+def render_tear_sheet_body(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    view_mode: str = "owner",
+    *,
+    town_pulse_filter: str = "all",
+) -> html.Div:
     """Decision-first tear sheet with owner and realtor presentation modes."""
     price_answer, price_summary, _price_label = _price_answer(view)
     economics_answer, economics_summary = _economics_answer(view, report)
@@ -5165,17 +5671,19 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         chart=location_metrics_bars(view, report),
         extra_content=html.Div(
             [
+                _town_pulse_block(view, signal_filter=town_pulse_filter),
                 html.Div([html.Span("Demand Drivers", style=SECTION_HEADER_STYLE), html.Ul([html.Li(d, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for d in view.risk_location.drivers[:4]], style={"margin": "4px 0", "paddingLeft": "16px"})], style={"flex": "1"}),
                 html.Div([html.Span("Location Risks", style=SECTION_HEADER_STYLE), html.Ul([html.Li(r, style={"fontSize": "11px", "color": TONE_WARNING_TEXT}) for r in view.risk_location.risks[:4]], style={"margin": "4px 0", "paddingLeft": "16px"})], style={"flex": "1"}),
             ],
             style={"display": "flex", "gap": "16px", "marginTop": "8px"},
-        ) if (view.risk_location.drivers or view.risk_location.risks) else None,
+        ) if (view.risk_location.town_pulse is not None or view.risk_location.drivers or view.risk_location.risks) else None,
         default_open=False,
     )
     realtor_market_support = html.Div(
         [
             html.Div("Market Support", style=SECTION_HEADER_STYLE),
             location_metrics_bars(view, report),
+            _town_pulse_block(view, signal_filter=town_pulse_filter),
             html.Div(
                 [
                     _list_block("Demand Drivers", view.risk_location.drivers[:4], tone="positive"),
@@ -5255,62 +5763,20 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         },
     )
 
-    owner_tabs = [
-        (
-            "overview",
-            "Overview",
-            [
-                _conclusion_ribbon,
-                _property_analysis_top_stack(view, report),
-            ],
-        ),
-        (
-            "value",
-            "Value",
-            [
-                render_insight_hero(view, report),
-                price_section,
-                market_section,
-            ],
-        ),
-        (
-            "strategy",
-            "Strategy",
-            [
-                _decision_engine_block(view),
-                economics_section,
-                forward_section,
-                render_perspective_block(view),
-                render_what_if_slider(view),
-            ],
-        ),
-        (
-            "renovation",
-            "Renovation",
-            [
-                _renovation_path_summary(view, report),
-                _renovation_value_overlay(view, report),
-                optionality_section,
-            ],
-        ),
-        (
-            "risk",
-            "Risk",
-            [
-                risk_section,
-            ],
-        ),
-        (
-            "support",
-            "Support / Diagnostics",
-            [
-                evidence_section,
-                _report_card_block(view),
-                market_section,
-                _owner_decision_close(view, report),
-            ],
-        ),
-    ]
+    owner_page = _premium_owner_page(
+        view,
+        report,
+        town_pulse_filter=town_pulse_filter,
+        decision_memo=_decision_engine_block(view),
+        risk_section=risk_section,
+        optionality_section=optionality_section,
+        evidence_section=evidence_section,
+        report_card_block=_report_card_block(view),
+        price_section=price_section,
+        economics_section=economics_section,
+        forward_section=forward_section,
+        market_section=market_section,
+    )
 
     realtor_fit_section = _question_section(
         "Who This Property Fits Best",
@@ -5385,7 +5851,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             "overview",
             "Overview",
             [
-                _property_analysis_top_stack(view, report),
+                _property_analysis_top_stack(view, report, town_pulse_filter=town_pulse_filter),
                 _realtor_positioning_header(view, report),
                 _decision_summary_block(view, report),
                 _report_card_block(view),
@@ -5438,10 +5904,31 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         ),
     ]
 
-    return html.Div(
+    owner_content = html.Div(
+        [
+            html.Div(
+                [
+                    _tear_sheet_view_toggle(selected_mode),
+                    _conclusion_ribbon,
+                ],
+                style={"display": "grid", "gap": "10px"},
+            ),
+            owner_page,
+        ],
+        style={"display": "grid", "gap": "14px"},
+    )
+
+    realtor_content = html.Div(
         [
             _tear_sheet_view_toggle(selected_mode),
-            _tear_sheet_subtabs(owner_tabs if selected_mode == "owner" else realtor_tabs),
+            _tear_sheet_subtabs(realtor_tabs),
+        ],
+        style={"display": "grid", "gap": "4px"},
+    )
+
+    return html.Div(
+        [
+            owner_content if selected_mode == "owner" else realtor_content,
         ],
         style={"padding": "16px 20px", "maxWidth": "1100px"},
     )
@@ -6235,6 +6722,7 @@ def render_location_section(view: PropertyAnalysisView, *, compact: bool = False
     return html.Div(
         [
             inline_metric_strip([("Town", f"{view.risk_location.town_score:.0f}", view.risk_location.town_label.replace("_", " ").title()), ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label), ("Scarcity", f"{view.risk_location.scarcity_score:.0f}", None), ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label)]),
+            _town_pulse_block(view),
             html.Div(
                 [
                     html.Ul([html.Li(d, style={"fontSize": "11px", "color": TEXT_SECONDARY}) for d in view.risk_location.drivers[:4]], style={"margin": "0", "paddingLeft": "16px"}),
@@ -6242,6 +6730,138 @@ def render_location_section(view: PropertyAnalysisView, *, compact: bool = False
             ) if view.risk_location.drivers else None,
         ],
         style={"display": "grid", "gap": "8px"},
+    )
+
+
+def _town_pulse_block(view: PropertyAnalysisView, signal_filter: str = "all") -> html.Div | None:
+    pulse = view.risk_location.town_pulse
+    if pulse is None or not pulse.key_signals:
+        return None
+    signal_groups = {
+        "all": pulse.key_signals[:4],
+        "bullish": pulse.bullish_signals[:4],
+        "bearish": pulse.bearish_signals[:4],
+        "watch": pulse.watch_items[:4],
+    }
+    active_signals = signal_groups.get(signal_filter, pulse.key_signals[:4])
+    rows = [_town_pulse_signal_row(item) for item in active_signals]
+    filter_label = {
+        "all": "All signals",
+        "bullish": "Catalysts",
+        "bearish": "Risks",
+        "watch": "Watch items",
+    }.get(signal_filter, "All signals")
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(pulse.section_title, style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        [
+                            html.Span(filter_label, style=tone_badge_style("neutral")),
+                            html.Span(
+                                pulse.confidence_label,
+                                style=tone_badge_style(
+                                    "positive" if pulse.confidence_label == "High" else
+                                    "warning" if pulse.confidence_label == "Medium" else
+                                    "negative"
+                                ),
+                            ),
+                        ],
+                        style={"display": "flex", "gap": "6px", "alignItems": "center"},
+                    ),
+                ],
+                style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "start"},
+            ),
+            html.Div(
+                "What is changing in this town that comps and listing data may not fully reflect yet.",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "-2px"},
+            ),
+            html.Div(
+                [
+                    html.Span("Click the sentiment chart to filter these rows.", style={"fontSize": "11px", "color": TEXT_MUTED}),
+                    html.Button(
+                        "Clear",
+                        id="town-pulse-clear-filter",
+                        n_clicks=0,
+                        style={
+                            "border": f"1px solid {BORDER_SUBTLE}",
+                            "backgroundColor": BG_SURFACE_2,
+                            "color": TEXT_SECONDARY,
+                            "fontSize": "11px",
+                            "padding": "4px 8px",
+                            "borderRadius": "999px",
+                            "cursor": "pointer",
+                        },
+                    ) if signal_filter != "all" else None,
+                ],
+                style={"display": "flex", "gap": "8px", "alignItems": "center", "marginTop": "2px"},
+            ),
+            html.Div(pulse.narrative_summary, style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
+            html.Div(
+                rows if rows else [
+                    html.Div(
+                        f"No {filter_label.lower()} are currently available for this town.",
+                        style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_MUTED},
+                    )
+                ],
+                style={"display": "grid", "gap": "8px"},
+            ),
+        ],
+        style={**CARD_STYLE, "padding": "12px 14px"},
+    )
+
+
+def _town_pulse_signal_row(item: object) -> html.Details:
+    tone = getattr(item, "tone", "warning")
+    tag_style = tone_badge_style(tone)
+    evidence = getattr(item, "evidence_excerpt", "")
+    source_type = getattr(item, "source_type", "")
+    source_date_text = getattr(item, "source_date_text", "")
+    source_url = getattr(item, "source_url", None)
+    reconciliation_tag = getattr(item, "reconciliation_tag", None)
+    return html.Details(
+        [
+            html.Summary(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(getattr(item, "title", "Town signal"), style={"fontSize": "13px", "fontWeight": "700", "color": TEXT_PRIMARY, "lineHeight": "1.35"}),
+                                html.Div(getattr(item, "description", ""), style={"fontSize": "11px", "color": TEXT_SECONDARY, "lineHeight": "1.5", "marginTop": "3px"}),
+                            ],
+                            style={"minWidth": "0"},
+                        ),
+                        html.Div(
+                            [
+                                html.Span(getattr(item, "status_tag", "Watch"), style=tag_style),
+                                html.Span(getattr(item, "confidence_tag", "Low"), style=tone_badge_style("neutral")),
+                                html.Span(reconciliation_tag, style=tone_badge_style("warning")) if reconciliation_tag else None,
+                            ],
+                            style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "justifyContent": "end"},
+                        ),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "minmax(0, 1fr) auto", "gap": "10px", "alignItems": "start"},
+                ),
+                style={"cursor": "pointer", "listStyle": "none"},
+            ),
+            html.Div(
+                [
+                    html.Div("Evidence", style={"fontSize": "10px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": TEXT_MUTED}),
+                    html.Div(evidence, style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+                    html.Div(
+                        [
+                            html.Span(f"Source: {source_type}", style={"fontSize": "10px", "color": TEXT_MUTED}),
+                            html.Span(f" | {source_date_text}", style={"fontSize": "10px", "color": TEXT_MUTED}) if source_date_text else None,
+                            html.A(" | Open source", href=source_url, target="_blank", rel="noreferrer", style={"fontSize": "10px", "color": ACCENT_BLUE, "textDecoration": "none"}) if source_url else None,
+                        ],
+                        style={"marginTop": "6px"},
+                    ) if source_type or source_date_text or source_url else None,
+                ],
+                style={"paddingTop": "8px"},
+            ) if evidence else None,
+        ],
+        style={"border": f"1px solid {BORDER_SUBTLE}", "borderRadius": "10px", "padding": "10px 12px", "backgroundColor": BG_SURFACE_2},
     )
 
 

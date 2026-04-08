@@ -1,0 +1,13 @@
+{
+  "id": "fixture-ordinance-001",
+  "town": "Belmar",
+  "state": "NJ",
+  "source_type": "ordinance",
+  "title": "Belmar short-term rental ordinance introduced",
+  "published_at": "2026-01-21T00:00:00+00:00",
+  "raw_text": "Ordinance 2026-07 was introduced to cap short-term rental permits in residential blocks and require annual renewal. Council members said the ordinance is under review and has not yet been adopted.",
+  "cleaned_text": "Ordinance 2026-07 was introduced to cap short-term rental permits in residential blocks and require annual renewal. Council members said the ordinance is under review and has not yet been adopted.",
+  "metadata": {
+    "ordinance_number": "2026-07"
+  }
+}
