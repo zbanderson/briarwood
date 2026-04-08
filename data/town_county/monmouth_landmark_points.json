@@ -1,0 +1,228 @@
+{
+  "source_scope": "Curated Monmouth shore-town landmark points for Briarwood geo benchmarking",
+  "methodology_note": "These points are curated Briarwood reference anchors used for location benchmarking. They are town-level anchor points, not parcel-level truth.",
+  "towns": [
+    {
+      "name": "Belmar",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Belmar Boardwalk",
+            "latitude": 40.1760,
+            "longitude": -74.0175
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Belmar Main Street",
+            "latitude": 40.1780,
+            "longitude": -74.0230
+          }
+        ],
+        "train": [
+          {
+            "label": "Belmar NJ Transit Station",
+            "latitude": 40.1840,
+            "longitude": -74.0280
+          }
+        ],
+        "park": [
+          {
+            "label": "Silver Lake",
+            "latitude": 40.1804,
+            "longitude": -74.0219
+          }
+        ]
+      }
+    },
+    {
+      "name": "Bradley Beach",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Bradley Beach Boardwalk",
+            "latitude": 40.2027,
+            "longitude": -74.0066
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Main Street Bradley Beach",
+            "latitude": 40.2020,
+            "longitude": -74.0143
+          }
+        ],
+        "train": [
+          {
+            "label": "Bradley Beach NJ Transit Station",
+            "latitude": 40.2027,
+            "longitude": -74.0124
+          }
+        ],
+        "park": [
+          {
+            "label": "Riley Park",
+            "latitude": 40.2038,
+            "longitude": -74.0105
+          }
+        ]
+      }
+    },
+    {
+      "name": "Spring Lake",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Spring Lake Boardwalk",
+            "latitude": 40.1498,
+            "longitude": -74.0228
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Third Avenue Spring Lake",
+            "latitude": 40.1509,
+            "longitude": -74.0289
+          }
+        ],
+        "train": [
+          {
+            "label": "Spring Lake NJ Transit Station",
+            "latitude": 40.1518,
+            "longitude": -74.0287
+          }
+        ],
+        "park": [
+          {
+            "label": "Divine Park",
+            "latitude": 40.1530,
+            "longitude": -74.0258
+          }
+        ]
+      }
+    },
+    {
+      "name": "Sea Girt",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Sea Girt Beach",
+            "latitude": 40.1325,
+            "longitude": -74.0347
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Sea Girt Plaza Area",
+            "latitude": 40.1322,
+            "longitude": -74.0418
+          }
+        ],
+        "train": [
+          {
+            "label": "Manasquan NJ Transit Station",
+            "latitude": 40.1269,
+            "longitude": -74.0461
+          }
+        ],
+        "park": [
+          {
+            "label": "Sea Girt Lighthouse",
+            "latitude": 40.1284,
+            "longitude": -74.0376
+          }
+        ]
+      }
+    },
+    {
+      "name": "Manasquan",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Manasquan Beach",
+            "latitude": 40.1076,
+            "longitude": -74.0348
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Main Street Manasquan",
+            "latitude": 40.1264,
+            "longitude": -74.0480
+          }
+        ],
+        "train": [
+          {
+            "label": "Manasquan NJ Transit Station",
+            "latitude": 40.1269,
+            "longitude": -74.0461
+          }
+        ],
+        "park": [
+          {
+            "label": "Fisherman's Cove",
+            "latitude": 40.1062,
+            "longitude": -74.0390
+          }
+        ]
+      }
+    },
+    {
+      "name": "Avon by the Sea",
+      "state": "NJ",
+      "county": "Monmouth",
+      "source_name": "briarwood_landmarks_v1",
+      "as_of": "2026-04-08",
+      "landmark_points": {
+        "beach": [
+          {
+            "label": "Avon by the Sea Beach",
+            "latitude": 40.1937,
+            "longitude": -74.0153
+          }
+        ],
+        "downtown": [
+          {
+            "label": "Main Street Avon by the Sea",
+            "latitude": 40.1919,
+            "longitude": -74.0179
+          }
+        ],
+        "train": [
+          {
+            "label": "Belmar NJ Transit Station",
+            "latitude": 40.1840,
+            "longitude": -74.0280
+          }
+        ],
+        "park": [
+          {
+            "label": "Sylvan Lake",
+            "latitude": 40.1908,
+            "longitude": -74.0200
+          }
+        ]
+      }
+    }
+  ]
+}

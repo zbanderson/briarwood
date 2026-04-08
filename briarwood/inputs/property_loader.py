@@ -17,6 +17,7 @@ from briarwood.schemas import (
     EvidenceMode,
     InputCoverageStatus,
     MarketLocationSignals,
+    OccupancyStrategy,
     PropertyFacts,
     PropertyInput,
     SourceCoverageItem,
@@ -308,6 +309,8 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         local_documents=_coerce_document_list(market_payload.get("local_documents", data.get("local_documents"))),
     )
     user_assumptions = UserAssumptions(
+        occupancy_strategy=_optional_occupancy_strategy(assumptions_payload.get("occupancy_strategy", data.get("occupancy_strategy"))),
+        owner_occupied_unit_count=_optional_int(assumptions_payload.get("owner_occupied_unit_count", data.get("owner_occupied_unit_count"))),
         estimated_monthly_rent=_optional_float(assumptions_payload.get("estimated_monthly_rent", data.get("estimated_monthly_rent"))),
         back_house_monthly_rent=_optional_float(assumptions_payload.get("back_house_monthly_rent", data.get("back_house_monthly_rent"))),
         seasonal_monthly_rent=_optional_float(assumptions_payload.get("seasonal_monthly_rent", data.get("seasonal_monthly_rent"))),
@@ -371,6 +374,16 @@ def _optional_str(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _optional_occupancy_strategy(value: object) -> OccupancyStrategy | None:
+    text = _optional_str(value)
+    if text is None:
+        return None
+    try:
+        return OccupancyStrategy(text.lower())
+    except ValueError:
+        return None
 
 
 def _optional_int(value: object) -> int | None:

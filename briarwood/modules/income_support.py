@@ -57,14 +57,61 @@ class IncomeSupportModule:
         wrapper_warnings.append(
             f"Maintenance reserve not specified; assuming {maintenance_pct:.1%} annually."
         )
+        occupancy_strategy_raw = getattr(property_input, "occupancy_strategy", None)
+        occupancy_strategy = (
+            occupancy_strategy_raw.value
+            if hasattr(occupancy_strategy_raw, "value")
+            else str(occupancy_strategy_raw or "")
+        )
+        owner_occupied_unit_count = getattr(property_input, "owner_occupied_unit_count", None)
         manual_unit_rents = [rent for rent in property_input.unit_rents if rent > 0]
-        if manual_unit_rents:
+        occupancy_assumptions: list[str] = []
+        occupancy_warnings: list[str] = []
+        if occupancy_strategy == "owner_occupy_partial" and manual_unit_rents:
+            rent_context_rent = sum(manual_unit_rents)
+            rent_source_type = "manual_input"
+            rentable_units = len(manual_unit_rents)
+            owner_units_text = (
+                f"; {int(owner_occupied_unit_count)} owner-occupied unit{'s' if int(owner_occupied_unit_count) != 1 else ''} excluded"
+                if owner_occupied_unit_count not in (None, "", 0)
+                else ""
+            )
+            rent_context_assumptions = [
+                f"Manual rent schedule supplied for {rentable_units} rentable unit{'s' if rentable_units != 1 else ''}{owner_units_text}."
+            ]
+            rent_context_warnings: list[str] = []
+            occupancy_assumptions.append(
+                "Partial owner-occupancy selected; income support reflects only the rentable units that were entered."
+            )
+        elif occupancy_strategy == "owner_occupy_partial" and property_input.estimated_monthly_rent is not None:
+            rent_context_rent = property_input.estimated_monthly_rent
+            rent_source_type = "provided"
+            rent_context_assumptions = [
+                "A blended rent estimate was used for the rentable portion of a partial owner-occupancy setup."
+            ]
+            rent_context_warnings = [
+                "Partial owner-occupancy selected without unit-level rents; income support uses the provided rentable-income estimate."
+            ]
+            occupancy_assumptions.append(
+                "Add unit-level rents for the non-owner units to improve house-hack income precision."
+            )
+        elif occupancy_strategy == "owner_occupy_partial":
+            rent_context_rent = None
+            rent_source_type = "missing"
+            rent_context_assumptions = []
+            rent_context_warnings = [
+                "Partial owner-occupancy selected, but rentable-unit income was not provided."
+            ]
+            occupancy_warnings.append(
+                "House-hack support is incomplete until the rentable units or back-house rent are entered."
+            )
+        elif manual_unit_rents:
             rent_context_rent = sum(manual_unit_rents)
             rent_source_type = "manual_input"
             rent_context_assumptions = [
                 f"Manual unit rent schedule supplied for {len(manual_unit_rents)} unit{'s' if len(manual_unit_rents) != 1 else ''}."
             ]
-            rent_context_warnings: list[str] = []
+            rent_context_warnings = []
         else:
             rent_context = self.rent_context_agent.run(
                 RentContextInput(
@@ -81,6 +128,7 @@ class IncomeSupportModule:
             rent_context_assumptions = rent_context.assumptions
             rent_context_warnings = rent_context.warnings
         wrapper_warnings.extend(rent_context_warnings)
+        wrapper_warnings.extend(occupancy_warnings)
 
         output = self.agent.run(
             IncomeAgentInput(
@@ -102,7 +150,7 @@ class IncomeSupportModule:
             )
         )
         warnings = wrapper_warnings + output.warnings
-        assumptions = output.assumptions + rent_context_assumptions
+        assumptions = output.assumptions + rent_context_assumptions + occupancy_assumptions
         if getattr(property_input, "rent_confidence_override", None):
             assumptions.append(
                 f"User marked rent confidence as {property_input.rent_confidence_override.lower()}."
@@ -136,6 +184,8 @@ class IncomeSupportModule:
                 "downside_burden": output.downside_burden,
                 "risk_view": output.risk_view,
                 "support_label": support_label,
+                "occupancy_strategy": occupancy_strategy or None,
+                "owner_occupied_unit_count": owner_occupied_unit_count,
                 "rent_source_type": output.rent_source_type,
                 "financing_complete": output.financing_complete,
                 "carrying_cost_complete": output.carrying_cost_complete,

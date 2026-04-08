@@ -21,6 +21,12 @@ class InputCoverageStatus(str, Enum):
     MISSING = "missing"
 
 
+class OccupancyStrategy(str, Enum):
+    FULL_RENTAL = "full_rental"
+    OWNER_OCCUPY_PARTIAL = "owner_occupy_partial"
+    OWNER_OCCUPY_FULL = "owner_occupy_full"
+
+
 @dataclass(slots=True)
 class SourceCoverageItem:
     category: str
@@ -107,6 +113,8 @@ class MarketLocationSignals:
 
 @dataclass(slots=True)
 class UserAssumptions:
+    occupancy_strategy: OccupancyStrategy | None = None
+    owner_occupied_unit_count: int | None = None
     estimated_monthly_rent: float | None = None
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
@@ -183,6 +191,8 @@ class PropertyInput:
     taxes: float | None = None
     insurance: float | None = None
     monthly_hoa: float | None = None
+    occupancy_strategy: OccupancyStrategy | None = None
+    owner_occupied_unit_count: int | None = None
     estimated_monthly_rent: float | None = None
     back_house_monthly_rent: float | None = None
     seasonal_monthly_rent: float | None = None
@@ -265,6 +275,8 @@ class PropertyInput:
             taxes=facts.taxes,
             insurance=assumptions.insurance,
             monthly_hoa=facts.monthly_hoa,
+            occupancy_strategy=assumptions.occupancy_strategy,
+            owner_occupied_unit_count=assumptions.owner_occupied_unit_count,
             estimated_monthly_rent=assumptions.estimated_monthly_rent,
             back_house_monthly_rent=assumptions.back_house_monthly_rent,
             seasonal_monthly_rent=assumptions.seasonal_monthly_rent,

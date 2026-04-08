@@ -1,53 +1,53 @@
 {
-  "property_id": "l-street-2",
+  "property_id": "119-4th-ave-avon-by-the-sea-nj-07717",
   "facts": {
-    "address": "1302 L Street",
-    "town": "Belmar",
+    "address": "119 4th Ave, Avon By The Sea, NJ 07717",
+    "town": "Avon By The Sea",
     "state": "NJ",
     "county": "Monmouth",
-    "latitude": 40.1772087,
-    "longitude": -74.0343669,
+    "latitude": 40.1890129,
+    "longitude": -74.0188404,
     "beds": 3,
     "baths": 1.5,
-    "sqft": 1500,
-    "lot_size": 0.11,
-    "property_type": "Single Family Residence",
-    "condition_profile": "maintained",
-    "capex_lane": "moderate",
-    "year_built": 1934,
-    "garage_spaces": 2,
-    "garage_type": "detached",
-    "has_detached_garage": true,
-    "has_back_house": true,
-    "adu_type": "studio_over_garage",
-    "adu_sqft": 300,
-    "has_basement": false,
-    "basement_finished": false,
-    "has_pool": false,
-    "parking_spaces": 4,
+    "sqft": 1081,
+    "lot_size": null,
+    "property_type": null,
+    "condition_profile": null,
+    "capex_lane": null,
+    "year_built": null,
+    "garage_spaces": null,
+    "garage_type": null,
+    "has_detached_garage": null,
+    "has_back_house": null,
+    "adu_type": null,
+    "adu_sqft": null,
+    "has_basement": null,
+    "basement_finished": null,
+    "has_pool": null,
+    "parking_spaces": null,
     "corner_lot": null,
     "driveway_off_street": null,
-    "purchase_price": 850000.0,
-    "taxes": 5000.0,
+    "purchase_price": 1699000.0,
+    "taxes": null,
     "monthly_hoa": null,
     "days_on_market": null,
-    "listing_description": null
+    "listing_description": "Seeded from comp database (BELMAR-SALE-119-4th-ave-avon-by-the-sea-nj-07717-2025-09-08)."
   },
   "market_signals": {},
   "user_assumptions": {
-    "occupancy_strategy": "owner_occupy_partial",
-    "owner_occupied_unit_count": 1,
+    "occupancy_strategy": "full_rental",
+    "owner_occupied_unit_count": null,
     "estimated_monthly_rent": null,
-    "back_house_monthly_rent": 1175.0,
+    "back_house_monthly_rent": null,
     "seasonal_monthly_rent": null,
     "unit_rents": [],
     "rent_confidence_override": null,
-    "insurance": 2500.0,
+    "insurance": null,
     "monthly_maintenance_reserve_override": null,
-    "condition_profile_override": "maintained",
-    "condition_confirmed": true,
-    "capex_lane_override": "moderate",
-    "capex_confirmed": true,
+    "condition_profile_override": null,
+    "condition_confirmed": null,
+    "capex_lane_override": null,
+    "capex_confirmed": null,
     "repair_capex_budget": null,
     "strategy_intent": null,
     "hold_period_years": null,
@@ -77,11 +77,11 @@
         "source_name": "manual entry"
       },
       "lot_size": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "taxes": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "hoa": {
@@ -105,7 +105,7 @@
         "source_name": "manual entry"
       },
       "insurance_estimate": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "comp_support": {
@@ -113,11 +113,11 @@
         "source_name": "manual entry"
       },
       "condition_assumption": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "capex_assumption": {
-        "status": "user_supplied",
+        "status": "missing",
         "source_name": "manual entry"
       },
       "capex_budget": {

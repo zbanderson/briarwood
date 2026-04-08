@@ -50,6 +50,11 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("town_context_confidence", view.compare_metrics)
         self.assertIn("subject_ppsf_vs_town", view.compare_metrics)
         self.assertIn("town_relative_opportunity_score", view.compare_metrics)
+        self.assertAlmostEqual(
+            view.compare_metrics["subject_ppsf"],
+            view.compare_metrics["ask_price"] / view.compare_metrics["sqft"],
+            places=6,
+        )
         self.assertIsNotNone(view.decision)
         assert view.decision is not None
         self.assertIn(view.decision.recommendation, {"Buy", "Neutral", "Avoid"})
@@ -64,6 +69,13 @@ class DashViewModelTests(unittest.TestCase):
         self.assertTrue(view.liquidity_profile_label)
         self.assertTrue(view.optionality_label)
         self.assertTrue(view.risk_skew_label)
+        self.assertIn(
+            view.risk_location.location_support_label,
+            {"Geo-Benchmarked", "Geocoded, Landmark Data Missing", "Geocoded, Proxy-Based", "Address-Linked Only"},
+        )
+        self.assertTrue(view.risk_location.location_support_detail)
+        if view.risk_location.location_support_label == "Geo-Benchmarked":
+            self.assertTrue(view.risk_location.location_anchor_summary)
         self.assertIsNotNone(view.positioning_summary)
         self.assertTrue(view.decision.risk_statement.startswith("Risk stance:"))
         self.assertTrue(view.decision.summary_view.startswith("Positioning:"))
@@ -163,16 +175,13 @@ class DashViewModelTests(unittest.TestCase):
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
         text = _flatten_text(body)
-        # The top-level Tear Sheet structure now uses a presentation toggle and sub-tabs.
-        self.assertIn("Presentation", text)
-        # Summary content remains visible in the default overview.
+        # Summary content remains visible in the unified Property Analysis view.
         self.assertIn("/ 5", text)
-        self.assertTrue("DECISION SUMMARY" in text or "DECISION MEMO" in text)
         self.assertIn("Score Report Card", text)
         self.assertIn("ASSUMPTION SUMMARY", text)
         self.assertTrue("Current Value Snapshot" in text or "Section A - Value Snapshot" in text)
-        self.assertIn("Option 1 Buy As-Is", text)
-        self.assertIn("Option 2 Buy + Renovate", text)
+        self.assertIn("Buy As-Is", text)
+        self.assertIn("Buy + Renovate", text)
         self.assertIn("Town Pulse", text)
         self.assertIn("Scenario View", text)
         self.assertIn("Risk & Constraints", text)

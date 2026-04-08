@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
+from briarwood.geocoder import geocode_address
 from briarwood.runner import run_report, run_report_from_listing_text, write_report_html
 from briarwood.reports.pdf_renderer import write_tear_sheet_pdf
 from briarwood.schemas import AnalysisReport
@@ -239,6 +240,8 @@ def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], li
         "town": getattr(property_input, "town", None),
         "state": getattr(property_input, "state", None),
         "county": getattr(property_input, "county", None),
+        "latitude": getattr(property_input, "latitude", None),
+        "longitude": getattr(property_input, "longitude", None),
         "purchase_price": getattr(property_input, "purchase_price", None),
         "beds": getattr(property_input, "beds", None),
         "baths": getattr(property_input, "baths", None),
@@ -261,6 +264,8 @@ def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], li
         "parking_spaces": getattr(property_input, "parking_spaces", None),
         "corner_lot": getattr(property_input, "corner_lot", None),
         "driveway_off_street": getattr(property_input, "driveway_off_street", None),
+        "occupancy_strategy": getattr(property_input, "occupancy_strategy", None),
+        "owner_occupied_unit_count": getattr(property_input, "owner_occupied_unit_count", None),
         "estimated_monthly_rent": getattr(property_input, "estimated_monthly_rent", None),
         "unit_rents": list(getattr(property_input, "unit_rents", []) or []),
         "back_house_monthly_rent": getattr(property_input, "back_house_monthly_rent", None),
@@ -272,6 +277,8 @@ def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], li
         "notes": getattr(property_input, "listing_description", None),
     }
     if assumptions is not None:
+        subject["occupancy_strategy"] = getattr(assumptions, "occupancy_strategy", subject["occupancy_strategy"])
+        subject["owner_occupied_unit_count"] = getattr(assumptions, "owner_occupied_unit_count", subject["owner_occupied_unit_count"])
         subject["estimated_monthly_rent"] = getattr(assumptions, "estimated_monthly_rent", subject["estimated_monthly_rent"])
         subject["unit_rents"] = list(getattr(assumptions, "unit_rents", []) or subject["unit_rents"])
         subject["back_house_monthly_rent"] = getattr(assumptions, "back_house_monthly_rent", subject["back_house_monthly_rent"])
@@ -320,6 +327,8 @@ def load_comp_form_defaults(source_ref: str) -> tuple[dict[str, object], list[di
         "parking_spaces": None,
         "corner_lot": None,
         "driveway_off_street": None,
+        "occupancy_strategy": "full_rental",
+        "owner_occupied_unit_count": None,
         "estimated_monthly_rent": None,
         "unit_rents": [],
         "back_house_monthly_rent": None,
@@ -354,6 +363,7 @@ def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, o
     property_dir = _saved_property_path(property_id)
     property_dir.mkdir(parents=True, exist_ok=True)
 
+    _maybe_geocode_subject(subject)
     payload = _manual_payload(property_id=property_id, subject=subject, comps=comps)
     raw_input_path = property_dir / "inputs.json"
     raw_input_path.write_text(json.dumps(payload, indent=2) + "\n")
@@ -416,6 +426,8 @@ def _subject_from_payload(payload: dict[str, object], property_id: str) -> dict[
         "town": facts.get("town"),
         "state": facts.get("state"),
         "county": facts.get("county"),
+        "latitude": facts.get("latitude"),
+        "longitude": facts.get("longitude"),
         "purchase_price": facts.get("purchase_price"),
         "beds": facts.get("beds"),
         "baths": facts.get("baths"),
@@ -548,6 +560,8 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
             "town": str(subject.get("town") or "Unknown"),
             "state": str(subject.get("state") or "NJ"),
             "county": subject.get("county") or "Monmouth",
+            "latitude": _optional_float(subject.get("latitude")),
+            "longitude": _optional_float(subject.get("longitude")),
             "beds": _optional_int(subject.get("beds")),
             "baths": _optional_float(subject.get("baths")),
             "sqft": _optional_int(subject.get("sqft")),
@@ -576,6 +590,8 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
         },
         "market_signals": {},
         "user_assumptions": {
+            "occupancy_strategy": subject.get("occupancy_strategy"),
+            "owner_occupied_unit_count": _optional_int(subject.get("owner_occupied_unit_count")),
             "estimated_monthly_rent": _optional_float(subject.get("estimated_monthly_rent")),
             "back_house_monthly_rent": _optional_float(subject.get("back_house_monthly_rent")),
             "seasonal_monthly_rent": _optional_float(subject.get("seasonal_monthly_rent")),
@@ -609,6 +625,7 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
                     "status": "user_supplied" if _optional_float_list(subject.get("unit_rents")) else manual_status(subject.get("estimated_monthly_rent")),
                     "source_name": "manual entry",
                 },
+                "occupancy_strategy": {"status": manual_status(subject.get("occupancy_strategy")), "source_name": "manual entry"},
                 "rent_confidence": {"status": manual_status(subject.get("rent_confidence_override")), "source_name": "manual entry"},
                 "insurance_estimate": {"status": manual_status(subject.get("insurance")), "source_name": "manual entry"},
                 "comp_support": {"status": "user_supplied" if comps else "missing", "source_name": "manual entry"},
@@ -620,6 +637,26 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
             },
         },
     }
+
+
+def _maybe_geocode_subject(subject: dict[str, object]) -> None:
+    if subject.get("latitude") not in (None, "") and subject.get("longitude") not in (None, ""):
+        return
+    if os.environ.get("BRIARWOOD_DISABLE_MANUAL_GEOCODING", "").strip().lower() in {"1", "true", "yes"}:
+        return
+    parts = [subject.get("address"), subject.get("town"), subject.get("state")]
+    full_address = ", ".join(str(part).strip() for part in parts if part)
+    if not full_address:
+        return
+    try:
+        coords = geocode_address(full_address)
+    except (OSError, ValueError, RuntimeError) as exc:
+        logger.warning("Manual geocoding skipped for %s: %s", full_address, exc)
+        return
+    if coords is None:
+        return
+    subject["latitude"] = coords[0]
+    subject["longitude"] = coords[1]
 
 
 def _saved_property_path(property_id: str) -> Path:

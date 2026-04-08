@@ -10,6 +10,7 @@ from briarwood.schemas import (
     EvidenceMode,
     InputCoverageStatus,
     MarketLocationSignals,
+    OccupancyStrategy,
     PropertyFacts,
     SourceCoverageItem,
     SourceMetadata,
@@ -62,6 +63,8 @@ class PublicRecordAdapter:
             local_documents=_coerce_document_list(payload.get("local_documents")),
         )
         assumptions = UserAssumptions(
+            occupancy_strategy=_optional_occupancy_strategy(payload.get("occupancy_strategy")),
+            owner_occupied_unit_count=_optional_int(payload.get("owner_occupied_unit_count")),
             estimated_monthly_rent=_optional_float(payload.get("estimated_monthly_rent")),
             rent_confidence_override=_optional_str(payload.get("rent_confidence_override")),
             insurance=_optional_float(payload.get("insurance")),
@@ -117,6 +120,8 @@ class ManualInputAdapter:
     def apply(self, canonical: CanonicalPropertyData, *, overrides: dict[str, object]) -> CanonicalPropertyData:
         assumptions = replace(
             canonical.user_assumptions,
+            occupancy_strategy=_coalesce_occupancy_strategy(overrides.get("occupancy_strategy"), canonical.user_assumptions.occupancy_strategy),
+            owner_occupied_unit_count=_coalesce_int(overrides.get("owner_occupied_unit_count"), canonical.user_assumptions.owner_occupied_unit_count),
             estimated_monthly_rent=_coalesce_float(overrides.get("estimated_monthly_rent"), canonical.user_assumptions.estimated_monthly_rent),
             rent_confidence_override=_coalesce_str(overrides.get("rent_confidence_override"), canonical.user_assumptions.rent_confidence_override),
             insurance=_coalesce_float(overrides.get("insurance"), canonical.user_assumptions.insurance),
@@ -135,6 +140,7 @@ class ManualInputAdapter:
         )
         coverage = dict(canonical.source_metadata.source_coverage)
         for category, key in {
+            "occupancy_strategy": "occupancy_strategy",
             "rent_estimate": "estimated_monthly_rent",
             "rent_confidence": "rent_confidence_override",
             "insurance_estimate": "insurance",
@@ -210,6 +216,7 @@ def _infer_source_metadata(
         "sale_history": _list_coverage("sale_history", facts.sale_history),
         "listing_history": _list_coverage("listing_history", facts.price_history),
         "rent_estimate": _assumption_coverage("rent_estimate", assumptions.estimated_monthly_rent),
+        "occupancy_strategy": _assumption_coverage("occupancy_strategy", assumptions.occupancy_strategy),
         "insurance_estimate": _assumption_coverage("insurance_estimate", assumptions.insurance),
         "school_signal": _coverage("school_signal", market_signals.school_rating),
         "flood_risk": _coverage("flood_risk", market_signals.flood_risk),
@@ -282,6 +289,14 @@ def _optional_bool(value: object) -> bool | None:
     return None
 
 
+def _optional_occupancy_strategy(value: object) -> OccupancyStrategy | None:
+    text = _optional_str(value)
+    try:
+        return OccupancyStrategy(text) if text is not None else None
+    except ValueError:
+        return None
+
+
 def _coalesce_float(left: object, right: float | None) -> float | None:
     return _optional_float(left) if left is not None else right
 
@@ -296,6 +311,10 @@ def _coalesce_str(left: object, right: str | None) -> str | None:
 
 def _coalesce_bool(left: object, right: bool | None) -> bool | None:
     return _optional_bool(left) if left is not None else right
+
+
+def _coalesce_occupancy_strategy(left: object, right: OccupancyStrategy | None) -> OccupancyStrategy | None:
+    return _optional_occupancy_strategy(left) if left is not None else right
 
 
 def _coerce_landmark_points(value: object) -> dict[str, list[dict[str, object]]]:

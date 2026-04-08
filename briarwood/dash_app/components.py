@@ -6,6 +6,8 @@ Sub-factor scoring drives the tear sheet structure.
 """
 from __future__ import annotations
 
+from urllib.parse import quote_plus
+
 from dash import dash_table, dcc, html
 import plotly.graph_objects as go
 
@@ -872,7 +874,14 @@ def forward_range_chart(view: PropertyAnalysisView, *, compact: bool = False) ->
     return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
-def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph | html.Div:
+def forward_fan_chart(
+    view: PropertyAnalysisView,
+    *,
+    compact: bool = False,
+    years: int = 1,
+    horizon_label: str | None = None,
+    chart_height: int | None = None,
+) -> dcc.Graph | html.Div:
     anchor_value = view.bcv or view.base_case
     if anchor_value is None:
         return html.Div(
@@ -882,7 +891,14 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
 
     fig = go.Figure()
     x_anchor = "Today"
-    x_horizon = "12M"
+    x_horizon = horizon_label or ("12M" if years <= 1 else f"{years}Y")
+
+    def _project_terminal(anchor: float, one_year_terminal: float, total_years: int) -> float:
+        if total_years <= 1:
+            return one_year_terminal
+        if anchor > 0 and one_year_terminal > 0:
+            return anchor * ((one_year_terminal / anchor) ** total_years)
+        return anchor + ((one_year_terminal - anchor) * total_years)
 
     fig.add_trace(
         go.Scatter(
@@ -896,10 +912,12 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
     )
 
     if view.bull_case is not None and view.bear_case is not None:
+        bull_terminal = _project_terminal(anchor_value, view.bull_case, years)
+        bear_terminal = _project_terminal(anchor_value, view.bear_case, years)
         fig.add_trace(
             go.Scatter(
                 x=[x_anchor, x_horizon, x_horizon, x_anchor],
-                y=[anchor_value, view.bull_case, view.bear_case, anchor_value],
+                y=[anchor_value, bull_terminal, bear_terminal, anchor_value],
                 fill="toself",
                 fillcolor="rgba(88, 166, 255, 0.14)",
                 line={"color": "rgba(0,0,0,0)"},
@@ -910,10 +928,11 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
         )
 
     if view.bull_case is not None:
+        bull_terminal = _project_terminal(anchor_value, view.bull_case, years)
         fig.add_trace(
             go.Scatter(
                 x=[x_anchor, x_horizon],
-                y=[anchor_value, view.bull_case],
+                y=[anchor_value, bull_terminal],
                 mode="lines",
                 name="Upside",
                 line={"color": ACCENT_GREEN, "width": 2, "dash": "dash"},
@@ -922,10 +941,11 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
         )
 
     if view.bear_case is not None:
+        bear_terminal = _project_terminal(anchor_value, view.bear_case, years)
         fig.add_trace(
             go.Scatter(
                 x=[x_anchor, x_horizon],
-                y=[anchor_value, view.bear_case],
+                y=[anchor_value, bear_terminal],
                 mode="lines",
                 name="Downside",
                 line={"color": ACCENT_RED, "width": 2, "dash": "dash"},
@@ -934,10 +954,11 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
         )
 
     if view.base_case is not None:
+        base_terminal = _project_terminal(anchor_value, view.base_case, years)
         fig.add_trace(
             go.Scatter(
                 x=[x_anchor, x_horizon],
-                y=[anchor_value, view.base_case],
+                y=[anchor_value, base_terminal],
                 mode="lines+markers",
                 name="Base",
                 line={"color": ACCENT_BLUE, "width": 4},
@@ -947,10 +968,11 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
         )
 
     if view.stress_case is not None:
+        stress_terminal = _project_terminal(anchor_value, view.stress_case, years)
         fig.add_trace(
             go.Scatter(
                 x=[x_anchor, x_horizon],
-                y=[anchor_value, view.stress_case],
+                y=[anchor_value, stress_terminal],
                 mode="lines",
                 name="Stress",
                 line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
@@ -991,7 +1013,7 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
     )
 
     layout = dict(PLOTLY_LAYOUT_COMPACT if compact else PLOTLY_LAYOUT)
-    layout["height"] = CHART_HEIGHT_COMPACT if compact else CHART_HEIGHT_STANDARD
+    layout["height"] = chart_height or (CHART_HEIGHT_COMPACT if compact else CHART_HEIGHT_STANDARD)
     layout["legend"] = {
         "orientation": "h",
         "yanchor": "bottom",
@@ -1006,7 +1028,12 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
     return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
-def forward_fan_chart_from_ask(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph | html.Div:
+def forward_fan_chart_from_ask(
+    view: PropertyAnalysisView,
+    *,
+    compact: bool = False,
+    chart_height: int | None = None,
+) -> dcc.Graph | html.Div:
     """Forward fan anchored at ask_price instead of BCV.
 
     Shows the bull/base/bear terminal values at 12M, drawn from the ask price
@@ -1131,7 +1158,7 @@ def forward_fan_chart_from_ask(view: PropertyAnalysisView, *, compact: bool = Fa
         )
 
     layout = dict(PLOTLY_LAYOUT_COMPACT if compact else PLOTLY_LAYOUT)
-    layout["height"] = CHART_HEIGHT_COMPACT if compact else CHART_HEIGHT_STANDARD
+    layout["height"] = chart_height or (CHART_HEIGHT_COMPACT if compact else CHART_HEIGHT_STANDARD)
     layout["legend"] = {
         "orientation": "h",
         "yanchor": "bottom",
@@ -3177,6 +3204,59 @@ def _property_header_basics(report: AnalysisReport) -> str:
     return " · ".join(items)
 
 
+def _subject_location_block(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div | None:
+    property_input = getattr(report, "property_input", None)
+    if property_input is None:
+        return None
+
+    lat = getattr(property_input, "latitude", None)
+    lon = getattr(property_input, "longitude", None)
+    location_module = report.module_results.get("location_intelligence")
+    payload = getattr(location_module, "payload", None) if location_module is not None else None
+    category_results = getattr(payload, "category_results", None) or []
+
+    if lat is None and lon is None and not category_results:
+        return None
+
+    address_parts = [
+        getattr(property_input, "address", None),
+        getattr(property_input, "town", None),
+        getattr(property_input, "state", None),
+    ]
+    maps_query = ", ".join(str(part).strip() for part in address_parts if part)
+    maps_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(maps_query)}" if maps_query else None
+
+    status = "Geocoded" if view.geocoded else "Coordinates Attached" if lat is not None and lon is not None else "Address Only"
+    tone = "positive" if view.geocoded or (lat is not None and lon is not None) else "warning"
+    anchor_summary = " • ".join(
+        f"{str(getattr(item, 'category', '')).replace('_', ' ').title()} {float(getattr(item, 'subject_distance_miles')):.2f} mi"
+        for item in category_results[:3]
+        if getattr(item, "category", None) and getattr(item, "subject_distance_miles", None) is not None
+    )
+
+    chips = [
+        compact_badge("Status", status, tone=tone),
+        compact_badge("Location Support", view.risk_location.location_support_label, tone="positive" if view.risk_location.location_support_label == "Geo-Benchmarked" else "warning" if "Missing" in view.risk_location.location_support_label else "neutral"),
+    ]
+    if lat is not None and lon is not None:
+        chips.append(compact_badge("Lat / Lon", f"{float(lat):.5f}, {float(lon):.5f}", tone="neutral"))
+
+    links: list[object] = []
+    if maps_url:
+        links.append(html.A("Open in Google Maps", href=maps_url, target="_blank", rel="noreferrer", style={"fontSize": "12px", "fontWeight": "600", "color": ACCENT_BLUE, "textDecoration": "none"}))
+
+    return html.Div(
+        [
+            html.Div("Subject Location", style={**SECTION_HEADER_STYLE, "fontSize": "10px", "marginBottom": "4px"}),
+            html.Div(chips, style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "alignItems": "center"}),
+            html.Div(view.risk_location.location_support_detail, style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED}) if view.risk_location.location_support_detail else None,
+            html.Div(f"Nearest anchors: {anchor_summary}", style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY}) if anchor_summary else None,
+            html.Div(links, style={"display": "flex", "gap": "10px", "alignItems": "center"}) if links else None,
+        ],
+        style={**CARD_STYLE, "padding": "12px 14px", "marginTop": "12px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
+    )
+
+
 def _premium_property_header(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
     locality, street = _property_header_identity(report)
     basics = _property_header_basics(report)
@@ -3215,6 +3295,7 @@ def _premium_property_header(view: PropertyAnalysisView, report: AnalysisReport)
                         style={"fontSize": "14px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginTop": "8px", "maxWidth": "72ch"},
                     ),
                     html.Div(basics, style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "8px"}) if basics else None,
+                    _subject_location_block(view, report),
                 ],
                 style={"display": "grid", "gap": "0"},
             ),
@@ -3293,25 +3374,72 @@ def _premium_decision_strip(view: PropertyAnalysisView) -> html.Div:
     )
 
 
-def _premium_key_metrics_row(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def _key_metric_context_lines(view: PropertyAnalysisView, report: AnalysisReport) -> list[tuple[str, str, str]]:
     metrics = _economics_inputs(report, view)
-    key_cards = [
-        ("Net Monthly Cost", _fmt_value(metrics.get("net_monthly_cost")) or view.income_support.monthly_cash_flow_text, "carry after rent support"),
-        ("Price-to-Rent", view.income_support.price_to_rent_text, view.income_support.ptr_classification),
-        ("CapEx Load", view.capex_lane, _capex_basis_source_label(view.capex_basis_source)),
-        ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
-        ("Optionality", view.optionality_label, view.decision.best_fit if view.decision is not None else None),
+    monthly_cash_flow = metrics.get("monthly_cash_flow")
+    rent = metrics.get("monthly_rent")
+    gross_cost = metrics.get("gross_monthly_cost")
+    rent_coverage = None
+    if isinstance(rent, (int, float)) and isinstance(gross_cost, (int, float)) and gross_cost > 0:
+        rent_coverage = rent / gross_cost
+
+    net_monthly_cost_value = _fmt_value(metrics.get("net_monthly_cost")) or view.income_support.monthly_cash_flow_text
+    net_monthly_cost_context = _benchmark_sublabel(monthly_cash_flow, "cash_flow") if isinstance(monthly_cash_flow, (int, float)) else None
+    if rent_coverage is not None:
+        coverage_text = f"rent covers {rent_coverage:.0%} of carrying cost"
+        net_monthly_cost_context = f"{net_monthly_cost_context} • {coverage_text}" if net_monthly_cost_context else coverage_text
+
+    ptr_raw = view.compare_metrics.get("price_to_rent")
+    ptr_context = _benchmark_sublabel(float(ptr_raw), "ptr") if isinstance(ptr_raw, (int, float)) else view.income_support.ptr_classification
+    town_ppsf = view.compare_metrics.get("town_baseline_median_ppsf")
+    if town_ppsf is not None:
+        ptr_context = f"{ptr_context or ''} • town median PPSF {_fmt_compact(town_ppsf)}".strip(" •")
+
+    capex_context_parts = [view.condition_profile]
+    capex_source = _capex_basis_source_label(view.capex_basis_source)
+    if capex_source:
+        capex_context_parts.append(capex_source)
+    if view.compare_metrics.get("town_baseline_median_price") is not None:
+        capex_context_parts.append(f"town prior {_fmt_compact(view.compare_metrics.get('town_baseline_median_price'))}")
+
+    liquidity_context = _benchmark_sublabel(view.risk_location.liquidity_score, "liquidity") or view.risk_location.liquidity_label
+    town_dom = view.town_context.get("town_dom_median") if isinstance(view.town_context, dict) else None
+    if town_dom is not None:
+        liquidity_context = f"{liquidity_context or ''} • town DOM {float(town_dom):.0f}".strip(" •")
+
+    optionality_context_parts: list[str] = []
+    town_opportunity = view.town_context.get("town_relative_opportunity_score") if isinstance(view.town_context, dict) else None
+    if town_opportunity is not None:
+        optionality_context_parts.append(f"town opportunity {float(town_opportunity):.2f}/5")
+    if view.decision is not None and view.decision.best_fit:
+        optionality_context_parts.append(view.decision.best_fit)
+
+    return [
+        ("Net Monthly Cost", net_monthly_cost_value, net_monthly_cost_context or "context unavailable"),
+        ("Price-to-Rent", view.income_support.price_to_rent_text, ptr_context or "context unavailable"),
+        ("CapEx Load", view.capex_lane, " • ".join(part for part in capex_context_parts if part) or "context unavailable"),
+        ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", liquidity_context or "context unavailable"),
+        ("Optionality", view.optionality_label, " • ".join(optionality_context_parts) or "context unavailable"),
     ]
+
+
+def _premium_key_metrics_row(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+    key_cards = _key_metric_context_lines(view, report)
     return html.Div(
         [
             html.Div("Key Metrics", style=SECTION_HEADER_STYLE),
+            html.Div(
+                "Each metric includes its comparison context so the number is not floating on its own.",
+                style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "2px"},
+            ),
             html.Div(
                 [
                     html.Div(
                         [
                             html.Div(label, style=LABEL_STYLE),
                             html.Div(value, style={"fontSize": "20px", "fontWeight": "800", "lineHeight": "1.1", "color": TEXT_PRIMARY}),
-                            html.Div(subtitle, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_MUTED, "marginTop": "6px"}) if subtitle else None,
+                            html.Div("Context", style={**LABEL_STYLE, "fontSize": "10px", "marginTop": "10px", "marginBottom": "3px"}),
+                            html.Div(subtitle, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY}),
                         ],
                         style={**CARD_STYLE, "padding": "16px 16px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
                     )
@@ -3324,7 +3452,12 @@ def _premium_key_metrics_row(view: PropertyAnalysisView, report: AnalysisReport)
     )
 
 
-def _premium_scenario_workspace(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def _premium_scenario_workspace(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    town_pulse_filter: str = "all",
+) -> html.Div:
     return html.Div(
         [
             html.Div("Scenario View", style=SECTION_HEADER_STYLE),
@@ -3332,8 +3465,8 @@ def _premium_scenario_workspace(view: PropertyAnalysisView, report: AnalysisRepo
                 "Use this section to move from current value to strategic path, then to forward value and break-even timing. The goal is to see whether the deal works today, through execution, and over time.",
                 style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "10px"},
             ),
-            _renovation_path_summary(view, report),
             _property_analysis_top_stack(view, report, include_market_position=False),
+            _premium_town_pulse_section(view, report, town_pulse_filter=town_pulse_filter),
         ],
         style={**CARD_STYLE_ELEVATED, "padding": "20px 22px", "display": "grid", "gap": "14px"},
     )
@@ -3405,7 +3538,7 @@ def _premium_town_pulse_section(view: PropertyAnalysisView, report: AnalysisRepo
     ])
     pulse_block = _town_pulse_block(view, signal_filter=town_pulse_filter)
     content: list[object] = [
-        html.Div("Town Pulse", style=SECTION_HEADER_STYLE),
+        html.Div("Section D - Town Pulse", style=SECTION_HEADER_STYLE),
         html.Div(
             "This is the local intelligence layer: what may be changing in the town before comps and listing data fully catch up.",
             style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY},
@@ -3476,7 +3609,6 @@ def _premium_owner_page(
     report: AnalysisReport,
     *,
     town_pulse_filter: str = "all",
-    decision_memo: html.Div,
     risk_section: html.Div,
     optionality_section: html.Div,
     evidence_section: html.Div,
@@ -3490,11 +3622,9 @@ def _premium_owner_page(
         [
             _premium_property_header(view, report),
             _premium_decision_strip(view),
-            decision_memo,
             _premium_key_metrics_row(view, report),
-            _premium_scenario_workspace(view, report),
+            _premium_scenario_workspace(view, report, town_pulse_filter=town_pulse_filter),
             _premium_risk_constraints_section(view, risk_section, optionality_section),
-            _premium_town_pulse_section(view, report, town_pulse_filter=town_pulse_filter),
             _premium_supporting_details(
                 [
                     render_insight_hero(view, report),
@@ -3510,39 +3640,6 @@ def _premium_owner_page(
             ),
         ],
         style={"display": "grid", "gap": "14px"},
-    )
-
-
-def _tear_sheet_view_toggle(view_mode: str) -> html.Div:
-    selected_mode = view_mode if view_mode in {"owner", "realtor"} else "owner"
-
-    return html.Div(
-        [
-            html.Div(
-                [
-                    html.Div("Presentation", style={**LABEL_STYLE, "marginBottom": "6px"}),
-                    dcc.RadioItems(
-                        id="tear-sheet-view-toggle",
-                        options=[
-                            {"label": "  Owner View", "value": "owner"},
-                            {"label": "  Realtor View", "value": "realtor"},
-                        ],
-                        value=selected_mode,
-                        inline=True,
-                        inputStyle={"marginRight": "4px"},
-                        labelStyle={
-                            "display": "inline-flex", "alignItems": "center",
-                            "marginRight": "6px", "padding": "5px 10px",
-                            "border": f"1px solid {BORDER}", "borderRadius": "6px",
-                            "backgroundColor": BG_SURFACE_2, "color": TEXT_SECONDARY,
-                            "fontSize": "11px", "fontWeight": "500", "cursor": "pointer",
-                        },
-                    ),
-                ],
-                style={"marginTop": "8px"},
-            ),
-        ],
-        style={**CARD_STYLE, "padding": "12px 14px", "marginBottom": "16px"},
     )
 
 
@@ -4035,36 +4132,61 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
     range_text = "12-month range unavailable."
     if view.bear_case is not None and view.bull_case is not None:
         range_text = f"12-month range runs from {_fmt_compact(view.bear_case)} to {_fmt_compact(view.bull_case)}."
+    if isinstance(base, (int, float)) and isinstance(ask, (int, float)):
+        if base < ask:
+            shortfall = ask - base
+            range_text = f"{range_text} Even the 12-month base case stays about {_fmt_compact(shortfall)} below today's ask."
+        elif base > ask:
+            cushion_12m = base - ask
+            range_text = f"{range_text} The 12-month base case sits about {_fmt_compact(cushion_12m)} above today's ask."
 
-    # Primary metrics strip — decision anchors
-    primary_metrics = [
-        ("Ask", _fmt_compact(ask), None),
-        ("Fair Value", _fmt_compact(bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
-        ("12M Base", _fmt_compact(base), None),
-        ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct)),
-    ]
-
-    # Secondary metrics strip — basis + town context (absorbed from former _value_snapshot_block)
     town_context = view.town_context or {}
-    secondary_metrics: list[tuple[str, str, str | None]] = [
-        ("All-In Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
+    subject_vs_town = town_context.get("subject_ppsf_vs_town")
+    town_prior = view.compare_metrics.get("town_baseline_median_price")
+    value_cards: list[tuple[str, str, str | None]] = [
+        ("Ask Price", _fmt_compact(ask), "current asking price"),
         (
-            "Town Prior",
-            _fmt_compact(view.compare_metrics.get("town_baseline_median_price")),
-            f"Idx {float(view.compare_metrics.get('town_price_index')):.0f}" if view.compare_metrics.get("town_price_index") is not None else None,
+            "Briarwood Fair Value",
+            _fmt_compact(bcv),
+            f"{gap_pct_text(view)} vs ask" if view.mispricing_pct is not None else "today's fair value anchor",
+        ),
+        (
+            "12M Base Case",
+            _fmt_compact(base),
+            (
+                f"{_fmt_signed_pct(((base - ask) / ask))} vs ask in 12 months"
+                if isinstance(base, (int, float)) and isinstance(ask, (int, float)) and ask != 0
+                else "base-case value in 12 months"
+            ),
+        ),
+        (
+            "All-In Basis",
+            _fmt_compact(view.all_in_basis),
+            _capex_basis_source_label(view.capex_basis_source),
         ),
     ]
-    if town_context.get("subject_ppsf_vs_town") is not None:
-        secondary_metrics.append(
-            ("Subject vs Town PPSF", f"{float(town_context['subject_ppsf_vs_town']):.2f}x", None)
+    if town_prior is not None:
+        value_cards.append(
+            (
+                "Town Median Price",
+                _fmt_compact(town_prior),
+                f"town price index {float(view.compare_metrics.get('town_price_index')):.0f}" if view.compare_metrics.get("town_price_index") is not None else "local reference point",
+            )
         )
-    if town_context.get("town_relative_opportunity_score") is not None:
-        secondary_metrics.append(
-            ("Town Opportunity", f"{float(town_context['town_relative_opportunity_score']):.2f}/5", None)
-        )
-    if town_context.get("town_context_confidence") is not None:
-        secondary_metrics.append(
-            ("Town Context", f"{float(town_context['town_context_confidence']):.0%}", None)
+    if subject_vs_town is not None:
+        ratio = float(subject_vs_town)
+        if ratio < 1:
+            town_compare = f"pricing is {((1 - ratio) * 100):.0f}% below town PPSF"
+        elif ratio > 1:
+            town_compare = f"pricing is {((ratio - 1) * 100):.0f}% above town PPSF"
+        else:
+            town_compare = "priced in line with town PPSF"
+        value_cards.append(
+            (
+                "Compared with Town",
+                f"{ratio:.2f}x",
+                town_compare,
+            )
         )
 
     value_box = html.Div(
@@ -4079,32 +4201,53 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
                 range_text,
                 style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "6px"},
             ),
-            inline_metric_strip(primary_metrics),
-            html.Div(inline_metric_strip(secondary_metrics), style={"marginTop": "6px"}) if secondary_metrics else None,
+            html.Div(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(label, style=LABEL_STYLE),
+                                html.Div(value, style={"fontSize": "18px", "fontWeight": "800", "lineHeight": "1.1", "color": TEXT_PRIMARY}),
+                                html.Div(detail, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "6px"}) if detail else None,
+                            ],
+                            style={**CARD_STYLE, "padding": "12px 14px", "boxShadow": "none", "borderColor": BORDER_SUBTLE, "minWidth": "0"},
+                        )
+                        for label, value, detail in value_cards
+                    ],
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns": f"repeat({len(value_cards)}, minmax(0, 1fr))",
+                        "gap": "10px",
+                        "marginTop": "12px",
+                    },
+                ),
+                style={"overflowX": "auto"},
+            ),
         ],
         style={**CARD_STYLE, "padding": "14px 16px"},
     )
 
-    trend_box = html.Div(
+    forward_chart_block = html.Div(
         [
-            html.Div("Value Context", style={**LABEL_STYLE, "marginBottom": "6px"}),
+            html.Div("12-Month Value Path", style={**LABEL_STYLE, "marginBottom": "6px"}),
             html.Div(
-                "This pairs today's value anchor with the current forward range. A longer historical trend can slot in here when property or market history is available in the analysis view.",
+                "This is the one forward-looking value chart for the page: ask today, fair value today, and Briarwood's 12-month stress, bear, base, and bull view.",
                 style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "8px"},
             ),
-            forward_fan_chart(view, compact=True),
+            forward_fan_chart_from_ask(view, chart_height=300),
+            html.Div(style={"marginTop": "12px"}),
+            _scenario_table(view),
+            html.Div(_scenario_skew_summary(view), style={"marginTop": "10px"}),
         ],
         style={**CARD_STYLE, "padding": "14px 16px"},
     )
 
     return _property_analysis_section(
         "Section A - Value Snapshot",
-        "Answer the current value question first, then frame the immediate upside or downside around the asking price.",
+        "Answer the value question once: what we think it is worth today, how that compares to ask, and what the 12-month range looks like from here.",
         [
-            html.Div(
-                [value_box, trend_box],
-                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(300px, 1fr))", "gap": "12px", "alignItems": "start"},
-            ),
+            value_box,
+            forward_chart_block,
             html.Div(comp_positioning_dot_plot(view, report), style={"marginTop": "10px"}),
         ],
     )
@@ -4115,15 +4258,16 @@ def renovation_value_trajectory_chart(
     report: AnalysisReport,
     *,
     show_renovated: bool = False,
+    years: int = 1,
+    chart_height: int | None = None,
 ) -> go.Figure:
     """Base-case value trajectory anchored at ask price.
 
-    Both trajectories start at ``ask_price`` on month 0 and grow linearly to
-    their respective 12-month terminal anchors. The as-is terminal is the
-    engine's base-case value (BCV or base). The renovated overlay uses the
-    modeled renovated BCV when available; otherwise it falls back to the
-    comp-derived renovation premium so the toggle always produces a visible
-    second line.
+    Both trajectories start at ``ask_price`` on month 0 and project out from
+    Briarwood's current 12-month anchors. The as-is terminal is the engine's
+    base-case value (BCV or base). The renovated overlay uses the modeled
+    renovated BCV when available; otherwise it falls back to the comp-derived
+    renovation premium.
     """
     ask = view.ask_price
     base = view.base_case
@@ -4140,20 +4284,24 @@ def renovation_value_trajectory_chart(
             xref="paper", yref="paper", x=0.5, y=0.5,
         )
         layout = dict(PLOTLY_LAYOUT_COMPACT)
-        layout["height"] = CHART_HEIGHT_STANDARD
+        layout["height"] = chart_height or CHART_HEIGHT_STANDARD
         fig.update_layout(**layout)
         return fig
 
-    months = list(range(0, 13))
+    months = list(range(0, max(1, years * 12) + 1))
 
-    def _linear_path(start: float, end: float) -> list[float]:
+    def _project_path(start: float, one_year_terminal: float, total_years: int) -> list[float]:
         if len(months) <= 1:
             return [start]
-        step = (end - start) / (len(months) - 1)
+        if start > 0 and one_year_terminal > 0:
+            annual_ratio = one_year_terminal / start
+            return [start * (annual_ratio ** (month / 12.0)) for month in months]
+        projected_terminal = start + ((one_year_terminal - start) * total_years)
+        step = (projected_terminal - start) / (len(months) - 1)
         return [start + step * i for i in range(len(months))]
 
     # As-is base trajectory
-    as_is_path = _linear_path(ask, terminal_as_is)
+    as_is_path = _project_path(ask, terminal_as_is, years)
     fig.add_trace(
         go.Scatter(
             x=months,
@@ -4189,7 +4337,32 @@ def renovation_value_trajectory_chart(
                 overlay_label = "Renovated (bull fallback)"
 
         if renovated_terminal is not None:
-            reno_path = _linear_path(ask, renovated_terminal)
+            reno_path = _project_path(ask, renovated_terminal, years)
+            lower_path = [min(a, b) for a, b in zip(as_is_path, reno_path)]
+            upper_path = [max(a, b) for a, b in zip(as_is_path, reno_path)]
+            fig.add_trace(
+                go.Scatter(
+                    x=months,
+                    y=lower_path,
+                    mode="lines",
+                    line={"color": "rgba(0,0,0,0)", "width": 0},
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=months,
+                    y=upper_path,
+                    mode="lines",
+                    line={"color": "rgba(0,0,0,0)", "width": 0},
+                    fill="tonexty",
+                    fillcolor="rgba(107, 114, 128, 0.14)",
+                    hoverinfo="skip",
+                    showlegend=False,
+                    name="Renovation gap",
+                )
+            )
             fig.add_trace(
                 go.Scatter(
                     x=months,
@@ -4201,6 +4374,19 @@ def renovation_value_trajectory_chart(
                     hovertemplate="Month %{x}<br>Renovated: %{y:$,.0f}<extra></extra>",
                 )
             )
+            if as_is_path[-1]:
+                gap_pct = ((reno_path[-1] - as_is_path[-1]) / abs(as_is_path[-1])) * 100
+                fig.add_annotation(
+                    x=months[-1],
+                    y=max(as_is_path[-1], reno_path[-1]),
+                    text=f"{gap_pct:+.0f}% gap",
+                    showarrow=False,
+                    yshift=16,
+                    font={"color": TEXT_SECONDARY, "size": 11},
+                    bgcolor="rgba(255,255,255,0.92)",
+                    bordercolor=BORDER,
+                    borderwidth=1,
+                )
         else:
             fig.add_annotation(
                 text="Renovation scenario not modeled and no comp premium available.",
@@ -4221,17 +4407,24 @@ def renovation_value_trajectory_chart(
     )
 
     layout = dict(PLOTLY_LAYOUT_COMPACT)
-    layout["height"] = CHART_HEIGHT_STANDARD
+    layout["height"] = chart_height or CHART_HEIGHT_STANDARD
     layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "title": "Value"}
-    layout["xaxis"] = {**layout.get("xaxis", {}), "title": "Months from today", "tickmode": "linear", "dtick": 2}
+    layout["xaxis"] = {**layout.get("xaxis", {}), "title": "Months from today", "tickmode": "linear", "dtick": 6 if years > 1 else 2}
     layout["showlegend"] = True
     layout["legend"] = {**layout.get("legend", {}), "orientation": "h", "yanchor": "bottom", "y": 1.0, "xanchor": "right", "x": 1.0}
     fig.update_layout(**layout)
     return fig
 
 
-def _strategic_path_card(title: str, subtitle: str, metrics: list[tuple[str, str, str | None]], tone: str = "neutral") -> html.Div:
-    accent = tone_color(tone) if tone != "neutral" else ACCENT_BLUE
+def _strategic_path_card(
+    title: str,
+    subtitle: str,
+    metrics: list[tuple[str, str, str | None]],
+    tone: str = "neutral",
+    *,
+    accent: str | None = None,
+) -> html.Div:
+    accent = accent or (tone_color(tone) if tone != "neutral" else ACCENT_BLUE)
     return html.Div(
         [
             html.Div(title, style={"fontSize": "17px", "fontWeight": "700", "color": TEXT_PRIMARY, "marginBottom": "6px"}),
@@ -4256,6 +4449,7 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             ("Recommendation", view.decision.recommendation if view.decision is not None else "—", None),
         ],
         tone="neutral",
+        accent=ACCENT_BLUE,
     )
 
     if has_reno:
@@ -4284,40 +4478,12 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             ("Execution", "Not fully underwritten", None),
         ]
 
-    # Live trajectory chart — as-is terminal is the engine's base-case value.
+    # Live trajectory chart — both lines are always visible to avoid duplicate path framing.
     initial_figure = renovation_value_trajectory_chart(
-        view, report, show_renovated=False
-    )
-
-    overlay_controls = html.Div(
-        [
-            html.Div("Renovated overlay", style={**LABEL_STYLE, "marginBottom": "4px"}),
-            dcc.RadioItems(
-                id="reno-overlay-toggle",
-                options=[
-                    {"label": "  Off", "value": "off"},
-                    {"label": "  On", "value": "on"},
-                ],
-                value="off",
-                inline=True,
-                inputStyle={"marginRight": "4px"},
-                labelStyle={
-                    "display": "inline-flex", "alignItems": "center",
-                    "marginRight": "8px", "padding": "4px 10px",
-                    "border": f"1px solid {BORDER}", "borderRadius": "6px",
-                    "backgroundColor": BG_SURFACE_2, "color": TEXT_SECONDARY,
-                    "fontSize": "11px", "fontWeight": "500", "cursor": "pointer",
-                },
-            ),
-            html.Div(
-                "Overlays a dashed renovated trajectory using the engine's modeled renovated value "
-                "— or the comp-derived premium when a full scenario isn't available."
-                if has_reno else
-                "No full renovation scenario is modeled — the overlay will use the comp-derived premium instead.",
-                style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "4px"},
-            ),
-        ],
-        style={"marginBottom": "10px"},
+        view,
+        report,
+        show_renovated=True,
+        chart_height=300,
     )
 
     # Renovation premium: PPSF bar chart (dated vs renovated comps)
@@ -4351,15 +4517,12 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
 
     trajectory_children = [
         html.Div("Projected Value Trajectory (Base Case)", style={**LABEL_STYLE, "marginBottom": "6px"}),
-        overlay_controls,
         dcc.Graph(
-            id="reno-trajectory-chart",
             figure=initial_figure,
             config={"displayModeBar": False, "responsive": True},
         ),
         html.Div(
-            "Line anchors at the ask price on day 0 and grows linearly to the 12-month base case. "
-            "Toggle the overlay on to compare against the renovated case.",
+            "Both paths start at today's ask and run to Briarwood's current 12-month as-is and renovation anchors, so the overlay stays tied to the same forward window used elsewhere on the page.",
             style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px", "lineHeight": "1.5"},
         ),
     ]
@@ -4378,7 +4541,7 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             html.Div(
                 [
                     as_is_card,
-                    _strategic_path_card("Buy + Renovate", reno_subtitle, reno_metrics, tone="positive" if has_reno else "warning"),
+                    _strategic_path_card("Buy + Renovate", reno_subtitle, reno_metrics, tone="positive" if has_reno else "warning", accent=ACCENT_GREEN),
                 ],
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px"},
             ),
@@ -4457,10 +4620,10 @@ def _forward_scenarios_top_section(view: PropertyAnalysisView) -> html.Div:
             inline_metric_strip(metric_rows),
             html.Div(
                 [
-                    html.Div(forward_fan_chart_from_ask(view), style={"minWidth": "0"}),
-                    _scenario_table(view),
+                    html.Div(forward_fan_chart_from_ask(view, chart_height=300), style={"minWidth": "0"}),
+                    html.Div(_scenario_table(view), style={"marginTop": "12px"}),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px", "alignItems": "start", "marginTop": "10px"},
+                style={"display": "grid", "gap": "12px", "alignItems": "start", "marginTop": "10px"},
             ),
             html.Div(_scenario_skew_summary(view), style={"marginTop": "10px"}),
         ],
@@ -4475,7 +4638,7 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
 
     if not isinstance(monthly_rent, (int, float)):
         return _property_analysis_section(
-            "Section D - Financial Path / Rent Ramp",
+            "Section C - Financial Path / Rent Ramp",
             "Show when the hold can work financially, or explain what data is still missing.",
             [
                 html.Div(
@@ -4493,7 +4656,7 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
 
     if not isinstance(gross_cost, (int, float)) or gross_cost <= 0:
         return _property_analysis_section(
-            "Section D - Financial Path / Rent Ramp",
+            "Section C - Financial Path / Rent Ramp",
             "Show when the hold can work financially, or explain what data is still missing.",
             [
                 html.Div(
@@ -4535,7 +4698,7 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
 
     fig.add_hline(y=0, line_dash="dot", line_color=TEXT_MUTED, annotation_text="Break-even", annotation_font_color=TEXT_MUTED, annotation_position="right")
     layout = dict(PLOTLY_LAYOUT_COMPACT)
-    layout["height"] = CHART_HEIGHT_STANDARD
+    layout["height"] = 300
     layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "title": "Monthly cash flow"}
     layout["xaxis"] = {**layout.get("xaxis", {}), "title": "Years from today", "tickmode": "linear", "dtick": 1}
     fig.update_layout(**layout)
@@ -4550,7 +4713,7 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
             summary = f"Under a 3% annual rent-growth path, break-even lands around {base_break_even.lower()}."
 
     return _property_analysis_section(
-        "Section D - Financial Path / Rent Ramp",
+        "Section C - Financial Path / Rent Ramp",
         "Translate today's carry into a simple time path so the user can see whether the property works now or only after rent growth catches up.",
         [
             html.Div(
@@ -4577,7 +4740,7 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
                         style={**CARD_STYLE, "padding": "14px 16px"},
                     ),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "1.4fr 1fr", "gap": "12px", "alignItems": "start"},
+                style={"display": "grid", "gap": "12px", "alignItems": "start"},
             ),
             html.Div(
                 "v1 holds carrying costs flat and only moves rent — a decision aid, not a full operating pro forma.",
@@ -4597,7 +4760,6 @@ def _property_analysis_top_stack(
     sections = [
         _value_snapshot_top_section(view, report),
         _strategic_paths_top_section(view, report),
-        _forward_scenarios_top_section(view),
         _rent_ramp_break_even_section(view, report),
     ]
     if include_market_position:
@@ -4629,11 +4791,26 @@ def _market_position_top_section(
         html.Div(
             [
                 html.Div("Backdrop Read", style={**LABEL_STYLE, "marginBottom": "6px"}),
+                html.Div(
+                    [
+                        html.Span("Location Support", style={**SECTION_HEADER_STYLE, "fontSize": "10px"}),
+                        html.Span(rl.location_support_label, style=tone_badge_style("positive" if rl.location_support_label == "Geo-Benchmarked" else "warning" if "Missing" in rl.location_support_label else "neutral")),
+                    ],
+                    style={"display": "flex", "gap": "8px", "alignItems": "center", "flexWrap": "wrap", "marginBottom": "6px"},
+                ),
                 metrics,
                 html.Div(
                     "Town-level positioning blends valuation support, momentum, scarcity, liquidity, and Town Pulse catalysts into a quick market read.",
                     style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "6px"},
                 ),
+                html.Div(
+                    rl.location_support_detail,
+                    style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "4px"},
+                ) if rl.location_support_detail else None,
+                html.Div(
+                    f"Benchmarked anchors: {rl.location_anchor_summary}",
+                    style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "4px"},
+                ) if rl.location_anchor_summary else None,
                 html.Div(
                     "Catalysts are confirmed positive local signals. Risks are confirmed negative local signals. Watch items are early-stage, mixed, or lower-confidence signals.",
                     style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "6px"},
@@ -5492,17 +5669,15 @@ def _renovation_premium_bar_chart(
 def render_tear_sheet_body(
     view: PropertyAnalysisView,
     report: AnalysisReport,
-    view_mode: str = "owner",
     *,
     town_pulse_filter: str = "all",
 ) -> html.Div:
-    """Decision-first tear sheet with owner and realtor presentation modes."""
+    """Decision-first property analysis page."""
     price_answer, price_summary, _price_label = _price_answer(view)
     economics_answer, economics_summary = _economics_answer(view, report)
     forward_answer, forward_summary = _forward_answer(view)
-    risk_answer, top_risks = _risk_answer(view)
+    risk_answer, _ = _risk_answer(view)
     optionality_answer, optionality_summary = _optionality_answer(view)
-    selected_mode = view_mode if view_mode in {"owner", "realtor"} else "owner"
 
     # Property-driven smart defaults: determine which sections to auto-expand
     auto_open = get_smart_defaults(view)
@@ -5604,13 +5779,13 @@ def render_tear_sheet_body(
         missing_note=_section_missing_note(view, ["market_momentum", "net_opportunity_delta"]),
     )
     risk_section = _question_section(
-        "What Could Break the Thesis?" if selected_mode == "owner" else "Risks / Things To Be Aware Of",
-        risk_answer if selected_mode == "owner" else _reframe_risk_for_realtor(risk_answer),
+        "What Could Break the Thesis?",
+        risk_answer,
         section_id="tear-risk",
         confidence=_section_confidence(view, "risk"),
-        default_open="tear-risk" in auto_open if selected_mode == "owner" else False,
-        insight_callout=_risk_insight(view) if selected_mode == "owner" else None,
-        summary="Risk combines valuation cushion, execution burden, exit liquidity, income support, and market backdrop. The goal is to show where the thesis can break." if selected_mode == "owner" else "These are the practical issues an agent or buyer should keep in mind so the positioning stays credible.",
+        default_open="tear-risk" in auto_open,
+        insight_callout=_risk_insight(view),
+        summary="Risk combines valuation cushion, execution burden, exit liquidity, income support, and market backdrop. The goal is to show where the thesis can break.",
         metrics_strip=inline_metric_strip([m for m in [
             ("Risk Score", f"{view.risk_location.risk_score:.0f}", _benchmark_sublabel(view.risk_location.risk_score, "risk_score")),
             ("Liquidity", f"{view.risk_location.liquidity_score:.0f}/100", view.risk_location.liquidity_label),
@@ -5623,7 +5798,6 @@ def render_tear_sheet_body(
         extra_content=html.Div(
             [block for block in [
                 _risk_list_block(view),
-                _list_block("Client-Facing Reframes", [_reframe_risk_for_realtor(item) for item in top_risks[:3]], tone="warning") if selected_mode == "realtor" else None,
             ] if block is not None],
             style={"display": "grid", "gap": "8px"},
         ),
@@ -5631,13 +5805,13 @@ def render_tear_sheet_body(
         missing_note=_section_missing_note(view, ["liquidity", "capex_load"]),
     )
     optionality_section = _question_section(
-        "Where's the Upside?" if selected_mode == "owner" else "What Needs To Be True",
-        optionality_answer if selected_mode == "owner" else "The upside case depends on which parts of the story are real, financeable, and supportable during diligence.",
+        "Where's the Upside?",
+        optionality_answer,
         section_id="tear-optionality",
         confidence=_section_confidence(view, "optionality"),
-        default_open="tear-optionality" in auto_open if selected_mode == "owner" else False,
-        insight_callout=_optionality_insight(view, report) if selected_mode == "owner" else None,
-        summary=optionality_summary if selected_mode == "owner" else "Use this section to separate real flexibility from things that still need to be proven before leaning on the upside case.",
+        default_open="tear-optionality" in auto_open,
+        insight_callout=_optionality_insight(view, report),
+        summary=optionality_summary,
         metrics_strip=inline_metric_strip([
             ("Condition", view.condition_profile, None),
             ("CapEx Lane", view.capex_lane, None),
@@ -5653,7 +5827,6 @@ def render_tear_sheet_body(
                 ),
                 _optionality_fact_block(view),
                 _scarcity_breakdown_strip(view),
-                _list_block("What Needs To Be True", view.what_changes_call[:3], tone="warning") if selected_mode == "realtor" else None,
             ],
             style={"display": "grid", "gap": "8px"},
         ),
@@ -5679,41 +5852,13 @@ def render_tear_sheet_body(
         ) if (view.risk_location.town_pulse is not None or view.risk_location.drivers or view.risk_location.risks) else None,
         default_open=False,
     )
-    realtor_market_support = html.Div(
-        [
-            html.Div("Market Support", style=SECTION_HEADER_STYLE),
-            location_metrics_bars(view, report),
-            _town_pulse_block(view, signal_filter=town_pulse_filter),
-            html.Div(
-                [
-                    _list_block("Demand Drivers", view.risk_location.drivers[:4], tone="positive"),
-                    _list_block("Watch-Outs", [_reframe_risk_for_realtor(item) for item in view.risk_location.risks[:4]], tone="warning"),
-                ],
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "10px", "marginTop": "8px"},
-            ),
-        ],
-        style={**CARD_STYLE, "padding": "10px 12px"},
-    )
-    realtor_economics_support = html.Div(
-        [
-            html.Div("Ownership Economics", style=SECTION_HEADER_STYLE),
-            html.Div(
-                [
-                    income_carry_waterfall(view, report),
-                    _economics_summary_box(view, report),
-                ],
-                style={"display": "grid", "gridTemplateColumns": "1.3fr 0.8fr", "gap": "12px", "alignItems": "start"},
-            ),
-        ],
-        style={**CARD_STYLE, "padding": "10px 12px"},
-    )
     evidence_section = _question_section(
-        "How Strong Is the Evidence?" if selected_mode == "owner" else "Evidence / Confidence",
-        f"Overall confidence is {view.overall_confidence:.0%}, with the analysis strongest where facts and user-confirmed inputs replace inferred assumptions." if selected_mode == "owner" else f"Overall confidence is {view.overall_confidence:.0%}. Use this section to separate what is confirmed from what still needs validation with a client or during diligence.",
+        "How Strong Is the Evidence?",
+        f"Overall confidence is {view.overall_confidence:.0%}, with the analysis strongest where facts and user-confirmed inputs replace inferred assumptions.",
         section_id="tear-evidence",
         confidence=_section_confidence(view, "evidence"),
         default_open=False,
-        summary="This section distinguishes sourced facts, user-confirmed inputs, estimated assumptions, and unresolved gaps so the Briarwood conclusion can be read in context." if selected_mode == "owner" else "This is the trust layer behind the positioning: what is known, what is estimated, and what would most improve confidence.",
+        summary="This section distinguishes sourced facts, user-confirmed inputs, estimated assumptions, and unresolved gaps so the Briarwood conclusion can be read in context.",
         metrics_strip=_evidence_summary_strip(view),
         basis_chips=_section_status_chips(
             view,
@@ -5767,7 +5912,6 @@ def render_tear_sheet_body(
         view,
         report,
         town_pulse_filter=town_pulse_filter,
-        decision_memo=_decision_engine_block(view),
         risk_section=risk_section,
         optionality_section=optionality_section,
         evidence_section=evidence_section,
@@ -5777,158 +5921,10 @@ def render_tear_sheet_body(
         forward_section=forward_section,
         market_section=market_section,
     )
-
-    realtor_fit_section = _question_section(
-        "Who This Property Fits Best",
-        _fit_label(view),
-        section_id="tear-fit",
-        confidence=_section_confidence(view, "optionality"),
-        default_open=True,
-        summary="Use this section to align the property with the buyer type most likely to understand and accept the tradeoffs.",
-        metrics_strip=inline_metric_strip([
-            ("Best Fit", view.decision.best_fit if view.decision is not None else "—", None),
-            ("Positioning", _soft_recommendation_label(view.decision.recommendation) if view.decision is not None else "—", None),
-            ("Confidence", f"{view.overall_confidence:.0%}", None),
-            ("Optionality", optionality_answer, None),
-        ]),
-        extra_content=render_perspective_block(view),
-    )
-    realtor_why_section = _question_section(
-        "Why This Works",
-        f"{price_answer} {forward_answer}",
-        section_id="tear-why",
-        confidence=min(_section_confidence(view, "price"), _section_confidence(view, "forward")),
-        default_open=True,
-        summary="This combines current value support, forward scenarios, and the broader market setup into the core positioning case.",
-        metrics_strip=inline_metric_strip([
-            ("Ask", _fmt_compact(view.ask_price), None),
-            ("Fair Value", _fmt_compact(view.bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
-            ("Base", _fmt_compact(view.base_case), None),
-            ("Momentum", f"{view.risk_location.market_momentum_score:.0f}/100", view.risk_location.market_momentum_label),
-        ]),
-        chart=html.Div(
-            [
-                comp_positioning_dot_plot(view, report),
-                html.Div(forward_fan_chart(view), style={"marginTop": "8px"}),
-            ],
-            style={"display": "grid", "gap": "8px"},
-        ),
-    )
-    realtor_talking_points_section = _question_section(
-        "Buyer Talking Points / Defensible Positives",
-        "Lead with the parts of the story that are both real and supportable.",
-        section_id="tear-talking-points",
-        confidence=_section_confidence(view, "price"),
-        default_open=False,
-        summary="These points come directly from Briarwood's current valuation, forward view, optionality, and local-market drivers.",
-        extra_content=html.Div(
-            [block for block in [
-                _list_block("Talking Points", _realtor_talking_points(view, report), tone="positive"),
-                _optionality_fact_block(view),
-                realtor_market_support,
-            ] if block is not None],
-            style={"display": "grid", "gap": "8px"},
-        ),
-    )
-    realtor_objections_section = _question_section(
-        "What Buyers Will Ask",
-        "Expect questions around condition, carrying cost, and how durable the upside case really is.",
-        section_id="tear-objections",
-        confidence=_section_confidence(view, "risk"),
-        default_open=False,
-        summary="This section translates the main underwriting objections into practical buyer questions an agent should be ready for.",
-        extra_content=html.Div(
-            [block for block in [
-                _list_block("Likely Buyer Questions", [_reframe_risk_for_realtor(item) for item in top_risks[:3]], tone="warning"),
-                realtor_economics_support,
-            ] if block is not None],
-            style={"display": "grid", "gap": "8px"},
-        ),
-    )
-
-    realtor_tabs = [
-        (
-            "overview",
-            "Overview",
-            [
-                _property_analysis_top_stack(view, report, town_pulse_filter=town_pulse_filter),
-                _realtor_positioning_header(view, report),
-                _decision_summary_block(view, report),
-                _report_card_block(view),
-                _value_snapshot_block(view, report),
-                _renovation_path_summary(view, report),
-            ],
-        ),
-        (
-            "value",
-            "Value",
-            [
-                realtor_why_section,
-                price_section,
-                market_section,
-            ],
-        ),
-        (
-            "strategy",
-            "Strategy",
-            [
-                realtor_fit_section,
-                realtor_talking_points_section,
-                realtor_objections_section,
-            ],
-        ),
-        (
-            "renovation",
-            "Renovation",
-            [
-                _renovation_path_summary(view, report),
-                _renovation_value_overlay(view, report),
-                optionality_section,
-            ],
-        ),
-        (
-            "risk",
-            "Risk",
-            [
-                risk_section,
-            ],
-        ),
-        (
-            "support",
-            "Support / Diagnostics",
-            [
-                evidence_section,
-                market_section,
-                _realtor_positioning_close(view),
-            ],
-        ),
-    ]
-
-    owner_content = html.Div(
-        [
-            html.Div(
-                [
-                    _tear_sheet_view_toggle(selected_mode),
-                    _conclusion_ribbon,
-                ],
-                style={"display": "grid", "gap": "10px"},
-            ),
-            owner_page,
-        ],
-        style={"display": "grid", "gap": "14px"},
-    )
-
-    realtor_content = html.Div(
-        [
-            _tear_sheet_view_toggle(selected_mode),
-            _tear_sheet_subtabs(realtor_tabs),
-        ],
-        style={"display": "grid", "gap": "4px"},
-    )
-
     return html.Div(
         [
-            owner_content if selected_mode == "owner" else realtor_content,
+            _conclusion_ribbon,
+            owner_page,
         ],
         style={"padding": "16px 20px", "maxWidth": "1100px"},
     )
@@ -5964,16 +5960,28 @@ def _location_context_chips(view: PropertyAnalysisView) -> html.Div | None:
     """School signal badge + coastal profile tag — only shown when data exists."""
     chips: list[html.Span] = []
     rl = view.risk_location
+    if rl.location_support_label:
+        tone = "positive" if rl.location_support_label == "Geo-Benchmarked" else "warning" if "Missing" in rl.location_support_label else "neutral"
+        chips.append(compact_badge("Location Support", rl.location_support_label, tone=tone))
     if rl.school_signal is not None and rl.school_signal_text:
         tone = "positive" if rl.school_signal >= 7 else "warning" if rl.school_signal >= 5 else "negative"
         chips.append(compact_badge("School Quality", rl.school_signal_text, tone=tone))
     if rl.coastal_profile_label:
         chips.append(compact_badge("Location", rl.coastal_profile_label, tone="positive"))
-    if not chips:
+    if not chips and not rl.location_anchor_summary:
         return None
+    children: list[object] = [
+        html.Span("LOCATION CONTEXT", style={**SECTION_HEADER_STYLE, "fontSize": "10px", "marginBottom": "4px"})
+    ] + chips
+    if rl.location_anchor_summary:
+        children.append(
+            html.Div(
+                rl.location_anchor_summary,
+                style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "width": "100%"},
+            )
+        )
     return html.Div(
-        [html.Span("LOCATION CONTEXT", style={**SECTION_HEADER_STYLE, "fontSize": "10px", "marginBottom": "4px"})]
-        + chips,
+        children,
         style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "alignItems": "center"},
     )
 

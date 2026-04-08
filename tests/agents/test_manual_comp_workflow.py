@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from briarwood.agents.comparable_sales import ComparableSalesAgent, ComparableSalesRequest, FileBackedComparableSalesProvider
 from briarwood.dash_app import data as dash_data
@@ -179,6 +180,99 @@ class ManualCompWorkflowTests(unittest.TestCase):
                 self.assertEqual(income.metrics["monthly_rent_estimate"], 5000)
                 saved_payload = (dash_data.SAVED_PROPERTY_DIR / property_id / "inputs.json").read_text()
                 self.assertIn('"unit_rents": [', saved_payload)
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+    def test_register_manual_analysis_persists_partial_owner_occupancy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, _output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "1214 Main St, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "property_type": "Triplex",
+                        "purchase_price": 995000,
+                        "beds": 5,
+                        "baths": 3.0,
+                        "occupancy_strategy": "owner_occupy_partial",
+                        "owner_occupied_unit_count": 1,
+                        "unit_rents": [2400, 2200],
+                        "insurance": 2400,
+                        "taxes": 12000,
+                    },
+                    [],
+                )
+
+                reports = dash_data.load_reports([property_id])
+                report = reports[property_id]
+                income = report.get_module("income_support")
+
+                self.assertEqual(report.property_input.occupancy_strategy, "owner_occupy_partial")
+                self.assertEqual(report.property_input.owner_occupied_unit_count, 1)
+                self.assertEqual(income.metrics["occupancy_strategy"], "owner_occupy_partial")
+                saved_payload = (dash_data.SAVED_PROPERTY_DIR / property_id / "inputs.json").read_text()
+                self.assertIn('"occupancy_strategy": "owner_occupy_partial"', saved_payload)
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+    def test_register_manual_analysis_persists_subject_coordinates(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                property_id, _output_path = dash_data.register_manual_analysis(
+                    {
+                        "address": "99 Ocean Ave, Belmar, NJ 07719",
+                        "town": "Belmar",
+                        "state": "NJ",
+                        "county": "Monmouth",
+                        "purchase_price": 910000,
+                        "beds": 3,
+                        "baths": 2.0,
+                        "latitude": 40.1781,
+                        "longitude": -74.0214,
+                    },
+                    [],
+                )
+
+                reports = dash_data.load_reports([property_id])
+                report = reports[property_id]
+
+                self.assertEqual(report.property_input.latitude, 40.1781)
+                self.assertEqual(report.property_input.longitude, -74.0214)
+                saved_payload = (dash_data.SAVED_PROPERTY_DIR / property_id / "inputs.json").read_text()
+                self.assertIn('"latitude": 40.1781', saved_payload)
+                self.assertIn('"longitude": -74.0214', saved_payload)
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
+    def test_register_manual_analysis_geocodes_by_default_when_coordinates_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                with patch.object(dash_data, "geocode_address", return_value=(40.1781, -74.0214)) as mocked_geocode:
+                    property_id, _output_path = dash_data.register_manual_analysis(
+                        {
+                            "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+                            "town": "Belmar",
+                            "state": "NJ",
+                            "county": "Monmouth",
+                            "purchase_price": 910000,
+                            "beds": 3,
+                            "baths": 2.0,
+                        },
+                        [],
+                    )
+
+                report = dash_data.load_reports([property_id])[property_id]
+                mocked_geocode.assert_called_once()
+                self.assertEqual(report.property_input.latitude, 40.1781)
+                self.assertEqual(report.property_input.longitude, -74.0214)
             finally:
                 dash_data.SAVED_PROPERTY_DIR = original_saved_dir
 

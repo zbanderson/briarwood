@@ -103,10 +103,9 @@ server = app.server
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 MAIN_TABS = [
-    ("opportunities", "Dashboard"),
+    ("opportunities", "Markets"),
     ("tear_sheet", "Property Analysis"),
     ("compare", "Compare"),
-    ("portfolio", "Markets"),
     ("scenarios", "Scenarios"),
     ("data_quality", "Diagnostics"),
     ("settings", "Settings"),
@@ -166,6 +165,12 @@ PROPERTY_TYPE_OPTIONS = [
     {"label": "Triplex", "value": "triplex"},
     {"label": "Fourplex", "value": "fourplex"},
     {"label": "Multi Family", "value": "multi_family"},
+]
+
+OCCUPANCY_STRATEGY_OPTIONS = [
+    {"label": "Rental / not owner-occupied", "value": "full_rental"},
+    {"label": "Owner occupies part of property", "value": "owner_occupy_partial"},
+    {"label": "Owner occupies all of property", "value": "owner_occupy_full"},
 ]
 
 DISCOVERY_PRICE_BANDS = [
@@ -465,6 +470,46 @@ def _form_property_type(property_type: str | None) -> str:
     return mapping.get(normalized, "")
 
 
+def _occupancy_strategy_note(
+    property_type: str | None,
+    occupancy_strategy: str | None,
+    owner_occupied_unit_count: float | None,
+) -> tuple[dict[str, str], html.Span]:
+    unit_count = _unit_count_for_property_type(property_type)
+    property_label = _normalize_property_label(property_type)
+    if occupancy_strategy == "owner_occupy_partial":
+        owner_units = int(owner_occupied_unit_count or 1)
+        rentable_units = max(unit_count - owner_units, 0) if unit_count else None
+        detail = (
+            f"Rental support will use only the rentable units you enter. Briarwood will treat about {rentable_units} unit"
+            f"{'' if rentable_units == 1 else 's'} as income-producing."
+            if rentable_units is not None
+            else "Rental support will use only the rentable units you enter."
+        )
+        return (
+            {"display": "block"},
+            html.Span(
+                f"Partial owner-occupancy selected for this {property_label.lower()}. {detail}",
+                style={"color": TONE_POSITIVE_TEXT},
+            ),
+        )
+    if occupancy_strategy == "owner_occupy_full":
+        return (
+            {"display": "block"},
+            html.Span(
+                "Owner-occupy full selected. Briarwood will not assume whole-property rental income unless you add a separate rentable unit.",
+                style={"color": TEXT_MUTED},
+            ),
+        )
+    return (
+        {"display": "block" if unit_count > 1 else "none"},
+        html.Span(
+            f"{property_label} selected — unit rents will override the single market-rent input when provided.",
+            style={"color": TONE_POSITIVE_TEXT},
+        ),
+    )
+
+
 def _bool_dropdown_value(value: bool | None) -> str:
     if value is True:
         return "true"
@@ -547,6 +592,8 @@ def _changed_property_fields(source_subject: dict[str, object], new_subject: dic
         "parking_spaces": "Parking",
         "corner_lot": "Corner Lot",
         "driveway_off_street": "Off-Street Parking",
+        "occupancy_strategy": "Occupancy Strategy",
+        "owner_occupied_unit_count": "Owner-Occupied Units",
         "estimated_monthly_rent": "Market Rent",
         "unit_rents": "Unit Rents",
         "back_house_monthly_rent": "Back House Rent",
@@ -572,24 +619,23 @@ def _changed_property_fields(source_subject: dict[str, object], new_subject: dic
 def _shell_nav_groups() -> list[tuple[str, list[dict[str, str]]]]:
     return [
         (
-            "Workspace",
+            "Markets",
             [
-                {"tab": "opportunities", "label": "Dashboard", "description": "Best opportunities and current shortlist."},
+                {"tab": "opportunities", "label": "Markets", "description": "Best opportunities, shortlist discovery, and cross-property market context."},
                 {"tab": "tear_sheet", "label": "Property Analysis", "description": "Decision-first underwriting for the active property."},
-                {"tab": "compare", "label": "Compare", "description": "Line up multiple properties side by side."},
-                {"tab": "portfolio", "label": "Markets", "description": "Cross-property and market-level patterns."},
             ],
         ),
         (
             "Tools",
             [
+                {"tab": "compare", "label": "Compare", "description": "Line up multiple properties side by side."},
                 {"tab": "scenarios", "label": "Scenarios", "description": "Pressure-test renovate, knockdown, and hold paths."},
-                {"tab": "data_quality", "label": "Diagnostics", "description": "Evidence, assumptions, and data quality."},
             ],
         ),
         (
             "Admin",
             [
+                {"tab": "data_quality", "label": "Diagnostics", "description": "Evidence, assumptions, and data quality."},
                 {"tab": "settings", "label": "Settings", "description": "Workspace preferences and system configuration."},
             ],
         ),
@@ -649,7 +695,7 @@ def _build_shell_sidebar(active_tab: str | None) -> html.Div:
                 [
                     html.Div("Workspace", style={**SECTION_HEADER_STYLE, "color": "rgba(255,255,255,0.62)"}),
                     html.Div(
-                        "Use the shell to move between discovery, analysis, comparison, and market context without losing your active property.",
+                        "Move between market discovery, property analysis, tools, and admin surfaces without losing your active property.",
                         style={"fontSize": "12px", "lineHeight": "1.55", "color": "rgba(255,255,255,0.76)"},
                     ),
                 ],
@@ -691,11 +737,11 @@ def _shell_context_for_tab(
     compare_count = len(compare_ids or [])
     report_view = build_property_analysis_view(report) if report is not None else None
 
-    if tab == "opportunities":
+    if tab in {"opportunities", "portfolio"}:
         return (
-            "Discovery Workspace",
-            "Dashboard",
-            "Start from surfaced opportunities instead of hunting through an address-first workflow.",
+            "Markets",
+            "Markets",
+            "Start from surfaced opportunities, then read the broader loaded-property market context in one place.",
             [
                 _context_metric("Surfaced", str(len(_discoverable_property_ids(loaded_ids))), "visible opportunity universe"),
                 _context_metric("Loaded", str(loaded_count), "properties in this session"),
@@ -725,15 +771,6 @@ def _shell_context_for_tab(
             [
                 _context_metric("Selected", str(compare_count), "properties confirmed for compare"),
                 _context_metric("Mode", "Heatmap-first", "switch into detail when needed"),
-            ],
-        )
-    if tab == "portfolio":
-        return (
-            "Cross-Property Read",
-            "Markets",
-            "Read market and portfolio patterns across the currently loaded property set.",
-            [
-                _context_metric("Loaded", str(loaded_count), "properties contributing to the market read"),
             ],
         )
     if tab == "scenarios":
@@ -1576,6 +1613,17 @@ def _add_property_form_body() -> list:
                     style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)", "gap": "6px"},
                 ),
                 html.Div(
+                    [
+                        _dropdown("manual-occupancy-strategy", OCCUPANCY_STRATEGY_OPTIONS, "Occupancy Strategy"),
+                        _number_input("manual-owner-occupied-unit-count", "Owner-occupied units"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "6px"},
+                ),
+                html.Div(
+                    id="manual-occupancy-note",
+                    style={"fontSize": "13px", "color": TEXT_MUTED},
+                ),
+                html.Div(
                     id="manual-unit-rents-container",
                     children=[
                         html.Div("Unit Rent Schedule", style=SECTION_HEADER_STYLE),
@@ -1800,7 +1848,6 @@ def _build_layout():
             dcc.Store(id="last-analysis-summary", data=None),
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
-            dcc.Store(id="tear-sheet-view-mode", storage_type="local", data="owner"),
             dcc.Store(id="town-pulse-filter", data="all"),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
@@ -2441,7 +2488,6 @@ def sync_town_pulse_filter(
     Input("property-catalog-version", "data"),
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
-    Input("tear-sheet-view-mode", "data"),
     Input("town-pulse-filter", "data"),
 )
 def render_main_tab(
@@ -2449,22 +2495,35 @@ def render_main_tab(
     _catalog_version: int | None,
     loaded_ids: list[str] | None,
     focus_id: str | None,
-    tear_sheet_view_mode: str | None,
     town_pulse_filter: str | None,
 ):
-    if tab == "opportunities":
+    if tab in {"opportunities", "portfolio"}:
+        market_workspace = html.Div(
+            [
+                _opportunity_discovery_section(
+                    loaded_ids=loaded_ids,
+                    focus_id=focus_id,
+                    town_filter="all",
+                    recommendation_filter="all",
+                    strategy_filter="all",
+                    price_band_filter="all",
+                ),
+                html.Div(
+                    style={
+                        "height": "1px",
+                        "backgroundColor": BORDER,
+                        "margin": "6px 0 4px",
+                    },
+                ),
+                _build_market_view_block(loaded_ids),
+            ],
+            style={"display": "grid", "gap": "18px"},
+        )
         return _build_page_container(
-            eyebrow="Discovery",
-            title="Dashboard",
-            subtitle="Start with the best opportunities on the board right now, then jump into a property when something deserves closer attention.",
-            content=_opportunity_discovery_section(
-                loaded_ids=loaded_ids,
-                focus_id=focus_id,
-                town_filter="all",
-                recommendation_filter="all",
-                strategy_filter="all",
-                price_band_filter="all",
-            ),
+            eyebrow="Markets",
+            title="Markets",
+            subtitle="Start with the best opportunities on the board right now, then use the loaded property set to read the broader market backdrop in the same workspace.",
+            content=market_workspace,
             max_width="1140px",
         )
 
@@ -2489,7 +2548,6 @@ def render_main_tab(
             content=render_tear_sheet_body(
                 view,
                 report,
-                tear_sheet_view_mode or "owner",
                 town_pulse_filter=town_pulse_filter or "all",
             ),
             max_width="1140px",
@@ -2525,20 +2583,6 @@ def render_main_tab(
                     ),
                 ]
             ),
-        )
-
-    if tab == "portfolio":
-        loaded_ids = loaded_ids or []
-        if not loaded_ids:
-            return _empty_state("Load properties to view portfolio dashboard.")
-        reports = load_reports(loaded_ids)
-        views = [build_property_analysis_view(r) for r in reports.values()]
-        return _build_page_container(
-            eyebrow="Cross-Property",
-            title="Markets",
-            subtitle="Use the loaded property set as a lightweight market workspace until Briarwood grows into dedicated town and market pages.",
-            content=render_portfolio_dashboard(views),
-            max_width="1200px",
         )
 
     if tab == "data_quality":
@@ -2582,16 +2626,28 @@ def render_main_tab(
     return _empty_state("Select a tab.")
 
 
-@app.callback(
-    Output("tear-sheet-view-mode", "data"),
-    Input("tear-sheet-view-toggle", "value"),
-    State("tear-sheet-view-mode", "data"),
-    prevent_initial_call=True,
-)
-def update_tear_sheet_view_mode(selected_mode: str | None, current_mode: str | None) -> str:
-    if selected_mode in {"owner", "realtor"}:
-        return selected_mode
-    return current_mode or "owner"
+def _build_market_view_block(loaded_ids: list[str] | None) -> html.Div:
+    loaded_ids = loaded_ids or []
+    if not loaded_ids:
+        return _empty_state("Load properties to view the market read.")
+    reports = load_reports(loaded_ids)
+    views = [build_property_analysis_view(r) for r in reports.values()]
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Market View", style={"fontSize": "18px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                    html.Div(
+                        "Use the loaded property set as a lightweight market workspace until Briarwood grows into dedicated town and market pages.",
+                        style=_PAGE_SUBTITLE_STYLE,
+                    ),
+                ],
+                style={"display": "grid", "gap": "4px"},
+            ),
+            render_portfolio_dashboard(views),
+        ],
+        style={"display": "grid", "gap": "14px"},
+    )
 
 
 def _empty_state(message: str) -> html.Div:
@@ -2728,20 +2784,35 @@ def validate_form(
 @app.callback(
     Output("manual-unit-rents-container", "style"),
     Output("manual-unit-rent-note", "children"),
+    Output("manual-occupancy-note", "children"),
     Input("manual-property-type", "value"),
+    Input("manual-occupancy-strategy", "value"),
+    Input("manual-owner-occupied-unit-count", "value"),
 )
-def toggle_rent_inputs(property_type: str | None):
+def toggle_rent_inputs(
+    property_type: str | None,
+    occupancy_strategy: str | None,
+    owner_occupied_unit_count: float | None,
+):
     unit_count = _unit_count_for_property_type(property_type)
-    if unit_count <= 1:
-        return {"display": "none"}, ""
     property_label = _normalize_property_label(property_type)
-    return (
-        {"display": "grid", "gap": "6px"},
-        html.Span(
-            f"{property_label} selected — unit rents will override the single market-rent input when provided.",
-            style={"color": TONE_POSITIVE_TEXT},
-        ),
+    unit_note = html.Span(
+        f"{property_label} selected — unit rents will override the single market-rent input when provided.",
+        style={"color": TONE_POSITIVE_TEXT},
     )
+    if unit_count <= 1:
+        _note_style, occupancy_note = _occupancy_strategy_note(
+            property_type,
+            occupancy_strategy,
+            owner_occupied_unit_count,
+        )
+        return {"display": "none"}, "", occupancy_note
+    _note_style, occupancy_note = _occupancy_strategy_note(
+        property_type,
+        occupancy_strategy,
+        owner_occupied_unit_count,
+    )
+    return {"display": "grid", "gap": "6px"}, unit_note, occupancy_note
 
 
 # ── Drawer callbacks ───────────────────────────────────────────────────────────
@@ -2784,6 +2855,8 @@ def set_drawer_visibility(is_open: bool | None):
     Output("manual-lot-size", "value"),
     Output("manual-year-built", "value"),
     Output("manual-property-type", "value"),
+    Output("manual-occupancy-strategy", "value"),
+    Output("manual-owner-occupied-unit-count", "value"),
     Output("manual-taxes", "value"),
     Output("manual-hoa", "value"),
     Output("manual-dom", "value"),
@@ -2819,7 +2892,7 @@ def set_drawer_visibility(is_open: bool | None):
 )
 def populate_manual_form(is_open: bool | None, target_property_id: str | None, comp_ref: str | None):
     if not is_open:
-        return (no_update,) * 40
+        return (no_update,) * 42
 
     if comp_ref:
         subject, comps = load_comp_form_defaults(comp_ref)
@@ -2837,6 +2910,8 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
             subject.get("lot_size"),
             subject.get("year_built"),
             _form_property_type(subject.get("property_type")),
+            subject.get("occupancy_strategy") or "full_rental",
+            subject.get("owner_occupied_unit_count"),
             subject.get("taxes"),
             subject.get("monthly_hoa"),
             subject.get("days_on_market"),
@@ -2881,6 +2956,8 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
             None,
             None,
             "",
+            "full_rental",
+            None,
             None,
             None,
             None,
@@ -2926,6 +3003,8 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
         subject.get("lot_size"),
         subject.get("year_built"),
         _form_property_type(subject.get("property_type")),
+        subject.get("occupancy_strategy") or "full_rental",
+        subject.get("owner_occupied_unit_count"),
         subject.get("taxes"),
         subject.get("monthly_hoa"),
         subject.get("days_on_market"),
@@ -3247,6 +3326,7 @@ def manage_manual_comps(
 # ── Manual analysis callback ───────────────────────────────────────────────────
 @app.callback(
     Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
     Output("manual-entry-status", "children", allow_duplicate=True),
     Output("property-catalog-version", "data", allow_duplicate=True),
     Output("add-property-open", "data", allow_duplicate=True),
@@ -3269,6 +3349,8 @@ def manage_manual_comps(
     State("manual-lot-size", "value"),
     State("manual-year-built", "value"),
     State("manual-property-type", "value"),
+    State("manual-occupancy-strategy", "value"),
+    State("manual-owner-occupied-unit-count", "value"),
     State("manual-taxes", "value"),
     State("manual-hoa", "value"),
     State("manual-dom", "value"),
@@ -3314,6 +3396,8 @@ def run_manual_analysis(
     lot_size: float | None,
     year_built: float | None,
     property_type: str | None,
+    occupancy_strategy: str | None,
+    owner_occupied_unit_count: float | None,
     taxes: float | None,
     monthly_hoa: float | None,
     days_on_market: float | None,
@@ -3369,7 +3453,7 @@ def run_manual_analysis(
                 ),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, ""
+        return no_update, no_update, error_msg, no_update, no_update, no_update, no_update, ""
     if price in (None, ""):
         error_msg = html.Div(
             [
@@ -3377,7 +3461,7 @@ def run_manual_analysis(
                 html.Div("Address and asking price are required.", style={"color": TEXT_SECONDARY, "marginTop": "4px"}),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, ""
+        return no_update, no_update, error_msg, no_update, no_update, no_update, no_update, ""
 
     def _bool(v: str | None) -> bool | None:
         if v == "true":
@@ -3399,6 +3483,8 @@ def run_manual_analysis(
         "lot_size": lot_size,
         "year_built": year_built,
         "property_type": _engine_property_type(property_type),
+        "occupancy_strategy": occupancy_strategy or "full_rental",
+        "owner_occupied_unit_count": int(owner_occupied_unit_count) if owner_occupied_unit_count not in (None, "") else None,
         "taxes": taxes,
         "monthly_hoa": monthly_hoa,
         "days_on_market": days_on_market,
@@ -3436,6 +3522,16 @@ def run_manual_analysis(
             inline_notes.append("Multi-unit selected without unit rents; income support fell back to the single rent field or market prior.")
         if unit_count > 1 and unit_rents:
             inline_notes.append(f"Manual rents for {len(unit_rents)} unit{'s' if len(unit_rents) != 1 else ''} were used in income support.")
+        if occupancy_strategy == "owner_occupy_partial":
+            owner_units = int(owner_occupied_unit_count or 1)
+            inline_notes.append(
+                f"Partial owner-occupancy selected; Briarwood is underwriting rent from the non-owner units rather than the full property."
+            )
+            if unit_count > 0:
+                rentable_units = max(unit_count - owner_units, 0)
+                inline_notes.append(
+                    f"Owner-occupied units: {owner_units}. Expected rentable units in this setup: {rentable_units}."
+                )
         summary = {
             "property_id": new_id,
             "address": address,
@@ -3471,7 +3567,7 @@ def run_manual_analysis(
                 ) if inline_notes else None,
             ]
         )
-        return [new_id], success_msg, new_version, False, summary, "tear_sheet", ""
+        return [new_id], new_id, success_msg, new_version, False, summary, "tear_sheet", ""
     except Exception as exc:
         print(f"[ANALYSIS] EXCEPTION: {type(exc).__name__}: {exc}", flush=True)
         tb = traceback.format_exc(limit=6)
@@ -3487,7 +3583,7 @@ def run_manual_analysis(
                 ),
             ]
         )
-        return no_update, error_msg, no_update, no_update, no_update, no_update, ""
+        return no_update, no_update, error_msg, no_update, no_update, no_update, no_update, ""
 
 
 
@@ -3581,38 +3677,6 @@ def update_what_if(adjusted_ask: float | None, rate: float | None, vacancy: floa
     view = build_property_analysis_view(report)
     vacancy = vacancy if vacancy is not None else 0.05
     return render_what_if_metrics(view, adjusted_ask, rate, vacancy)
-
-
-# ── Section B: Renovation value trajectory callback ─────────────────────────
-#
-# Live-updates the perceived-value line chart on the Property Analysis Overview
-# tab. Inputs are the perceived-value number box and the renovated overlay
-# toggle; the callback re-reads the focused report, rebuilds the view model,
-# and regenerates the Plotly figure. Mirrors the what-if callback pattern.
-
-
-@app.callback(
-    Output("reno-trajectory-chart", "figure"),
-    Input("reno-overlay-toggle", "value"),
-    State("property-selector-dropdown", "value"),
-    State("loaded-preset-ids", "data"),
-    prevent_initial_call=True,
-)
-def update_reno_trajectory(
-    overlay_toggle: str | None,
-    focus_id: str | None,
-    loaded_ids: list[str] | None,
-):
-    report = _focused_report(loaded_ids, focus_id)
-    if report is None:
-        return no_update
-    view = build_property_analysis_view(report)
-    show_renovated = overlay_toggle == "on"
-    return renovation_value_trajectory_chart(
-        view,
-        report,
-        show_renovated=show_renovated,
-    )
 
 
 # ── TXT export callback ──────────────────────────────────────────────────────

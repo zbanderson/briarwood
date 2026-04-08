@@ -119,6 +119,48 @@ def _income_list(income: object, name: str) -> list[float]:
     return value if isinstance(value, list) else []
 
 
+def _location_support_state(report: AnalysisReport) -> tuple[str, str]:
+    property_input = report.property_input
+    location_module = report.module_results.get("location_intelligence")
+    payload = getattr(location_module, "payload", None) if location_module is not None else None
+    category_results = getattr(payload, "category_results", None)
+    missing_inputs = set(getattr(payload, "missing_inputs", []) or [])
+
+    if category_results:
+        category_names = ", ".join(
+            str(getattr(item, "category", "")).replace("_", " ").title()
+            for item in category_results[:2]
+            if getattr(item, "category", None)
+        )
+        detail = (
+            f"Subject coordinates were benchmarked against nearby comp buckets for {category_names.lower()}."
+            if category_names
+            else "Subject coordinates were benchmarked against nearby geo comp buckets."
+        )
+        return "Geo-Benchmarked", detail
+    if property_input is not None and property_input.latitude is not None and property_input.longitude is not None:
+        if "landmark_points" in missing_inputs:
+            return "Geocoded, Landmark Data Missing", "The property has coordinates, but Briarwood does not yet have landmark points to benchmark beach, park, or train distance for this town."
+        return "Geocoded, Proxy-Based", "The property has coordinates, but location scoring still relies mostly on proxy signals rather than full landmark benchmarking."
+    return "Address-Linked Only", "Maps can open from the address, but location scoring is still relying on town-level and zone-style proxies because subject coordinates are not attached."
+
+
+def _location_anchor_summary(report: AnalysisReport) -> str:
+    location_module = report.module_results.get("location_intelligence")
+    payload = getattr(location_module, "payload", None) if location_module is not None else None
+    category_results = getattr(payload, "category_results", None) or []
+    if not category_results:
+        return ""
+    parts: list[str] = []
+    for item in category_results[:3]:
+        category = str(getattr(item, "category", "")).replace("_", " ").title()
+        distance = getattr(item, "subject_distance_miles", None)
+        if not category or distance is None:
+            continue
+        parts.append(f"{category} {distance:.2f} mi")
+    return " • ".join(parts)
+
+
 def _cost_val_metric(report: AnalysisReport, key: str) -> float | None:
     """Extract a metric from the cost_valuation module result."""
     mod = report.module_results.get("cost_valuation")
@@ -571,6 +613,9 @@ class RiskLocationViewModel:
     school_signal: float | None = None
     school_signal_text: str = ""
     coastal_profile_label: str = ""  # "Beach Premium", "Downtown Premium", or ""
+    location_support_label: str = "Proxy-Based"
+    location_support_detail: str = ""
+    location_anchor_summary: str = ""
     # Scarcity breakdown (Group 5)
     land_scarcity_score: float | None = None
     location_scarcity_score: float | None = None
@@ -1194,6 +1239,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     metric_statuses = compute_metric_input_statuses(report)
     assumption_statuses = _assumption_status_items(report)
     overall_confidence = confidence_breakdown.overall_confidence
+    location_support_label, location_support_detail = _location_support_state(report)
+    location_anchor_summary = _location_anchor_summary(report)
 
     positives = list(town_county.score.demand_drivers[:2]) + list(scarcity.demand_drivers[:1])
     risks = list(rental_ease.risks[:2]) + list(town_county.score.demand_risks[:2])
@@ -1459,6 +1506,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             school_signal=property_input.school_rating if property_input else None,
             school_signal_text=f"{property_input.school_rating:.1f}/10" if property_input and property_input.school_rating is not None else "",
             coastal_profile_label=_coastal_profile_label(town_county),
+            location_support_label=location_support_label,
+            location_support_detail=location_support_detail,
+            location_anchor_summary=location_anchor_summary,
             # Scarcity component breakdown
             land_scarcity_score=getattr(scarcity, "land_scarcity_score", None),
             location_scarcity_score=getattr(scarcity, "location_scarcity_score", None),

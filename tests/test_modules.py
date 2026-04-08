@@ -220,6 +220,22 @@ class ModuleTests(unittest.TestCase):
         self.assertGreater(result.metrics["effective_monthly_rent"], baseline_result.metrics["effective_monthly_rent"])
         self.assertGreater(result.metrics["income_support_ratio"], baseline_result.metrics["income_support_ratio"])
 
+    def test_income_support_respects_partial_owner_occupancy(self) -> None:
+        property_input = sample_property()
+        property_input.property_type = "Triplex"
+        property_input.occupancy_strategy = "owner_occupy_partial"
+        property_input.owner_occupied_unit_count = 1
+        property_input.estimated_monthly_rent = None
+        property_input.unit_rents = [2400, 2200]
+
+        result = IncomeSupportModule().run(property_input)
+
+        self.assertEqual(result.metrics["rent_source_type"], "manual_input")
+        self.assertEqual(result.metrics["monthly_rent_estimate"], 4600)
+        self.assertEqual(result.metrics["occupancy_strategy"], "owner_occupy_partial")
+        self.assertEqual(result.metrics["owner_occupied_unit_count"], 1)
+        self.assertIn("Partial owner-occupancy selected", " ".join(result.payload.assumptions))
+
     def test_renovation_scenario_returns_structured_blocked_payload_when_budget_missing(self) -> None:
         property_input = sample_property()
         property_input.renovation_scenario = {"enabled": True, "renovation_budget": 5_000}
