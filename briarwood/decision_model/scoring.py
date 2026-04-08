@@ -15,6 +15,8 @@ from typing import Any
 
 from briarwood.decision_model.scoring_config import (
     CATEGORY_WEIGHTS,
+    DEFAULT_DECISION_MODEL_SETTINGS,
+    DecisionModelSettings,
     MAX_SCORE,
     MIN_SCORE,
     NEUTRAL_SCORE,
@@ -24,7 +26,6 @@ from briarwood.decision_model.scoring_config import (
 )
 from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.schemas import AnalysisReport, PropertyInput
-from briarwood.settings import DEFAULT_DECISION_MODEL_SETTINGS, DecisionModelSettings
 
 
 # ── Data classes ───────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ def _prop(report: AnalysisReport) -> PropertyInput | None:
     return report.property_input
 
 
-def _estimate_comp_renovation_premium(report: AnalysisReport) -> dict[str, Any]:
+def estimate_comp_renovation_premium(report: AnalysisReport) -> dict[str, Any]:
     """Estimate renovation premium from comp condition data.
 
     Compares median $/sqft of renovated/updated comps vs dated/needs_work comps.
@@ -319,7 +320,7 @@ def extract_scoring_metrics(report: AnalysisReport) -> dict[str, Any]:
     m["reno_net_value_creation"] = reno.get("net_value_creation")
 
     # ── comp-derived renovation premium ──
-    reno_premium = _estimate_comp_renovation_premium(report)
+    reno_premium = estimate_comp_renovation_premium(report)
     m["comp_renovation_premium_pct"] = reno_premium.get("renovation_premium_pct")
     m["comp_renovated_comp_count"] = reno_premium.get("renovated_comp_count", 0)
     m["comp_dated_comp_count"] = reno_premium.get("dated_comp_count", 0)

@@ -1,91 +1,91 @@
-/* ── Briarwood Dark Theme — Global CSS Overrides ───────────────────────── */
+/* ── Briarwood — Global CSS (light editorial theme) ─────────────────────── */
 
-/* ── Dropdown dark theme ─────────────────────────────────────────────── */
+/* ── Dropdown light theme ─────────────────────────────────────────────── */
 /* Dash renders dropdowns as React-Select components with their own DOM.
-   These overrides ensure the dropdown menu, options, and selected text
-   match the dark theme tokens from theme.py. */
+   These selectors ensure the menu, options, and selected text match the
+   warm-cream light palette from theme.py. */
 
 .briarwood-dropdown .Select-control,
 .Select-control {
-  background-color: #21262d !important;
-  border-color: #30363d !important;
-  color: #e6edf3 !important;
+  background-color: #fdfbf6 !important;
+  border-color: #e2d9c6 !important;
+  color: #3d342a !important;
 }
 
 .briarwood-dropdown .Select-value-label,
 .Select-value-label {
-  color: #e6edf3 !important;
+  color: #3d342a !important;
 }
 
 .briarwood-dropdown .Select-placeholder,
 .Select-placeholder {
-  color: #848d97 !important;
+  color: #8a7f70 !important;
 }
 
 .briarwood-dropdown .Select-input input,
 .Select-input input {
-  color: #e6edf3 !important;
+  color: #3d342a !important;
 }
 
 .briarwood-dropdown .Select-menu-outer,
 .Select-menu-outer {
-  background-color: #1c2333 !important;
-  border-color: #30363d !important;
-  color: #e6edf3 !important;
+  background-color: #fdfbf6 !important;
+  border-color: #e2d9c6 !important;
+  color: #3d342a !important;
+  box-shadow: 0 12px 32px rgba(76, 57, 30, 0.12) !important;
   z-index: 300 !important;
 }
 
 .briarwood-dropdown .VirtualizedSelectOption,
 .VirtualizedSelectOption {
-  background-color: #1c2333 !important;
-  color: #e6edf3 !important;
+  background-color: #fdfbf6 !important;
+  color: #3d342a !important;
 }
 
 .briarwood-dropdown .VirtualizedSelectFocusedOption,
 .VirtualizedSelectFocusedOption {
-  background-color: #2d333b !important;
-  color: #e6edf3 !important;
+  background-color: #f1ece3 !important;
+  color: #3d342a !important;
 }
 
 .briarwood-dropdown .Select-arrow-zone .Select-arrow,
 .Select-arrow-zone .Select-arrow {
-  border-top-color: #8b949e !important;
+  border-top-color: #8a7f70 !important;
 }
 
 .briarwood-dropdown .Select-clear-zone,
 .Select-clear-zone {
-  color: #8b949e !important;
+  color: #8a7f70 !important;
 }
 
 /* Dash's newer dropdown rendering (div-based) */
 .briarwood-dropdown .dash-dropdown .Select-menu,
 .dash-dropdown .Select-menu {
-  background-color: #1c2333 !important;
+  background-color: #fdfbf6 !important;
 }
 
 /* Multi-select tags */
 .briarwood-dropdown .Select-value,
 .Select--multi .Select-value {
-  background-color: #2d333b !important;
-  border-color: #30363d !important;
-  color: #e6edf3 !important;
+  background-color: #f1ece3 !important;
+  border-color: #e2d9c6 !important;
+  color: #3d342a !important;
 }
 
-/* ── DataTable dark overrides ────────────────────────────────────────── */
-/* Ensure DataTable filter/pagination elements match the dark theme */
+/* ── DataTable light overrides ───────────────────────────────────────── */
 
 .dash-spreadsheet .dash-filter input {
-  background-color: #21262d !important;
-  color: #e6edf3 !important;
-  border-color: #30363d !important;
+  background-color: #fdfbf6 !important;
+  color: #3d342a !important;
+  border-color: #e2d9c6 !important;
 }
 
 .previous-next-container button {
-  color: #8b949e !important;
+  color: #8a7f70 !important;
 }
 
 .previous-next-container button:hover {
-  color: #e6edf3 !important;
+  color: #3d342a !important;
 }
 
 /* ── Collapsible sections (<details>/<summary>) ──────────────────────── */
@@ -101,7 +101,7 @@ details > summary::-webkit-details-marker {
 details > summary::before {
   content: "▶ ";
   font-size: 10px;
-  color: #848d97;
+  color: #8a7f70;
   margin-right: 4px;
   display: inline-block;
   transition: transform 0.15s ease;
@@ -112,7 +112,7 @@ details[open] > summary::before {
 }
 
 details[open] > summary {
-  border-bottom-color: #30363d;
+  border-bottom-color: #e2d9c6;
 }
 
 /* ── dcc.Tabs overrides ──────────────────────────────────────────────── */
@@ -144,22 +144,72 @@ details[open] > summary {
   min-width: 0;
 }
 
-/* Scrollbar styling for dark theme */
+/* Scrollbar styling — warm cream palette */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #f5f1e8;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
-  border-radius: 4px;
+  background: #d7cab8;
+  border-radius: 5px;
+  border: 2px solid #f5f1e8;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: #b8a98f;
+}
+
+/* ── Motion: transitions, hover lifts, tab fades ─────────────────────── */
+
+@keyframes briarwood-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#main-tab-content {
+  animation: briarwood-fade-in 220ms ease-out;
+}
+
+.card {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(76, 57, 30, 0.09);
+}
+
+button,
+.tab-button,
+.btn-primary,
+.btn-secondary {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 18px rgba(47, 111, 178, 0.22);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+/* ── Accessibility: focus-visible ────────────────────────────────────── */
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid #2f6fb2;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* ── Mobile responsive breakpoints ─────────────────────────────────── */
@@ -240,40 +290,41 @@ details[open] > summary {
   }
 }
 
-/* ── Slider dark theme ─────────────────────────────────────────────── */
+/* ── Slider light theme ───────────────────────────────────────────── */
 
 .rc-slider-track {
-  background-color: #58a6ff !important;
+  background-color: #2f6fb2 !important;
 }
 
 .rc-slider-handle {
-  border-color: #58a6ff !important;
-  background-color: #161b22 !important;
+  border-color: #2f6fb2 !important;
+  background-color: #fdfbf6 !important;
 }
 
 .rc-slider-rail {
-  background-color: #30363d !important;
+  background-color: #e2d9c6 !important;
 }
 
 .rc-slider-dot {
-  border-color: #30363d !important;
-  background-color: #161b22 !important;
+  border-color: #e2d9c6 !important;
+  background-color: #fdfbf6 !important;
 }
 
 .rc-slider-mark-text {
-  color: #848d97 !important;
+  color: #8a7f70 !important;
 }
 
 .rc-slider-tooltip-inner {
-  background-color: #1c2333 !important;
-  border-color: #30363d !important;
-  color: #e6edf3 !important;
+  background-color: #fdfbf6 !important;
+  border-color: #e2d9c6 !important;
+  color: #3d342a !important;
   font-size: 13px !important;
   font-weight: 600 !important;
+  box-shadow: 0 8px 24px rgba(76, 57, 30, 0.12) !important;
 }
 
 .rc-slider-tooltip-arrow {
-  border-top-color: #1c2333 !important;
+  border-top-color: #fdfbf6 !important;
 }
 
 /* ── Confidence tooltip ────────────────────────────────────────────── */
@@ -285,6 +336,6 @@ details[open] > summary {
 /* ── Low-confidence section treatment ──────────────────────────────── */
 
 .section-low-confidence {
-  border-left: 3px solid #f8514999 !important;
+  border-left: 3px solid #c96d5e99 !important;
   opacity: 0.92;
 }

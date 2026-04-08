@@ -116,7 +116,9 @@ class ManualCompWorkflowTests(unittest.TestCase):
                 self.assertTrue(property_id)
                 saved_dir = dash_data.SAVED_PROPERTY_DIR / property_id
                 self.assertTrue((saved_dir / "inputs.json").exists())
-                self.assertTrue((saved_dir / "report.pkl").exists())
+                # C1 (audit 2026-04-08): pickle-based report cache removed
+                # to close an RCE vector. Reports now rehydrate from
+                # inputs.json via run_report() instead.
                 self.assertTrue((saved_dir / "summary.json").exists())
             finally:
                 dash_data.SAVED_PROPERTY_DIR = original_saved_dir

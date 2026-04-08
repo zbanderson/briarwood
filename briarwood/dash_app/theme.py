@@ -50,6 +50,7 @@ TONE_NEUTRAL_BORDER = "#d7cab8"
 
 FONT_FAMILY = "Inter, 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif"
 FONT_MONO = "'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace"
+FONT_DISPLAY = "'Source Serif 4', Georgia, serif"
 
 # ── Layout ─────────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,37 @@ VALUE_STYLE_MEDIUM: dict = {
     "letterSpacing": "-0.01em",
 }
 
+# ── Display headings (editorial serif) ─────────────────────────────────────────
+
+HEADING_XL_STYLE: dict = {
+    "fontFamily": FONT_DISPLAY,
+    "fontSize": "28px",
+    "fontWeight": "700",
+    "letterSpacing": "-0.02em",
+    "lineHeight": "1.15",
+    "color": TEXT_PRIMARY,
+    "margin": "0",
+}
+
+HEADING_L_STYLE: dict = {
+    "fontFamily": FONT_DISPLAY,
+    "fontSize": "22px",
+    "fontWeight": "600",
+    "letterSpacing": "-0.01em",
+    "lineHeight": "1.2",
+    "color": TEXT_PRIMARY,
+    "margin": "0",
+}
+
+HEADING_M_STYLE: dict = {
+    "fontFamily": FONT_DISPLAY,
+    "fontSize": "20px",
+    "fontWeight": "600",
+    "lineHeight": "1.25",
+    "color": TEXT_PRIMARY,
+    "margin": "0",
+}
+
 BODY_TEXT_STYLE: dict = {
     "fontSize": "13px",
     "color": TEXT_SECONDARY,
@@ -234,6 +266,7 @@ PLOTLY_LAYOUT: dict = {
     "paper_bgcolor": BG_SURFACE,
     "plot_bgcolor": BG_SURFACE_2,
     "font": {"color": TEXT_PRIMARY, "family": FONT_FAMILY, "size": 12},
+    "title": {"font": {"color": TEXT_PRIMARY, "family": FONT_DISPLAY, "size": 16}},
     "margin": {"l": 44, "r": 16, "t": 24, "b": 36},
     "xaxis": {
         "gridcolor": BORDER_SUBTLE,

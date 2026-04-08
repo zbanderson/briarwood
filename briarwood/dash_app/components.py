@@ -16,7 +16,8 @@ from briarwood.dash_app.theme import (
     BODY_TEXT_STYLE, BORDER, BORDER_SUBTLE,
     BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, CHART_HEIGHT_COMPACT, CHART_HEIGHT_STANDARD,
-    FONT_FAMILY, GRID_2, GRID_3, GRID_4,
+    FONT_DISPLAY, FONT_FAMILY, GRID_2, GRID_3, GRID_4,
+    HEADING_XL_STYLE, HEADING_L_STYLE, HEADING_M_STYLE,
     LABEL_STYLE, PAGE_STYLE,
     PLOTLY_LAYOUT, PLOTLY_LAYOUT_COMPACT,
     SECTION_HEADER_STYLE,
@@ -353,7 +354,7 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
                 html.Div(label, style={"fontSize": "11px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
                 html.Div(
                     [
-                        html.Span(f"{score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": sc}),
+                        html.Span(f"{score:.1f}", style={**HEADING_L_STYLE, "color": sc}),
                         html.Span("/5", style={"fontSize": "11px", "color": TEXT_MUTED}),
                     ],
                     style={"marginBottom": "4px"},
@@ -374,7 +375,7 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
                 html.Div("RISK", style={"fontSize": "11px", "fontWeight": "600", "textTransform": "uppercase", "color": TEXT_MUTED, "letterSpacing": "0.08em", "marginBottom": "4px"}),
                 html.Div(
                     [
-                        html.Span(f"{ls.risk_score:.1f}", style={"fontSize": "22px", "fontWeight": "700", "color": risk_display_color}),
+                        html.Span(f"{ls.risk_score:.1f}", style={**HEADING_L_STYLE, "color": risk_display_color}),
                         html.Span("/5", style={"fontSize": "11px", "color": TEXT_MUTED}),
                     ],
                     style={"marginBottom": "4px"},
@@ -390,9 +391,9 @@ def render_lens_selector(view: PropertyAnalysisView) -> html.Div:
 
     return html.Div(
         [
-            html.Div(
-                [html.Span("PERSPECTIVE SCORES", style=SECTION_HEADER_STYLE)],
-                style={"marginBottom": "6px"},
+            html.H2(
+                "PERSPECTIVE SCORES",
+                style={**SECTION_HEADER_STYLE, "marginTop": "0", "marginBottom": "6px"},
             ),
             html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "8px"}),
             # Recommendation banner
@@ -421,13 +422,14 @@ def render_score_header(view: PropertyAnalysisView) -> html.Div:
     dots = "●" * filled + "○" * (5 - filled)
 
     return html.Div(
-        [
+        className="card",
+        children=[
             # Top row: score + dots + tier
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Span(f"{view.final_score:.2f}", style={"fontSize": "28px", "fontWeight": "700", "color": sc, "letterSpacing": "-0.03em"}),
+                            html.Span(f"{view.final_score:.2f}", style={**HEADING_XL_STYLE, "color": sc}),
                             html.Span(" / 5", style={"fontSize": "14px", "color": TEXT_MUTED}),
                             html.Span(f"  {dots}", style={"fontSize": "16px", "color": sc, "letterSpacing": "3px", "marginLeft": "8px"}),
                         ],
@@ -623,8 +625,9 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
     ]
 
     return html.Div(
-        [
-            html.Div("EXECUTIVE SUMMARY", style=SECTION_HEADER_STYLE),
+        className="card",
+        children=[
+            html.H3("EXECUTIVE SUMMARY", style={**SECTION_HEADER_STYLE, "marginTop": "0"}),
             # Thesis narrative
             html.Div(
                 view.score_narrative or view.memo_summary or "",
@@ -635,7 +638,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
                 [
                     html.Div(
                         [
-                            html.Div("Top Strengths", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_POSITIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
+                            html.H4("Top Strengths", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_POSITIVE_TEXT, "marginBottom": "4px", "marginTop": "0", "textTransform": "uppercase"}),
                             html.Ul(
                                 [html.Li([html.Span(f"{name}: ", style={"fontWeight": "500"}), html.Span(ev, style={"color": TEXT_MUTED})], style={"fontSize": "11px", "marginBottom": "3px"}) for _, name, ev in top_strengths],
                                 style={"margin": "0", "paddingLeft": "14px"},
@@ -645,7 +648,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Div("Top Risks", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_NEGATIVE_TEXT, "marginBottom": "4px", "textTransform": "uppercase"}),
+                            html.H4("Top Risks", style={"fontSize": "11px", "fontWeight": "600", "color": TONE_NEGATIVE_TEXT, "marginBottom": "4px", "marginTop": "0", "textTransform": "uppercase"}),
                             html.Ul(
                                 [html.Li([html.Span(f"{name}: ", style={"fontWeight": "500"}), html.Span(ev, style={"color": TEXT_MUTED})], style={"fontSize": "11px", "marginBottom": "3px"}) for _, name, ev in top_risks],
                                 style={"margin": "0", "paddingLeft": "14px"},
@@ -659,7 +662,7 @@ def render_executive_summary(view: PropertyAnalysisView) -> html.Div:
             # Key metrics as compact table
             html.Div(
                 [
-                    html.Div("Key Metrics", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "marginBottom": "4px", "textTransform": "uppercase"}),
+                    html.H4("Key Metrics", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_MUTED, "marginBottom": "4px", "marginTop": "0", "textTransform": "uppercase"}),
                     html.Table(
                         html.Tbody(
                             [
@@ -866,7 +869,7 @@ def forward_range_chart(view: PropertyAnalysisView, *, compact: bool = False) ->
     ))
     fig.add_hline(y=view.ask_price or 0, line_dash="dot", line_color=TEXT_MUTED, annotation_text="Ask", annotation_font_color=TEXT_MUTED, annotation_font_size=10, annotation_position="right")
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph | html.Div:
@@ -1000,7 +1003,147 @@ def forward_fan_chart(view: PropertyAnalysisView, *, compact: bool = False) -> d
     layout["xaxis"] = {**layout.get("xaxis", {}), "title": "", "showgrid": False}
     layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "gridcolor": BG_SURFACE_4}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
+
+
+def forward_fan_chart_from_ask(view: PropertyAnalysisView, *, compact: bool = False) -> dcc.Graph | html.Div:
+    """Forward fan anchored at ask_price instead of BCV.
+
+    Shows the bull/base/bear terminal values at 12M, drawn from the ask price
+    on day 0. When BCV > ask, the gap on day 0 is rendered as a green cushion
+    marker so the user can see the value already being found before any
+    forward growth.
+
+    The bull/base/bear endpoint values are taken directly from the engine —
+    they are NOT shifted upward by the cushion (Option A: honest to model).
+    """
+    ask = view.ask_price
+    if ask is None:
+        return html.Div(
+            "Ask-anchored forward fan is unavailable because the ask price is missing.",
+            style={"fontSize": "11px", "color": TEXT_MUTED, "padding": "12px"},
+        )
+
+    bcv = view.bcv
+    cushion = (bcv - ask) if isinstance(bcv, (int, float)) else None
+
+    fig = go.Figure()
+    x_anchor = "Today"
+    x_horizon = "12M"
+
+    # Ask marker on day 0
+    fig.add_trace(
+        go.Scatter(
+            x=[x_anchor],
+            y=[ask],
+            mode="markers",
+            name=f"Ask {_fmt_compact(ask)}",
+            marker={"size": 11 if not compact else 10, "color": ACCENT_ORANGE, "line": {"color": BORDER, "width": 1.5}},
+            hovertemplate="Ask price<br>%{y:$,.0f}<extra></extra>",
+        )
+    )
+
+    # Cushion marker (BCV on day 0) — only if we have a positive gap
+    if cushion is not None and abs(cushion) > 1:
+        cushion_color = ACCENT_GREEN if cushion > 0 else ACCENT_RED
+        cushion_label = (
+            f"+{_fmt_compact(cushion)} cushion"
+            if cushion > 0
+            else f"{_fmt_compact(cushion)} gap"
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor],
+                y=[bcv],
+                mode="markers",
+                name=f"Fair Value {_fmt_compact(bcv)}",
+                marker={"size": 11, "color": cushion_color, "line": {"color": BORDER, "width": 1.5}, "symbol": "diamond"},
+                hovertemplate=f"Briarwood fair value<br>%{{y:$,.0f}}<br>{cushion_label}<extra></extra>",
+            )
+        )
+        # Vertical cushion band on day 0
+        fig.add_shape(
+            type="line",
+            x0=x_anchor, x1=x_anchor,
+            y0=ask, y1=bcv,
+            line={"color": cushion_color, "width": 6},
+        )
+
+    # Bull / bear fan fill from ASK on day 0 to bull/bear on 12M
+    if view.bull_case is not None and view.bear_case is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor, x_horizon, x_horizon, x_anchor],
+                y=[ask, view.bull_case, view.bear_case, ask],
+                fill="toself",
+                fillcolor="rgba(88, 166, 255, 0.14)",
+                line={"color": "rgba(0,0,0,0)"},
+                hoverinfo="skip",
+                name="Bull / Bear Range",
+                showlegend=True,
+            )
+        )
+
+    if view.bull_case is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor, x_horizon],
+                y=[ask, view.bull_case],
+                mode="lines",
+                name="Upside",
+                line={"color": ACCENT_GREEN, "width": 2, "dash": "dash"},
+                hovertemplate="%{x}<br>Upside: %{y:$,.0f}<extra></extra>",
+            )
+        )
+    if view.bear_case is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor, x_horizon],
+                y=[ask, view.bear_case],
+                mode="lines",
+                name="Downside",
+                line={"color": ACCENT_RED, "width": 2, "dash": "dash"},
+                hovertemplate="%{x}<br>Downside: %{y:$,.0f}<extra></extra>",
+            )
+        )
+    if view.base_case is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor, x_horizon],
+                y=[ask, view.base_case],
+                mode="lines+markers",
+                name="Base",
+                line={"color": ACCENT_BLUE, "width": 4},
+                marker={"size": 7, "color": ACCENT_BLUE},
+                hovertemplate="%{x}<br>Base: %{y:$,.0f}<extra></extra>",
+            )
+        )
+    if view.stress_case is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[x_anchor, x_horizon],
+                y=[ask, view.stress_case],
+                mode="lines",
+                name="Stress",
+                line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
+                hovertemplate="%{x}<br>Stress: %{y:$,.0f}<extra></extra>",
+            )
+        )
+
+    layout = dict(PLOTLY_LAYOUT_COMPACT if compact else PLOTLY_LAYOUT)
+    layout["height"] = CHART_HEIGHT_COMPACT if compact else CHART_HEIGHT_STANDARD
+    layout["legend"] = {
+        "orientation": "h",
+        "yanchor": "bottom",
+        "y": -0.28 if compact else -0.2,
+        "x": 0,
+        "bgcolor": "rgba(0,0,0,0)",
+        "font": {"color": TEXT_SECONDARY, "size": 11},
+    }
+    layout["xaxis"] = {**layout.get("xaxis", {}), "title": "", "showgrid": False}
+    layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "gridcolor": BG_SURFACE_4}
+    fig.update_layout(**layout)
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def renovation_justification_chart(view: PropertyAnalysisView, report: AnalysisReport | None = None, *, compact: bool = False) -> dcc.Graph | html.Div | None:
@@ -1016,8 +1159,8 @@ def renovation_justification_chart(view: PropertyAnalysisView, report: AnalysisR
         if reno_payload and reno_payload.get("enabled"):
             renovated_anchor = reno_payload.get("renovated_bcv")
         else:
-            from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
-            premium_data = _estimate_comp_renovation_premium(report)
+            from briarwood.decision_model.scoring import estimate_comp_renovation_premium
+            premium_data = estimate_comp_renovation_premium(report)
             renovated_anchor = premium_data.get("estimated_renovated_value")
     if renovated_anchor is None:
         renovated_anchor = view.bull_case if view.bull_case is not None else view.base_case
@@ -1121,7 +1264,7 @@ def renovation_justification_chart(view: PropertyAnalysisView, report: AnalysisR
     layout["xaxis"] = {**layout.get("xaxis", {}), "title": "", "showgrid": False}
     layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "gridcolor": BG_SURFACE_4}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def comp_positioning_dot_plot(view: PropertyAnalysisView, report: AnalysisReport) -> dcc.Graph | html.Div:
@@ -1269,7 +1412,7 @@ def comp_positioning_dot_plot(view: PropertyAnalysisView, report: AnalysisReport
         "range": [0, 1.08],
     }
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def location_metrics_bars(view: PropertyAnalysisView, report: AnalysisReport) -> dcc.Graph | html.Div:
@@ -1350,7 +1493,7 @@ def location_metrics_bars(view: PropertyAnalysisView, report: AnalysisReport) ->
     layout["xaxis"] = {**layout.get("xaxis", {}), "range": [0, 100], "title": "", "showgrid": True}
     layout["yaxis"] = {**layout.get("yaxis", {}), "autorange": "reversed", "showgrid": False}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def income_carry_waterfall(view: PropertyAnalysisView, report: AnalysisReport) -> dcc.Graph | html.Div:
@@ -1407,7 +1550,7 @@ def income_carry_waterfall(view: PropertyAnalysisView, report: AnalysisReport) -
     layout["showlegend"] = False
     layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "title": ""}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def risk_breakdown_bars(view: PropertyAnalysisView) -> html.Div:
@@ -1889,6 +2032,18 @@ def render_property_verdict(view: PropertyAnalysisView) -> html.Div:
     sc = score_color(score)
     vc = verdict_color(view.recommendation_tier or "")
 
+    # Hero background tint keyed off verdict tone
+    tier_key = (view.recommendation_tier or "").lower()
+    if "buy" in tier_key or "strong" in tier_key:
+        hero_bg = TONE_POSITIVE_BG
+        hero_border = TONE_POSITIVE_BORDER
+    elif "avoid" in tier_key or "pass" in tier_key or "no" in tier_key:
+        hero_bg = TONE_NEGATIVE_BG
+        hero_border = TONE_NEGATIVE_BORDER
+    else:
+        hero_bg = TONE_NEUTRAL_BG
+        hero_border = TONE_NEUTRAL_BORDER
+
     # Best lens
     ls = view.lens_scores
     best_key = ls.recommended_lens if ls else ""
@@ -1899,33 +2054,74 @@ def render_property_verdict(view: PropertyAnalysisView) -> html.Div:
     bottom_line = _generate_bottom_line(view)
 
     return html.Div(
-        [
-            # Header: Verdict + Score
+        className="card",
+        children=[
+            # Hero: giant serif verdict + score
             html.Div(
                 [
                     html.Div(
                         [
-                            html.Div(tier, style={"fontSize": "20px", "fontWeight": "700", "color": vc, "marginBottom": "4px"}),
-                            html.Div(f"Best suited as: {lens_name}", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                            html.H1(
+                                tier,
+                                style={
+                                    "fontFamily": FONT_DISPLAY,
+                                    "fontSize": "56px",
+                                    "fontWeight": "700",
+                                    "letterSpacing": "-0.025em",
+                                    "lineHeight": "1.0",
+                                    "color": vc,
+                                    "marginBottom": "10px",
+                                    "marginTop": "0",
+                                },
+                            ),
+                            html.Div(
+                                f"Best suited as: {lens_name}",
+                                style={"fontSize": "14px", "color": TEXT_SECONDARY, "letterSpacing": "0.01em"},
+                            ),
                         ],
                     ),
                     html.Div(
                         [
                             html.Div(
                                 [
-                                    html.Span(f"{score:.1f}", style={"fontSize": "32px", "fontWeight": "700", "color": sc}),
-                                    html.Span(" / 5", style={"fontSize": "16px", "color": TEXT_MUTED}),
+                                    html.Span(
+                                        f"{score:.1f}",
+                                        style={
+                                            "fontFamily": FONT_DISPLAY,
+                                            "fontSize": "48px",
+                                            "fontWeight": "700",
+                                            "letterSpacing": "-0.02em",
+                                            "color": sc,
+                                        },
+                                    ),
+                                    html.Span(" / 5", style={"fontSize": "18px", "color": TEXT_MUTED, "marginLeft": "4px"}),
                                 ],
                                 style={"textAlign": "right"},
                             ),
-                            html.Div(score_label(score), style={"fontSize": "13px", "fontWeight": "600", "color": sc, "textAlign": "right"}),
+                            html.Div(
+                                score_label(score),
+                                style={
+                                    "fontSize": "12px",
+                                    "fontWeight": "600",
+                                    "color": sc,
+                                    "textAlign": "right",
+                                    "textTransform": "uppercase",
+                                    "letterSpacing": "0.08em",
+                                    "marginTop": "4px",
+                                },
+                            ),
                         ],
                     ),
                 ],
-                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "16px"},
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "flex-end",
+                    "paddingBottom": "28px",
+                    "marginBottom": "28px",
+                    "borderBottom": f"1px solid {hero_border}",
+                },
             ),
-            # Divider
-            html.Div(style={"height": "1px", "backgroundColor": BORDER, "margin": "0 0 16px"}),
             # Strengths + Risks
             html.Div(
                 [
@@ -1955,7 +2151,15 @@ def render_property_verdict(view: PropertyAnalysisView) -> html.Div:
                 style={"paddingTop": "12px", "borderTop": f"1px solid {BORDER}"},
             ),
         ],
-        style={**CARD_STYLE, "border": f"2px solid {vc}40", "padding": "20px 24px", "marginBottom": "24px"},
+        style={
+            "backgroundColor": hero_bg,
+            "border": f"1px solid {hero_border}",
+            "borderLeft": f"4px solid {vc}",
+            "borderRadius": "14px",
+            "padding": "48px 40px",
+            "marginBottom": "28px",
+            "boxShadow": "0 16px 48px rgba(76, 57, 30, 0.08)",
+        },
     )
 
 
@@ -2877,6 +3081,14 @@ def _decision_engine_block(view: PropertyAnalysisView) -> html.Div:
     )
 
 
+# ── Archived 2026-04-08 ────────────────────────────────────────────────────
+# `_decision_summary_block` rendered a 6-card grid (Price, Hold Economics,
+# Forward, Risk, Optionality, Fit) that duplicated the main tab navigation,
+# plus a conclusion paragraph at the bottom. The card grid was retired from
+# the Overview tab; the conclusion copy is now extracted via
+# `_decision_conclusion(...)` and rendered as a ribbon at the top of Overview.
+# Function body is preserved in case the grid is useful in a future layout.
+# ───────────────────────────────────────────────────────────────────────────
 def _decision_summary_block(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
     price_answer, _, price_label = _price_answer(view)
     economics_answer, economics_summary = _economics_answer(view, report)
@@ -3309,8 +3521,8 @@ def _renovation_path_summary(view: PropertyAnalysisView, report: AnalysisReport)
             + (f" on a budget of {_fmt_compact(budget)}." if budget else ".")
         )
     else:
-        from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
-        premium_data = _estimate_comp_renovation_premium(report)
+        from briarwood.decision_model.scoring import estimate_comp_renovation_premium
+        premium_data = estimate_comp_renovation_premium(report)
         renovated_bcv = premium_data.get("estimated_renovated_value") or view.bull_case
         if premium_data.get("estimated_renovated_value"):
             option_two_note = (
@@ -3384,6 +3596,13 @@ def _evidence_summary_strip(view: PropertyAnalysisView) -> html.Div:
     )
 
 
+# ── Archived 2026-04-08 ────────────────────────────────────────────────────
+# `_value_snapshot_block` used to live at the bottom of the Overview tab as a
+# compact "Current Value Snapshot" bar. Its metrics (Ask, Fair Value, All-In
+# Basis, Town Prior, subject-vs-town PPSF, town opportunity, town context
+# confidence) have been absorbed into `_value_snapshot_top_section` so the
+# value story lives in a single section. Function body is preserved.
+# ───────────────────────────────────────────────────────────────────────────
 def _value_snapshot_block(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
     town_context = view.town_context or {}
     metric_rows = [
@@ -3450,6 +3669,37 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
     if view.bear_case is not None and view.bull_case is not None:
         range_text = f"12-month range runs from {_fmt_compact(view.bear_case)} to {_fmt_compact(view.bull_case)}."
 
+    # Primary metrics strip — decision anchors
+    primary_metrics = [
+        ("Ask", _fmt_compact(ask), None),
+        ("Fair Value", _fmt_compact(bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
+        ("12M Base", _fmt_compact(base), None),
+        ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct)),
+    ]
+
+    # Secondary metrics strip — basis + town context (absorbed from former _value_snapshot_block)
+    town_context = view.town_context or {}
+    secondary_metrics: list[tuple[str, str, str | None]] = [
+        ("All-In Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
+        (
+            "Town Prior",
+            _fmt_compact(view.compare_metrics.get("town_baseline_median_price")),
+            f"Idx {float(view.compare_metrics.get('town_price_index')):.0f}" if view.compare_metrics.get("town_price_index") is not None else None,
+        ),
+    ]
+    if town_context.get("subject_ppsf_vs_town") is not None:
+        secondary_metrics.append(
+            ("Subject vs Town PPSF", f"{float(town_context['subject_ppsf_vs_town']):.2f}x", None)
+        )
+    if town_context.get("town_relative_opportunity_score") is not None:
+        secondary_metrics.append(
+            ("Town Opportunity", f"{float(town_context['town_relative_opportunity_score']):.2f}/5", None)
+        )
+    if town_context.get("town_context_confidence") is not None:
+        secondary_metrics.append(
+            ("Town Context", f"{float(town_context['town_context_confidence']):.0%}", None)
+        )
+
     value_box = html.Div(
         [
             html.Div("What We Think It Is Worth Now", style={**LABEL_STYLE, "marginBottom": "6px"}),
@@ -3462,12 +3712,8 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
                 range_text,
                 style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "6px"},
             ),
-            inline_metric_strip([
-                ("Ask", _fmt_compact(ask), None),
-                ("Fair Value", _fmt_compact(bcv), gap_pct_text(view) if view.mispricing_pct is not None else None),
-                ("12M Base", _fmt_compact(base), None),
-                ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct)),
-            ]),
+            inline_metric_strip(primary_metrics),
+            html.Div(inline_metric_strip(secondary_metrics), style={"marginTop": "6px"}) if secondary_metrics else None,
         ],
         style={**CARD_STYLE, "padding": "14px 16px"},
     )
@@ -3497,6 +3743,126 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
     )
 
 
+def renovation_value_trajectory_chart(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    show_renovated: bool = False,
+) -> go.Figure:
+    """Base-case value trajectory anchored at ask price.
+
+    Both trajectories start at ``ask_price`` on month 0 and grow linearly to
+    their respective 12-month terminal anchors. The as-is terminal is the
+    engine's base-case value (BCV or base). The renovated overlay uses the
+    modeled renovated BCV when available; otherwise it falls back to the
+    comp-derived renovation premium so the toggle always produces a visible
+    second line.
+    """
+    ask = view.ask_price
+    base = view.base_case
+    bcv = view.bcv
+    terminal_as_is = bcv or base
+
+    fig = go.Figure()
+
+    if ask is None or terminal_as_is is None:
+        fig.add_annotation(
+            text="Trajectory unavailable — ask price or fair value missing.",
+            showarrow=False,
+            font={"color": TEXT_MUTED, "size": 12},
+            xref="paper", yref="paper", x=0.5, y=0.5,
+        )
+        layout = dict(PLOTLY_LAYOUT_COMPACT)
+        layout["height"] = CHART_HEIGHT_STANDARD
+        fig.update_layout(**layout)
+        return fig
+
+    months = list(range(0, 13))
+
+    def _linear_path(start: float, end: float) -> list[float]:
+        if len(months) <= 1:
+            return [start]
+        step = (end - start) / (len(months) - 1)
+        return [start + step * i for i in range(len(months))]
+
+    # As-is base trajectory
+    as_is_path = _linear_path(ask, terminal_as_is)
+    fig.add_trace(
+        go.Scatter(
+            x=months,
+            y=as_is_path,
+            mode="lines+markers",
+            name="As-Is (base)",
+            line={"color": ACCENT_BLUE, "width": 3},
+            marker={"size": 6, "color": ACCENT_BLUE},
+            hovertemplate="Month %{x}<br>As-Is: %{y:$,.0f}<extra></extra>",
+        )
+    )
+
+    # Renovated overlay — fall back to comp-derived premium when reno scenario
+    # is not modeled so the toggle always produces a visible second line.
+    if show_renovated:
+        renovated_terminal: float | None = None
+        overlay_label = "Renovated (base)"
+        reno = _get_reno_data(report)
+        if reno and reno.get("renovated_bcv") is not None:
+            renovated_terminal = float(reno["renovated_bcv"])
+        else:
+            try:
+                from briarwood.decision_model.scoring import estimate_comp_renovation_premium
+                premium_data = estimate_comp_renovation_premium(report)
+                candidate = premium_data.get("estimated_renovated_value")
+                if candidate is not None:
+                    renovated_terminal = float(candidate)
+                    overlay_label = "Renovated (comp-derived)"
+            except Exception:
+                renovated_terminal = None
+            if renovated_terminal is None and view.bull_case is not None:
+                renovated_terminal = float(view.bull_case)
+                overlay_label = "Renovated (bull fallback)"
+
+        if renovated_terminal is not None:
+            reno_path = _linear_path(ask, renovated_terminal)
+            fig.add_trace(
+                go.Scatter(
+                    x=months,
+                    y=reno_path,
+                    mode="lines+markers",
+                    name=overlay_label,
+                    line={"color": ACCENT_GREEN, "width": 3, "dash": "dash"},
+                    marker={"size": 6, "color": ACCENT_GREEN},
+                    hovertemplate="Month %{x}<br>Renovated: %{y:$,.0f}<extra></extra>",
+                )
+            )
+        else:
+            fig.add_annotation(
+                text="Renovation scenario not modeled and no comp premium available.",
+                showarrow=False,
+                font={"color": TEXT_MUTED, "size": 10},
+                xref="paper", yref="paper", x=0.98, y=0.02, xanchor="right", yanchor="bottom",
+            )
+
+    # Ask reference line
+    fig.add_hline(
+        y=ask,
+        line_dash="dot",
+        line_color=TEXT_MUTED,
+        annotation_text=f"Ask {_fmt_compact(ask)}",
+        annotation_font_color=TEXT_MUTED,
+        annotation_font_size=10,
+        annotation_position="bottom right",
+    )
+
+    layout = dict(PLOTLY_LAYOUT_COMPACT)
+    layout["height"] = CHART_HEIGHT_STANDARD
+    layout["yaxis"] = {**layout.get("yaxis", {}), "tickformat": "$,.0f", "title": "Value"}
+    layout["xaxis"] = {**layout.get("xaxis", {}), "title": "Months from today", "tickmode": "linear", "dtick": 2}
+    layout["showlegend"] = True
+    layout["legend"] = {**layout.get("legend", {}), "orientation": "h", "yanchor": "bottom", "y": 1.0, "xanchor": "right", "x": 1.0}
+    fig.update_layout(**layout)
+    return fig
+
+
 def _strategic_path_card(title: str, subtitle: str, metrics: list[tuple[str, str, str | None]], tone: str = "neutral") -> html.Div:
     accent = tone_color(tone) if tone != "neutral" else ACCENT_BLUE
     return html.Div(
@@ -3511,7 +3877,7 @@ def _strategic_path_card(title: str, subtitle: str, metrics: list[tuple[str, str
 
 def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
     reno_payload = _get_reno_data(report)
-    reno_overlay = _renovation_value_overlay(view, report)
+    has_reno = reno_payload is not None
 
     as_is_card = _strategic_path_card(
         "Buy As-Is",
@@ -3525,7 +3891,7 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
         tone="neutral",
     )
 
-    if reno_payload:
+    if has_reno:
         renovated_bcv = reno_payload.get("renovated_bcv")
         budget = reno_payload.get("renovation_budget")
         net_creation = reno_payload.get("net_value_creation")
@@ -3537,9 +3903,9 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             ("ROI", f"{float(reno_payload.get('roi_pct')):.0f}%" if reno_payload.get("roi_pct") is not None else "—", None),
         ]
     else:
-        from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
+        from briarwood.decision_model.scoring import estimate_comp_renovation_premium
 
-        premium_data = _estimate_comp_renovation_premium(report)
+        premium_data = estimate_comp_renovation_premium(report)
         estimated_renovated = premium_data.get("estimated_renovated_value") or view.bull_case
         reno_subtitle = (
             "A dedicated renovation scenario is not available, so Briarwood falls back to a comp-derived value-add estimate."
@@ -3551,6 +3917,93 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             ("Execution", "Not fully underwritten", None),
         ]
 
+    # Live trajectory chart — as-is terminal is the engine's base-case value.
+    initial_figure = renovation_value_trajectory_chart(
+        view, report, show_renovated=False
+    )
+
+    overlay_controls = html.Div(
+        [
+            html.Div("Renovated overlay", style={**LABEL_STYLE, "marginBottom": "4px"}),
+            dcc.RadioItems(
+                id="reno-overlay-toggle",
+                options=[
+                    {"label": "  Off", "value": "off"},
+                    {"label": "  On", "value": "on"},
+                ],
+                value="off",
+                inline=True,
+                inputStyle={"marginRight": "4px"},
+                labelStyle={
+                    "display": "inline-flex", "alignItems": "center",
+                    "marginRight": "8px", "padding": "4px 10px",
+                    "border": f"1px solid {BORDER}", "borderRadius": "6px",
+                    "backgroundColor": BG_SURFACE_2, "color": TEXT_SECONDARY,
+                    "fontSize": "11px", "fontWeight": "500", "cursor": "pointer",
+                },
+            ),
+            html.Div(
+                "Overlays a dashed renovated trajectory using the engine's modeled renovated value "
+                "— or the comp-derived premium when a full scenario isn't available."
+                if has_reno else
+                "No full renovation scenario is modeled — the overlay will use the comp-derived premium instead.",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "4px"},
+            ),
+        ],
+        style={"marginBottom": "10px"},
+    )
+
+    # Renovation premium: PPSF bar chart (dated vs renovated comps)
+    from briarwood.decision_model.scoring import estimate_comp_renovation_premium
+
+    premium_data = estimate_comp_renovation_premium(report)
+    reno_ppsf = premium_data.get("median_renovated_ppsf")
+    dated_ppsf = premium_data.get("median_dated_ppsf")
+    premium_pct = premium_data.get("renovation_premium_pct")
+    reno_count = premium_data.get("renovated_comp_count", 0)
+    dated_count = premium_data.get("dated_comp_count", 0)
+
+    justification_block = None
+    if reno_ppsf and dated_ppsf and premium_pct is not None:
+        justification_block = html.Div(
+            [
+                html.Div(
+                    "Renovation Premium from Comps",
+                    style={**LABEL_STYLE, "marginTop": "14px", "marginBottom": "6px"},
+                ),
+                _renovation_premium_bar_chart(
+                    float(reno_ppsf), float(dated_ppsf), float(premium_pct),
+                    int(reno_count), int(dated_count),
+                ),
+                html.Div(
+                    f"Based on {reno_count} renovated/updated and {dated_count} dated/needs-work comps in the area.",
+                    style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px", "lineHeight": "1.5"},
+                ),
+            ],
+        )
+
+    trajectory_children = [
+        html.Div("Projected Value Trajectory (Base Case)", style={**LABEL_STYLE, "marginBottom": "6px"}),
+        overlay_controls,
+        dcc.Graph(
+            id="reno-trajectory-chart",
+            figure=initial_figure,
+            config={"displayModeBar": False, "responsive": True},
+        ),
+        html.Div(
+            "Line anchors at the ask price on day 0 and grows linearly to the 12-month base case. "
+            "Toggle the overlay on to compare against the renovated case.",
+            style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "6px", "lineHeight": "1.5"},
+        ),
+    ]
+    if justification_block is not None:
+        trajectory_children.append(justification_block)
+
+    trajectory_chart_block = html.Div(
+        trajectory_children,
+        style={**CARD_STYLE, "padding": "14px 16px", "marginTop": "10px"},
+    )
+
     return _property_analysis_section(
         "Section B - Strategic Paths",
         "Compare the clean as-is path against the renovation path without forcing the user into the deeper scenario tabs first.",
@@ -3558,22 +4011,69 @@ def _strategic_paths_top_section(view: PropertyAnalysisView, report: AnalysisRep
             html.Div(
                 [
                     as_is_card,
-                    _strategic_path_card("Buy + Renovate", reno_subtitle, reno_metrics, tone="positive" if reno_payload else "warning"),
+                    _strategic_path_card("Buy + Renovate", reno_subtitle, reno_metrics, tone="positive" if has_reno else "warning"),
                 ],
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px"},
             ),
-            html.Div(
-                [
-                    html.Div("Projected Value Impact", style={**LABEL_STYLE, "marginBottom": "6px"}),
-                    reno_overlay if reno_overlay is not None else _renovation_path_summary(view, report),
-                ],
-                style={"marginTop": "10px"},
-            ),
+            trajectory_chart_block,
         ],
     )
 
 
 def _forward_scenarios_top_section(view: PropertyAnalysisView) -> html.Div:
+    ask = view.ask_price
+    bcv = view.bcv
+    cushion = (bcv - ask) if isinstance(bcv, (int, float)) and isinstance(ask, (int, float)) else None
+
+    if cushion is None:
+        cushion_ribbon = None
+    elif cushion > 0:
+        cushion_ribbon = html.Div(
+            [
+                html.Span(
+                    f"Starting from an ask of {_fmt_compact(ask)}. ",
+                    style={"color": TEXT_PRIMARY, "fontWeight": "600"},
+                ),
+                html.Span(
+                    f"Briarwood sees fair value at {_fmt_compact(bcv)} — that's {_fmt_compact(cushion)} of cushion already captured on day one.",
+                    style={"color": TONE_POSITIVE_TEXT},
+                ),
+            ],
+            style={
+                "fontSize": "13px",
+                "lineHeight": "1.55",
+                "padding": "10px 14px",
+                "backgroundColor": TONE_POSITIVE_BG,
+                "borderLeft": f"3px solid {TONE_POSITIVE_BORDER}",
+                "borderRadius": "0 6px 6px 0",
+                "marginBottom": "10px",
+            },
+        )
+    elif cushion < 0:
+        cushion_ribbon = html.Div(
+            [
+                html.Span(
+                    f"Starting from an ask of {_fmt_compact(ask)}. ",
+                    style={"color": TEXT_PRIMARY, "fontWeight": "600"},
+                ),
+                html.Span(
+                    f"Briarwood sees fair value at {_fmt_compact(bcv)}, which is {_fmt_compact(abs(cushion))} below ask — you would need forward growth to absorb that gap.",
+                    style={"color": TONE_WARNING_TEXT},
+                ),
+            ],
+            style={
+                "fontSize": "13px",
+                "lineHeight": "1.55",
+                "padding": "10px 14px",
+                "backgroundColor": TONE_WARNING_BG,
+                "borderLeft": f"3px solid {TONE_WARNING_BORDER}",
+                "borderRadius": "0 6px 6px 0",
+                "marginBottom": "10px",
+            },
+        )
+    else:
+        cushion_ribbon = None
+
     metric_rows = [
         ("Bear", view.forward.bear_value_text, view.forward.downside_pct_text),
         ("Base", view.forward.base_value_text, None),
@@ -3584,12 +4084,13 @@ def _forward_scenarios_top_section(view: PropertyAnalysisView) -> html.Div:
 
     return _property_analysis_section(
         "Section C - Forward Value / Scenario View",
-        "Show the range of outcomes cleanly so the user can scan downside, base, and upside without reading dense narrative first.",
+        "All three cases are drawn from your ask price, so any value Briarwood already sees above ask shows up as a day-0 cushion before forward growth kicks in.",
         [
+            cushion_ribbon,
             inline_metric_strip(metric_rows),
             html.Div(
                 [
-                    html.Div(forward_fan_chart(view), style={"minWidth": "0"}),
+                    html.Div(forward_fan_chart_from_ask(view), style={"minWidth": "0"}),
                     _scenario_table(view),
                 ],
                 style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px", "alignItems": "start", "marginTop": "10px"},
@@ -3690,29 +4191,30 @@ def _rent_ramp_break_even_section(view: PropertyAnalysisView, report: AnalysisRe
                     html.Div(
                         [
                             html.Div("Cash-Flow Path", style={**LABEL_STYLE, "marginBottom": "6px"}),
-                            html.Div(summary, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_PRIMARY, "marginBottom": "8px"}),
-                            dcc.Graph(figure=fig, config={"displayModeBar": False}),
+                            html.Div(summary, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_PRIMARY, "marginBottom": "10px"}),
+                            dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True}),
                         ],
                         style={**CARD_STYLE, "padding": "14px 16px"},
                     ),
                     html.Div(
                         [
-                            html.Div("Break-Even Read", style={**LABEL_STYLE, "marginBottom": "6px"}),
+                            html.Div("Break-Even Read", style={**LABEL_STYLE, "marginBottom": "8px"}),
                             inline_metric_strip([
                                 ("Current Rent", _fmt_compact(monthly_rent), None),
                                 ("Monthly Cost", _fmt_compact(gross_cost), None),
                                 ("Today Cash Flow", _fmt_signed_currency(monthly_cash_flow), None),
                             ]),
+                            html.Div(style={"height": "8px"}),
                             inline_metric_strip(break_even_labels),
-                            html.Div(
-                                "This v1 holds carrying costs flat and only moves rent. It is intended as a decision aid, not a full operating pro forma.",
-                                style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "10px"},
-                            ),
                         ],
                         style={**CARD_STYLE, "padding": "14px 16px"},
                     ),
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))", "gap": "12px", "alignItems": "start"},
+                style={"display": "grid", "gridTemplateColumns": "1.4fr 1fr", "gap": "12px", "alignItems": "start"},
+            ),
+            html.Div(
+                "v1 holds carrying costs flat and only moves rent — a decision aid, not a full operating pro forma.",
+                style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "8px", "fontStyle": "italic"},
             ),
         ],
     )
@@ -3773,6 +4275,12 @@ def _town_context_block(view: PropertyAnalysisView) -> html.Div | None:
     )
 
 
+# ── Archived 2026-04-08 ────────────────────────────────────────────────────
+# `_strategy_fit_block` was the thin lens-positioning card at the top of the
+# Strategy tab. Replaced by `_decision_engine_block` (the full investment
+# memo), which covers best_fit + thesis + drivers + break conditions in a
+# single more informative card. Function body preserved for re-use.
+# ───────────────────────────────────────────────────────────────────────────
 def _strategy_fit_block(view: PropertyAnalysisView) -> html.Div:
     decision = view.decision
     best_fit = decision.best_fit if decision is not None else _fit_label(view)
@@ -4271,8 +4779,8 @@ def _optionality_insight(view: PropertyAnalysisView, report: AnalysisReport) -> 
             return _section_insight_callout(text, tone)
 
     # Try comp-derived renovation premium
-    from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
-    premium_data = _estimate_comp_renovation_premium(report)
+    from briarwood.decision_model.scoring import estimate_comp_renovation_premium
+    premium_data = estimate_comp_renovation_premium(report)
     premium_pct = premium_data.get("renovation_premium_pct")
     est_creation = premium_data.get("estimated_value_creation")
     if premium_pct is not None and premium_pct > 0.05 and est_creation and est_creation > 0:
@@ -4300,7 +4808,7 @@ def _renovation_value_overlay(view: PropertyAnalysisView, report: AnalysisReport
     value creation.  Falls back to explicit renovation data if available, or
     shows a data-insufficient message for properties that need work.
     """
-    from briarwood.decision_model.scoring import _estimate_comp_renovation_premium
+    from briarwood.decision_model.scoring import estimate_comp_renovation_premium
 
     condition = view.condition_profile.lower().replace(" ", "_")
     # Only show for properties where renovation is relevant
@@ -4344,7 +4852,7 @@ def _renovation_value_overlay(view: PropertyAnalysisView, report: AnalysisReport
             )
 
     # Comp-derived renovation premium
-    premium_data = _estimate_comp_renovation_premium(report)
+    premium_data = estimate_comp_renovation_premium(report)
     premium_pct = premium_data.get("renovation_premium_pct")
     reno_ppsf = premium_data.get("median_renovated_ppsf")
     dated_ppsf = premium_data.get("median_dated_ppsf")
@@ -4473,7 +4981,7 @@ def _renovation_premium_bar_chart(
         showlegend=False,
     )
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "100px"})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True}, style={"height": "100px"})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -4729,24 +5237,38 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
         ),
     )
 
+    # Decision conclusion ribbon — a compact paragraph extracted from the
+    # archived _decision_summary_block. The 6-card grid in that block has been
+    # retired (duplicated tab navigation) but the conclusion copy is preserved
+    # here as a single-line context ribbon.
+    _conclusion_ribbon = html.Div(
+        _decision_conclusion(view, report),
+        style={
+            "fontSize": "13px",
+            "lineHeight": "1.65",
+            "color": TEXT_PRIMARY,
+            "padding": "12px 14px",
+            "backgroundColor": BG_SURFACE_2,
+            "borderLeft": f"3px solid {ACCENT_BLUE}",
+            "borderRadius": "0 6px 6px 0",
+            "marginBottom": "12px",
+        },
+    )
+
     owner_tabs = [
         (
             "overview",
             "Overview",
             [
+                _conclusion_ribbon,
                 _property_analysis_top_stack(view, report),
-                render_insight_hero(view, report),
-                _decision_engine_block(view),
-                _decision_summary_block(view, report),
-                _report_card_block(view),
-                _value_snapshot_block(view, report),
-                _renovation_path_summary(view, report),
             ],
         ),
         (
             "value",
             "Value",
             [
+                render_insight_hero(view, report),
                 price_section,
                 market_section,
             ],
@@ -4755,7 +5277,7 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             "strategy",
             "Strategy",
             [
-                _strategy_fit_block(view),
+                _decision_engine_block(view),
                 economics_section,
                 forward_section,
                 render_perspective_block(view),
@@ -4767,7 +5289,6 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             "Renovation",
             [
                 _renovation_path_summary(view, report),
-                _renovation_justification_block(view, report),
                 _renovation_value_overlay(view, report),
                 optionality_section,
             ],
@@ -4895,7 +5416,6 @@ def render_tear_sheet_body(view: PropertyAnalysisView, report: AnalysisReport, v
             "Renovation",
             [
                 _renovation_path_summary(view, report),
-                _renovation_justification_block(view, report),
                 _renovation_value_overlay(view, report),
                 optionality_section,
             ],
@@ -6156,7 +6676,7 @@ def score_comparison_heatmap(views: list[PropertyAnalysisView]) -> dcc.Graph | h
     layout["xaxis"] = {**layout.get("xaxis", {}), "side": "bottom", "tickangle": -20}
     layout["yaxis"] = {**layout.get("yaxis", {}), "autorange": "reversed"}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def category_comparison_radar(view_a: PropertyAnalysisView, view_b: PropertyAnalysisView) -> dcc.Graph | html.Div:
@@ -6203,7 +6723,7 @@ def category_comparison_radar(view_a: PropertyAnalysisView, view_b: PropertyAnal
     }
     layout["legend"] = {"orientation": "h", "y": 1.08, "x": 0, "font": {"color": TEXT_SECONDARY, "size": 11}}
     fig.update_layout(**layout)
-    return dcc.Graph(figure=fig, config={"displayModeBar": False})
+    return dcc.Graph(figure=fig, config={"displayModeBar": False, "responsive": True})
 
 
 def comparison_explainer(view_a: PropertyAnalysisView, view_b: PropertyAnalysisView) -> html.Div:

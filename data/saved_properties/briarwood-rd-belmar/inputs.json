@@ -9,7 +9,7 @@
     "baths": 2.0,
     "sqft": 1196,
     "lot_size": 0.09,
-    "property_type": null,
+    "property_type": "Single Family Residence",
     "condition_profile": "needs_work",
     "capex_lane": "heavy",
     "year_built": 1965,
@@ -33,17 +33,17 @@
   },
   "market_signals": {},
   "user_assumptions": {
-    "estimated_monthly_rent": 2800.0,
+    "estimated_monthly_rent": 3500.0,
     "back_house_monthly_rent": null,
     "seasonal_monthly_rent": null,
     "unit_rents": [],
     "rent_confidence_override": null,
     "insurance": 2400.0,
-    "monthly_maintenance_reserve_override": null,
-    "condition_profile_override": null,
-    "condition_confirmed": null,
-    "capex_lane_override": null,
-    "capex_confirmed": null,
+    "monthly_maintenance_reserve_override": 300.0,
+    "condition_profile_override": "needs_work",
+    "condition_confirmed": true,
+    "capex_lane_override": "heavy",
+    "capex_confirmed": true,
     "repair_capex_budget": null,
     "strategy_intent": null,
     "hold_period_years": null,
@@ -105,11 +105,11 @@
         "source_name": "manual entry"
       },
       "condition_assumption": {
-        "status": "missing",
+        "status": "user_supplied",
         "source_name": "manual entry"
       },
       "capex_assumption": {
-        "status": "missing",
+        "status": "user_supplied",
         "source_name": "manual entry"
       },
       "capex_budget": {

@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from briarwood.inputs.adapters import ListingTextAdapter, PublicRecordAdapter, normalized_listing_to_canonical
 from briarwood.inputs.market_location_adapter import MarketLocationAdapter
@@ -20,16 +24,170 @@ from briarwood.schemas import (
     UserAssumptions,
 )
 
+logger = logging.getLogger(__name__)
+
+
+# S5 (audit 2026-04-08): pydantic sanity-check at the ingestion boundary. The
+# existing dataclass pipeline is preserved — this model only inspects the
+# fields that caused real-world issues (out-of-range numerics and typo'd
+# enums) and fails loudly before the engine sees nonsense. Rate fields allow
+# either 0..1 or 0..100 because cost_valuation._normalize_percent accepts
+# both forms.
+_FLOOD_VALUES = {None, "none", "low", "medium", "high"}
+
+
+class _PropertyInputValidationModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    address: str
+    town: str
+    state: str
+    beds: int | None = None
+    baths: float | None = None
+    sqft: int | None = None
+    lot_size: float | None = None
+    year_built: int | None = None
+    purchase_price: float | None = None
+    taxes: float | None = None
+    insurance: float | None = None
+    monthly_hoa: float | None = None
+    estimated_monthly_rent: float | None = None
+    down_payment_percent: float | None = None
+    interest_rate: float | None = None
+    loan_term_years: int | None = None
+    vacancy_rate: float | None = None
+    school_rating: float | None = None
+    flood_risk: Literal["none", "low", "medium", "high"] | None = None
+
+    @field_validator("address", "town", "state")
+    @classmethod
+    def _non_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("must not be empty")
+        return value
+
+    @field_validator("beds")
+    @classmethod
+    def _beds_range(cls, value: int | None) -> int | None:
+        if value is not None and not 0 <= value <= 50:
+            raise ValueError("beds out of range (0..50)")
+        return value
+
+    @field_validator("baths")
+    @classmethod
+    def _baths_range(cls, value: float | None) -> float | None:
+        if value is not None and not 0 <= value <= 50:
+            raise ValueError("baths out of range (0..50)")
+        return value
+
+    @field_validator("sqft")
+    @classmethod
+    def _sqft_range(cls, value: int | None) -> int | None:
+        if value is not None and not 0 <= value <= 100_000:
+            raise ValueError("sqft out of range (0..100000)")
+        return value
+
+    @field_validator("lot_size")
+    @classmethod
+    def _lot_size_range(cls, value: float | None) -> float | None:
+        if value is not None and value < 0:
+            raise ValueError("lot_size must be non-negative")
+        return value
+
+    @field_validator("year_built")
+    @classmethod
+    def _year_built_range(cls, value: int | None) -> int | None:
+        if value is not None and not 1600 <= value <= 2100:
+            raise ValueError("year_built out of plausible range (1600..2100)")
+        return value
+
+    @field_validator(
+        "purchase_price",
+        "taxes",
+        "insurance",
+        "monthly_hoa",
+        "estimated_monthly_rent",
+    )
+    @classmethod
+    def _money_non_negative(cls, value: float | None) -> float | None:
+        if value is not None and value < 0:
+            raise ValueError("must be non-negative")
+        return value
+
+    @field_validator("down_payment_percent", "interest_rate", "vacancy_rate")
+    @classmethod
+    def _rate_range(cls, value: float | None) -> float | None:
+        # Accept either 0..1 or 0..100 form (cost_valuation normalizes).
+        if value is not None and not 0 <= value <= 100:
+            raise ValueError("rate out of range (0..100)")
+        return value
+
+    @field_validator("loan_term_years")
+    @classmethod
+    def _loan_term_range(cls, value: int | None) -> int | None:
+        if value is not None and not 1 <= value <= 50:
+            raise ValueError("loan_term_years out of range (1..50)")
+        return value
+
+    @field_validator("school_rating")
+    @classmethod
+    def _school_rating_range(cls, value: float | None) -> float | None:
+        if value is not None and not 0 <= value <= 10:
+            raise ValueError("school_rating out of range (0..10)")
+        return value
+
+
+def _validate_property_input(property_input: PropertyInput) -> None:
+    """Run pydantic sanity checks on an assembled PropertyInput.
+
+    Fails fast with a clear message when ranges/enums are obviously wrong
+    (e.g. negative sqft, interest_rate of 900, flood_risk typo). The existing
+    dataclass pipeline handles the actual construction; this just guards the
+    boundary so bad data can't silently propagate into scoring.
+    """
+    try:
+        _PropertyInputValidationModel.model_validate(
+            {
+                "address": property_input.address,
+                "town": property_input.town,
+                "state": property_input.state,
+                "beds": property_input.beds,
+                "baths": property_input.baths,
+                "sqft": property_input.sqft,
+                "lot_size": property_input.lot_size,
+                "year_built": property_input.year_built,
+                "purchase_price": property_input.purchase_price,
+                "taxes": property_input.taxes,
+                "insurance": property_input.insurance,
+                "monthly_hoa": property_input.monthly_hoa,
+                "estimated_monthly_rent": property_input.estimated_monthly_rent,
+                "down_payment_percent": property_input.down_payment_percent,
+                "interest_rate": property_input.interest_rate,
+                "loan_term_years": property_input.loan_term_years,
+                "vacancy_rate": property_input.vacancy_rate,
+                "school_rating": property_input.school_rating,
+                "flood_risk": property_input.flood_risk,
+            }
+        )
+    except ValidationError as exc:
+        raise ValueError(
+            f"Property input failed validation for {property_input.property_id}: {exc}"
+        ) from exc
+
 
 def load_property_from_json(path: str | Path) -> PropertyInput:
     data = json.loads(Path(path).read_text())
     if {"facts", "market_signals", "user_assumptions", "source_metadata"} & set(data):
         canonical = _canonical_from_dict(data)
         canonical = _enrich_with_market_context(canonical)
-        return PropertyInput.from_canonical(canonical)
+        property_input = PropertyInput.from_canonical(canonical)
+        _validate_property_input(property_input)
+        return property_input
     canonical = PublicRecordAdapter().build(data, property_id=str(data.get("property_id") or "property-json"))
     canonical = _enrich_with_market_context(canonical)
-    return PropertyInput.from_canonical(canonical)
+    property_input = PropertyInput.from_canonical(canonical)
+    _validate_property_input(property_input)
+    return property_input
 
 
 def load_property_from_normalized_listing(
@@ -39,7 +197,9 @@ def load_property_from_normalized_listing(
 ) -> PropertyInput:
     canonical = normalized_listing_to_canonical(normalized_property_data, property_id=property_id)
     canonical = _enrich_with_market_context(canonical)
-    return PropertyInput.from_canonical(canonical)
+    property_input = PropertyInput.from_canonical(canonical)
+    _validate_property_input(property_input)
+    return property_input
 
 
 def load_property_from_listing_intake_result(
@@ -77,7 +237,9 @@ def load_property_from_listing_text(
     adapter = ListingTextAdapter(intake_service=intake_service or ListingIntakeService())
     canonical = adapter.build(text, property_id=property_id, source_url=source_url)
     canonical = _enrich_with_market_context(canonical)
-    return PropertyInput.from_canonical(canonical)
+    property_input = PropertyInput.from_canonical(canonical)
+    _validate_property_input(property_input)
+    return property_input
 
 
 def _enrich_with_market_context(canonical: CanonicalPropertyData) -> CanonicalPropertyData:

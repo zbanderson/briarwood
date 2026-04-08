@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.scarcity.schemas import LandScarcityInputs, LandScarcityScore
+from briarwood.scoring import clamp_score
 
 
 class LandScarcityScorer:
@@ -39,7 +40,7 @@ class LandScarcityScorer:
             score += 10
 
         confidence = self._confidence(inputs)
-        final_score = self._clamp_score(score)
+        final_score = clamp_score(score)
         label = self._label(final_score, confidence)
 
         if inputs.lot_size_sqft is None:
@@ -127,10 +128,6 @@ class LandScarcityScorer:
         return (
             f"{inputs.town}, {inputs.state} has insufficient lot evidence for a confident land scarcity view."
         )
-
-    def _clamp_score(self, value: float) -> float:
-        return max(0.0, min(value, 100.0))
-
 
 def score_land_scarcity(payload: LandScarcityInputs | dict[str, object]) -> LandScarcityScore:
     """Convenience wrapper for one-shot land scarcity scoring."""

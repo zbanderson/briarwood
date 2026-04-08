@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.scarcity.schemas import LocationScarcityInputs, LocationScarcityScore
+from briarwood.scoring import clamp_score
 
 
 class LocationScarcityScorer:
@@ -45,7 +46,7 @@ class LocationScarcityScorer:
                 score += 5
 
         confidence = self._confidence(inputs)
-        final_score = self._clamp_score(score)
+        final_score = clamp_score(score)
         label = self._label(final_score, confidence)
 
         if inputs.anchor_type is None:
@@ -139,10 +140,6 @@ class LocationScarcityScorer:
         return (
             f"{inputs.town}, {inputs.state} has insufficient anchor evidence for a confident location scarcity view."
         )
-
-    def _clamp_score(self, value: float) -> float:
-        return max(0.0, min(value, 100.0))
-
 
 def score_location_scarcity(payload: LocationScarcityInputs | dict[str, object]) -> LocationScarcityScore:
     """Convenience wrapper for one-shot location scarcity scoring."""

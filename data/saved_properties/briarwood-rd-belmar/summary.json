@@ -3,10 +3,10 @@
   "address": "1223 Briarwood Rd, Belmar, NJ 07719",
   "label": "1223 Briarwood Rd",
   "ask_price": 674200.0,
-  "bcv": 764131.17,
+  "bcv": 779824.76,
   "pricing_view": "appears undervalued",
-  "confidence": 0.67,
+  "confidence": 0.7,
   "comp_trust": "Seed / Review Only",
-  "missing_input_count": 7,
-  "timestamp": "2026-04-05T12:42:52"
+  "missing_input_count": 5,
+  "timestamp": "2026-04-08T11:21:00"
 }

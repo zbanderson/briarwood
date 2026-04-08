@@ -4,10 +4,14 @@ Light, retail-friendly shell with analytical property analysis surfaces.
 """
 from __future__ import annotations
 
+import logging
 import os
 import traceback
 from datetime import datetime
+from functools import lru_cache
 from urllib.parse import quote_plus
+
+logger = logging.getLogger(__name__)
 
 import dash
 from dash import ALL, Dash, Input, Output, State, ctx, dash_table, dcc, html, no_update
@@ -35,9 +39,11 @@ from briarwood.dash_app.components import (
     render_tour_overlay,
     render_tour_trigger_button,
     render_what_if_metrics,
+    renovation_value_trajectory_chart,
 )
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
+    SAVED_PROPERTY_DIR,
     export_preset_tear_sheet,
     export_preset_tear_sheet_pdf,
     list_comp_database_rows,
@@ -71,6 +77,26 @@ app = Dash(
     suppress_callback_exceptions=True,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
+app.index_string = """<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+        {%css%}
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>"""
 server = app.server
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -592,44 +618,77 @@ def _strategy_tags(view) -> list[str]:
     return tags[:2]
 
 
+# S6 (audit 2026-04-08): opportunity discovery used to re-run the full
+# run_report() pipeline for every saved property on every board render. We
+# now cache the per-property record by (property_id, inputs.json mtime) —
+# edits on disk invalidate the entry automatically because mtime changes.
+@lru_cache(maxsize=128)
+def _build_opportunity_record_cached(
+    property_id: str, inputs_mtime_ns: int
+) -> dict[str, object] | None:
+    del inputs_mtime_ns  # only used as a cache key — the mtime change busts the entry
+    try:
+        report = load_report_for_preset(property_id)
+    except (KeyError, OSError, ValueError) as exc:
+        logger.warning(
+            "Opportunity discovery: skipping %s (load failed: %s)",
+            property_id,
+            exc,
+        )
+        return None
+    try:
+        view = build_property_analysis_view(report)
+    except (AttributeError, KeyError, ValueError, ZeroDivisionError) as exc:
+        logger.warning(
+            "Opportunity discovery: skipping %s (view build failed: %s)",
+            property_id,
+            exc,
+        )
+        return None
+    signal_label, signal_text, signal_strength = _opportunity_signal(view)
+    return {
+        "property_id": property_id,
+        "address": view.address,
+        "identity": _property_identity(
+            view.address,
+            getattr(report.property_input, "town", None),
+            getattr(report.property_input, "state", None),
+        ),
+        "town": getattr(report.property_input, "town", None) or "Unknown",
+        "state": getattr(report.property_input, "state", None) or "",
+        "recommendation": view.recommendation_tier or "Neutral",
+        "score": float(view.final_score or 0.0),
+        "ask_price": view.ask_price,
+        "signal_label": signal_label,
+        "signal_text": signal_text,
+        "signal_strength": signal_strength,
+        "tags": _strategy_tags(view),
+        "maps": _maps_links(
+            view.address,
+            getattr(report.property_input, "town", None),
+            getattr(report.property_input, "state", None),
+        ),
+        "selected": False,
+    }
+
+
+def _inputs_mtime_ns(property_id: str) -> int:
+    """Return the inputs.json mtime in ns, or 0 if the file is missing."""
+    try:
+        return (SAVED_PROPERTY_DIR / property_id / "inputs.json").stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
 def _opportunity_records(loaded_ids: list[str] | None) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
     for property_id in _discoverable_property_ids(loaded_ids):
-        try:
-            report = load_report_for_preset(property_id)
-        except Exception:
+        record = _build_opportunity_record_cached(property_id, _inputs_mtime_ns(property_id))
+        if record is None:
             continue
-        try:
-            view = build_property_analysis_view(report)
-        except Exception:
-            continue
-        signal_label, signal_text, signal_strength = _opportunity_signal(view)
-        records.append(
-            {
-                "property_id": property_id,
-                "address": view.address,
-                "identity": _property_identity(
-                    view.address,
-                    getattr(report.property_input, "town", None),
-                    getattr(report.property_input, "state", None),
-                ),
-                "town": getattr(report.property_input, "town", None) or "Unknown",
-                "state": getattr(report.property_input, "state", None) or "",
-                "recommendation": view.recommendation_tier or "Neutral",
-                "score": float(view.final_score or 0.0),
-                "ask_price": view.ask_price,
-                "signal_label": signal_label,
-                "signal_text": signal_text,
-                "signal_strength": signal_strength,
-                "tags": _strategy_tags(view),
-                "maps": _maps_links(
-                    view.address,
-                    getattr(report.property_input, "town", None),
-                    getattr(report.property_input, "state", None),
-                ),
-                "selected": False,
-            }
-        )
+        # Copy so per-call mutations (e.g. `selected` flag downstream) don't
+        # leak into the cached entry.
+        records.append(dict(record))
     records.sort(
         key=lambda item: (
             -_recommendation_weight(str(item["recommendation"])),
@@ -944,21 +1003,24 @@ def _feedback_banner() -> html.Div:
     return html.Div(id="analysis-feedback-banner", style={"flexShrink": "0"})
 
 
-def _main_tab_bar() -> dcc.Tabs:
-    return dcc.Tabs(
-        id="main-tabs",
-        value="opportunities",
-        children=[
-            dcc.Tab(
-                label=label,
-                value=value,
-                style=_TAB_STYLE,
-                selected_style=_TAB_SELECTED_STYLE,
-            )
-            for value, label in MAIN_TABS
-        ],
-        style=_TAB_BAR_STYLE,
-        colors={"border": "transparent", "primary": ACCENT_BLUE, "background": BG_SURFACE},
+def _main_tab_bar() -> html.Nav:
+    return html.Nav(
+        children=dcc.Tabs(
+            id="main-tabs",
+            value="opportunities",
+            children=[
+                dcc.Tab(
+                    label=label,
+                    value=value,
+                    style=_TAB_STYLE,
+                    selected_style=_TAB_SELECTED_STYLE,
+                )
+                for value, label in MAIN_TABS
+            ],
+            style=_TAB_BAR_STYLE,
+            colors={"border": "transparent", "primary": ACCENT_BLUE, "background": BG_SURFACE},
+        ),
+        **{"aria-label": "Main navigation"},
     )
 
 
@@ -1016,7 +1078,7 @@ def _add_property_drawer() -> html.Div:
                                 html.Div(id="manual-editing-status", style={"fontSize": "12px", "color": ACCENT_BLUE, "marginTop": "4px"}),
                             ]
                         ),
-                        html.Button("✕", id="add-property-close-button", n_clicks=0, style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"}),
+                        html.Button("✕", id="add-property-close-button", n_clicks=0, style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"}, **{"aria-label": "Close add property drawer"}),
                     ],
                     style={"display": "flex", "justifyContent": "space-between", "alignItems": "start", "marginBottom": "16px"},
                 ),
@@ -1048,7 +1110,7 @@ def _add_property_drawer() -> html.Div:
                         ),
                         html.Div(
                             [
-                                html.Button("Edit Selected Record", id="edit-selected-property-button", n_clicks=0, style=BTN_PRIMARY),
+                                html.Button("Edit Selected Record", id="edit-selected-property-button", n_clicks=0, className="btn-primary", style=BTN_PRIMARY),
                                 html.Button("Compare Selected", id="compare-selected-button", n_clicks=0, style=BTN_SECONDARY),
                             ],
                             style={"display": "flex", "gap": "8px", "marginTop": "4px", "flexWrap": "wrap"},
@@ -1333,6 +1395,7 @@ def _add_property_form_body() -> list:
                     id="manual-run-analysis-trigger",
                     n_clicks=0,
                     type="button",
+                    className="btn-primary",
                     style=_BTN_ANALYZE_ENABLED,
                 ),
                 dcc.Loading(
@@ -1372,7 +1435,7 @@ def _compare_controls() -> html.Div:
                     ),
                     html.Div(
                         [
-                            html.Button("Go", id="compare-go-button", n_clicks=0, style=BTN_PRIMARY),
+                            html.Button("Go", id="compare-go-button", n_clicks=0, className="btn-primary", style=BTN_PRIMARY),
                         ],
                         style={"display": "flex", "gap": "8px", "marginTop": "8px"},
                     ),
@@ -1458,9 +1521,10 @@ def _build_layout():
                 id="main-content-loading",
                 type="default",
                 color=ACCENT_BLUE,
-                children=html.Div(
+                children=html.Main(
                     id="main-tab-content",
                     style={"flex": "1", "minHeight": "0"},
+                    **{"aria-label": "Property analysis content"},
                 ),
                 style={"flex": "1", "minHeight": "0"},
             ),
@@ -3046,6 +3110,38 @@ def update_what_if(adjusted_ask: float | None, rate: float | None, vacancy: floa
     view = build_property_analysis_view(report)
     vacancy = vacancy if vacancy is not None else 0.05
     return render_what_if_metrics(view, adjusted_ask, rate, vacancy)
+
+
+# ── Section B: Renovation value trajectory callback ─────────────────────────
+#
+# Live-updates the perceived-value line chart on the Property Analysis Overview
+# tab. Inputs are the perceived-value number box and the renovated overlay
+# toggle; the callback re-reads the focused report, rebuilds the view model,
+# and regenerates the Plotly figure. Mirrors the what-if callback pattern.
+
+
+@app.callback(
+    Output("reno-trajectory-chart", "figure"),
+    Input("reno-overlay-toggle", "value"),
+    State("property-selector-dropdown", "value"),
+    State("loaded-preset-ids", "data"),
+    prevent_initial_call=True,
+)
+def update_reno_trajectory(
+    overlay_toggle: str | None,
+    focus_id: str | None,
+    loaded_ids: list[str] | None,
+):
+    report = _focused_report(loaded_ids, focus_id)
+    if report is None:
+        return no_update
+    view = build_property_analysis_view(report)
+    show_renovated = overlay_toggle == "on"
+    return renovation_value_trajectory_chart(
+        view,
+        report,
+        show_renovated=show_renovated,
+    )
 
 
 # ── TXT export callback ──────────────────────────────────────────────────────

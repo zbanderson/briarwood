@@ -683,7 +683,7 @@ def _num(value: Any) -> float | None:
         return None
     try:
         return float(value)
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from briarwood.evidence import build_section_evidence
 from briarwood.schemas import ModuleResult, PropertyInput
-from briarwood.settings import DEFAULT_RISK_SETTINGS, RiskSettings
+from briarwood.decision_model.scoring_config import DEFAULT_RISK_SETTINGS, RiskSettings
 from briarwood.scoring import clamp_score
 from briarwood.utils import current_year
 

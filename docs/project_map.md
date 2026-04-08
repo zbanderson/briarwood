@@ -207,8 +207,6 @@ The goal is to make the current state legible, identify the weak points, and giv
   - user assumptions
   - report-oriented convenience fields
 - some older dataclass shapes are looser than the newer pydantic agent contracts
-- there is still stale code in the repo
-  - notably `briarwood/modules/town_intelligence.py`
 
 ### Recommended Next Steps
 

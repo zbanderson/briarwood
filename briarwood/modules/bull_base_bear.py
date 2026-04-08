@@ -9,7 +9,10 @@ from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule, get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import ModuleResult, PropertyInput, ScenarioOutput
-from briarwood.settings import BullBaseBearSettings, DEFAULT_BULL_BASE_BEAR_SETTINGS
+from briarwood.decision_model.scoring_config import (
+    BullBaseBearSettings,
+    DEFAULT_BULL_BASE_BEAR_SETTINGS,
+)
 from briarwood.scoring import clamp_score
 
 

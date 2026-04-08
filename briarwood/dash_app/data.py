@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
-import pickle
+import logging
+import os
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
@@ -145,7 +148,10 @@ def list_saved_properties() -> list[SavedPropertySummary]:
                     tear_sheet_path=property_dir / "tear_sheet.html",
                 )
             )
-        except Exception:
+        except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError) as exc:
+            logger.warning(
+                "Skipping saved property summary %s: %s", summary_path, exc
+            )
             continue
     return sorted(summaries, key=lambda item: item.timestamp, reverse=True)
 
@@ -153,7 +159,8 @@ def list_saved_properties() -> list[SavedPropertySummary]:
 def list_comp_database_rows() -> list[dict[str, str]]:
     try:
         dataset = JsonComparableSalesStore(SALES_COMPS_PATH).load()
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError, KeyError) as exc:
+        logger.warning("Cannot load comp database %s: %s", SALES_COMPS_PATH, exc)
         return []
     rows: list[dict[str, str]] = []
     for sale in dataset.sales:
@@ -174,14 +181,10 @@ def list_comp_database_rows() -> list[dict[str, str]]:
 
 def load_report_for_preset(preset_id: str) -> AnalysisReport:
     if preset_id not in _REPORT_CACHE:
-        saved_report = _load_saved_report(preset_id)
-        if saved_report is not None:
-            _REPORT_CACHE[preset_id] = saved_report
-        else:
-            preset_map = {preset.preset_id: preset for preset in list_presets()}
-            if preset_id not in preset_map:
-                raise KeyError(f"Unknown property preset: {preset_id}")
-            _REPORT_CACHE[preset_id] = preset_map[preset_id].loader()
+        preset_map = {preset.preset_id: preset for preset in list_presets()}
+        if preset_id not in preset_map:
+            raise KeyError(f"Unknown property preset: {preset_id}")
+        _REPORT_CACHE[preset_id] = preset_map[preset_id].loader()
     return _REPORT_CACHE[preset_id]
 
 
@@ -219,8 +222,13 @@ def load_property_form_defaults(property_id: str) -> tuple[dict[str, object], li
             subject = _subject_from_payload(payload, property_id)
             comps = payload.get("user_assumptions", {}).get("manual_comp_inputs", [])
             return subject, comps if isinstance(comps, list) else []
-        except Exception:
-            pass
+        except (OSError, json.JSONDecodeError, AttributeError, TypeError) as exc:
+            logger.warning(
+                "Cannot load form defaults for %s from %s: %s",
+                property_id,
+                inputs_path,
+                exc,
+            )
 
     report = load_report_for_preset(property_id)
     property_input = report.property_input
@@ -337,8 +345,8 @@ def _load_comp_database_report(source_ref: str) -> AnalysisReport:
     finally:
         try:
             temp_path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        except OSError as exc:
+            logger.warning("Cannot unlink temp file %s: %s", temp_path, exc)
 
 
 def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, object]]) -> tuple[str, Path]:
@@ -352,7 +360,6 @@ def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, o
 
     report = run_report(raw_input_path)
     tear_sheet_path = write_report_html(report, property_dir / "tear_sheet.html")
-    _write_saved_report(property_dir / "report.pkl", report)
     _write_saved_summary(property_dir, report)
     _REPORT_CACHE[property_id] = report
     invalidate_preset_cache()
@@ -376,7 +383,10 @@ def _saved_property_presets() -> list[PropertyPreset]:
 def _comp_database_presets() -> list[PropertyPreset]:
     try:
         dataset = JsonComparableSalesStore(SALES_COMPS_PATH).load()
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError, KeyError) as exc:
+        logger.warning(
+            "Cannot build comp-database presets from %s: %s", SALES_COMPS_PATH, exc
+        )
         return []
 
     existing_labels = {summary.label.strip().lower() for summary in list_saved_properties()}
@@ -466,13 +476,12 @@ def _saved_property_directory_presets() -> list[PropertyPreset]:
 
 
 def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
-    """Re-run analysis from saved inputs.json when pickle is missing or stale."""
+    """Re-run analysis from saved inputs.json (authoritative rehydration path)."""
     inputs_path = _saved_property_path(property_id) / "inputs.json"
     if not inputs_path.exists():
         raise KeyError(f"No inputs.json for saved property: {property_id}")
     report = run_report(inputs_path)
     property_dir = _saved_property_path(property_id)
-    _write_saved_report(property_dir / "report.pkl", report)
     _write_saved_summary(property_dir, report)
     return report
 
@@ -480,7 +489,8 @@ def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
 def _saved_property_label_from_inputs(path: Path, property_id: str) -> str:
     try:
         payload = json.loads(path.read_text())
-    except Exception:
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Cannot read saved property inputs %s: %s", path, exc)
         return property_id.replace("-", " ").title()
 
     facts = payload.get("facts")
@@ -506,7 +516,8 @@ def _legacy_manual_presets() -> list[PropertyPreset]:
     for path in sorted(LEGACY_MANUAL_ENTRY_DIR.glob("*.json")):
         try:
             payload = json.loads(path.read_text())
-        except Exception:
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Skipping legacy manual entry %s: %s", path, exc)
             continue
         property_id = str(payload.get("property_id") or path.stem)
         address = str(((payload.get("facts") or {}) if isinstance(payload.get("facts"), dict) else {}).get("address") or property_id)
@@ -615,20 +626,11 @@ def _saved_property_path(property_id: str) -> Path:
     return SAVED_PROPERTY_DIR / property_id
 
 
-def _load_saved_report(property_id: str) -> AnalysisReport | None:
-    report_path = _saved_property_path(property_id) / "report.pkl"
-    if not report_path.exists():
-        return None
-    try:
-        with report_path.open("rb") as handle:
-            return pickle.load(handle)
-    except Exception:
-        return None
-
-
-def _write_saved_report(path: Path, report: AnalysisReport) -> None:
-    with path.open("wb") as handle:
-        pickle.dump(report, handle)
+# C1 (audit 2026-04-08): Removed pickle-based report cache (pickle.load on
+# user-writable files was an RCE risk). Rehydration now flows through
+# _reanalyze_saved_property() → run_report() → inputs.json, which is the
+# same rehydration pattern used by the preset loaders. Per-session speed is
+# provided by the in-memory _REPORT_CACHE above.
 
 
 def _write_saved_summary(property_dir: Path, report: AnalysisReport) -> None:
@@ -645,7 +647,25 @@ def _write_saved_summary(property_dir: Path, report: AnalysisReport) -> None:
         "missing_input_count": len(view.evidence.missing_inputs),
         "timestamp": datetime.now().isoformat(timespec="seconds"),
     }
-    (property_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    # Atomic write: write to a unique tmp file in the same directory, then
+    # rename. A non-atomic write_text can be observed mid-truncation by
+    # list_saved_properties(). A shared tmp path would also race between
+    # concurrent writers (one rename pulls the tmp out from under the other),
+    # so tempfile.mkstemp gives each writer its own tmp file.
+    target = property_dir / "summary.json"
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=".summary.", suffix=".json.tmp", dir=str(property_dir)
+    )
+    try:
+        with os.fdopen(fd, "w") as fh:
+            fh.write(json.dumps(summary, indent=2) + "\n")
+        os.replace(tmp_path, target)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def _comp_trust_value(view: object) -> str:

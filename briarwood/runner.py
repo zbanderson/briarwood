@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from briarwood.engine import AnalysisEngine
 from briarwood.inputs.property_loader import load_property_from_json, load_property_from_listing_text
@@ -28,11 +31,8 @@ from briarwood.modules.town_county_outlook import TownCountyOutlookModule
 from briarwood.schemas import AnalysisReport, PropertyInput
 from briarwood.reports.renderer import render_tear_sheet_html, write_tear_sheet_html
 from briarwood.reports.tear_sheet import build_tear_sheet
-from briarwood.settings import (
-    BullBaseBearSettings,
-    CostValuationSettings,
-    RiskSettings,
-)
+from briarwood.decision_model.scoring_config import BullBaseBearSettings, RiskSettings
+from briarwood.settings import CostValuationSettings
 import json
 
 
@@ -125,12 +125,16 @@ def _prepare_property_input(property_input: PropertyInput) -> None:
     if os.environ.get("BRIARWOOD_ENABLE_GEOCODING", "").strip().lower() not in {"1", "true", "yes"}:
         return
 
-    # Geocode address if lat/lon missing (enables location_intelligence module)
+    # Geocode address if lat/lon missing (enables location_intelligence module).
+    # Geocoding is best-effort: network/import failures must not block analysis,
+    # but we log them so silent degradation of location_intelligence is debuggable.
     try:
         if apply_geocoding(property_input):
             property_input.geocoded = True
-    except Exception:
-        pass  # Geocoding is best-effort; don't block analysis
+    except (OSError, ValueError, RuntimeError) as exc:
+        logger.warning(
+            "Geocoding skipped for %s: %s", property_input.address, exc
+        )
 
 
 def run_report(

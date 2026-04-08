@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
+
+logger = logging.getLogger(__name__)
 
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore
 from briarwood.evidence import (
@@ -941,7 +944,10 @@ def _active_listing_rows(report: AnalysisReport) -> list[ActiveListingViewRow]:
 
     try:
         dataset = JsonActiveListingStore(ACTIVE_LISTINGS_PATH).load()
-    except Exception:
+    except (OSError, ValueError, KeyError) as exc:
+        logger.warning(
+            "Cannot load active listings from %s: %s", ACTIVE_LISTINGS_PATH, exc
+        )
         return []
 
     filtered = []
@@ -1350,7 +1356,8 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
                 f"Town context for {town_context['town']} is well covered and can be used as a secondary pricing benchmark."
             )
 
-    # Scoring layer — gracefully degrade if scoring fails
+    # Scoring layer — gracefully degrade if scoring fails. Log so silent score
+    # blanks in the UI are debuggable (was bare `except Exception: pass`).
     try:
         from briarwood.decision_model.scoring import calculate_final_score
         fs = calculate_final_score(report)
@@ -1359,15 +1366,19 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         view.recommendation_action = fs.action
         view.score_narrative = fs.narrative
         view.category_scores = fs.category_scores
-    except Exception:
-        pass
+    except (AttributeError, KeyError, ValueError, ZeroDivisionError) as exc:
+        logger.warning(
+            "calculate_final_score failed for %s: %s", report.property_id, exc
+        )
 
     # Lens scoring — multi-perspective evaluation
     try:
         from briarwood.decision_model.lens_scoring import calculate_lens_scores
         view.lens_scores = calculate_lens_scores(report, view.category_scores)
-    except Exception:
-        pass
+    except (AttributeError, KeyError, ValueError, ZeroDivisionError) as exc:
+        logger.warning(
+            "calculate_lens_scores failed for %s: %s", report.property_id, exc
+        )
 
     strategy_fit_label = _strategy_fit_label(view.lens_scores)
     view.optionality_label = _optionality_label(strategy_fit_label, None, scenario.bull_case_value)
@@ -1561,22 +1572,6 @@ def _confidence_level(confidence: float) -> str:
     if confidence >= 0.62:
         return "Estimated"
     return "Provisional"
-
-
-def _deterministic_recommendation_from_score(final_score: float) -> str:
-    return recommendation_label_from_score(final_score)
-
-
-def _recommendation_rank(label: str) -> int:
-    return recommendation_rank(label)
-
-
-def _downgrade_recommendation(label: str, steps: int = 1) -> str:
-    return downgrade_recommendation(label, steps)
-
-
-def _cap_recommendation(label: str, cap: str) -> str:
-    return cap_recommendation(label, cap)
 
 
 def _driver_strength(score: float) -> str:
@@ -1903,7 +1898,7 @@ def _strategy_fit_label(lens_scores: Any | None) -> str:
 
 
 def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
-    score_tier = _deterministic_recommendation_from_score(float(view.final_score or 0.0))
+    score_tier = recommendation_label_from_score(float(view.final_score or 0.0))
     final_score = float(view.final_score or 0.0)
     confidence_score = max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100))
     valuation_pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
@@ -2109,11 +2104,11 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
 
     recommendation = score_tier
     if confidence_score < 60:
-        recommendation = _downgrade_recommendation(recommendation, 1)
+        recommendation = downgrade_recommendation(recommendation, 1)
     if critical_missing:
-        recommendation = _cap_recommendation(recommendation, "Neutral")
+        recommendation = cap_recommendation(recommendation, "Neutral")
     if high_risk_flags:
-        recommendation = _cap_recommendation(recommendation, "Neutral")
+        recommendation = cap_recommendation(recommendation, "Neutral")
 
     major_positive = [item for score, item in positive_candidates if score >= 18]
     major_negative = [item for score, item in negative_candidates if score >= 18]
@@ -2145,7 +2140,7 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
     positive_drivers = [item for _, item in positive_candidates[:3]]
     negative_drivers = [item for _, item in negative_candidates[:3]]
 
-    if _recommendation_rank(recommendation) >= _recommendation_rank("Neutral") and positive_drivers:
+    if recommendation_rank(recommendation) >= recommendation_rank("Neutral") and positive_drivers:
         lead_driver = positive_drivers[0]
     elif negative_drivers:
         lead_driver = negative_drivers[0]

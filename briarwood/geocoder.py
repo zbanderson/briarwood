@@ -6,16 +6,22 @@ Results are cached in-memory to avoid repeat requests within a session.
 """
 from __future__ import annotations
 
+import logging
+import threading
 import time
 from functools import lru_cache
 
 from briarwood.schemas import PropertyInput
 
+logger = logging.getLogger(__name__)
 
 _LAST_REQUEST_TIME: float = 0.0
 _MIN_INTERVAL: float = 1.1  # seconds between requests (Nominatim requires ≥1s)
 _USER_AGENT = "BriarwoodRealEstate/1.0 (investment research tool)"
 _TIMEOUT = 5
+# S7 (audit 2026-04-08): guards _LAST_REQUEST_TIME read/sleep/write against
+# concurrent Dash callback threads so we cannot exceed Nominatim's 1 req/sec ToS.
+_RATE_LIMIT_LOCK = threading.Lock()
 
 
 @lru_cache(maxsize=500)
@@ -33,25 +39,30 @@ def geocode_address(address: str) -> tuple[float, float] | None:
     except ImportError:
         return None
 
-    # Rate limiting
-    elapsed = time.time() - _LAST_REQUEST_TIME
-    if elapsed < _MIN_INTERVAL:
-        time.sleep(_MIN_INTERVAL - elapsed)
+    # Rate limiting — serialize the read/sleep/write under a lock so concurrent
+    # threads cannot race past the interval check.
+    with _RATE_LIMIT_LOCK:
+        elapsed = time.time() - _LAST_REQUEST_TIME
+        if elapsed < _MIN_INTERVAL:
+            time.sleep(_MIN_INTERVAL - elapsed)
 
-    try:
-        resp = requests.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={"q": address, "format": "json", "limit": 1},
-            headers={"User-Agent": _USER_AGENT},
-            timeout=_TIMEOUT,
-        )
-        _LAST_REQUEST_TIME = time.time()
-        if resp.status_code == 200:
-            results = resp.json()
-            if results:
-                return float(results[0]["lat"]), float(results[0]["lon"])
-    except Exception:
-        pass
+        try:
+            resp = requests.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": address, "format": "json", "limit": 1},
+                headers={"User-Agent": _USER_AGENT},
+                timeout=_TIMEOUT,
+            )
+            _LAST_REQUEST_TIME = time.time()
+            if resp.status_code == 200:
+                results = resp.json()
+                if results:
+                    return float(results[0]["lat"]), float(results[0]["lon"])
+        except (requests.RequestException, ValueError, KeyError) as exc:
+            # C2 (audit 2026-04-08): was bare `except Exception: pass` — now
+            # narrow to network/parse errors and log so repeated failures are
+            # debuggable (timeouts vs. rate-limited vs. malformed JSON).
+            logger.warning("Geocoding failed for %r: %s", address, exc)
 
     return None
 

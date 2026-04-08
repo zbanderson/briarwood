@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.scarcity.schemas import DemandConsistencyInputs, DemandConsistencyScore
+from briarwood.scoring import clamp_score
 
 
 class DemandConsistencyScorer:
@@ -65,7 +66,7 @@ class DemandConsistencyScorer:
                 score -= 5
 
         confidence = self._confidence(inputs)
-        final_score = self._clamp_score(score)
+        final_score = clamp_score(score)
         label = self._label(final_score, confidence)
 
         if inputs.liquidity_signal is None and inputs.months_of_supply is None and inputs.days_on_market is None:
@@ -173,10 +174,6 @@ class DemandConsistencyScorer:
         return (
             f"{inputs.town}, {inputs.state} has insufficient core data for a reliable demand consistency view."
         )
-
-    def _clamp_score(self, value: float) -> float:
-        return max(0.0, min(value, 100.0))
-
 
 def score_demand_consistency(payload: DemandConsistencyInputs | dict[str, object]) -> DemandConsistencyScore:
     """Convenience wrapper for one-shot demand consistency scoring."""

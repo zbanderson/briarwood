@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-
-def clamp_score(value: float) -> float:
-    return max(0.0, min(value, 100.0))
+from briarwood.scoring import clamp_score
 
 
 def liquidity_view_to_score(view: str | None) -> float | None:

@@ -3,10 +3,10 @@
   "address": "123 Test St",
   "label": "123 Test St",
   "ask_price": 500000.0,
-  "bcv": 893633.93,
+  "bcv": 918187.55,
   "pricing_view": "appears undervalued",
-  "confidence": 0.59,
+  "confidence": 0.54,
   "comp_trust": "Seed / Review Only",
   "missing_input_count": 10,
-  "timestamp": "2026-04-04T06:33:10"
+  "timestamp": "2026-04-08T11:21:00"
 }

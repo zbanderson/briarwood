@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.town_county.schemas import TownCountyInputs, TownCountyScore
+from briarwood.scoring import clamp_score
 
 
 class TownCountyScorer:
@@ -34,7 +35,7 @@ class TownCountyScorer:
         normalized_coastal = self._normalize_coastal_profile(inputs.coastal_profile_signal)
         flood_penalty = self._flood_penalty(inputs.flood_risk)
 
-        town_demand_score = self._clamp_score(
+        town_demand_score = clamp_score(
             (35 * (normalized_town_price or 0.0))
             + (20 * (normalized_town_population or 0.0))
             + (20 * (normalized_school or 0.0))
@@ -52,7 +53,7 @@ class TownCountyScorer:
             or normalized_county_population is not None
             or normalized_macro is not None
         ):
-            county_support_score = self._clamp_score(
+            county_support_score = clamp_score(
                 (45 * (normalized_county_price or 0.0))
                 + (20 * (normalized_county_population or 0.0))
                 + (35 * (normalized_macro or 0.0))
@@ -67,10 +68,10 @@ class TownCountyScorer:
         )
 
         if county_support_score is None:
-            town_county_score = self._clamp_score((0.65 * town_demand_score) + (0.35 * market_alignment_score))
+            town_county_score = clamp_score((0.65 * town_demand_score) + (0.35 * market_alignment_score))
             unsupported_claims.append("County-level structural support could not be confirmed.")
         else:
-            town_county_score = self._clamp_score(
+            town_county_score = clamp_score(
                 (0.50 * town_demand_score)
                 + (0.25 * county_support_score)
                 + (0.25 * market_alignment_score)
@@ -78,7 +79,7 @@ class TownCountyScorer:
         if normalized_macro is None:
             unsupported_claims.append("County macro sentiment is unavailable, so broader economic tone is only partly measured.")
 
-        area_sentiment_score = self._clamp_score(
+        area_sentiment_score = clamp_score(
             (0.70 * town_county_score)
             + (0.20 * ((normalized_macro or 0.50) * 100))
             + (0.10 * ((normalized_coastal or 0.50) * 100))
@@ -231,7 +232,7 @@ class TownCountyScorer:
         if not has_core_property_context:
             score -= 10
 
-        return self._clamp_score(score)
+        return clamp_score(score)
 
     def _location_label(self, score: float, confidence: float) -> str:
         if confidence < 0.40:
@@ -336,10 +337,6 @@ class TownCountyScorer:
             f"{inputs.town}, {inputs.state} lacks enough core evidence for a confident location thesis. "
             f"Unsupported areas include: {'; '.join(unsupported_claims[:2])}."
         )
-
-    def _clamp_score(self, value: float) -> float:
-        return max(0.0, min(value, 100.0))
-
 
 def score_town_county(payload: TownCountyInputs | dict[str, object]) -> TownCountyScore:
     """Convenience wrapper for one-shot town/county thesis scoring."""
