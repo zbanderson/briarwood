@@ -70,6 +70,7 @@ from briarwood.dash_app.theme import (
     tone_badge_style, score_color, verdict_color,
 )
 from briarwood.dash_app.view_models import build_property_analysis_view
+from briarwood.dash_app.view_models import build_market_view_model
 
 
 app = Dash(
@@ -1849,6 +1850,7 @@ def _build_layout():
             dcc.Store(id="compare-confirmed-ids", data=[]),
             dcc.Store(id="compare-go-token", data=0),
             dcc.Store(id="town-pulse-filter", data="all"),
+            dcc.Store(id="selected-market-town", data=None),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
@@ -2479,6 +2481,19 @@ def sync_town_pulse_filter(
     raise dash.exceptions.PreventUpdate
 
 
+@app.callback(
+    Output("selected-market-town", "data"),
+    Input({"type": "market-card-button", "town": ALL}, "n_clicks"),
+    State("selected-market-town", "data"),
+    prevent_initial_call=True,
+)
+def sync_selected_market_town(_clicks: list[int], current_town: str | None) -> str | None:
+    trigger = ctx.triggered_id
+    if isinstance(trigger, dict):
+        return str(trigger.get("town") or current_town)
+    raise dash.exceptions.PreventUpdate
+
+
 # ── Main tab content ───────────────────────────────────────────────────────────
 
 
@@ -2489,6 +2504,7 @@ def sync_town_pulse_filter(
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
     Input("town-pulse-filter", "data"),
+    Input("selected-market-town", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -2496,33 +2512,14 @@ def render_main_tab(
     loaded_ids: list[str] | None,
     focus_id: str | None,
     town_pulse_filter: str | None,
+    selected_market_town: str | None,
 ):
     if tab in {"opportunities", "portfolio"}:
-        market_workspace = html.Div(
-            [
-                _opportunity_discovery_section(
-                    loaded_ids=loaded_ids,
-                    focus_id=focus_id,
-                    town_filter="all",
-                    recommendation_filter="all",
-                    strategy_filter="all",
-                    price_band_filter="all",
-                ),
-                html.Div(
-                    style={
-                        "height": "1px",
-                        "backgroundColor": BORDER,
-                        "margin": "6px 0 4px",
-                    },
-                ),
-                _build_market_view_block(loaded_ids),
-            ],
-            style={"display": "grid", "gap": "18px"},
-        )
+        market_workspace = _build_market_view_block(selected_market_town)
         return _build_page_container(
             eyebrow="Markets",
             title="Markets",
-            subtitle="Start with the best opportunities on the board right now, then use the loaded property set to read the broader market backdrop in the same workspace.",
+            subtitle="Rank towns by investability, valuation, and local catalysts so the next search starts with where the market is actually setting up.",
             content=market_workspace,
             max_width="1140px",
         )
@@ -2626,27 +2623,149 @@ def render_main_tab(
     return _empty_state("Select a tab.")
 
 
-def _build_market_view_block(loaded_ids: list[str] | None) -> html.Div:
-    loaded_ids = loaded_ids or []
-    if not loaded_ids:
-        return _empty_state("Load properties to view the market read.")
-    reports = load_reports(loaded_ids)
-    views = [build_property_analysis_view(r) for r in reports.values()]
+def _build_market_view_block(selected_town: str | None) -> html.Div:
+    market_view = build_market_view_model(selected_town)
+    if not market_view.markets:
+        return _empty_state("Market scanner data is unavailable right now.")
+    selected_market = market_view.selected_market
+    selected_town = market_view.selected_town
+
+    cards = [
+        html.Button(
+            [
+                html.Div(
+                    [
+                        html.Div(card.town, style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                        html.Div(
+                            f"{card.score:.1f}/10",
+                            style={
+                                "fontSize": "24px",
+                                "fontWeight": "800",
+                                "color": ACCENT_BLUE,
+                                "letterSpacing": "-0.03em",
+                            },
+                        ),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "alignItems": "start", "gap": "12px"},
+                ),
+                html.Div(card.market_condition, style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": TEXT_MUTED}),
+                html.Div(card.short_narrative, style={"fontSize": "14px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(label, style=LABEL_STYLE),
+                                html.Div(value, style={"fontSize": "15px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                            ],
+                            style={**CARD_STYLE, "padding": "10px 12px", "boxShadow": "none"},
+                        )
+                        for label, value in card.key_metrics.items()
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(2, minmax(0, 1fr))", "gap": "8px"},
+                ),
+                html.Div(
+                    "Open Town Tear Sheet",
+                    style={"fontSize": "12px", "fontWeight": "700", "color": ACCENT_BLUE},
+                ),
+            ],
+            id={"type": "market-card-button", "town": card.town},
+            n_clicks=0,
+            style={
+                **CARD_STYLE_ELEVATED,
+                "padding": "18px 18px 16px",
+                "display": "grid",
+                "gap": "12px",
+                "textAlign": "left",
+                "width": "100%",
+                "border": f"1px solid {ACCENT_BLUE}" if card.town == selected_town else f"1px solid {BORDER}",
+                "background": "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(238,246,251,0.9) 100%)" if card.town == selected_town else BG_SURFACE,
+                "cursor": "pointer",
+            },
+        )
+        for card in market_view.markets
+    ]
+
+    detail = _render_market_detail_placeholder(selected_market)
     return html.Div(
         [
             html.Div(
                 [
-                    html.Div("Market View", style={"fontSize": "18px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                    html.Div("Top Value Markets", style={"fontSize": "28px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
                     html.Div(
-                        "Use the loaded property set as a lightweight market workspace until Briarwood grows into dedicated town and market pages.",
+                        "This list is intentionally judgmental: each card combines market structure, relative valuation, catalysts, and investability into a single research-first read on where to look next.",
                         style=_PAGE_SUBTITLE_STYLE,
                     ),
                 ],
                 style={"display": "grid", "gap": "4px"},
             ),
-            render_portfolio_dashboard(views),
+            html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "14px"}),
+            detail,
         ],
         style={"display": "grid", "gap": "14px"},
+    )
+
+
+def _render_market_detail_placeholder(selected_market) -> html.Div:
+    if selected_market is None:
+        return _empty_state("Select a market to open the Town Tear Sheet placeholder.")
+
+    metrics = selected_market.metrics
+    pillar_rows = [
+        ("Market Structure", f"{selected_market.structure_score:.1f}/10"),
+        ("Valuation", f"{selected_market.valuation_score:.1f}/10"),
+        ("Catalysts", f"{selected_market.catalyst_score:.1f}/10"),
+        ("Investability", f"{selected_market.investability_score:.1f}/10"),
+    ]
+    metric_rows = [
+        ("Avg DOM", f"{metrics['avg_dom']:.1f} days" if metrics.get("avg_dom") is not None else "Unavailable"),
+        ("Avg $/SF", f"${metrics['avg_price_per_sqft']:,.0f}" if metrics.get("avg_price_per_sqft") is not None else "Unavailable"),
+        ("Median Price", f"${metrics['median_price']:,.0f}" if metrics.get("median_price") is not None else "Unavailable"),
+        ("Sold / Month", f"{metrics['sold_per_month']:.2f}" if metrics.get("sold_per_month") is not None else "Unavailable"),
+        ("Sell-Through", f"{metrics['sell_through_rate']:.2f}x" if metrics.get("sell_through_rate") is not None else "Unavailable"),
+        ("Price-to-Rent", f"{metrics['price_to_rent_ratio']:.1f}x" if metrics.get("price_to_rent_ratio") is not None else "Unavailable"),
+    ]
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Town Tear Sheet", style=SECTION_HEADER_STYLE),
+                    html.Div(selected_market.town, style={"fontSize": "24px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
+                    html.Div(
+                        "Placeholder v1: this panel establishes the destination state for a fuller town tear sheet while already surfacing the ranking logic behind the selected market.",
+                        style=_PAGE_SUBTITLE_STYLE,
+                    ),
+                ],
+                style={"display": "grid", "gap": "4px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(label, style=LABEL_STYLE),
+                            html.Div(value, style={"fontSize": "18px", "fontWeight": "800", "color": TEXT_PRIMARY}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px"}
+                    )
+                    for label, value in pillar_rows
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(160px, 1fr))", "gap": "10px"},
+            ),
+            html.Div(selected_market.narrative, style={"fontSize": "14px", "lineHeight": "1.7", "color": TEXT_SECONDARY}),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(label, style=LABEL_STYLE),
+                            html.Div(value, style={"fontSize": "15px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px"}
+                    )
+                    for label, value in metric_rows
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(160px, 1fr))", "gap": "10px"},
+            ),
+        ],
+        style={**CARD_STYLE_ELEVATED, "padding": "18px 20px", "display": "grid", "gap": "14px"},
     )
 
 

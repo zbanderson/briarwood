@@ -8,11 +8,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from briarwood.inputs.adapters import ListingTextAdapter, PublicRecordAdapter, normalized_listing_to_canonical
+from briarwood.data_quality.arbitration import apply_evidence_profile
 from briarwood.inputs.market_location_adapter import MarketLocationAdapter
 from briarwood.inputs.property_support_adapter import PropertySupportAdapter
 from briarwood.listing_intake.schemas import ListingIntakeResult, NormalizedPropertyData
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.schemas import (
+    CanonicalFieldProvenance,
     CanonicalPropertyData,
     EvidenceMode,
     InputCoverageStatus,
@@ -22,7 +24,9 @@ from briarwood.schemas import (
     PropertyInput,
     SourceCoverageItem,
     SourceMetadata,
+    SourceTier,
     UserAssumptions,
+    VerifiedStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -246,6 +250,7 @@ def load_property_from_listing_text(
 def _enrich_with_market_context(canonical: CanonicalPropertyData) -> CanonicalPropertyData:
     canonical = MarketLocationAdapter().enrich(canonical)
     canonical = PropertySupportAdapter().enrich(canonical)
+    canonical = apply_evidence_profile(canonical)
     return canonical
 
 
@@ -359,6 +364,9 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         source_coverage=source_coverage,
         provenance=list(metadata_payload.get("provenance", [])),
         freshest_as_of=_optional_str(metadata_payload.get("freshest_as_of")),
+        field_provenance=_coerce_field_provenance(metadata_payload.get("field_provenance")),
+        mapper_version=_optional_str(metadata_payload.get("mapper_version")) or "legacy",
+        property_evidence_profile=metadata_payload.get("property_evidence_profile"),
     )
     return CanonicalPropertyData(
         property_id=str(data.get("property_id") or "property-json"),
@@ -450,3 +458,26 @@ def _coerce_document_list(value: object) -> list[dict[str, object]]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, dict)]
+
+
+def _coerce_field_provenance(value: object) -> dict[str, CanonicalFieldProvenance]:
+    if not isinstance(value, dict):
+        return {}
+    provenance: dict[str, CanonicalFieldProvenance] = {}
+    for key, raw in value.items():
+        if not isinstance(key, str) or not isinstance(raw, dict):
+            continue
+        try:
+            provenance[key] = CanonicalFieldProvenance(
+                value=raw.get("value"),
+                source=str(raw.get("source") or "unknown"),
+                source_tier=SourceTier(str(raw.get("source_tier") or SourceTier.TIER_3.value)),
+                verified_status=VerifiedStatus(str(raw.get("verified_status") or VerifiedStatus.UNVERIFIED.value)),
+                last_updated=_optional_str(raw.get("last_updated")),
+                confidence=float(raw.get("confidence") or 0.0),
+                mapper_version=_optional_str(raw.get("mapper_version")) or "legacy",
+                notes=[str(item) for item in list(raw.get("notes", []) or [])],
+            )
+        except (TypeError, ValueError):
+            continue
+    return provenance

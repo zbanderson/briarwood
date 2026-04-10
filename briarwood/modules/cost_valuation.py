@@ -165,7 +165,7 @@ class CostValuationModule:
         # coastal_profile_signal available via market_signals
         is_coastal = False
         if property_input.market_signals is not None:
-            is_coastal = (property_input.market_signals.coastal_profile_signal or 0) > 0
+            is_coastal = (getattr(property_input.market_signals, "coastal_profile_signal", None) or 0) > 0
         is_seasonal = property_input.seasonal_monthly_rent is not None
         if is_coastal and is_seasonal:
             return self.settings.default_coastal_seasonal_vacancy_rate

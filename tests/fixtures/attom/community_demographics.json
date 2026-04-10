@@ -1,0 +1,11 @@
+{
+  "community": {
+    "housing": {
+      "medrent": 3085,
+      "occupied": 82.4,
+      "vacant": 17.6,
+      "vacantforsale": 2.1,
+      "vacantforrent": 3.4
+    }
+  }
+}

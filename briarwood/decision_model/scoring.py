@@ -435,6 +435,14 @@ def _critical_input_penalty(m: dict[str, Any]) -> float:
         penalty += 0.10
     elif int(m.get("comp_count") or 0) < 4 and float(m.get("comp_confidence") or 0.0) < 0.60:
         penalty += 0.05
+    # Group 2a: graduated comp_confidence_score penalty
+    comp_conf_score = m.get("comp_confidence_score")
+    if comp_conf_score is not None:
+        s = DEFAULT_DECISION_MODEL_SETTINGS
+        if comp_conf_score < s.comp_confidence_score_low_threshold:
+            penalty += s.comp_confidence_score_low_penalty
+        elif comp_conf_score < s.comp_confidence_score_medium_threshold:
+            penalty += s.comp_confidence_score_medium_penalty
     if not m.get("condition_profile") and m.get("repair_capex_budget") is None:
         penalty += 0.08
     if bool(m.get("town_low_confidence_flag")) and int(m.get("comp_count") or 0) < 3:
@@ -568,6 +576,21 @@ def _aggregate_category(
         s.contribution = round(s.score * s.weight, 4)
 
     cat_score = _clamp(sum(s.contribution for s in active))
+
+    # Group 2b: dampen toward NEUTRAL_SCORE when heavy weight redistribution
+    # reduces conviction (few sub-factors carry disproportionate influence).
+    original_total = sum(
+        SUB_FACTOR_WEIGHTS[category_key].get(name, 0.0)
+        for name in unscorable_names
+    )
+    total_category_weight = sum(SUB_FACTOR_WEIGHTS[category_key].values())
+    redistribution_fraction = original_total / total_category_weight if total_category_weight else 0.0
+    s = DEFAULT_DECISION_MODEL_SETTINGS
+    if redistribution_fraction >= s.redistribution_dampen_heavy_threshold:
+        cat_score = cat_score + (NEUTRAL_SCORE - cat_score) * s.redistribution_dampen_heavy_factor
+    elif redistribution_fraction >= s.redistribution_dampen_moderate_threshold:
+        cat_score = cat_score + (NEUTRAL_SCORE - cat_score) * s.redistribution_dampen_moderate_factor
+
     cw = CATEGORY_WEIGHTS[category_key]
     return CategoryScore(
         category_name=category_name, score=round(cat_score, 2), weight=cw,
@@ -608,7 +631,7 @@ def _score_price_vs_comps(m: dict) -> tuple[float, str, float | None]:
 
     pct = m.get("mispricing_pct")
     if pct is None:
-        return NEUTRAL_SCORE, "No comp-based valuation available", None
+        return None, "No comp-based valuation available", None
     delta = pct * 100  # convert to percentage points
     if delta >= 18:
         return 5.0, f"Priced {delta:.1f}% below model value — significant discount", delta
@@ -631,7 +654,7 @@ def _score_ppsf_positioning(m: dict) -> tuple[float, str, float | None]:
     town_median_ppsf = m.get("town_baseline_median_ppsf")
     town_confidence = float(m.get("town_context_confidence") or 0.0)
     if not ask or not sqft or sqft == 0:
-        return NEUTRAL_SCORE, "Sqft unavailable — cannot calculate $/SF", None
+        return None, "Sqft unavailable — cannot calculate $/SF", None
     ask_ppsf = ask / sqft
     model_benchmark = (bcv / sqft) if bcv and sqft else None
     model_signal = _ppsf_benchmark_signal(ask_ppsf, model_benchmark, "model")
@@ -658,7 +681,7 @@ def _score_historical_pricing(m: dict) -> tuple[float, str, float | None]:
     yr1 = m.get("zhvi_1yr_change")
     yr3 = m.get("inputs_trailing_3yr_cagr")
     if yr1 is None and yr3 is None:
-        return NEUTRAL_SCORE, "No ZHVI history available", None
+        return None, "No ZHVI history available", None
     # Use 3yr CAGR as primary, 1yr as secondary
     trend = yr3 if yr3 is not None else yr1
     trend_pct = (trend or 0) * 100
@@ -678,7 +701,7 @@ def _score_scarcity_premium(m: dict) -> tuple[float, str, float | None]:
     """Does location scarcity justify pricing?"""
     scarcity = m.get("scarcity_support_score") or m.get("location_scarcity_score")
     if scarcity is None:
-        return NEUTRAL_SCORE, "No scarcity data available", None
+        return None, "No scarcity data available", None
     if scarcity >= 75:
         return 5.0, f"Scarcity score {scarcity:.0f} — highly supply-constrained location", scarcity
     if scarcity >= 60:
@@ -760,7 +783,7 @@ def _score_downside_protection(m: dict) -> tuple[float, str, float | None]:
     bcv = m.get("bcv")
     ask = m.get("purchase_price") or m.get("ask_price")
     if bcv is None or ask is None or ask == 0:
-        return NEUTRAL_SCORE, "Cannot calculate downside buffer", None
+        return None, "Cannot calculate downside buffer", None
     buffer_pct = ((bcv - ask) / ask) * 100
     if buffer_pct >= 15:
         return 5.0, f"Fair value {buffer_pct:+.1f}% above ask — strong equity cushion", buffer_pct
@@ -781,7 +804,7 @@ def _score_replacement_cost(m: dict) -> tuple[float, str, float | None]:
     sqft = m.get("sqft")
     lot_size = m.get("lot_size")
     if not ask or not sqft or sqft == 0:
-        return NEUTRAL_SCORE, "Cannot estimate replacement cost", None
+        return None, "Cannot estimate replacement cost", None
     ask_ppsf = ask / sqft
     replacement_ppsf = DEFAULT_DECISION_MODEL_SETTINGS.replacement_cost_per_sqft
     ratio = ask_ppsf / replacement_ppsf
@@ -912,7 +935,7 @@ def _score_renovation_upside(m: dict) -> tuple[float, str, float | None]:
         return 3.0, "Moderate renovation potential based on condition", condition or capex
     if condition in ("updated", "renovated") or capex == "light":
         return 2.0, "Already updated — limited renovation upside", condition or capex
-    return NEUTRAL_SCORE, "Condition unknown — cannot assess renovation potential", None
+    return None, "Condition unknown — cannot assess renovation potential", None
 
 
 def _score_strategy_flexibility(m: dict) -> tuple[float, str, float | None]:
@@ -1032,7 +1055,7 @@ def _score_dom_signal(m: dict) -> tuple[float, str, float | None]:
         if town_liquidity_index is not None:
             score = _lerp_score(float(town_liquidity_index), 75, 120, 1.8, 4.6)
             return score, f"DOM unavailable — using town liquidity index {float(town_liquidity_index):.0f}", town_liquidity_index
-        return NEUTRAL_SCORE, "Days on market unavailable", None
+        return None, "Days on market unavailable", None
     if dom <= 7:
         base_score = 5.0
         evidence = f"{dom} DOM — hot demand, absorbing immediately"
@@ -1104,7 +1127,7 @@ def _score_buyer_seller_balance(m: dict) -> tuple[float, str, float | None]:
         count += 1
 
     if count == 0:
-        return NEUTRAL_SCORE, "Insufficient data for market balance assessment", None
+        return None, "Insufficient data for market balance assessment", None
     avg = score_sum / count
     detail = ", ".join(signals)
     tone = "seller's market" if avg >= 3.5 else "balanced" if avg >= 2.5 else "buyer's market"
@@ -1125,7 +1148,7 @@ def _score_location_momentum(m: dict) -> tuple[float, str, float | None]:
     yr1 = m.get("zhvi_1yr_change")
 
     if town is None:
-        return NEUTRAL_SCORE, "No town score available", None
+        return None, "No town score available", None
 
     # Weight town score as primary
     base = _lerp_score(town, 30, 80, 1.5, 4.5)
@@ -1198,7 +1221,7 @@ def _score_liquidity_risk(m: dict) -> tuple[float, str, float | None]:
         score = _town_liquidity_score(float(town_liquidity_index))
         return score, f"Property liquidity unavailable — using town liquidity context ({float(town_liquidity_index):.0f}/100)", town_liquidity_index
 
-    return NEUTRAL_SCORE, "No liquidity data available", None
+    return None, "No liquidity data available", None
 
 
 def _score_capex_risk(m: dict) -> tuple[float, str, str | None]:

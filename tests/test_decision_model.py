@@ -92,9 +92,9 @@ class SubFactorScorerTests(unittest.TestCase):
         score, _, _ = _score_price_vs_comps({"net_opportunity_delta_pct": -0.30})
         self.assertAlmostEqual(score, 1.0, places=2)
 
-    def test_price_vs_comps_neutral_when_no_data(self) -> None:
+    def test_price_vs_comps_none_when_no_data(self) -> None:
         score, _, raw = _score_price_vs_comps({})
-        self.assertAlmostEqual(score, 3.0, places=2)  # NEUTRAL_SCORE
+        self.assertIsNone(score)  # Group 2c: no-data → None for weight redistribution
         self.assertIsNone(raw)
 
     def test_price_vs_comps_falls_back_to_mispricing_pct(self) -> None:
@@ -123,13 +123,13 @@ class SubFactorScorerTests(unittest.TestCase):
         self.assertAlmostEqual(high, 5.0, places=2)
         self.assertAlmostEqual(low, 1.0, places=2)
 
-    def test_scarcity_premium_neutral_when_missing(self) -> None:
+    def test_scarcity_premium_none_when_missing(self) -> None:
         score, _, _ = _score_scarcity_premium({})
-        self.assertAlmostEqual(score, 3.0, places=2)
+        self.assertIsNone(score)  # Group 2c: no-data → None
 
-    def test_ppsf_positioning_neutral_without_sqft(self) -> None:
+    def test_ppsf_positioning_none_without_sqft(self) -> None:
         score, _, _ = _score_ppsf_positioning({"purchase_price": 500_000, "bcv": 500_000})
-        self.assertAlmostEqual(score, 3.0, places=2)
+        self.assertIsNone(score)  # Group 2c: no sqft → None
 
     def test_ppsf_positioning_prefers_ask_below_model(self) -> None:
         # ask ppsf $400, bcv ppsf $500 → model benchmark ~20% below → high score

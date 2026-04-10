@@ -21,6 +21,20 @@ class InputCoverageStatus(str, Enum):
     MISSING = "missing"
 
 
+class SourceTier(str, Enum):
+    TIER_1 = "tier_1"
+    TIER_2 = "tier_2"
+    TIER_3 = "tier_3"
+
+
+class VerifiedStatus(str, Enum):
+    VERIFIED = "verified"
+    USER_CONFIRMED = "user_confirmed"
+    UNVERIFIED = "unverified"
+    ESTIMATED = "estimated"
+    CONFLICTED = "conflicted"
+
+
 class OccupancyStrategy(str, Enum):
     FULL_RENTAL = "full_rental"
     OWNER_OCCUPY_PARTIAL = "owner_occupy_partial"
@@ -34,6 +48,18 @@ class SourceCoverageItem:
     source_name: str | None = None
     freshness: str | None = None
     note: str | None = None
+
+
+@dataclass(slots=True)
+class CanonicalFieldProvenance:
+    value: Any
+    source: str
+    source_tier: SourceTier
+    verified_status: VerifiedStatus
+    last_updated: str | None = None
+    confidence: float = 0.0
+    mapper_version: str = "legacy"
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -143,6 +169,9 @@ class SourceMetadata:
     source_coverage: dict[str, SourceCoverageItem] = field(default_factory=dict)
     provenance: list[str] = field(default_factory=list)
     freshest_as_of: str | None = None
+    field_provenance: dict[str, CanonicalFieldProvenance] = field(default_factory=dict)
+    mapper_version: str = "legacy"
+    property_evidence_profile: Any | None = None
 
 
 @dataclass(slots=True)
@@ -333,6 +362,38 @@ class PropertyInput:
             elif category in self.source_metadata.source_coverage:
                 return self.source_metadata.source_coverage[category]
         return SourceCoverageItem(category=category, status=InputCoverageStatus.MISSING)
+
+    def provenance_for(self, field_name: str) -> CanonicalFieldProvenance | None:
+        if self.source_metadata is None:
+            return None
+        if isinstance(self.source_metadata, dict):
+            raw_map = self.source_metadata.get("field_provenance", {})
+            raw_item = raw_map.get(field_name) if isinstance(raw_map, dict) else None
+            if isinstance(raw_item, CanonicalFieldProvenance):
+                return raw_item
+            if isinstance(raw_item, dict):
+                try:
+                    return CanonicalFieldProvenance(
+                        value=raw_item.get("value"),
+                        source=str(raw_item.get("source") or "unknown"),
+                        source_tier=SourceTier(str(raw_item.get("source_tier") or SourceTier.TIER_3.value)),
+                        verified_status=VerifiedStatus(str(raw_item.get("verified_status") or VerifiedStatus.UNVERIFIED.value)),
+                        last_updated=raw_item.get("last_updated"),
+                        confidence=float(raw_item.get("confidence") or 0.0),
+                        mapper_version=str(raw_item.get("mapper_version") or "legacy"),
+                        notes=list(raw_item.get("notes", []) or []),
+                    )
+                except (TypeError, ValueError):
+                    return None
+            return None
+        return self.source_metadata.field_provenance.get(field_name)
+
+    def evidence_profile(self) -> Any | None:
+        if self.source_metadata is None:
+            return None
+        if isinstance(self.source_metadata, dict):
+            return self.source_metadata.get("property_evidence_profile")
+        return self.source_metadata.property_evidence_profile
 
 
 @dataclass(slots=True)

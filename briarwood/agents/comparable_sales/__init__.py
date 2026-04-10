@@ -1,8 +1,13 @@
 from briarwood.agents.comparable_sales.agent import ComparableSalesAgent, FileBackedComparableSalesProvider
 from briarwood.agents.comparable_sales.ingest_public_records import (
+    apply_modiv_enrichment,
     load_public_record_rows,
     merge_public_record_verification,
+    merge_sr1a_verification,
 )
+from briarwood.agents.comparable_sales.sr1a_parser import parse_sr1a_file, SR1AParseResult
+from briarwood.agents.comparable_sales.modiv_enricher import MODIVEnricher
+from briarwood.agents.comparable_sales.ingest_public_bulk import run_bulk_ingest, BulkIngestResult
 from briarwood.agents.comparable_sales.import_csv import (
     append_active_rows,
     append_rows,
@@ -36,4 +41,11 @@ __all__ = [
     "JsonActiveListingStore",
     "JsonComparableSalesStore",
     "merge_public_record_verification",
+    "merge_sr1a_verification",
+    "apply_modiv_enrichment",
+    "parse_sr1a_file",
+    "SR1AParseResult",
+    "MODIVEnricher",
+    "run_bulk_ingest",
+    "BulkIngestResult",
 ]

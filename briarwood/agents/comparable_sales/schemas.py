@@ -62,6 +62,11 @@ class ComparableSale(BaseModel):
     garage_spaces: int | None = Field(default=None, ge=0)
     location_tags: list[str] = Field(default_factory=list)
     micro_location_notes: list[str] = Field(default_factory=list)
+    canonical_address: str | None = None
+    quality_status: str | None = Field(default=None, pattern="^(accepted|accepted_with_warnings|needs_review|rejected)$")
+    quality_issues: list[str] = Field(default_factory=list)
+    quality_score: float | None = Field(default=None, ge=0, le=1)
+    source_provenance: dict[str, object] = Field(default_factory=dict)
 
 
 class ComparableSalesRequest(BaseModel):
@@ -80,6 +85,8 @@ class ComparableSalesRequest(BaseModel):
     year_built: int | None = Field(default=None, ge=1800, le=2200)
     stories: float | None = Field(default=None, ge=0)
     garage_spaces: int | None = Field(default=None, ge=0)
+    latitude: float | None = None
+    longitude: float | None = None
     listing_description: str | None = None
     market_value_today: float | None = Field(default=None, gt=0)
     market_history_points: list[dict[str, object]] = Field(default_factory=list)
@@ -190,3 +197,8 @@ class ActiveListingRecord(BaseModel):
     latitude: float | None = Field(default=None, validation_alias=AliasChoices("latitude", "lat"))
     longitude: float | None = Field(default=None, validation_alias=AliasChoices("longitude", "lon", "lng"))
     notes: str | None = None
+    canonical_address: str | None = None
+    quality_status: str | None = Field(default=None, pattern="^(accepted|accepted_with_warnings|needs_review|rejected)$")
+    quality_issues: list[str] = Field(default_factory=list)
+    quality_score: float | None = Field(default=None, ge=0, le=1)
+    source_provenance: dict[str, object] = Field(default_factory=dict)

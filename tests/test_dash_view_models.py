@@ -3,7 +3,8 @@ from __future__ import annotations
 import unittest
 
 from briarwood.modules.bull_base_bear import BullBaseBearModule
-from briarwood.schemas import AnalysisReport, ModuleResult
+from briarwood.runner import build_engine
+from briarwood.schemas import AnalysisReport, ModuleResult, PropertyInput
 from briarwood.dash_app.components import (
     render_compare_decision_mode,
     render_tear_sheet_body,
@@ -12,6 +13,7 @@ from briarwood.dash_app.compare import build_compare_summary
 from briarwood.dash_app.data import DEFAULT_PRESET_IDS, load_reports
 from briarwood.dash_app.scenarios import render_scenarios_section
 from briarwood.dash_app.view_models import (
+    build_market_view_model,
     build_evidence_rows,
     build_property_analysis_view,
     build_section_evidence_rows,
@@ -99,6 +101,65 @@ class DashViewModelTests(unittest.TestCase):
         total_abs = sum(abs(value) for value in view.report_card.factor_contributions.values())
         self.assertGreaterEqual(total_abs, 98)
         self.assertLessEqual(total_abs, 102)
+        self.assertTrue(view.markets)
+        self.assertIsNotNone(view.market_view)
+        assert view.market_view is not None
+        self.assertEqual(view.market_view.selected_town, "Belmar")
+        self.assertEqual(view.markets[0].score, view.market_view.markets[0].score)
+
+    def test_market_view_model_exposes_ranked_market_cards(self) -> None:
+        market_view = build_market_view_model("Belmar")
+        self.assertTrue(market_view.markets)
+        self.assertEqual(market_view.selected_town, "Belmar")
+        self.assertIsNotNone(market_view.selected_market)
+        assert market_view.selected_market is not None
+        self.assertEqual(market_view.selected_market.town, "Belmar")
+        self.assertIn("DOM", market_view.markets[0].key_metrics)
+        self.assertIn("$/SF", market_view.markets[0].key_metrics)
+        scores = [item.score for item in market_view.markets]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    def test_property_analysis_view_exposes_hybrid_value_summary(self) -> None:
+        property_input = PropertyInput(
+            property_id="hybrid-view",
+            address="304 14th Ave",
+            town="Belmar",
+            state="NJ",
+            county="Monmouth",
+            beds=5,
+            baths=3.0,
+            sqft=2250,
+            lot_size=0.14,
+            year_built=1948,
+            property_type="Duplex",
+            has_back_house=True,
+            adu_type="detached_cottage",
+            purchase_price=1_095_000,
+            taxes=11_800,
+            insurance=2_400,
+            estimated_monthly_rent=5_750,
+            back_house_monthly_rent=1_950,
+            unit_rents=[3_800, 1_950],
+            down_payment_percent=0.25,
+            interest_rate=0.0675,
+            loan_term_years=30,
+            days_on_market=29,
+            listing_description=(
+                "Front house plus detached rear cottage two blocks from the beach. "
+                "Flexible multigenerational or guest house setup with strong seasonal demand."
+            ),
+            vacancy_rate=0.06,
+        )
+        report = build_engine().run_all(property_input)
+
+        view = build_property_analysis_view(report)
+
+        self.assertIsNotNone(view.hybrid_value)
+        assert view.hybrid_value is not None
+        self.assertTrue(view.hybrid_value.is_hybrid)
+        self.assertIn("front-house", view.hybrid_value.narrative.lower())
+        self.assertNotEqual(view.hybrid_value.total_hybrid_value, "Unavailable")
+        self.assertIn("hybrid_indicated_value", view.compare_metrics)
 
     def test_compare_summary_explains_differences(self) -> None:
         views = [build_property_analysis_view(report) for report in self.reports.values()]

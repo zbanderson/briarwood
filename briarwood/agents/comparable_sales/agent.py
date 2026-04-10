@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from math import log
 from pathlib import Path
 from typing import Protocol
 import json
@@ -12,6 +13,7 @@ from briarwood.agents.comparable_sales.schemas import (
     ComparableSalesRequest,
 )
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
+from briarwood.utils import haversine_miles
 
 
 class ComparableSalesProvider(Protocol):
@@ -76,6 +78,15 @@ class ComparableSalesAgent:
                     else "No file-backed comparable sales were available for this town."
                 ],
             )
+
+        # Deduplicate: keep latest sale per normalized address
+        seen_addresses: dict[str, ComparableSale] = {}
+        for sale in raw_sales:
+            key = sale.address.strip().lower()
+            existing = seen_addresses.get(key)
+            if existing is None or sale.sale_date > existing.sale_date:
+                seen_addresses[key] = sale
+        raw_sales = list(seen_addresses.values())
 
         history_points = self._parse_history_points(request.market_history_points)
         adjusted: list[AdjustedComparable] = []
@@ -298,6 +309,17 @@ class ComparableSalesAgent:
             if price_ratio < 0.35 or price_ratio > 2.50:
                 return False, "price_range_too_far"
 
+        # Distance gate: reject comps beyond 5 miles when coordinates are available
+        if (
+            request.latitude is not None
+            and request.longitude is not None
+            and sale.latitude is not None
+            and sale.longitude is not None
+        ):
+            dist = haversine_miles(request.latitude, request.longitude, sale.latitude, sale.longitude)
+            if dist > 5.0:
+                return False, "distance_too_far"
+
         return True, None
 
     def _similarity_profile(
@@ -463,8 +485,13 @@ class ComparableSalesAgent:
         notes: list[str] = []
 
         if request.sqft and sale.sqft:
-            sqft_delta = (request.sqft - sale.sqft) / max(sale.sqft, 1)
-            sqft_pct = max(-0.08, min(sqft_delta * 0.45, 0.08))
+            # Log-based diminishing returns: larger size gaps produce
+            # progressively smaller per-sqft adjustments.  Calibrated so
+            # a 20% size difference yields roughly the same adjustment as
+            # the prior linear formula (~9%), while a 35% gap (the gate
+            # limit) tops out below the cap rather than scaling linearly.
+            ratio = request.sqft / max(sale.sqft, 1)
+            sqft_pct = max(-0.15, min(log(ratio) * 0.50, 0.15))
             pct += sqft_pct
             if abs(sqft_pct) >= 0.01:
                 notes.append(f"Living-area adjustment: {sqft_pct:+.1%}.")
@@ -515,7 +542,7 @@ class ComparableSalesAgent:
 
         if not notes:
             notes.append("Only minor subject adjustments were required.")
-        return max(-0.12, min(pct, 0.12)), notes[:4]
+        return max(-0.20, min(pct, 0.20)), notes[:4]
 
     def _time_adjust_price(
         self,
@@ -696,7 +723,12 @@ class ComparableSalesAgent:
         }
         subject_rank = rank.get(subject_condition, 2)
         comp_rank = rank.get(comp_condition, 2)
-        return max(-0.05, min((subject_rank - comp_rank) * 0.015, 0.05))
+        # Per-rank delta raised from 1.5% to 4% to reflect measured renovation
+        # premiums of 25-40% across 4 condition ranks in NJ coastal markets.
+        # Cap raised from ±5% to ±15%.
+        # TODO: feed measured renovation premium from estimate_comp_renovation_premium()
+        # back into this adjustment rate rather than using a static multiplier.
+        return max(-0.15, min((subject_rank - comp_rank) * 0.04, 0.15))
 
     def _capex_lane_for_condition(self, condition: str | None) -> str | None:
         if condition == "renovated":

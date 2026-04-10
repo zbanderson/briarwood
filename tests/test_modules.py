@@ -4,6 +4,7 @@ from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
+from briarwood.modules.hybrid_value import HybridValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
 from briarwood.modules.liquidity_signal import LiquiditySignalModule
@@ -58,6 +59,7 @@ class ModuleTests(unittest.TestCase):
             PropertySnapshotModule(),
             MarketValueHistoryModule(),
             ComparableSalesModule(),
+            HybridValueModule(),
             CurrentValueModule(),
             CostValuationModule(),
             IncomeSupportModule(),
@@ -173,6 +175,57 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("blended_value_midpoint", result.metrics)
         self.assertIn("comp_confidence_score", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
+
+    def test_hybrid_value_module_decomposes_front_house_and_rear_income(self) -> None:
+        property_input = PropertyInput(
+            property_id="hybrid-sample",
+            address="304 14th Ave",
+            town="Belmar",
+            state="NJ",
+            county="Monmouth",
+            beds=5,
+            baths=3.0,
+            sqft=2250,
+            lot_size=0.14,
+            year_built=1948,
+            property_type="Duplex",
+            has_back_house=True,
+            adu_type="detached_cottage",
+            purchase_price=1_095_000,
+            taxes=11_800,
+            insurance=2_400,
+            estimated_monthly_rent=5_750,
+            back_house_monthly_rent=1_950,
+            unit_rents=[3_800, 1_950],
+            down_payment_percent=0.25,
+            interest_rate=0.0675,
+            loan_term_years=30,
+            days_on_market=29,
+            listing_description=(
+                "Front house plus detached rear cottage two blocks from the beach. "
+                "Flexible multigenerational or guest house setup with strong seasonal demand."
+            ),
+            vacancy_rate=0.06,
+        )
+
+        hybrid_result = HybridValueModule().run(property_input)
+        hybrid_payload = hybrid_result.payload
+
+        self.assertIsNotNone(hybrid_payload)
+        self.assertTrue(hybrid_payload.is_hybrid)
+        self.assertIsNotNone(hybrid_payload.primary_house_value)
+        self.assertIsNotNone(hybrid_payload.rear_income_value)
+        self.assertGreater(hybrid_payload.base_case_hybrid_value, hybrid_payload.primary_house_value)
+        self.assertGreaterEqual(len(hybrid_payload.primary_house_comp_set), 1)
+        self.assertIn(hybrid_payload.rear_income_method_used, {"noi_cap_rate", "gross_rent_multiplier"})
+        self.assertIn("hybrid valuation framework", hybrid_payload.narrative.lower())
+
+        current_value_result = CurrentValueModule().run(property_input)
+        self.assertEqual(current_value_result.metrics["valuation_method"], "hybrid")
+        self.assertEqual(
+            current_value_result.metrics["briarwood_current_value"],
+            hybrid_result.metrics["base_case_hybrid_value"],
+        )
 
     def test_comparable_sales_module_returns_payload(self) -> None:
         result = ComparableSalesModule().run(sample_property())

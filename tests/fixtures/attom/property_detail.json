@@ -1,0 +1,16 @@
+{
+  "property": [
+    {
+      "address": {"oneLine": "1223 Briarwood Rd, Belmar, NJ 07719"},
+      "building": {
+        "rooms": {"beds": 4, "bathstotal": 2.5},
+        "size": {"universalsize": 2180},
+        "summary": {"levels": 2},
+        "parking": {"prkgspaces": 1}
+      },
+      "summary": {"yearbuilt": 1950, "proptype": "Single Family"},
+      "location": {"latitude": 40.177, "longitude": -74.032},
+      "lot": {"lotsize1": 0.17}
+    }
+  ]
+}

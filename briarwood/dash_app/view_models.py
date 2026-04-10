@@ -19,7 +19,9 @@ from briarwood.recommendations import (
     recommendation_label_from_score,
     recommendation_rank,
 )
-from briarwood.modules.town_aggregation_diagnostics import get_town_context
+from briarwood.modules.town_aggregation_diagnostics import get_town_context, normalize_town_name
+from briarwood.modules.market_analyzer import MarketAnalysisOutput, analyze_markets
+from briarwood.modules.hybrid_value import get_hybrid_value_payload
 from briarwood.local_intelligence.classification import bucket_town_signals
 from briarwood.local_intelligence.models import ImpactDirection, SignalStatus, TownSignal
 from briarwood.local_intelligence.summarize import build_town_summary
@@ -873,6 +875,46 @@ class ReportCardViewModel:
 
 
 @dataclass(slots=True)
+class PropertyEvidenceSummaryViewModel:
+    structural_status: str
+    tax_status: str
+    sale_status: str
+    rent_status: str
+    comp_eligibility_status: str
+    key_notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class HybridValueViewModel:
+    is_hybrid: bool
+    reason: str
+    primary_house_value: str
+    rear_income_value: str
+    optionality_premium_value: str
+    total_hybrid_value: str
+    confidence: float
+    notes: list[str] = field(default_factory=list)
+    narrative: str = ""
+
+
+@dataclass(slots=True)
+class MarketCardViewModel:
+    town: str
+    score: float
+    short_narrative: str
+    key_metrics: dict[str, str] = field(default_factory=dict)
+    market_condition: str = ""
+    town_slug: str = ""
+
+
+@dataclass(slots=True)
+class MarketViewModel:
+    markets: list[MarketCardViewModel] = field(default_factory=list)
+    selected_town: str | None = None
+    selected_market: MarketAnalysisOutput | None = None
+
+
+@dataclass(slots=True)
 class PropertyAnalysisView:
     property_id: str
     label: str
@@ -937,6 +979,10 @@ class PropertyAnalysisView:
     confidence_level: str = "Medium"  # "High", "Medium", "Low"
     confidence_factors: list[ConfidenceFactorItem] = field(default_factory=list)
     top_input_impacts: list[InputImpactItem] = field(default_factory=list)
+    markets: list[MarketCardViewModel] = field(default_factory=list)
+    market_view: MarketViewModel | None = None
+    property_evidence_summary: PropertyEvidenceSummaryViewModel | None = None
+    hybrid_value: HybridValueViewModel | None = None
 
     @property
     def valuation(self) -> ValueViewModel:
@@ -1263,6 +1309,117 @@ def _screening_summary(report: AnalysisReport) -> str:
     return f"{output.comp_count} kept | {output.rejected_count} screened out" + (f" | {reasons}" if reasons else "")
 
 
+def _market_condition_label(score: float | None) -> str:
+    if score is None:
+        return "Mixed"
+    if score >= 6.6:
+        return "Seller Market"
+    if score <= 4.0:
+        return "Buyer Market"
+    return "Balanced"
+
+
+def _score_band(score: float) -> str:
+    if score >= 0.8:
+        return "confirmed"
+    if score >= 0.55:
+        return "confirmed_with_conflict"
+    if score >= 0.35:
+        return "estimated"
+    return "missing"
+
+
+def _short_market_narrative(analysis: MarketAnalysisOutput) -> str:
+    sentence = analysis.narrative.strip().split(". ")[0].strip()
+    return sentence if sentence.endswith(".") else f"{sentence}."
+
+
+def _market_card_view_model(analysis: MarketAnalysisOutput) -> MarketCardViewModel:
+    metrics = analysis.metrics
+    return MarketCardViewModel(
+        town=analysis.town,
+        score=analysis.market_score,
+        short_narrative=_short_market_narrative(analysis),
+        key_metrics={
+            "DOM": _fmt_number(metrics.get("avg_dom"), "d"),
+            "$/SF": _fmt_currency(metrics.get("avg_price_per_sqft")),
+        },
+        market_condition=_market_condition_label(metrics.get("buyer_vs_seller_score")),
+        town_slug=analysis.town.lower().replace(" ", "-"),
+    )
+
+
+def build_market_view_model(selected_town: str | None = None) -> MarketViewModel:
+    analyses = analyze_markets()
+    cards = [_market_card_view_model(item) for item in analyses]
+    normalized_selected = normalize_town_name(selected_town) if selected_town else None
+    selected = next((item for item in analyses if item.town == normalized_selected), None)
+    if selected is None and analyses:
+        selected = analyses[0]
+    return MarketViewModel(
+        markets=cards,
+        selected_town=selected.town if selected is not None else None,
+        selected_market=selected,
+    )
+
+
+def build_property_evidence_summary_view_model(property_input: PropertyInput | None) -> PropertyEvidenceSummaryViewModel | None:
+    if property_input is None:
+        return None
+    profile = property_input.evidence_profile()
+    if profile is None:
+        return None
+    summary_flags = getattr(profile, "summary_flags", None) or (profile.get("summary_flags") if isinstance(profile, dict) else {})
+    structural_score = float(summary_flags.get("structural_data_quality_score", 0.0) or 0.0)
+    tax_score = float(summary_flags.get("tax_data_quality_score", 0.0) or 0.0)
+    sale_score = float(summary_flags.get("sale_data_quality_score", 0.0) or 0.0)
+    rent_score = float(summary_flags.get("rent_data_quality_score", 0.0) or 0.0)
+    notes: list[str] = []
+    if property_input.provenance_for("sale_price") or property_input.provenance_for("last_sale_price"):
+        sale_prov = property_input.provenance_for("sale_price") or property_input.provenance_for("last_sale_price")
+        if sale_prov is not None and "sr1a" in sale_prov.source.lower():
+            notes.append("Sale verified by NJ SR1A")
+    tax_prov = property_input.provenance_for("tax_amount") or property_input.provenance_for("taxes")
+    if tax_prov is not None and "attom" in tax_prov.source.lower():
+        notes.append("Taxes confirmed via ATTOM assessment")
+    sqft_prov = property_input.provenance_for("sqft")
+    if sqft_prov is not None and "attom" in sqft_prov.source.lower():
+        notes.append("Living size confirmed via ATTOM")
+    if str(summary_flags.get("identity_match_status") or "") == "needs_review":
+        notes.append("Town mismatch detected between address and stored town")
+    rent_prov = property_input.provenance_for("estimated_rent") or property_input.provenance_for("estimated_monthly_rent")
+    if rent_prov is None or "estimate" in rent_prov.source.lower() or "briarwood" in rent_prov.source.lower():
+        notes.append("Rent remains estimated")
+    return PropertyEvidenceSummaryViewModel(
+        structural_status=_score_band(structural_score),
+        tax_status=_score_band(tax_score),
+        sale_status=_score_band(sale_score),
+        rent_status=_score_band(rent_score),
+        comp_eligibility_status=str(summary_flags.get("comp_eligibility_status") or "unknown"),
+        key_notes=notes[:5],
+    )
+
+
+def build_hybrid_value_view_model(report: AnalysisReport) -> HybridValueViewModel | None:
+    hybrid_result = report.module_results.get("hybrid_value")
+    if hybrid_result is None:
+        return None
+    hybrid = get_hybrid_value_payload(hybrid_result)
+    if not hybrid.is_hybrid:
+        return None
+    return HybridValueViewModel(
+        is_hybrid=True,
+        reason=hybrid.reason,
+        primary_house_value=_fmt_currency(hybrid.primary_house_value),
+        rear_income_value=_fmt_currency(hybrid.rear_income_value),
+        optionality_premium_value=_fmt_currency(hybrid.optionality_premium_value),
+        total_hybrid_value=_fmt_currency(hybrid.base_case_hybrid_value),
+        confidence=float(hybrid.confidence),
+        notes=list(hybrid.notes),
+        narrative=hybrid.narrative,
+    )
+
+
 def _active_listing_rows(report: AnalysisReport) -> list[ActiveListingViewRow]:
     property_input = report.property_input
     if property_input is None or not ACTIVE_LISTINGS_PATH.exists():
@@ -1350,6 +1507,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     overall_confidence = confidence_breakdown.overall_confidence
     location_support_label, location_support_detail = _location_support_state(report)
     location_anchor_summary = _location_anchor_summary(report)
+    market_view_model = build_market_view_model(property_input.town if property_input else None)
+    property_evidence_summary = build_property_evidence_summary_view_model(property_input)
+    hybrid_value_view = build_hybrid_value_view_model(report)
 
     positives = list(town_county.score.demand_drivers[:2]) + list(scarcity.demand_drivers[:1])
     risks = list(rental_ease.risks[:2]) + list(town_county.score.demand_risks[:2])
@@ -1469,6 +1629,11 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         "subject_lot_vs_town": subject_lot_vs_town,
         "town_adjusted_value_gap": town_adjusted_value_gap,
         "town_relative_opportunity_score": town_relative_opportunity_score,
+        "hybrid_indicated_value": (
+            report.module_results.get("hybrid_value").metrics.get("base_case_hybrid_value")
+            if report.module_results.get("hybrid_value") is not None
+            else None
+        ),
     }
 
     view = PropertyAnalysisView(
@@ -1672,6 +1837,10 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         ),
         town_context=town_context,
         compare_metrics=compare_metrics,
+        markets=market_view_model.markets,
+        market_view=market_view_model,
+        property_evidence_summary=property_evidence_summary,
+        hybrid_value=hybrid_value_view,
     )
     view.evidence.transparency_items = _assumption_transparency_items(
         property_input,

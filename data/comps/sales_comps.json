@@ -9,7 +9,9 @@
       "Manasquan",
       "Sea Girt",
       "Spring Lake"
-    ]
+    ],
+    "attom_enrichment_date": "2026-04-10",
+    "attom_records_enriched": 164
   },
   "sales": [
     {
@@ -49,7 +51,9 @@
       "micro_location_notes": [
         "Residential Belmar block with beach access support.",
         "Downtown access is still usable."
-      ]
+      ],
+      "latitude": 40.173623,
+      "longitude": -74.032183
     },
     {
       "address": "1406 D Street",
@@ -165,7 +169,9 @@
       "micro_location_notes": [
         "Avon beach access is a core part of fit.",
         "Walkable downtown support."
-      ]
+      ],
+      "latitude": 40.192077,
+      "longitude": -74.009802
     },
     {
       "address": "216 Sylvania Avenue",
@@ -240,7 +246,9 @@
       ],
       "micro_location_notes": [
         "Balanced beach and downtown positioning."
-      ]
+      ],
+      "latitude": 40.190647,
+      "longitude": -74.012283
     },
     {
       "address": "19 Walnut Street",
@@ -382,14 +390,16 @@
       "lot_size": 0.09,
       "year_built": 1994,
       "stories": 2.0,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [
         "beach_access",
         "downtown_access"
       ],
       "micro_location_notes": [
         "Beach and downtown overlap drive the comp case."
-      ]
+      ],
+      "latitude": 40.202748,
+      "longitude": -74.013859
     },
     {
       "address": "601 Newark Avenue",
@@ -426,7 +436,9 @@
       ],
       "micro_location_notes": [
         "Beach access is the primary overlap."
-      ]
+      ],
+      "latitude": 40.2067,
+      "longitude": -74.015168
     },
     {
       "address": "214 5th Avenue",
@@ -464,7 +476,9 @@
       ],
       "micro_location_notes": [
         "Compact Bradley block with decent downtown access."
-      ]
+      ],
+      "latitude": 40.20117,
+      "longitude": -74.010629
     },
     {
       "address": "152 Main Street",
@@ -502,7 +516,9 @@
       ],
       "micro_location_notes": [
         "Strong Manasquan beach-town positioning with downtown support."
-      ]
+      ],
+      "latitude": 40.122544,
+      "longitude": -74.048926
     },
     {
       "address": "309 Atlantic Avenue",
@@ -570,13 +586,15 @@
       "lot_size": 0.09,
       "year_built": 1982,
       "stories": 2.0,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [
         "downtown_access"
       ],
       "micro_location_notes": [
         "Downtown access is stronger than direct beach overlap."
-      ]
+      ],
+      "latitude": 40.125224,
+      "longitude": -74.046641
     },
     {
       "address": "715 Washington Boulevard",
@@ -650,7 +668,9 @@
       ],
       "micro_location_notes": [
         "Sea Girt beach profile remains the main overlap."
-      ]
+      ],
+      "latitude": 40.138068,
+      "longitude": -74.035463
     },
     {
       "address": "109 Crescent Parkway",
@@ -688,7 +708,9 @@
       ],
       "micro_location_notes": [
         "Mix of beach and downtown Sea Girt traits."
-      ]
+      ],
+      "latitude": 40.072801,
+      "longitude": -74.100949
     },
     {
       "address": "312 Monmouth Avenue",
@@ -726,7 +748,9 @@
       ],
       "micro_location_notes": [
         "Premium Spring Lake beach and downtown profile."
-      ]
+      ],
+      "latitude": 40.146873,
+      "longitude": -74.031364
     },
     {
       "address": "104 Salem Avenue",
@@ -763,7 +787,9 @@
       ],
       "micro_location_notes": [
         "Beach orientation is the clearest overlap."
-      ]
+      ],
+      "latitude": 40.144004,
+      "longitude": -74.027505
     },
     {
       "address": "219 Worthington Avenue",
@@ -801,7 +827,9 @@
       ],
       "micro_location_notes": [
         "Balanced Spring Lake beach and town-center fit."
-      ]
+      ],
+      "latitude": 40.159909,
+      "longitude": -74.027553
     },
     {
       "address": "200 17th Ave",
@@ -833,7 +861,10 @@
       "year_built": 1940,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "latitude": 40.17212,
+      "longitude": -74.017968,
+      "stories": 1.0
     },
     {
       "address": "1236 Maplewood Road",
@@ -865,7 +896,10 @@
       "year_built": 1942,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "latitude": 40.177001,
+      "longitude": -74.037855,
+      "stories": 1.0
     },
     {
       "address": "302 4th Ave",
@@ -897,7 +931,10 @@
       "year_built": 2025,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "latitude": 40.184077,
+      "longitude": -74.015931,
+      "stories": 2.0
     },
     {
       "address": "1208 Pine Tree Way",
@@ -927,7 +964,12 @@
       "year_built": 1941,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 945,
+      "lot_size": 0.1561,
+      "latitude": 40.177921,
+      "longitude": -74.036853,
+      "stories": 1.0
     },
     {
       "address": "405 10th Ave",
@@ -959,7 +1001,10 @@
       "year_built": 1925,
       "garage_spaces": 2,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "latitude": 40.177948,
+      "longitude": -74.020417,
+      "stories": 2.0
     },
     {
       "address": "1208 L Street",
@@ -991,7 +1036,10 @@
       "year_built": 1950,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "latitude": 40.177709,
+      "longitude": -74.034171,
+      "stories": 2.0
     },
     {
       "address": "609 11th Ave",
@@ -1021,7 +1069,12 @@
       "year_built": 1932,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2025,
+      "lot_size": 0.1481,
+      "latitude": 40.177695,
+      "longitude": -74.025008,
+      "stories": 1.0
     },
     {
       "address": "516 13th Avee",
@@ -1052,7 +1105,11 @@
       "year_built": 2025,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1569,
+      "latitude": 40.176215,
+      "longitude": -74.024242,
+      "stories": 1.0
     },
     {
       "address": "510 13th Ave",
@@ -1077,9 +1134,16 @@
       "last_verified_at": "2026-04-01",
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "sqft": 1432,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "year_built": 1922,
+      "lot_size": 0.1905,
+      "latitude": 40.176104,
+      "longitude": -74.023725,
+      "stories": 2.0
     },
     {
       "address": "120 S Concourse #104",
@@ -1104,9 +1168,15 @@
       "last_verified_at": "2026-04-01",
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "sqft": 1170,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "baths": 2.0,
+      "year_built": 1990,
+      "latitude": 40.189519,
+      "longitude": -74.029459,
+      "stories": 1.0
     },
     {
       "address": "22 Cherry Ct",
@@ -1131,9 +1201,16 @@
       "last_verified_at": "2026-04-01",
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "sqft": 1786,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "baths": 3.0,
+      "year_built": 1978,
+      "lot_size": 0.0414,
+      "latitude": 40.154546,
+      "longitude": -74.039783,
+      "stories": 2.0
     },
     {
       "address": "105 12th Ave",
@@ -1158,9 +1235,16 @@
       "last_verified_at": "2026-04-01",
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "sqft": 1225,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 1.0,
+      "year_built": 1936,
+      "lot_size": 0.0849,
+      "latitude": 40.174894,
+      "longitude": -74.015656,
+      "stories": 1.0
     },
     {
       "address": "1101 A St",
@@ -1187,7 +1271,14 @@
       "sqft": 1900,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 4,
+      "baths": 1.0,
+      "year_built": 1932,
+      "lot_size": 0.064,
+      "latitude": 40.175942,
+      "longitude": -74.016721,
+      "stories": 2.0
     },
     {
       "address": "1000 River Rd Unit 9B",
@@ -1215,7 +1306,10 @@
       "sqft": 937,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1981,
+      "latitude": 40.179448,
+      "longitude": -74.028657
     },
     {
       "address": "212 16th Ave #5",
@@ -1242,11 +1336,16 @@
       "beds": 4,
       "baths": 2.0,
       "sqft": 1094,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
       "micro_location_notes": [
         "Income / rental potential noted."
-      ]
+      ],
+      "year_built": 1940,
+      "lot_size": 0.0574,
+      "latitude": 40.172982,
+      "longitude": -74.018354,
+      "stories": 1.0
     },
     {
       "address": "208 Tuttle Ave",
@@ -1273,9 +1372,14 @@
       "beds": 4,
       "baths": 2.5,
       "sqft": 2829,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1925,
+      "lot_size": 0.4304,
+      "latitude": 40.158593,
+      "longitude": -74.026542,
+      "stories": 2.0
     },
     {
       "address": "119 4th Ave",
@@ -1306,7 +1410,12 @@
       "location_tags": [
         "beach_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1956,
+      "lot_size": 0.087,
+      "latitude": 40.189017,
+      "longitude": -74.018956,
+      "stories": 1.0
     },
     {
       "address": "109 12th Ave",
@@ -1337,7 +1446,12 @@
       "location_tags": [],
       "micro_location_notes": [
         "Income / rental potential noted."
-      ]
+      ],
+      "year_built": 1922,
+      "lot_size": 0.1148,
+      "latitude": 40.174961,
+      "longitude": -74.01598,
+      "stories": 3.0
     },
     {
       "address": "96 5th Ave #6",
@@ -1368,7 +1482,11 @@
       "location_tags": [
         "beach_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1980,
+      "latitude": 40.18231,
+      "longitude": -74.012585,
+      "stories": 1.0
     },
     {
       "address": "107 3rd Ave Unit B1",
@@ -1397,7 +1515,11 @@
       "sqft": 625,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1965,
+      "latitude": 40.183926,
+      "longitude": -74.012744,
+      "stories": 1.0
     },
     {
       "address": "206 Monroe Ave",
@@ -1423,11 +1545,17 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "beds": 5,
       "baths": 3.0,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
       "micro_location_notes": [
         "Listed as tear-down / land value."
-      ]
+      ],
+      "sqft": 2308,
+      "year_built": 1920,
+      "lot_size": 0.1722,
+      "latitude": 40.164929,
+      "longitude": -74.024162,
+      "stories": 2.0
     },
     {
       "address": "501 Main St #36",
@@ -1456,7 +1584,10 @@
       "sqft": 791,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1975,
+      "latitude": 40.193,
+      "longitude": -74.021977
     },
     {
       "address": "204 Monroe Ave",
@@ -1484,7 +1615,13 @@
       "baths": 3.5,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2521,
+      "year_built": 1929,
+      "lot_size": 0.172,
+      "latitude": 40.164841,
+      "longitude": -74.024024,
+      "stories": 2.0
     },
     {
       "address": "412 Brighton Ave",
@@ -1513,7 +1650,12 @@
       "sqft": 2553,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.172,
+      "latitude": 40.155993,
+      "longitude": -74.030612,
+      "stories": 2.0
     },
     {
       "address": "220 Ludlow Ave",
@@ -1539,11 +1681,17 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "beds": 6,
       "baths": 6.5,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [],
       "micro_location_notes": [
         "Pool present."
-      ]
+      ],
+      "sqft": 1860,
+      "year_built": 1920,
+      "lot_size": 0.172,
+      "latitude": 40.159474,
+      "longitude": -74.027684,
+      "stories": 2.0
     },
     {
       "address": "135 Lakeside Ave",
@@ -1574,7 +1722,11 @@
       "location_tags": [
         "lake_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1909,
+      "latitude": 40.194657,
+      "longitude": -74.013209,
+      "stories": 2.0
     },
     {
       "address": "322 16th Ave",
@@ -1603,7 +1755,12 @@
       "sqft": 1562,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.1,
+      "latitude": 40.173569,
+      "longitude": -74.021221,
+      "stories": 2.0
     },
     {
       "address": "737 20th Ave",
@@ -1632,7 +1789,12 @@
       "sqft": 1059,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.1148,
+      "latitude": 40.168328,
+      "longitude": -74.029511,
+      "stories": 2.0
     },
     {
       "address": "1700 Main St #303",
@@ -1661,7 +1823,11 @@
       "sqft": 1251,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2009,
+      "latitude": 40.172854,
+      "longitude": -74.027028,
+      "stories": 1.0
     },
     {
       "address": "501 Main St #30",
@@ -1687,7 +1853,13 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "baths": 1.0,
+      "sqft": 791,
+      "year_built": 1975,
+      "latitude": 40.193,
+      "longitude": -74.021977
     },
     {
       "address": "903 Ocean Ave #4",
@@ -1717,7 +1889,11 @@
       "location_tags": [
         "beach_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 615,
+      "year_built": 1966,
+      "latitude": 40.177678,
+      "longitude": -74.014062
     },
     {
       "address": "218 4th Ave",
@@ -1743,11 +1919,17 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "beds": 3,
       "baths": 2.5,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [
         "beach_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1764,
+      "year_built": 1929,
+      "lot_size": 0.1148,
+      "latitude": 40.200137,
+      "longitude": -74.011274,
+      "stories": 2.0
     },
     {
       "address": "808 Allaire Rd",
@@ -1774,11 +1956,16 @@
       "beds": 4,
       "baths": 1.0,
       "sqft": 1545,
-      "garage_spaces": 0,
+      "garage_spaces": 1,
       "location_tags": [],
       "micro_location_notes": [
         "Listed as tear-down / land value."
-      ]
+      ],
+      "year_built": 1951,
+      "lot_size": 0.2066,
+      "latitude": 40.157929,
+      "longitude": -74.03849,
+      "stories": 2.0
     },
     {
       "address": "201 3rd Ave Unit 4A",
@@ -1806,7 +1993,12 @@
       "baths": 1.0,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1095,
+      "year_built": 1973,
+      "latitude": 40.184052,
+      "longitude": -74.013729,
+      "stories": 1.0
     },
     {
       "address": "319 Main St",
@@ -1833,11 +2025,15 @@
       "beds": 5,
       "baths": 2.5,
       "sqft": 2459,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [],
       "micro_location_notes": [
         "Income / rental potential noted."
-      ]
+      ],
+      "year_built": 1908,
+      "latitude": 40.191435,
+      "longitude": -74.022509,
+      "stories": 2.0
     },
     {
       "address": "1000 River Rd Unit 4G",
@@ -1863,7 +2059,12 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 1,
+      "sqft": 910,
+      "year_built": 1981,
+      "latitude": 40.179448,
+      "longitude": -74.028657
     },
     {
       "address": "106 Ludlow Ave",
@@ -1923,7 +2124,12 @@
       "sqft": 1430,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1927,
+      "lot_size": 0.148,
+      "latitude": 40.194552,
+      "longitude": -74.023983,
+      "stories": 1.0
     },
     {
       "address": "210 5th Ave #25",
@@ -1952,7 +2158,12 @@
       "sqft": 870,
       "garage_spaces": 0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1970,
+      "lot_size": 0.011,
+      "latitude": 40.182924,
+      "longitude": -74.015491,
+      "stories": 1.0
     },
     {
       "address": "102 7th Ave",
@@ -1978,11 +2189,17 @@
       "verification_notes": "Batch import from curated Excel comp sheet. sale_date estimated (2025-01-01) \u2014 not in source file; time adjustment may be unreliable.",
       "beds": 7,
       "baths": 5.0,
-      "garage_spaces": 0,
+      "garage_spaces": 2,
       "location_tags": [
         "beach_access"
       ],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 4022,
+      "year_built": 1922,
+      "lot_size": 0.1722,
+      "latitude": 40.180382,
+      "longitude": -74.013472,
+      "stories": 3.0
     },
     {
       "address": "1027 2nd Ave",
@@ -2011,7 +2228,12 @@
       "sqft": 928,
       "garage_spaces": 1,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1930,
+      "lot_size": 0.1148,
+      "latitude": 40.165961,
+      "longitude": -74.037041,
+      "stories": 1.0
     },
     {
       "address": "1803 Surf Ave",
@@ -2044,7 +2266,12 @@
       ],
       "micro_location_notes": [
         "Income / rental potential noted."
-      ]
+      ],
+      "year_built": 1920,
+      "lot_size": 0.1148,
+      "latitude": 40.170402,
+      "longitude": -74.017728,
+      "stories": 3.0
     },
     {
       "address": "100 Ocean Ave Unit 12F, Bradley Beach, NJ 07720",
@@ -2091,7 +2318,11 @@
       "baths": 1.0,
       "sqft": 832,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1973,
+      "latitude": 40.176171,
+      "longitude": -74.031238,
+      "stories": 1.0
     },
     {
       "address": "409 Brooklyn Blvd, Sea Girt, NJ 08750",
@@ -2114,7 +2345,14 @@
       "beds": 3,
       "baths": 2.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1705,
+      "year_built": 1965,
+      "lot_size": 0.1722,
+      "latitude": 40.136057,
+      "longitude": -74.036728,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "316 St Clair Ave, Spring Lake, NJ 07762",
@@ -2138,7 +2376,13 @@
       "baths": 3.0,
       "sqft": 2776,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1926,
+      "lot_size": 0.1722,
+      "latitude": 40.1572,
+      "longitude": -74.029109,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "200 Monmouth Ave #7, Spring Lake, NJ 07762",
@@ -2161,7 +2405,12 @@
       "beds": 1,
       "baths": 1.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 426,
+      "year_built": 1900,
+      "latitude": 40.146551,
+      "longitude": -74.028609,
+      "stories": 1.0
     },
     {
       "address": "1825 Pine Ter, Belmar, NJ 07719",
@@ -2185,7 +2434,13 @@
       "baths": 2.5,
       "sqft": 2492,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2008,
+      "lot_size": 0.092,
+      "latitude": 40.169721,
+      "longitude": -74.025003,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "210 Ocean Park Ave #9, Bradley Beach, NJ 07720",
@@ -2230,7 +2485,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-10",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 3.0,
+      "sqft": 1854,
+      "year_built": 1986,
+      "lot_size": 0.1963,
+      "latitude": 40.138892,
+      "longitude": -74.040871,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "302 Beacon Blvd, Sea Girt, NJ 08750",
@@ -2254,7 +2518,13 @@
       "baths": 4.5,
       "sqft": 3158,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2008,
+      "lot_size": 0.1722,
+      "latitude": 40.137064,
+      "longitude": -74.033679,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "5 Ocean Ave Unit 10B, Belmar, NJ 07719",
@@ -2278,7 +2548,11 @@
       "baths": 1.0,
       "sqft": 744,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1988,
+      "latitude": 40.186277,
+      "longitude": -74.010867,
+      "stories": 1.0
     },
     {
       "address": "406 Bell Pl, Sea Girt, NJ 08750",
@@ -2301,7 +2575,14 @@
       "beds": 4,
       "baths": 2.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2584,
+      "year_built": 1960,
+      "lot_size": 0.1722,
+      "latitude": 40.134772,
+      "longitude": -74.041213,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "113 York Ave, Spring Lake, NJ 07762",
@@ -2325,7 +2606,13 @@
       "baths": 3.0,
       "sqft": 3527,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2005,
+      "lot_size": 0.1722,
+      "latitude": 40.140468,
+      "longitude": -74.029133,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "208 Tuttle Ave, Spring Lake, NJ 07762",
@@ -2349,7 +2636,13 @@
       "baths": 2.5,
       "sqft": 2829,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1925,
+      "lot_size": 0.4304,
+      "latitude": 40.158593,
+      "longitude": -74.026542,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "1822 Laurel Ter, Belmar, NJ 07719",
@@ -2373,7 +2666,13 @@
       "baths": 3.5,
       "sqft": 1888,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2006,
+      "lot_size": 0.069,
+      "latitude": 40.170351,
+      "longitude": -74.023808,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "207 13th Ave #12, Belmar, NJ 07719",
@@ -2394,7 +2693,11 @@
       "verification_source_name": "icloud weekly comp drop",
       "verification_source_id": "BELMAR-CSV-16",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 563,
+      "year_built": 1970,
+      "latitude": 40.17475,
+      "longitude": -74.017855
     },
     {
       "address": "201 3rd Ave Unit 4A, Belmar, NJ 07719",
@@ -2415,7 +2718,12 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-17",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1095,
+      "year_built": 1973,
+      "latitude": 40.184052,
+      "longitude": -74.013729,
+      "stories": 1.0
     },
     {
       "address": "414 Sussex Ave, Spring Lake, NJ 07762",
@@ -2439,7 +2747,13 @@
       "baths": 4.0,
       "sqft": 2726,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2006,
+      "lot_size": 0.1722,
+      "latitude": 40.149293,
+      "longitude": -74.032835,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "809 Ocean Ave #12, Avon By The Sea, NJ 07717",
@@ -2463,7 +2777,10 @@
       "baths": 1.0,
       "sqft": 641,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2005,
+      "latitude": 40.194882,
+      "longitude": -74.009257
     },
     {
       "address": "435 Norwood Ave, Avon By The Sea, NJ 07717",
@@ -2486,7 +2803,14 @@
       "beds": 3,
       "baths": 2.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1344,
+      "year_built": 1924,
+      "lot_size": 0.08,
+      "latitude": 40.194365,
+      "longitude": -74.01973,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "20 Woodland Ave, Avon By The Sea, NJ 07717",
@@ -2510,7 +2834,12 @@
       "baths": 13.5,
       "sqft": 5464,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2006,
+      "lot_size": 0.241,
+      "latitude": 40.193165,
+      "longitude": -74.010109,
+      "stories": 3.0
     },
     {
       "address": "40 East End Ave, Avon By The Sea, NJ 07717",
@@ -2558,7 +2887,12 @@
       "baths": 3.0,
       "sqft": 1956,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1909,
+      "latitude": 40.194657,
+      "longitude": -74.013209,
+      "stories": 2.0,
+      "garage_spaces": 4
     },
     {
       "address": "432 Garfield Ave, Avon By The Sea, NJ 07717",
@@ -2582,7 +2916,12 @@
       "baths": 3.0,
       "sqft": 1330,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1914,
+      "lot_size": 0.0918,
+      "latitude": 40.19178,
+      "longitude": -74.02021,
+      "stories": 2.0
     },
     {
       "address": "342 Lincoln Ave, Avon By The Sea, NJ 07717",
@@ -2606,7 +2945,12 @@
       "baths": 3.0,
       "sqft": 2251,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "latitude": 40.190608,
+      "longitude": -74.018289,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "200 2nd Ave #14, Belmar, NJ 07719",
@@ -2630,7 +2974,12 @@
       "baths": 2.5,
       "sqft": 1550,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1998,
+      "latitude": 40.185818,
+      "longitude": -74.013234,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "119 4th Ave, Avon By The Sea, NJ 07717",
@@ -2654,7 +3003,12 @@
       "baths": 1.5,
       "sqft": 1081,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1956,
+      "lot_size": 0.087,
+      "latitude": 40.189017,
+      "longitude": -74.018956,
+      "stories": 1.0
     },
     {
       "address": "Rare opportunity to own a two-bedroom condo in Belmar, NJ, ideally located directly across from Silver Lake and just 1.5 blocks from the beach and boardwalk. This move-in ready second-floor corner unit offers exceptional natural light and a thoughtfully updated interior. Features include a renovated kitchen with white cabinets and granite countertops, a renovated bathroom with an in-unit washer and dryer, brand new LVP flooring, and fresh paint throughout. The spacious primary bedroom includes a walk-in closet, with ample additional closet storage throughout the home. The well-maintained building offers newer windows, refreshed siding, and a newer roof. An assigned parking space is located",
@@ -2702,7 +3056,12 @@
       "baths": 1.0,
       "sqft": 870,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1970,
+      "lot_size": 0.011,
+      "latitude": 40.182924,
+      "longitude": -74.015491,
+      "stories": 1.0
     },
     {
       "address": "110 Fifth Ave, Belmar, NJ 07719",
@@ -2772,7 +3131,14 @@
       "beds": 7,
       "baths": 2.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2399,
+      "year_built": 1940,
+      "lot_size": 0.1722,
+      "latitude": 40.183831,
+      "longitude": -74.01449,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "107 3rd Ave Unit B1, Belmar, NJ 07719",
@@ -2796,7 +3162,11 @@
       "baths": 1.0,
       "sqft": 625,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1965,
+      "latitude": 40.183926,
+      "longitude": -74.012744,
+      "stories": 1.0
     },
     {
       "address": "110 4th Ave, Belmar, NJ 07719",
@@ -2819,7 +3189,13 @@
       "beds": 4,
       "baths": 4.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 3462,
+      "year_built": 1903,
+      "lot_size": 0.1722,
+      "latitude": 40.18353,
+      "longitude": -74.013086,
+      "stories": 3.0
     },
     {
       "address": "512 1/2 8th Ave, Belmar, NJ 07719",
@@ -2866,7 +3242,12 @@
       "baths": 2.0,
       "sqft": 2605,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1914,
+      "lot_size": 0.111,
+      "latitude": 40.182191,
+      "longitude": -74.021856,
+      "stories": 2.0
     },
     {
       "address": "506 6th Ave, Belmar, NJ 07719",
@@ -2933,7 +3314,13 @@
       "beds": 15,
       "baths": 7.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1343,
+      "year_built": 1932,
+      "lot_size": 0.028,
+      "latitude": 40.175871,
+      "longitude": -74.016642,
+      "stories": 2.0
     },
     {
       "address": "405 10th Ave, Belmar, NJ 07719",
@@ -2957,7 +3344,13 @@
       "baths": 5.5,
       "sqft": 2403,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1925,
+      "lot_size": 0.1722,
+      "latitude": 40.177948,
+      "longitude": -74.020417,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "501 9th Ave, Belmar, NJ 07719",
@@ -2981,7 +3374,12 @@
       "baths": 2.0,
       "sqft": 2127,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.0861,
+      "latitude": 40.17939,
+      "longitude": -74.021625,
+      "stories": 2.0
     },
     {
       "address": "527 8th Ave, Belmar, NJ 07719",
@@ -3002,7 +3400,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-42",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 4,
+      "baths": 2.0,
+      "sqft": 1427,
+      "year_built": 1912,
+      "lot_size": 0.0574,
+      "latitude": 40.180658,
+      "longitude": -74.022679,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "1330 State Route 71 Unit 7B, Belmar, NJ 07719",
@@ -3026,7 +3433,11 @@
       "baths": 1.0,
       "sqft": 905,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1977,
+      "latitude": 40.175683,
+      "longitude": -74.031773,
+      "stories": 1.0
     },
     {
       "address": "1206 River Rd, Belmar, NJ 07719",
@@ -3074,7 +3485,12 @@
       "baths": 2.0,
       "sqft": 2071,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1950,
+      "lot_size": 0.072,
+      "latitude": 40.177709,
+      "longitude": -74.034171,
+      "stories": 2.0
     },
     {
       "address": "216 13th Ave, Belmar, NJ 07719",
@@ -3098,7 +3514,12 @@
       "baths": 3.0,
       "sqft": 2328,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.1148,
+      "latitude": 40.175181,
+      "longitude": -74.01836,
+      "stories": 2.0
     },
     {
       "address": "109 12th Ave, Belmar, NJ 07719",
@@ -3122,7 +3543,12 @@
       "baths": 2.0,
       "sqft": 2716,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1922,
+      "lot_size": 0.1148,
+      "latitude": 40.174961,
+      "longitude": -74.01598,
+      "stories": 3.0
     },
     {
       "address": "518 13th Ave, Belmar, NJ 07719",
@@ -3146,7 +3572,13 @@
       "baths": 1.0,
       "sqft": 1093,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.0792,
+      "latitude": 40.176123,
+      "longitude": -74.024461,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "516 13th Ave, Belmar, NJ 07719",
@@ -3169,7 +3601,13 @@
       "beds": 6,
       "baths": 5.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1569,
+      "year_built": 1920,
+      "lot_size": 0.1905,
+      "latitude": 40.176215,
+      "longitude": -74.024242,
+      "stories": 1.0
     },
     {
       "address": "1203 D St, Belmar, NJ 07719",
@@ -3190,7 +3628,14 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-50",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1371,
+      "year_built": 1994,
+      "latitude": 40.176082,
+      "longitude": -74.022828,
+      "stories": 2.0
     },
     {
       "address": "200 17th Ave, Belmar, NJ 07719",
@@ -3214,7 +3659,13 @@
       "baths": 1.0,
       "sqft": 728,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.0689,
+      "latitude": 40.17212,
+      "longitude": -74.017968,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "119 17th Ave, Belmar, NJ 07719",
@@ -3238,7 +3689,13 @@
       "baths": 1.5,
       "sqft": 1563,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.0895,
+      "latitude": 40.171687,
+      "longitude": -74.017714,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "316 16th Ave, Belmar, NJ 07719",
@@ -3262,7 +3719,12 @@
       "baths": 2.5,
       "sqft": 1506,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.091,
+      "latitude": 40.173481,
+      "longitude": -74.020793,
+      "stories": 1.0
     },
     {
       "address": "308 16th Ave, Belmar, NJ 07719",
@@ -3286,7 +3748,12 @@
       "baths": 3.0,
       "sqft": 1677,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.0909,
+      "latitude": 40.173365,
+      "longitude": -74.020231,
+      "stories": 2.0
     },
     {
       "address": "612 16th Ave, Belmar, NJ 07719",
@@ -3310,7 +3777,12 @@
       "baths": 2.5,
       "sqft": 4254,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1921,
+      "latitude": 40.17471,
+      "longitude": -74.026431,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "404 Park Place Ave, Bradley Beach, NJ 07720",
@@ -3331,7 +3803,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-56",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1812,
+      "year_built": 1914,
+      "lot_size": 0.124,
+      "latitude": 40.206041,
+      "longitude": -74.012351,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "1006 Madison Ave, Bradley Beach, NJ 07720",
@@ -3355,7 +3836,12 @@
       "baths": 1.0,
       "sqft": 717,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1914,
+      "lot_size": 0.0287,
+      "latitude": 40.206042,
+      "longitude": -74.01169,
+      "stories": 1.0
     },
     {
       "address": "1102 Madison Ave, Bradley Beach, NJ 07720",
@@ -3379,7 +3865,12 @@
       "baths": 2.0,
       "sqft": 1681,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1906,
+      "lot_size": 0.0517,
+      "latitude": 40.206751,
+      "longitude": -74.011447,
+      "stories": 2.0
     },
     {
       "address": "117 Kent Ave, Bradley Beach, NJ 07720",
@@ -3403,7 +3894,12 @@
       "baths": 1.0,
       "sqft": 576,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1906,
+      "lot_size": 0.0187,
+      "latitude": 40.207269,
+      "longitude": -74.00622,
+      "stories": 2.0
     },
     {
       "address": "1204 Oakwood Rd, Belmar, NJ 07719",
@@ -3427,7 +3923,12 @@
       "baths": 2.0,
       "sqft": 1715,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1945,
+      "lot_size": 0.0918,
+      "latitude": 40.177846,
+      "longitude": -74.039092,
+      "stories": 2.0
     },
     {
       "address": "1511 River Rd, Belmar, NJ 07719",
@@ -3451,7 +3952,11 @@
       "baths": 2.0,
       "sqft": 2617,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1903,
+      "latitude": 40.178371,
+      "longitude": -74.037533,
+      "stories": 2.0
     },
     {
       "address": "1238 Maplewood Rd, Belmar, NJ 07719",
@@ -3475,7 +3980,12 @@
       "baths": 1.0,
       "sqft": 663,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.0895,
+      "latitude": 40.176919,
+      "longitude": -74.037843,
+      "stories": 1.0
     },
     {
       "address": "1236 Maplewood Rd, Belmar, NJ 07719",
@@ -3499,7 +4009,12 @@
       "baths": 1.5,
       "sqft": 923,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1942,
+      "lot_size": 0.0895,
+      "latitude": 40.177001,
+      "longitude": -74.037855,
+      "stories": 1.0
     },
     {
       "address": "1225 Oakwood Rd, Belmar, NJ 07719",
@@ -3523,7 +4038,13 @@
       "baths": 3.0,
       "sqft": 2415,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2000,
+      "lot_size": 0.1607,
+      "latitude": 40.177181,
+      "longitude": -74.038365,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "1208 Pine Tree Way, Belmar, NJ 07719",
@@ -3547,7 +4068,12 @@
       "baths": 3.0,
       "sqft": 2498,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1941,
+      "lot_size": 0.1561,
+      "latitude": 40.177921,
+      "longitude": -74.036853,
+      "stories": 1.0
     },
     {
       "address": "802 Central Avenue Ave, Bradley Beach, NJ 07720",
@@ -3808,7 +4334,13 @@
       "baths": 1.0,
       "sqft": 1003,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1924,
+      "lot_size": 0.0427,
+      "latitude": 40.207762,
+      "longitude": -74.010605,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "81 Inskip Ave, Ocean Grove, NJ 07756",
@@ -3832,7 +4364,12 @@
       "baths": 1.0,
       "sqft": 654,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.0427,
+      "latitude": 40.207809,
+      "longitude": -74.010824,
+      "stories": 1.0
     },
     {
       "address": "417 Brooklyn Blvd, Sea Girt, NJ 08750",
@@ -3856,7 +4393,13 @@
       "baths": 4.0,
       "sqft": 3096,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1958,
+      "lot_size": 0.258,
+      "latitude": 40.136166,
+      "longitude": -74.037383,
+      "stories": 1.0,
+      "garage_spaces": 2
     },
     {
       "address": "500 Chicago Blvd, Sea Girt, NJ 08750",
@@ -3879,7 +4422,14 @@
       "beds": 5,
       "baths": 4.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2816,
+      "year_built": 2014,
+      "lot_size": 0.1722,
+      "latitude": 40.136644,
+      "longitude": -74.0377,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "314 Chicago Blvd, Sea Girt, NJ 08750",
@@ -3903,7 +4453,13 @@
       "baths": 3.0,
       "sqft": 3504,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1965,
+      "lot_size": 0.3013,
+      "latitude": 40.136204,
+      "longitude": -74.034976,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "2BR 1BA renovated cape home just 4 blocks to the beach. Great rental history or make the home your own! Off street parking and fenced in yard makes this one special. Come take a look. Close to beach, restaurants, NJ Transit train and Main St. This is the location that keeps on giving. Tenants current lease expires Feb 28, 2026 - make some money back on this investment ($3,000 per month - great tenants!)",
@@ -3951,7 +4507,12 @@
       "baths": 1.0,
       "sqft": 672,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1950,
+      "lot_size": 0.0918,
+      "latitude": 40.173352,
+      "longitude": -74.022291,
+      "stories": 1.0
     },
     {
       "address": "1807-1809 Laurel Ter, Lake Como, NJ 07719",
@@ -3999,7 +4560,12 @@
       "baths": 2.0,
       "sqft": 1684,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.1033,
+      "latitude": 40.171973,
+      "longitude": -74.028436,
+      "stories": 2.0
     },
     {
       "address": "745 20th Ave, Belmar, NJ 07719",
@@ -4023,7 +4589,12 @@
       "baths": 1.5,
       "sqft": 804,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1930,
+      "lot_size": 0.0717,
+      "latitude": 40.168264,
+      "longitude": -74.029794,
+      "stories": 2.0
     },
     {
       "address": "730 20th Ave, Belmar, NJ 07719",
@@ -4046,7 +4617,14 @@
       "beds": 5,
       "baths": 3.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 829,
+      "year_built": 1925,
+      "lot_size": 0.095,
+      "latitude": 40.168842,
+      "longitude": -74.029411,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "709 18th Ave, Belmar, NJ 07719",
@@ -4070,7 +4648,13 @@
       "baths": 5.5,
       "sqft": 2800,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.1435,
+      "latitude": 40.170204,
+      "longitude": -74.02881,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "742 Leroy Pl, Belmar, NJ 07719",
@@ -4091,7 +4675,15 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-83",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1152,
+      "year_built": 1930,
+      "lot_size": 0.0482,
+      "latitude": 40.171501,
+      "longitude": -74.029983,
+      "stories": 1.0
     },
     {
       "address": "1813 Margerum Ave, Belmar, NJ 07719",
@@ -4115,7 +4707,12 @@
       "baths": 1.0,
       "sqft": 1183,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1950,
+      "lot_size": 0.116,
+      "latitude": 40.169389,
+      "longitude": -74.030629,
+      "stories": 1.0
     },
     {
       "address": "305 4th Ave, Spring Lake, NJ 07762",
@@ -4139,7 +4736,12 @@
       "baths": 4.5,
       "sqft": 4119,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1932,
+      "latitude": 40.183558,
+      "longitude": -74.016204,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "418 Monmouth Ave, Spring Lake, NJ 07762",
@@ -4160,7 +4762,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-86",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1634,
+      "year_built": 1972,
+      "lot_size": 0.1722,
+      "latitude": 40.147328,
+      "longitude": -74.033814,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "321 Pitney Ave, Spring Lake, NJ 07762",
@@ -4183,7 +4794,14 @@
       "beds": 4,
       "baths": 3.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1848,
+      "year_built": 1950,
+      "lot_size": 0.422,
+      "latitude": 40.161979,
+      "longitude": -74.030372,
+      "stories": 1.0,
+      "garage_spaces": 2
     },
     {
       "address": "105 Saint Clair Ave, Spring Lake, NJ 07762",
@@ -4207,7 +4825,13 @@
       "baths": 5.0,
       "sqft": 3840,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1910,
+      "lot_size": 0.344,
+      "latitude": 40.157342,
+      "longitude": -74.023543,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "520 Brighton Ave, Spring Lake, NJ 07762",
@@ -4231,7 +4855,12 @@
       "baths": 3.0,
       "sqft": 2553,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1880,
+      "lot_size": 0.069,
+      "latitude": 40.155561,
+      "longitude": -74.03376,
+      "stories": 1.0
     },
     {
       "address": "2015 5th Ave, Spring Lake, NJ 07762",
@@ -4255,7 +4884,12 @@
       "baths": 1.5,
       "sqft": 2184,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1910,
+      "latitude": 40.159565,
+      "longitude": -74.033088,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "220 Ludlow Ave, Spring Lake, NJ 07762",
@@ -4278,7 +4912,14 @@
       "beds": 6,
       "baths": 6.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 1860,
+      "year_built": 1920,
+      "lot_size": 0.172,
+      "latitude": 40.159474,
+      "longitude": -74.027684,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "1905 3rd Ave, Spring Lake, NJ 07762",
@@ -4302,7 +4943,13 @@
       "baths": 3.5,
       "sqft": 3608,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1888,
+      "lot_size": 0.3444,
+      "latitude": 40.158586,
+      "longitude": -74.028061,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "212 Vroom Ave, Spring Lake, NJ 07762",
@@ -4326,7 +4973,13 @@
       "baths": 7.0,
       "sqft": 6500,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2022,
+      "lot_size": 0.2359,
+      "latitude": 40.161542,
+      "longitude": -74.027402,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "326 South Blvd, Spring Lake, NJ 07762",
@@ -4373,7 +5026,14 @@
       "beds": 5,
       "baths": 3.5,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2521,
+      "year_built": 1929,
+      "lot_size": 0.172,
+      "latitude": 40.164841,
+      "longitude": -74.024024,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "206 Monroe Ave, Spring Lake, NJ 07762",
@@ -4394,7 +5054,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-95",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 5,
+      "baths": 3.0,
+      "sqft": 2308,
+      "year_built": 1920,
+      "lot_size": 0.1722,
+      "latitude": 40.164929,
+      "longitude": -74.024162,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "10 Howell Ave, Spring Lake, NJ 07762",
@@ -4418,7 +5087,13 @@
       "baths": 3.5,
       "sqft": 2324,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.2296,
+      "latitude": 40.164333,
+      "longitude": -74.01914,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "600 State Route 71 #8, Spring Lake, NJ 07762",
@@ -4466,7 +5141,12 @@
       "baths": 2.5,
       "sqft": 2688,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1908,
+      "lot_size": 0.4917,
+      "latitude": 40.15805,
+      "longitude": -74.034188,
+      "stories": 2.0
     },
     {
       "address": "16 Devon Ct, Spring Lake, NJ 07762",
@@ -4490,7 +5170,12 @@
       "baths": 2.0,
       "sqft": 1784,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1985,
+      "latitude": 40.16313,
+      "longitude": -74.033156,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "9 Oak Ter, Neptune City, NJ 07753",
@@ -4511,7 +5196,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-100",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1265,
+      "year_built": 1927,
+      "lot_size": 0.124,
+      "latitude": 40.192478,
+      "longitude": -74.025636,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "569 Ocean Rd, Spring Lake, NJ 07762",
@@ -4535,7 +5229,12 @@
       "baths": 2.5,
       "sqft": 2010,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1926,
+      "lot_size": 0.1331,
+      "latitude": 40.143325,
+      "longitude": -74.038986,
+      "stories": 2.0
     },
     {
       "address": "309 1/2 5th Ave, Belmar, NJ 07719",
@@ -4583,7 +5282,11 @@
       "baths": 2.0,
       "sqft": 1251,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2009,
+      "latitude": 40.172854,
+      "longitude": -74.027028,
+      "stories": 1.0
     },
     {
       "address": "200 Monmouth Ave #23, Spring Lake, NJ 07762",
@@ -4603,10 +5306,15 @@
       "verification_source_type": "manual_review",
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-102",
-      "beds": 0,
+      "beds": 1,
       "baths": 1.0,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 426,
+      "year_built": 1900,
+      "latitude": 40.146551,
+      "longitude": -74.028609,
+      "stories": 1.0
     },
     {
       "address": "106 Ludlow Ave, Spring Lake, NJ 07762",
@@ -4651,7 +5359,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-104",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 2362,
+      "year_built": 2016,
+      "lot_size": 0.1722,
+      "latitude": 40.147375,
+      "longitude": -74.03764,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "616 Fifth Ave #304, Belmar, NJ 07719",
@@ -4699,7 +5416,11 @@
       "baths": 1.0,
       "sqft": 720,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1980,
+      "latitude": 40.18231,
+      "longitude": -74.012585,
+      "stories": 1.0
     },
     {
       "address": "Welcome to the Jersey Shore. The desirable Marina View Towers . Located in the heart of Belmar. Corner unit with an expansive window filled with loads of natural light. Enjoy the summer breeze while sitting on the private balcony. This spacious 1 bed 1 bath condo offers a flexible and open floor plan. Stove and refrigerator are one year old. Newer dishwasher. Secured building, elevator, laundry and assigned parking. With a little TLC and imagination this unit can be a perfect get away, year round living or a great investment! Just steps away from the Shark River, restaurants, shopping, beach and boardwalk. There's still time to enjoy the summer! Close to NJ Transit, Rt 35,138,195,18 an",
@@ -4741,7 +5462,12 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-108",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "sqft": 2912,
+      "year_built": 2019,
+      "lot_size": 0.1722,
+      "latitude": 40.1496,
+      "longitude": -74.037994
     },
     {
       "address": "114 3rd Ave, Bradley Beach, NJ 07720",
@@ -4765,7 +5491,10 @@
       "baths": 5.5,
       "sqft": 4300,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 2020,
+      "latitude": 40.198875,
+      "longitude": -74.00957
     },
     {
       "address": "1805 Parkway, Lake Como, NJ 07719",
@@ -4837,7 +5566,10 @@
       "baths": 5.5,
       "sqft": 4040,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1925,
+      "latitude": 40.191333,
+      "longitude": -74.013482
     },
     {
       "address": "302 4th Ave, Belmar, NJ 07719",
@@ -4885,7 +5617,13 @@
       "baths": 2.0,
       "sqft": 1094,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.0574,
+      "latitude": 40.172982,
+      "longitude": -74.018354,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "",
@@ -4951,7 +5689,15 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-69",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 3.0,
+      "sqft": 2062,
+      "year_built": 1919,
+      "lot_size": 0.0861,
+      "latitude": 40.201018,
+      "longitude": -74.013732,
+      "stories": 2.0
     },
     {
       "address": "603 Fletcher Lake Ave, Bradley Beach, NJ 07720",
@@ -4972,7 +5718,15 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-70",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": 1160,
+      "year_built": 1904,
+      "lot_size": 0.0482,
+      "latitude": 40.202904,
+      "longitude": -74.014594,
+      "stories": 2.0
     },
     {
       "address": "113 Lareine Ave #202, Bradley Beach, NJ 07720",
@@ -4996,7 +5750,11 @@
       "baths": 1.0,
       "sqft": 736,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1986,
+      "latitude": 40.202444,
+      "longitude": -74.008491,
+      "stories": 1.0
     },
     {
       "address": "201 Beacon Blvd, Sea Girt, NJ 08750",
@@ -5020,7 +5778,13 @@
       "baths": 4.5,
       "sqft": 4000,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1955,
+      "lot_size": 0.1997,
+      "latitude": 40.137216,
+      "longitude": -74.031119,
+      "stories": 3.0,
+      "garage_spaces": 1
     },
     {
       "address": "1822 Pine Ter, Belmar, NJ 07719",
@@ -5044,7 +5808,12 @@
       "baths": 1.0,
       "sqft": 832,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1930,
+      "lot_size": 0.0918,
+      "latitude": 40.170033,
+      "longitude": -74.024599,
+      "stories": 1.0
     },
     {
       "address": "1724 White St, Belmar, NJ 07719",
@@ -5068,7 +5837,12 @@
       "baths": 1.0,
       "sqft": 1046,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1940,
+      "lot_size": 0.121,
+      "latitude": 40.172102,
+      "longitude": -74.023823,
+      "stories": 1.0
     },
     {
       "address": "411 Atlantic Ave, Spring Lake, NJ 07762",
@@ -5092,7 +5866,13 @@
       "baths": 2.5,
       "sqft": 2696,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1969,
+      "lot_size": 0.172,
+      "latitude": 40.145604,
+      "longitude": -74.033816,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "412 Brighton Ave, Spring Lake, NJ 07762",
@@ -5116,7 +5896,12 @@
       "baths": 3.0,
       "sqft": 2553,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1920,
+      "lot_size": 0.172,
+      "latitude": 40.155993,
+      "longitude": -74.030612,
+      "stories": 2.0
     },
     {
       "address": "208 Ludlow Ave, Spring Lake, NJ 07762",
@@ -5140,7 +5925,13 @@
       "baths": 3.5,
       "sqft": 3464,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1900,
+      "lot_size": 0.3444,
+      "latitude": 40.159601,
+      "longitude": -74.026714,
+      "stories": 2.0,
+      "garage_spaces": 2
     },
     {
       "address": "569 Atlantic Ave, Spring Lake, NJ 07762",
@@ -5182,7 +5973,12 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-107",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "sqft": 1094,
+      "year_built": 1981,
+      "latitude": 40.179448,
+      "longitude": -74.028657
     },
     {
       "address": "319 Main St, Avon By The Sea, NJ 07717",
@@ -5230,7 +6026,12 @@
       "baths": 3.5,
       "sqft": 2419,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1999,
+      "lot_size": 0.1196,
+      "latitude": 40.120745,
+      "longitude": -74.056852,
+      "stories": 2.0
     },
     {
       "address": "42 Willow Way, Manasquan, NJ 08736",
@@ -5254,7 +6055,13 @@
       "baths": 2.5,
       "sqft": 2649,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1964,
+      "lot_size": 0.138,
+      "latitude": 40.129657,
+      "longitude": -74.048071,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "355 Cedar Ave, Manasquan, NJ 08736",
@@ -5278,7 +6085,12 @@
       "baths": 2.5,
       "sqft": 2454,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1995,
+      "lot_size": 0.115,
+      "latitude": 40.116472,
+      "longitude": -74.043941,
+      "stories": 2.0
     },
     {
       "address": "207 4th Ave, Manasquan, NJ 08736",
@@ -5302,7 +6114,12 @@
       "baths": 2.0,
       "sqft": 1470,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1986,
+      "lot_size": 0.098,
+      "latitude": 40.11171,
+      "longitude": -74.037033,
+      "stories": 1.0
     },
     {
       "address": "198 3rd Ave, Manasquan, NJ 08736",
@@ -5323,7 +6140,16 @@
       "verification_source_name": "Sold_0405.xlsx",
       "verification_source_id": "BELMAR-CSV-115",
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "baths": 1.0,
+      "sqft": 864,
+      "year_built": 1957,
+      "lot_size": 0.0656,
+      "latitude": 40.112038,
+      "longitude": -74.035581,
+      "stories": 1.0,
+      "garage_spaces": 4
     },
     {
       "address": "101 Neptune Pl, Sea Girt, NJ 08750",
@@ -5347,7 +6173,13 @@
       "baths": 4.5,
       "sqft": 4083,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "year_built": 1950,
+      "lot_size": 0.2583,
+      "latitude": 40.125558,
+      "longitude": -74.031972,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "4 Main St #580, Manasquan, NJ 08736",
@@ -5369,7 +6201,15 @@
       "verification_source_id": "BELMAR-CSV-117",
       "sqft": 2536,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 4,
+      "baths": 2.0,
+      "year_built": 1888,
+      "lot_size": 0.2649,
+      "latitude": 40.126808,
+      "longitude": -74.053487,
+      "stories": 2.0,
+      "garage_spaces": 1
     },
     {
       "address": "59 1/2 Taylor Ave #59, Manasquan, NJ 08736",
@@ -5414,7 +6254,15 @@
       "verification_source_id": "BELMAR-CSV-119",
       "sqft": 1300,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 3,
+      "baths": 1.0,
+      "year_built": 1959,
+      "lot_size": 0.1722,
+      "latitude": 40.119536,
+      "longitude": -74.041628,
+      "stories": 1.0,
+      "garage_spaces": 1
     },
     {
       "address": "117 Baltimore Blvd, Sea Girt, NJ 08750",
@@ -5436,7 +6284,15 @@
       "verification_source_id": "BELMAR-CSV-120",
       "sqft": 4606,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 5,
+      "baths": 5.0,
+      "year_built": 2012,
+      "lot_size": 0.2583,
+      "latitude": 40.133135,
+      "longitude": -74.031677,
+      "stories": 3.0,
+      "garage_spaces": 2
     },
     {
       "address": "1314 New Brunswick Ave, Manasquan, NJ 08736",
@@ -5458,7 +6314,14 @@
       "verification_source_id": "BELMAR-CSV-121",
       "sqft": 792,
       "location_tags": [],
-      "micro_location_notes": []
+      "micro_location_notes": [],
+      "beds": 2,
+      "baths": 1.0,
+      "year_built": 1950,
+      "lot_size": 0.1148,
+      "latitude": 40.131476,
+      "longitude": -74.064526,
+      "stories": 1.0
     },
     {
       "address": "387 Perrine Blvd, Manasquan, NJ 08736",

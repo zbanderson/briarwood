@@ -14,6 +14,7 @@ from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.modules.cost_valuation import CostValuationModule
 from briarwood.modules.current_value import CurrentValueModule
+from briarwood.modules.hybrid_value import HybridValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_context import build_default_town_county_service
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
@@ -24,6 +25,7 @@ from briarwood.modules.market_value_history import MarketValueHistoryModule
 from briarwood.modules.renovation_scenario import RenovationScenarioModule
 from briarwood.modules.teardown_scenario import TeardownScenarioModule
 from briarwood.modules.property_snapshot import PropertySnapshotModule
+from briarwood.modules.property_data_quality import PropertyDataQualityModule
 from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
@@ -46,10 +48,15 @@ def build_engine(
     market_value_history_module = MarketValueHistoryModule()
     comparable_sales_module = ComparableSalesModule(market_value_history_module=market_value_history_module)
     income_support_module = IncomeSupportModule(settings=cost_settings)
+    hybrid_value_module = HybridValueModule(
+        comparable_sales_module=comparable_sales_module,
+        income_support_module=income_support_module,
+    )
     current_value_module = CurrentValueModule(
         comparable_sales_module=comparable_sales_module,
         market_value_history_module=market_value_history_module,
         income_support_module=income_support_module,
+        hybrid_value_module=hybrid_value_module,
     )
     risk_constraints_module = RiskConstraintsModule(settings=risk_settings)
     town_county_service = build_default_town_county_service()
@@ -85,8 +92,10 @@ def build_engine(
     return AnalysisEngine(
         modules=[
             PropertySnapshotModule(),
+            PropertyDataQualityModule(),
             market_value_history_module,
             comparable_sales_module,
+            hybrid_value_module,
             current_value_module,
             CostValuationModule(settings=cost_settings),
             income_support_module,

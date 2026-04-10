@@ -6,6 +6,7 @@ from typing import Protocol
 from briarwood.listing_intake.schemas import NormalizedPropertyData
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.schemas import (
+    CanonicalFieldProvenance,
     CanonicalPropertyData,
     EvidenceMode,
     InputCoverageStatus,
@@ -14,7 +15,9 @@ from briarwood.schemas import (
     PropertyFacts,
     SourceCoverageItem,
     SourceMetadata,
+    SourceTier,
     UserAssumptions,
+    VerifiedStatus,
 )
 
 
@@ -97,6 +100,8 @@ class PublicRecordAdapter:
                 market_signals=market_signals,
                 assumptions=assumptions,
                 provenance=["public_record_adapter"],
+                field_provenance=_public_record_field_provenance(facts, market_signals, assumptions),
+                mapper_version="public_record_adapter/v1",
             ),
         )
 
@@ -161,6 +166,11 @@ class ManualInputAdapter:
             canonical.source_metadata,
             source_coverage=coverage,
             provenance=canonical.source_metadata.provenance + ["manual_input_adapter"],
+            field_provenance=_merge_field_provenance(
+                canonical.source_metadata.field_provenance,
+                _manual_override_field_provenance(overrides),
+            ),
+            mapper_version="manual_input_adapter/v1",
         )
         return replace(canonical, user_assumptions=assumptions, source_metadata=metadata)
 
@@ -204,6 +214,8 @@ def _infer_source_metadata(
     market_signals: MarketLocationSignals,
     assumptions: UserAssumptions,
     provenance: list[str],
+    field_provenance: dict[str, CanonicalFieldProvenance] | None = None,
+    mapper_version: str = "legacy",
 ) -> SourceMetadata:
     coverage = {
         "address": _coverage("address", facts.address),
@@ -236,6 +248,105 @@ def _infer_source_metadata(
         evidence_mode=evidence_mode,
         source_coverage=coverage,
         provenance=provenance,
+        field_provenance=field_provenance or {},
+        mapper_version=mapper_version,
+    )
+
+
+def _public_record_field_provenance(
+    facts: PropertyFacts,
+    market_signals: MarketLocationSignals,
+    assumptions: UserAssumptions,
+) -> dict[str, CanonicalFieldProvenance]:
+    provenance: dict[str, CanonicalFieldProvenance] = {}
+    for field_name in [
+        "address", "town", "state", "county", "latitude", "longitude", "beds", "baths", "sqft", "lot_size",
+        "property_type", "architectural_style", "year_built", "stories", "garage_spaces", "purchase_price",
+        "taxes", "monthly_hoa", "days_on_market", "listing_date", "listing_description", "source_url",
+    ]:
+        value = getattr(facts, field_name, None)
+        if value is None:
+            continue
+        provenance[field_name] = _provenance_entry(
+            value=value,
+            source="public_record_adapter",
+            tier=SourceTier.TIER_1,
+            verified_status=VerifiedStatus.VERIFIED,
+            mapper_version="public_record_adapter/v1",
+        )
+    for field_name in [
+        "town_population_trend", "town_price_trend", "school_rating", "flood_risk",
+        "town_population", "market_price_to_rent_benchmark",
+    ]:
+        value = getattr(market_signals, field_name, None)
+        if value is None:
+            continue
+        provenance[field_name] = _provenance_entry(
+            value=value,
+            source="public_record_adapter",
+            tier=SourceTier.TIER_1,
+            verified_status=VerifiedStatus.VERIFIED,
+            mapper_version="public_record_adapter/v1",
+        )
+    for field_name in [
+        "occupancy_strategy", "owner_occupied_unit_count", "estimated_monthly_rent", "rent_confidence_override",
+        "insurance", "down_payment_percent", "interest_rate", "loan_term_years", "vacancy_rate",
+        "condition_profile_override", "condition_confirmed", "capex_lane_override", "capex_confirmed",
+        "repair_capex_budget", "strategy_intent", "hold_period_years", "risk_tolerance",
+    ]:
+        value = getattr(assumptions, field_name, None)
+        if value is None:
+            continue
+        provenance[field_name] = _provenance_entry(
+            value=value,
+            source="public_record_adapter",
+            tier=SourceTier.TIER_3,
+            verified_status=VerifiedStatus.ESTIMATED,
+            mapper_version="public_record_adapter/v1",
+        )
+    return provenance
+
+
+def _manual_override_field_provenance(overrides: dict[str, object]) -> dict[str, CanonicalFieldProvenance]:
+    provenance: dict[str, CanonicalFieldProvenance] = {}
+    for key, value in overrides.items():
+        if value in (None, "", []):
+            continue
+        provenance[key] = _provenance_entry(
+            value=value,
+            source="manual override",
+            tier=SourceTier.TIER_1,
+            verified_status=VerifiedStatus.USER_CONFIRMED,
+            mapper_version="manual_input_adapter/v1",
+        )
+    return provenance
+
+
+def _merge_field_provenance(
+    base: dict[str, CanonicalFieldProvenance],
+    updates: dict[str, CanonicalFieldProvenance],
+) -> dict[str, CanonicalFieldProvenance]:
+    merged = dict(base)
+    merged.update(updates)
+    return merged
+
+
+def _provenance_entry(
+    *,
+    value: object,
+    source: str,
+    tier: SourceTier,
+    verified_status: VerifiedStatus,
+    mapper_version: str,
+    confidence: float = 0.9,
+) -> CanonicalFieldProvenance:
+    return CanonicalFieldProvenance(
+        value=value,
+        source=source,
+        source_tier=tier,
+        verified_status=verified_status,
+        confidence=confidence,
+        mapper_version=mapper_version,
     )
 
 

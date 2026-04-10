@@ -94,5 +94,110 @@ class ComparableSalesAgentTests(unittest.TestCase):
         self.assertGreaterEqual(result.rejected_count, 1)
 
 
+class ConditionAdjustmentTests(unittest.TestCase):
+    """Verify the raised condition adjustment cap (±15%) and per-rank delta (4%)."""
+
+    def setUp(self) -> None:
+        self.agent = ComparableSalesAgent(
+            FileBackedComparableSalesProvider(Path("data/comps/sales_comps.json"))
+        )
+
+    def test_same_condition_zero_adjustment(self) -> None:
+        pct = self.agent._condition_adjustment_pct("maintained", "maintained")
+        self.assertAlmostEqual(pct, 0.0)
+
+    def test_one_rank_difference(self) -> None:
+        pct = self.agent._condition_adjustment_pct("updated", "maintained")
+        self.assertAlmostEqual(pct, 0.04)
+
+    def test_full_range_needs_work_to_renovated(self) -> None:
+        pct = self.agent._condition_adjustment_pct("renovated", "needs_work")
+        self.assertAlmostEqual(pct, 0.15)
+
+    def test_full_range_renovated_to_needs_work(self) -> None:
+        pct = self.agent._condition_adjustment_pct("needs_work", "renovated")
+        self.assertAlmostEqual(pct, -0.15)
+
+    def test_two_rank_difference(self) -> None:
+        pct = self.agent._condition_adjustment_pct("renovated", "maintained")
+        self.assertAlmostEqual(pct, 0.08)
+
+
+class TotalAdjustmentCapTests(unittest.TestCase):
+    """Verify that the total subject adjustment cap is ±20%."""
+
+    def setUp(self) -> None:
+        self.agent = ComparableSalesAgent(
+            FileBackedComparableSalesProvider(Path("data/comps/sales_comps.json"))
+        )
+
+    def test_large_multi_dimension_adjustment_above_old_cap(self) -> None:
+        """A comp differing across many dimensions should be able to exceed ±12%."""
+        from briarwood.agents.comparable_sales import ComparableSale
+
+        request = ComparableSalesRequest(
+            town="Belmar",
+            state="NJ",
+            sqft=2000,
+            beds=4,
+            baths=3.0,
+            lot_size=0.25,
+            year_built=2010,
+            condition_profile="renovated",
+        )
+        sale = ComparableSale(
+            address="1 Test St",
+            town="Belmar",
+            state="NJ",
+            sale_price=500000,
+            sale_date="2025-06-01",
+            sqft=1400,
+            beds=2,
+            baths=1.5,
+            lot_size=0.10,
+            year_built=1960,
+            condition_profile="needs_work",
+        )
+        pct, notes = self.agent._subject_adjustment_pct(request, sale)
+        self.assertGreater(abs(pct), 0.12, "Adjustment should exceed the old ±12% cap")
+        self.assertLessEqual(abs(pct), 0.20, "Adjustment must respect the new ±20% cap")
+
+
+class SqftAdjustmentTests(unittest.TestCase):
+    """Verify non-linear (log-based) sqft adjustment."""
+
+    def setUp(self) -> None:
+        self.agent = ComparableSalesAgent(
+            FileBackedComparableSalesProvider(Path("data/comps/sales_comps.json"))
+        )
+
+    def _sqft_pct(self, subject_sqft: int, comp_sqft: int) -> float:
+        from math import log
+        ratio = subject_sqft / max(comp_sqft, 1)
+        return max(-0.15, min(log(ratio) * 0.50, 0.15))
+
+    def test_equal_sqft_zero_adjustment(self) -> None:
+        self.assertAlmostEqual(self._sqft_pct(2000, 2000), 0.0)
+
+    def test_20pct_larger_moderate_adjustment(self) -> None:
+        pct = self._sqft_pct(2400, 2000)
+        self.assertAlmostEqual(pct, 0.091, places=2)
+
+    def test_35pct_larger_below_cap(self) -> None:
+        pct = self._sqft_pct(2700, 2000)
+        self.assertLessEqual(pct, 0.15)
+        self.assertGreater(pct, 0.10)
+
+    def test_35pct_smaller(self) -> None:
+        pct = self._sqft_pct(1300, 2000)
+        self.assertAlmostEqual(pct, -0.15)
+
+    def test_diminishing_returns(self) -> None:
+        """Larger gaps should produce less-than-linear adjustments."""
+        small_gap = self._sqft_pct(2200, 2000)
+        large_gap = self._sqft_pct(2700, 2000)
+        self.assertLess(large_gap / small_gap, 3.5)
+
+
 if __name__ == "__main__":
     unittest.main()

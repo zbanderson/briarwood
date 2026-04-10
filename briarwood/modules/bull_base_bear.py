@@ -136,9 +136,14 @@ class BullBaseBearModule:
         base_value = bcv * (1.0 + base_total)
         bear_value = max(0.0, bcv * (1.0 + bear_total))
 
-        # Enforce ordering: bull >= base >= bear
-        bull_value = max(bull_value, base_value)
-        bear_value = min(bear_value, base_value)
+        # Enforce ordering: bull >= base >= bear (warn if reordering occurs)
+        scenario_reordered = False
+        if bull_value < base_value:
+            bull_value = base_value
+            scenario_reordered = True
+        if bear_value > base_value:
+            bear_value = base_value
+            scenario_reordered = True
 
         # --- Stress scenario ---
         stress_case_value: float | None = None
@@ -260,6 +265,7 @@ class BullBaseBearModule:
                 "risk_score": round(risk_score, 2),
                 "optionality_score": round(scarcity_score, 2),
                 "market_history_confidence": history_result.confidence,
+                "scenario_reordered": scenario_reordered,
             },
             score=score,
             confidence=confidence,

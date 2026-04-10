@@ -4,6 +4,7 @@ from briarwood.agents.current_value import CurrentValueAgent, CurrentValueInput,
 from briarwood.field_audit import audit_property_fields
 from briarwood.evidence import build_section_evidence
 from briarwood.modules.comparable_sales import ComparableSalesModule, get_comparable_sales_payload
+from briarwood.modules.hybrid_value import HybridValueModule, get_hybrid_value_payload
 from briarwood.modules.income_support import IncomeSupportModule, get_income_support_payload
 from briarwood.modules.market_value_history import (
     MarketValueHistoryModule,
@@ -27,15 +28,25 @@ class CurrentValueModule:
         comparable_sales_module: ComparableSalesModule | None = None,
         market_value_history_module: MarketValueHistoryModule | None = None,
         income_support_module: IncomeSupportModule | None = None,
+        hybrid_value_module: HybridValueModule | None = None,
         settings: CurrentValueSettings | None = None,
     ) -> None:
         self.agent = agent or CurrentValueAgent()
         self.comparable_sales_module = comparable_sales_module or ComparableSalesModule()
         self.market_value_history_module = market_value_history_module or MarketValueHistoryModule()
         self.income_support_module = income_support_module or IncomeSupportModule()
+        self.hybrid_value_module = hybrid_value_module or HybridValueModule(
+            comparable_sales_module=self.comparable_sales_module,
+            income_support_module=self.income_support_module,
+        )
         self.settings = settings or DEFAULT_CURRENT_VALUE_SETTINGS
 
-    def run(self, property_input: PropertyInput) -> ModuleResult:
+    def run(
+        self,
+        property_input: PropertyInput,
+        *,
+        prior_results: dict[str, ModuleResult] | None = None,
+    ) -> ModuleResult:
         if property_input.purchase_price is None or property_input.purchase_price <= 0:
             return ModuleResult(
                 module_name=self.name,
@@ -55,12 +66,36 @@ class CurrentValueModule:
                 ),
             )
 
-        comparable_result = self.comparable_sales_module.run(property_input)
-        history_result = self.market_value_history_module.run(property_input)
-        income_result = self.income_support_module.run(property_input)
+        comparable_result = (
+            prior_results.get("comparable_sales")
+            if prior_results is not None and "comparable_sales" in prior_results
+            else self.comparable_sales_module.run(property_input)
+        )
+        history_result = (
+            prior_results.get("market_value_history")
+            if prior_results is not None and "market_value_history" in prior_results
+            else self.market_value_history_module.run(property_input)
+        )
+        income_result = (
+            prior_results.get("income_support")
+            if prior_results is not None and "income_support" in prior_results
+            else self.income_support_module.run(property_input)
+        )
+        hybrid_result = (
+            prior_results.get("hybrid_value")
+            if prior_results is not None and "hybrid_value" in prior_results
+            else self.hybrid_value_module.run(
+                property_input,
+                prior_results={
+                    "comparable_sales": comparable_result,
+                    "income_support": income_result,
+                },
+            )
+        )
         comparable_sales = get_comparable_sales_payload(comparable_result)
         history = get_market_value_history_payload(history_result)
         income = get_income_support_payload(income_result)
+        hybrid_value = get_hybrid_value_payload(hybrid_result)
         town_context = get_town_context(property_input.town)
 
         output = self.agent.run(
@@ -114,12 +149,20 @@ class CurrentValueModule:
             }
         )
         output = self._apply_input_confidence_caps(output=output, income=income)
+        output = self._apply_hybrid_adjustment(output=output, hybrid_value=hybrid_value)
 
-        summary = (
-            f"Briarwood Current Value is about ${output.briarwood_current_value:,.0f}, "
-            f"which {output.pricing_view} versus the ask by "
-            f"{abs(output.mispricing_pct):.1%}. Confidence is {output.confidence:.0%}."
-        )
+        if hybrid_value.is_hybrid and hybrid_value.base_case_hybrid_value is not None:
+            summary = (
+                f"Briarwood Current Value is about ${output.briarwood_current_value:,.0f} under a hybrid front-house plus accessory-income framework, "
+                f"which {output.pricing_view} versus the ask by {abs(output.mispricing_pct):.1%}. "
+                f"Confidence is {output.confidence:.0%}."
+            )
+        else:
+            summary = (
+                f"Briarwood Current Value is about ${output.briarwood_current_value:,.0f}, "
+                f"which {output.pricing_view} versus the ask by "
+                f"{abs(output.mispricing_pct):.1%}. Confidence is {output.confidence:.0%}."
+            )
 
         return ModuleResult(
             module_name=self.name,
@@ -171,6 +214,10 @@ class CurrentValueModule:
                 "blended_value_midpoint": output.blended_value_range.midpoint if output.blended_value_range is not None else None,
                 "blended_value_high": output.blended_value_range.high if output.blended_value_range is not None else None,
                 "comp_confidence_score": output.comp_confidence_score,
+                "valuation_method": "hybrid" if hybrid_value.is_hybrid else "standard",
+                "hybrid_indicated_value": hybrid_value.base_case_hybrid_value,
+                "hybrid_low_value": hybrid_value.low_case_hybrid_value,
+                "hybrid_high_value": hybrid_value.high_case_hybrid_value,
             },
             score=max(0.0, min(output.confidence * 100, 100.0)),
             confidence=output.confidence,
@@ -211,6 +258,41 @@ class CurrentValueModule:
         if confidence == output.confidence and warnings == output.warnings:
             return output
         return output.model_copy(update={"confidence": round(confidence, 2), "warnings": warnings})
+
+    def _apply_hybrid_adjustment(self, *, output: CurrentValueOutput, hybrid_value: object) -> CurrentValueOutput:
+        if not getattr(hybrid_value, "is_hybrid", False):
+            return output
+        hybrid_base = getattr(hybrid_value, "base_case_hybrid_value", None)
+        if hybrid_base is None or hybrid_base <= 0:
+            return output
+
+        hybrid_confidence = float(getattr(hybrid_value, "confidence", 0.0) or 0.0)
+        confidence = round(max(0.4, min((output.confidence * 0.55) + (hybrid_confidence * 0.45), 0.86)), 2)
+        mispricing_amount = hybrid_base - output.ask_price
+        mispricing_pct = mispricing_amount / output.ask_price if output.ask_price else 0.0
+        assumptions = list(output.assumptions)
+        warnings = list(output.warnings)
+        assumptions.append(
+            "Hybrid value is used when a front-house comp anchor plus accessory-income decomposition fits the subject better than a pure single-family or pure multi-unit comp set."
+        )
+        warnings.append(
+            "Hybrid current value remains conservative: accessory-unit credit is capped and legality or rent uncertainty can still limit the indicated range."
+        )
+        low_value = getattr(hybrid_value, "low_case_hybrid_value", None) or output.value_low
+        high_value = getattr(hybrid_value, "high_case_hybrid_value", None) or output.value_high
+        return output.model_copy(
+            update={
+                "briarwood_current_value": round(float(hybrid_base), 2),
+                "value_low": round(float(low_value), 2),
+                "value_high": round(float(high_value), 2),
+                "mispricing_amount": round(float(mispricing_amount), 2),
+                "mispricing_pct": round(float(mispricing_pct), 4),
+                "pricing_view": self.agent._pricing_view(float(mispricing_pct)),
+                "confidence": confidence,
+                "assumptions": assumptions,
+                "warnings": warnings,
+            }
+        )
 
 
 def get_current_value_payload(result: ModuleResult) -> CurrentValueOutput:

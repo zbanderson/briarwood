@@ -3,10 +3,10 @@
   "address": "11 Test Ave, Belmar, NJ 07719",
   "label": "11 Test Ave",
   "ask_price": 700000.0,
-  "bcv": 769424.18,
+  "bcv": 769637.75,
   "pricing_view": "appears undervalued",
   "confidence": 0.55,
   "comp_trust": "Seed / Review Only",
   "missing_input_count": 5,
-  "timestamp": "2026-04-09T19:51:08"
+  "timestamp": "2026-04-10T08:55:18"
 }

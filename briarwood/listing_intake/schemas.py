@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from briarwood.schemas import (
+    CanonicalFieldProvenance,
     CanonicalPropertyData,
     EvidenceMode,
     InputCoverageStatus,
@@ -13,7 +14,9 @@ from briarwood.schemas import (
     PropertyInput,
     SourceCoverageItem,
     SourceMetadata,
+    SourceTier,
     UserAssumptions,
+    VerifiedStatus,
 )
 
 
@@ -157,6 +160,8 @@ class NormalizedPropertyData:
             evidence_mode=EvidenceMode.LISTING_ASSISTED,
             source_coverage=source_coverage,
             provenance=[f"{self.source or 'listing_text'}:{self.source_url or 'text'}"],
+            field_provenance=_listing_field_provenance(self, facts),
+            mapper_version="listing_intake/v1",
         )
         return CanonicalPropertyData(
             property_id=property_id,
@@ -220,3 +225,29 @@ def _parse_date(value: str | None) -> date | None:
         except ValueError:
             continue
     return None
+
+
+def _listing_field_provenance(
+    normalized: NormalizedPropertyData,
+    facts: PropertyFacts,
+) -> dict[str, CanonicalFieldProvenance]:
+    source_name = normalized.source or "listing_text"
+    provenance: dict[str, CanonicalFieldProvenance] = {}
+    for field_name in [
+        "address", "town", "state", "county", "zip_code", "beds", "baths", "sqft", "lot_size",
+        "property_type", "architectural_style", "condition_profile", "capex_lane", "year_built", "stories",
+        "garage_spaces", "purchase_price", "taxes", "monthly_hoa", "days_on_market", "listing_date",
+        "listing_description", "source_url",
+    ]:
+        value = getattr(facts, field_name, None)
+        if value is None:
+            continue
+        provenance[field_name] = CanonicalFieldProvenance(
+            value=value,
+            source=source_name,
+            source_tier=SourceTier.TIER_1,
+            verified_status=VerifiedStatus.VERIFIED,
+            confidence=0.88,
+            mapper_version="listing_intake/v1",
+        )
+    return provenance

@@ -1,0 +1,10 @@
+{
+  "property": [
+    {
+      "buildingpermit": [
+        {"issuedate": "2025-11-01", "description": "Interior renovation"},
+        {"issuedate": "2025-12-14", "description": "Deck replacement"}
+      ]
+    }
+  ]
+}

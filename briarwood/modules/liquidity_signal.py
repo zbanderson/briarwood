@@ -119,16 +119,18 @@ def get_liquidity_signal_payload(result: ModuleResult) -> LiquiditySignalOutput:
 
 
 def _dom_score(days_on_market: int | None) -> float | None:
+    """Smooth piecewise-linear DOM score (replaces step function)."""
     if days_on_market is None:
         return None
-    if days_on_market <= 7:
+    dom = float(days_on_market)
+    if dom <= 7:
         return 96.0
-    if days_on_market <= 21:
-        return 82.0
-    if days_on_market <= 45:
-        return 60.0
-    if days_on_market <= 90:
-        return 32.0
+    if dom <= 21:
+        return 96.0 + (82.0 - 96.0) * (dom - 7) / (21 - 7)
+    if dom <= 45:
+        return 82.0 + (60.0 - 82.0) * (dom - 21) / (45 - 21)
+    if dom <= 90:
+        return 60.0 + (32.0 - 60.0) * (dom - 45) / (90 - 45)
     return 12.0
 
 

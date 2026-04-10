@@ -250,7 +250,53 @@ class DecisionModelSettings:
     # TODO: make geography/property-type aware in a future iteration.
     replacement_cost_per_sqft: float = 400.0
 
+    # Comp confidence penalty thresholds for _critical_input_penalty.
+    # When the comp layer's enriched confidence score is low, the scoring
+    # engine should penalise the final score even if comp_count >= 2.
+    comp_confidence_score_low_threshold: float = 0.35
+    comp_confidence_score_low_penalty: float = 0.14
+    comp_confidence_score_medium_threshold: float = 0.50
+    comp_confidence_score_medium_penalty: float = 0.08
+
+    # Weight redistribution dampening thresholds for _aggregate_category.
+    # When a large fraction of a category's sub-factor weight is
+    # redistributed (because sub-factors were unscorable), the remaining
+    # factors get disproportionate influence.  Dampening pulls the
+    # category score toward NEUTRAL_SCORE to reflect reduced conviction.
+    redistribution_dampen_moderate_threshold: float = 0.40
+    redistribution_dampen_moderate_factor: float = 0.08
+    redistribution_dampen_heavy_threshold: float = 0.60
+    redistribution_dampen_heavy_factor: float = 0.15
+
+
+@dataclass(slots=True)
+class ComparableSalesSettings:
+    """Tuning knobs for the comparable-sales agent (Group 3c)."""
+    # Gate thresholds
+    max_distance_miles: float = 5.0
+    max_sale_age_days: int = 1460
+    sqft_gap_threshold: float = 0.35
+    lot_gap_threshold: float = 1.0
+    price_ratio_low: float = 0.35
+    price_ratio_high: float = 2.50
+    bed_diff_max: int = 2
+    bath_diff_max: float = 1.5
+    # Adjustment caps
+    total_adjustment_cap: float = 0.20
+    condition_per_rank_delta: float = 0.04
+    condition_cap: float = 0.15
+    sqft_adjustment_scale: float = 0.50
+    sqft_adjustment_cap: float = 0.15
+    # Similarity minimum
+    similarity_floor: float = 0.30
+    # Public record ingestion paths
+    sr1a_data_dir: str = "data/public_records/sr1a/"
+    modiv_data_dir: str = "data/public_records/modiv/"
+    target_county_code: str = "13"  # Monmouth
+    target_districts: list[str] | None = None  # None = all districts
+
 
 DEFAULT_BULL_BASE_BEAR_SETTINGS = BullBaseBearSettings()
 DEFAULT_RISK_SETTINGS = RiskSettings()
 DEFAULT_DECISION_MODEL_SETTINGS = DecisionModelSettings()
+DEFAULT_COMPARABLE_SALES_SETTINGS = ComparableSalesSettings()

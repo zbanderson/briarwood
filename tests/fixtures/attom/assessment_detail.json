@@ -1,0 +1,11 @@
+{
+  "property": [
+    {
+      "assessment": {
+        "tax": {"taxamt": 12850, "taxyear": 2025},
+        "assessed": {"assdlandvalue": 220000, "assdimprvalue": 365000, "assdttlvalue": 585000},
+        "market": {"mktttlvalue": 910000}
+      }
+    }
+  ]
+}
