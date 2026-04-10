@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:33:45Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 448240,
+    "avm_low": 331307,
+    "avm_value": 389774
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "303 COMSTOCK ST",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "303 COMSTOCK ST, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6801"
+        },
+        "area": {
+          "blockNum": "605",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "WEST ASBURY PARK",
+          "taxcodearea": "04"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 6814,
+            "avmlastmonthvalue": 382960,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 448240,
+            "low": 331307,
+            "scr": 85,
+            "value": 389774,
+            "valueRange": 58466
+          },
+          "calculations": {
+            "perSizeUnit": 367.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 82.42,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 459446.0,
+            "avmexcellentlow": 339589.68,
+            "avmgoodhigh": 448240.0,
+            "avmgoodlow": 331307.0,
+            "avmpoorhigh": 425828.0,
+            "avmpoorlow": 314741.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 468
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1062,
+            "grosssizeadjusted": 1062,
+            "livingsize": 1062,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1062
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1950
+          }
+        },
+        "identifier": {
+          "Id": 13150803,
+          "apn": "04-00605-0000-00003",
+          "apnOrig": "04-00605-0000-00003",
+          "attomId": 13150803,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, ZI07712",
+          "latitude": "40.218213",
+          "longitude": "-74.018041"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 25,
+          "lotnum": "3",
+          "lotsize1": 0.029,
+          "lotsize2": 1250
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "OLD 68,3-A",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 13150803,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:44.965Z",
+      "total": 1,
+      "transactionID": "b969dcc7df0183056f4a3e9a39ca6df8",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "fetched_at": "2026-04-10T19:30:18Z",
+  "normalized_payload": {
+    "avm_confidence": 82,
+    "avm_fsd": null,
+    "avm_high": 2122513,
+    "avm_low": 1474966,
+    "avm_value": 1798740
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "204 5TH AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "204 5TH AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1212",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "50",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 18720,
+            "avmlastmonthvalue": 1780020,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 2122513,
+            "low": 1474966,
+            "scr": 82,
+            "value": 1798740,
+            "valueRange": 323773
+          },
+          "calculations": {
+            "perSizeUnit": 578.0,
+            "rangePctOfValue": 36.0,
+            "ratioTaxAmt": 104.81,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2175575.82,
+            "avmexcellentlow": 1511840.15,
+            "avmgoodhigh": 2122513.0,
+            "avmgoodlow": 1474966.0,
+            "avmpoorhigh": 2016387.35,
+            "avmpoorlow": 1401217.7
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 1120
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathspartial": 1,
+            "bathstotal": 4.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 3112,
+            "grosssize": 3112,
+            "grosssizeadjusted": 3112,
+            "groundfloorsize": 1320,
+            "livingsize": 3112,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3112
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 37750905,
+          "apn": "08  00050-0000-00015",
+          "attomId": 37750905,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.201031",
+          "longitude": "-74.009753"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "15",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:15 BLK:50 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1895
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37750905,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:18.062Z",
+      "total": 1,
+      "transactionID": "13ee21c23ad6ac6137801465b79fe83d",
+      "version": "1.0.0"
+    }
+  }
+}

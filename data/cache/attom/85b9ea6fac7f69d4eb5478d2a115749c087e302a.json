@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-10T19:33:31Z",
+  "normalized_payload": {
+    "address": "102 UNION AVE, ASBURY PARK, NJ 07712",
+    "baths": 2.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.215171",
+    "longitude": "-74.019125",
+    "lot_size": 0.0620064,
+    "property_type": "TOWNHOUSE/ROWHOUSE",
+    "sqft": 1080,
+    "stories": 2,
+    "year_built": 1990
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "102 UNION AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "102 UNION AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6800",
+          "postal3": "C008"
+        },
+        "area": {
+          "blockNum": "1205",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ASBURY SHORES INC",
+          "taxcodearea": "4"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 1080,
+            "grosssizeadjusted": 1080,
+            "groundfloorsize": 540,
+            "livingsize": 1080,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1080
+          },
+          "summary": {
+            "archStyle": "TOWNHOUSE",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 288338,
+          "apn": "04  01205-0000-00002",
+          "attomId": 288338,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "N4": "708b2285f365ea13cb20bb9340cb6fb7",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, RS0005010168, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.215171",
+          "longitude": "-74.019125"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 18,
+          "lotnum": "2",
+          "lotsize1": 0.0620064,
+          "lotsize2": 2701
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:2 BLK:1205 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 12",
+          "propIndicator": "10",
+          "propLandUse": "TOWNHOUSE/ROWHOUSE",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "ROW HOUSE",
+          "propsubtype": "Residential",
+          "proptype": "TOWNHOUSE/ROWHOUSE",
+          "yearbuilt": 1990
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 288338,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:31.075Z",
+      "total": 1,
+      "transactionID": "7749850e7701afde13b84a27fd6f7073",
+      "version": "1.0.0"
+    }
+  }
+}

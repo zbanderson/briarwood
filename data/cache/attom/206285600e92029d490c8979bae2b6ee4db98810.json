@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:33:26Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 573643,
+    "avm_low": 423997,
+    "avm_value": 498820
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "401 RIDGE AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "401 RIDGE AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6331"
+        },
+        "area": {
+          "blockNum": "1406",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "04"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 3773,
+            "avmlastmonthvalue": 495047,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 573643,
+            "low": 423997,
+            "scr": 85,
+            "value": 498820,
+            "valueRange": 74823
+          },
+          "calculations": {
+            "perSizeUnit": 308.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 89.03,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 587984.07,
+            "avmexcellentlow": 434596.92,
+            "avmgoodhigh": 573643.0,
+            "avmgoodlow": 423997.0,
+            "avmpoorhigh": 544960.85,
+            "avmpoorlow": 402797.15
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "BRICK",
+            "roofShape": "HIP",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "bsmtsize": 720
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 440,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1616,
+            "grosssizeadjusted": 1616,
+            "livingsize": 1616,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1616
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1910
+          }
+        },
+        "identifier": {
+          "Id": 8351313,
+          "apn": "04-01406-0000-00006",
+          "apnOrig": "04-01406-0000-00006",
+          "attomId": 8351313,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "N4": "899a0cab0201773df431fc3e6086c015",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, RS0005010634, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.219719",
+          "longitude": "-74.025243"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 32,
+          "lotnum": "6",
+          "lotsize1": 0.074,
+          "lotsize2": 3200
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "OLD 61,4",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1910
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 8351313,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:26.006Z",
+      "total": 1,
+      "transactionID": "d6c9474108cc3e1a39a1ff331843ef2e",
+      "version": "1.0.0"
+    }
+  }
+}

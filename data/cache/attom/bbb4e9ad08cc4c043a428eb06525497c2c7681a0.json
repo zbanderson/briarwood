@@ -1,0 +1,135 @@
+{
+  "fetched_at": "2026-04-10T19:33:24Z",
+  "normalized_payload": {
+    "address": "9 DEAL LAKE CT, ASBURY PARK, NJ 07712",
+    "baths": 2.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.229851",
+    "longitude": "-74.001788",
+    "lot_size": 0.031,
+    "property_type": "SFR",
+    "sqft": 1398,
+    "stories": 2,
+    "year_built": 1930
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "9 DEAL LAKE CT",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "9 DEAL LAKE CT, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "5116"
+        },
+        "area": {
+          "blockNum": "3705",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "04"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "FLAT",
+            "roofcover": "COMPOSITION SHINGLE",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 738,
+            "fplccount": 1
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1398,
+            "grosssizeadjusted": 1398,
+            "livingsize": 1398,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1398
+          },
+          "summary": {
+            "archStyle": "ROW HOME",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1930
+          }
+        },
+        "identifier": {
+          "Id": 194546297,
+          "apn": "04-03705-0000-00014",
+          "apnOrig": "04-03705-0000-00014",
+          "attomId": 194546297,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa, 2e7fa370065620c582c90ff2708e6c73",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, CS3454270, DB3412060, ND0004843104, ND0004857291, PL3401960, SB0000103198, SB0000151620, SB0000153490, ZI07712",
+          "latitude": "40.229851",
+          "longitude": "-74.001788"
+        },
+        "lot": {
+          "depth": 71,
+          "frontage": 19,
+          "lotnum": "14",
+          "lotsize1": 0.031,
+          "lotsize2": 1350
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1930
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-30",
+          "pubDate": "2026-03-30"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194546297,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:24.374Z",
+      "total": 1,
+      "transactionID": "1eb30b829f890318882f22fe9aafb363",
+      "version": "1.0.0"
+    }
+  }
+}

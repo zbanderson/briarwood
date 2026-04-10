@@ -1,0 +1,121 @@
+{
+  "fetched_at": "2026-04-10T19:21:34Z",
+  "normalized_payload": {
+    "address": "903 OCEAN AVE, BELMAR, NJ 07719",
+    "baths": null,
+    "beds": 10,
+    "garage_spaces": null,
+    "latitude": "40.177678",
+    "longitude": "-74.014062",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 3756,
+    "stories": null,
+    "year_built": 1966
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "903 OCEAN AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "903 OCEAN AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2375",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "90",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "OCEAN BREEZE/BELMAR",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "beds": 10,
+            "roomsTotal": 23
+          },
+          "size": {
+            "bldgsize": 3756,
+            "grosssizeadjusted": 3756,
+            "livingsize": 3756,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3756
+          },
+          "summary": {
+            "archStyle": "CONDO/APARTMENT",
+            "unitsCount": "7",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 253249672,
+          "apn": "07  00090-0000-00003-  01-C0003",
+          "attomId": 253249672,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.177678",
+          "longitude": "-74.014062"
+        },
+        "lot": {
+          "lotnum": "3.01",
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1966
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 253249672,
+      "attomIds": [
+        253249672
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:34.710Z",
+      "total": 1,
+      "transactionID": "da11551235f9b34b2ffeded6024f6564",
+      "version": "1.0.0"
+    }
+  }
+}

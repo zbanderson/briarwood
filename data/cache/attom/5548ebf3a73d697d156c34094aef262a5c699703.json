@@ -1,0 +1,166 @@
+{
+  "fetched_at": "2026-04-10T19:29:52Z",
+  "normalized_payload": {
+    "avm_confidence": 88,
+    "avm_fsd": null,
+    "avm_high": 1668037,
+    "avm_low": 1310600,
+    "avm_value": 1489319
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "420 BURLINGTON AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "420 BURLINGTON AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1118",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "85",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "CENTRAL PARK",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 15996,
+            "avmlastmonthvalue": 1473323,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1668037,
+            "low": 1310600,
+            "scr": 88,
+            "value": 1489319,
+            "valueRange": 178718
+          },
+          "calculations": {
+            "perSizeUnit": 757.0,
+            "rangePctOfValue": 24.0,
+            "ratioTaxAmt": 111.11,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1709737.92,
+            "avmexcellentlow": 1343365.0,
+            "avmgoodhigh": 1668037.0,
+            "avmgoodlow": 1310600.0,
+            "avmpoorhigh": 1584635.15,
+            "avmpoorlow": 1245070.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "BRICK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1965,
+            "grosssizeadjusted": 1965,
+            "groundfloorsize": 1021,
+            "livingsize": 1965,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1965
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 196562641,
+          "apn": "08  00085-0000-00028",
+          "attomId": 196562641,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N4": "67faf068675b5d6f0e0bfd487ac98ca4",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005012005, SB0000102476, ZI07720",
+          "latitude": "40.196407",
+          "longitude": "-74.016487"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "28",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:28 BLK:85 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1902
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 196562641,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:52.102Z",
+      "total": 1,
+      "transactionID": "2e5efaf2647a634046453201fa2b5356",
+      "version": "1.0.0"
+    }
+  }
+}

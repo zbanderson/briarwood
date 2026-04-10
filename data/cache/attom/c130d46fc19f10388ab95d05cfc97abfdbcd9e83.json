@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-04-10T19:32:59Z",
+  "normalized_payload": {
+    "address": "521 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.192717",
+    "longitude": "-74.009901",
+    "lot_size": null,
+    "property_type": "TAX EXEMPT",
+    "sqft": 24168,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "521 OCEAN AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "521 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1446",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "23",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "building": {
+          "construction": {},
+          "interior": {
+            "fplctype": "UNKNOWN"
+          },
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 24168,
+            "grosssizeadjusted": 24168,
+            "livingsize": 24168,
+            "sizeInd": "BUILDING SQFT",
+            "universalsize": 24168
+          },
+          "summary": {}
+        },
+        "identifier": {
+          "Id": 335075750,
+          "apn": "06  00023-0000-00014",
+          "attomId": 335075750,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "N4": "31eb4c40ee4e08296180f870997f1790",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, ND0000017841, PL3402440, RS0002712031, RS0005010587, SB0000102419, ZI07717",
+          "latitude": "40.192717",
+          "longitude": "-74.009901"
+        },
+        "lot": {
+          "lotnum": "14"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: COMMON ELEMENTS/FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 335075750,
+      "attomIds": [
+        335075750
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:32:59.040Z",
+      "total": 1,
+      "transactionID": "7c66f8d603e80c9a42ddce494f98af64",
+      "version": "1.0.0"
+    }
+  }
+}

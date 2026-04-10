@@ -14,6 +14,7 @@ from briarwood.data_quality.normalizers import (
     normalize_state,
     normalize_town,
 )
+from briarwood.data_quality.eligibility import classify_comp_eligibility
 from briarwood.data_quality.provenance import FieldCandidate, FieldEvidence, PropertyEvidenceProfile
 from briarwood.data_quality.source_policy import (
     IDENTITY_FIELDS,
@@ -262,6 +263,15 @@ def _summary_flags(
     rent_score = _quality_score(rent_fields, required={"estimated_rent"})
     identity_status = _identity_match_status(identity_fields)
     comp_status = _comp_eligibility_status(identity_fields, structural_score, identity_status)
+    gate = classify_comp_eligibility(
+        PropertyEvidenceProfile(
+            structural_fields=structural_fields,
+            tax_fields=tax_fields,
+            sale_fields=sale_fields,
+            rent_fields=rent_fields,
+            identity_fields=identity_fields,
+        )
+    )
     return {
         "structural_data_quality_score": round(structural_score, 3),
         "tax_data_quality_score": round(tax_score, 3),
@@ -269,6 +279,10 @@ def _summary_flags(
         "rent_data_quality_score": round(rent_score, 3),
         "identity_match_status": identity_status,
         "comp_eligibility_status": comp_status,
+        "comp_eligibility_gate": gate.status,
+        "comp_eligibility_reasons": list(gate.reasons),
+        "comp_eligibility_warnings": list(gate.warnings),
+        "fatal_conflicts": list(gate.fatal_conflicts),
     }
 
 
@@ -316,7 +330,7 @@ def _comp_eligibility_status(identity_fields: dict[str, FieldEvidence], structur
     if identity_status == "needs_review":
         return "needs_review"
     if structural_score < 0.35:
-        return "rejected"
+        return "needs_review"
     if structural_score < 0.65:
         return "accepted_with_warnings"
     return "accepted"
@@ -335,6 +349,8 @@ def _field_normalizer(field_name: str):
         return normalize_town
     if field_name == "state":
         return normalize_state
+    if field_name == "property_type":
+        return lambda value: str(value).strip().lower() if value not in (None, "", [], {}) else None
     if field_name in {"sale_date", "last_sale_date", "tax_year"}:
         return normalize_date
     if field_name == "lot_size":

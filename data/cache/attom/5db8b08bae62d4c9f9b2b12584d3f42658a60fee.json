@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:22:34Z",
+  "normalized_payload": {
+    "avm_confidence": 80,
+    "avm_fsd": null,
+    "avm_high": 2561553,
+    "avm_low": 1707702,
+    "avm_value": 2134628
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "110 4TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "110 4TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2016",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "30",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 22260,
+            "avmlastmonthvalue": 2112368,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 2561553,
+            "low": 1707702,
+            "scr": 80,
+            "value": 2134628,
+            "valueRange": 426925
+          },
+          "calculations": {
+            "perSizeUnit": 616.0,
+            "rangePctOfValue": 40.0,
+            "ratioTaxAmt": 123.38,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2625591.82,
+            "avmexcellentlow": 1750394.55,
+            "avmgoodhigh": 2561553.0,
+            "avmgoodlow": 1707702.0,
+            "avmpoorhigh": 2433475.35,
+            "avmpoorlow": 1622316.9
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "BRICK",
+            "roofShape": "GAMBREL",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1042,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3462,
+            "grosssizeadjusted": 3462,
+            "groundfloorsize": 1677,
+            "livingsize": 3462,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3462
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 201925154,
+          "apn": "07  00030-0000-00011",
+          "attomId": 201925154,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.183530",
+          "longitude": "-74.013086"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "11",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:11 BLK:30 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 4",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1903
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 201925154,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:34.048Z",
+      "total": 1,
+      "transactionID": "d9e22dcfa03d16dc0b2a2a6f53e1b592",
+      "version": "1.0.0"
+    }
+  }
+}

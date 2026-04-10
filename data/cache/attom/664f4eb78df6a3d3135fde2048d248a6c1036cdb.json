@@ -1,0 +1,133 @@
+{
+  "fetched_at": "2026-04-10T19:22:54Z",
+  "normalized_payload": {
+    "address": "1006 MADISON AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.206042",
+    "longitude": "-74.011690",
+    "lot_size": 0.0286961,
+    "property_type": "SFR",
+    "sqft": 717,
+    "stories": 1,
+    "year_built": 1914
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1006 MADISON AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "1006 MADISON AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1527",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "16",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "PIER",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 717,
+            "grosssizeadjusted": 717,
+            "groundfloorsize": 717,
+            "livingsize": 717,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 717
+          },
+          "summary": {
+            "archStyle": "BUNGALOW",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 2301979,
+          "apn": "08  00016-0000-00020",
+          "attomId": 2301979,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.206042",
+          "longitude": "-74.011690"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 25,
+          "lotnum": "20",
+          "lotsize1": 0.0286961,
+          "lotsize2": 1250,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:20 BLK:16 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1914
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 2301979,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:54.074Z",
+      "total": 1,
+      "transactionID": "a8f5ac1ae4eea06f00fbf692a0b8ebce",
+      "version": "1.0.0"
+    }
+  }
+}

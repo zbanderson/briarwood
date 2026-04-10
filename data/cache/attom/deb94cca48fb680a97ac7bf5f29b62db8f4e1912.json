@@ -1,0 +1,137 @@
+{
+  "fetched_at": "2026-04-10T19:24:04Z",
+  "normalized_payload": {
+    "address": "1726 BELMONT AVE, BELMAR, NJ 07719",
+    "baths": 2.0,
+    "beds": 6,
+    "garage_spaces": null,
+    "latitude": "40.171973",
+    "longitude": "-74.028436",
+    "lot_size": 0.1033058,
+    "property_type": "SFR",
+    "sqft": 1684,
+    "stories": 2,
+    "year_built": 1940
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1726 BELMONT AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1726 BELMONT AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3016",
+          "postal3": "C010"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR ANX",
+          "taxcodearea": "46"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 6,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 1684,
+            "grosssizeadjusted": 1684,
+            "groundfloorsize": 1012,
+            "livingsize": 1684,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1684
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 15566680,
+          "apn": "46  00024-0000-00021",
+          "attomId": 15566680,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.171973",
+          "longitude": "-74.028436"
+        },
+        "lot": {
+          "depth": 90,
+          "frontage": 50,
+          "lotnum": "21",
+          "lotsize1": 0.1033058,
+          "lotsize2": 4500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:21 BLK:24 DIST:46 CITY/MUNI/TWP:LAKE COMO BORO MAP REF:TAX MAP 3",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 15566680,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:04.900Z",
+      "total": 1,
+      "transactionID": "a83a1e819dbf345cf684df3bb8969c42",
+      "version": "1.0.0"
+    }
+  }
+}

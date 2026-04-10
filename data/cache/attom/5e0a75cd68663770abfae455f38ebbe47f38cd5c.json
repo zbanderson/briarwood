@@ -1,0 +1,160 @@
+{
+  "fetched_at": "2026-04-10T19:32:21Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1342073,
+    "avm_low": 991967,
+    "avm_value": 1167020
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "226 SYLVANIA AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "226 SYLVANIA AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1286",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "19",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "AVON-BY-THE-SEA",
+          "taxcodearea": "06"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 10005,
+            "avmlastmonthvalue": 1157015,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1342073,
+            "low": 991967,
+            "scr": 85,
+            "value": 1167020,
+            "valueRange": 175053
+          },
+          "calculations": {
+            "perSizeUnit": 505.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 130.95,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1375624.82,
+            "avmexcellentlow": 1016766.18,
+            "avmgoodhigh": 1342073.0,
+            "avmgoodlow": 991967.0,
+            "avmpoorhigh": 1274969.35,
+            "avmpoorlow": 942368.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 588
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 5,
+            "roomsTotal": 11
+          },
+          "size": {
+            "bldgsize": 2307,
+            "grosssizeadjusted": 2307,
+            "groundfloorsize": 1371,
+            "livingsize": 2307,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2307
+          },
+          "summary": {
+            "archStyle": "BUNGALOW",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 17933774,
+          "apn": "06  00019-0000-00011",
+          "attomId": 17933774,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.192518",
+          "longitude": "-74.015253"
+        },
+        "lot": {
+          "depth": 140,
+          "frontage": 25,
+          "lotnum": "11",
+          "lotsize1": 0.0803489,
+          "lotsize2": 3500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:11 BLK:19 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1914
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 17933774,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:32:21.356Z",
+      "total": 1,
+      "transactionID": "733e29171ee6ae9e11bebaa767d4629d",
+      "version": "1.0.0"
+    }
+  }
+}

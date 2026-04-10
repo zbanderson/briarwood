@@ -1,0 +1,145 @@
+{
+  "fetched_at": "2026-04-10T19:21:56Z",
+  "normalized_payload": {
+    "address": "316 SAINT CLAIR AVE, SPRING LAKE, NJ 07762",
+    "baths": 2.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.157200",
+    "longitude": "-74.029109",
+    "lot_size": 0.1721763,
+    "property_type": "SFR",
+    "sqft": 2776,
+    "stories": 2,
+    "year_built": 1926
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "316 SAINT CLAIR AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "316 SAINT CLAIR AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1528",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "104",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "47"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1531,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 400,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2776,
+            "grosssizeadjusted": 2776,
+            "groundfloorsize": 1630,
+            "livingsize": 2776,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2776
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 201688361,
+          "apn": "47  00104-0000-00014",
+          "attomId": 201688361,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.157200",
+          "longitude": "-74.029109"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "14",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:14 BLK:104 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1926
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 201688361,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:56.321Z",
+      "total": 1,
+      "transactionID": "89a2a14fcdbf26da50635af5581d85bf",
+      "version": "1.0.0"
+    }
+  }
+}

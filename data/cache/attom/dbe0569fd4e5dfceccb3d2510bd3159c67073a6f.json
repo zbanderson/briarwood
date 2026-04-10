@@ -1,0 +1,131 @@
+{
+  "fetched_at": "2026-04-10T19:22:19Z",
+  "normalized_payload": {
+    "address": "20 WOODLAND AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 10.5,
+    "beds": 13,
+    "garage_spaces": null,
+    "latitude": "40.193165",
+    "longitude": "-74.010109",
+    "lot_size": 0.241,
+    "property_type": "SFR",
+    "sqft": 5464,
+    "stories": 3,
+    "year_built": 2006
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "20 WOODLAND AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "20 WOODLAND AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1435"
+        },
+        "area": {
+          "blockNum": "21",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BOROUGH/AVON BY/SEA",
+          "taxcodearea": "06"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "HIP",
+            "roofcover": "OTHER (NOT CLASSIFIED)"
+          },
+          "interior": {
+            "bsmtsize": 1568,
+            "fplccount": 1
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 9,
+            "bathspartial": 1,
+            "bathstotal": 10.5,
+            "beds": 13,
+            "roomsTotal": 18
+          },
+          "size": {
+            "bldgsize": 5464,
+            "grosssizeadjusted": 5464,
+            "livingsize": 5464,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 5464
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 3,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2006
+          }
+        },
+        "identifier": {
+          "Id": 45419439,
+          "apn": "06-00021-0000-00014",
+          "apnOrig": "06-00021-0000-00014",
+          "attomId": 45419439,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 16d59496aaa728a6b3dba5afa4dc5ba8",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.193165",
+          "longitude": "-74.010109"
+        },
+        "lot": {
+          "depth": 140,
+          "frontage": 75,
+          "lotnum": "14",
+          "lotsize1": 0.241,
+          "lotsize2": 10498
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2006
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-04-07",
+          "pubDate": "2026-04-07"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 45419439,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:19.169Z",
+      "total": 1,
+      "transactionID": "14f3dc54034eff9003beff8f4cb53636",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:31:54Z",
+  "normalized_payload": {
+    "address": "601 MAIN ST, AVON BY THE SEA, NJ 07717",
+    "baths": 3.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.193958",
+    "longitude": "-74.021582",
+    "lot_size": 0.1033058,
+    "property_type": "DUPLEX",
+    "sqft": 1408,
+    "stories": 2,
+    "year_built": 1929
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "601 MAIN ST",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "601 MAIN ST, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1019",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "10",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "06"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "BRICK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 614
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1408,
+            "grosssizeadjusted": 1408,
+            "groundfloorsize": 836,
+            "livingsize": 1408,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1408
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 190815701,
+          "apn": "06  00010-0000-00007-  01",
+          "attomId": 190815701,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 16d59496aaa728a6b3dba5afa4dc5ba8, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.193958",
+          "longitude": "-74.021582"
+        },
+        "lot": {
+          "depth": 90,
+          "frontage": 50,
+          "lotnum": "7.01",
+          "lotsize1": 0.1033058,
+          "lotsize2": 4500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:7.01 BLK:10 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "21",
+          "propLandUse": "DUPLEX",
+          "propclass": "Duplex, Triplex, Quadplex",
+          "propertyType": "DUPLEX (2 UNITS, ANY COMBINATION)",
+          "propsubtype": "Residential",
+          "proptype": "DUPLEX",
+          "yearbuilt": 1929
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190815701,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:31:53.883Z",
+      "total": 1,
+      "transactionID": "a02836580c1e3337618caa933cdcecc6",
+      "version": "1.0.0"
+    }
+  }
+}

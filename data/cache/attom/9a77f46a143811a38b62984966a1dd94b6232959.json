@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:20:54Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1107467,
+    "avm_low": 818562,
+    "avm_value": 963015
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1208 PINE TREE WAY",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1208 PINE TREE WAY, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2846",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "230",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 5890,
+            "avmlastmonthvalue": 957125,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1107467,
+            "low": 818562,
+            "scr": 85,
+            "value": 963015,
+            "valueRange": 144452
+          },
+          "calculations": {
+            "perSizeUnit": 1019.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 158.11,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1135153.67,
+            "avmexcellentlow": 839026.05,
+            "avmgoodhigh": 1107467.0,
+            "avmgoodlow": 818562.0,
+            "avmpoorhigh": 1052093.65,
+            "avmpoorlow": 777633.9
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 735,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 1,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 945,
+            "grosssizeadjusted": 945,
+            "groundfloorsize": 945,
+            "livingsize": 945,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 945
+          },
+          "summary": {
+            "archStyle": "BUNGALOW",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 143641636,
+          "apn": "07  00230-0000-00039",
+          "attomId": 143641636,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "fe99d8182b407c607a0ccf685e0b3338",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008649, PL3404930, ZI07719",
+          "latitude": "40.177921",
+          "longitude": "-74.036853"
+        },
+        "lot": {
+          "depth": 136,
+          "frontage": 50,
+          "lotnum": "39",
+          "lotsize1": 0.1561065,
+          "lotsize2": 6800
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:39 BLK:230 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 29",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1941
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 143641636,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:54.238Z",
+      "total": 1,
+      "transactionID": "6405d390cfc531a9cfebe4e858d53a33",
+      "version": "1.0.0"
+    }
+  }
+}

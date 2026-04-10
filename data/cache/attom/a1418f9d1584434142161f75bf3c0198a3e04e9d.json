@@ -1,0 +1,160 @@
+{
+  "fetched_at": "2026-04-10T19:22:39Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 550407,
+    "avm_low": 423764,
+    "avm_value": 487086
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1103 A ST",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1103 A ST, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2437",
+          "postal3": "C019"
+        },
+        "area": {
+          "blockNum": "111",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR",
+          "taxcodearea": "7"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7178,
+            "avmlastmonthvalue": 479908,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 550407,
+            "low": 423764,
+            "scr": 87,
+            "value": 487086,
+            "valueRange": 63321
+          },
+          "calculations": {
+            "perSizeUnit": 362.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 70.09,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 564167.17,
+            "avmexcellentlow": 434358.1,
+            "avmgoodhigh": 550407.0,
+            "avmgoodlow": 423764.0,
+            "avmpoorhigh": 522886.65,
+            "avmpoorlow": 402575.8
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 612,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1343,
+            "grosssizeadjusted": 1343,
+            "groundfloorsize": 731,
+            "livingsize": 1343,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1343
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 9110450,
+          "apn": "07  00111-0000-00021",
+          "attomId": 9110450,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.175871",
+          "longitude": "-74.016642"
+        },
+        "lot": {
+          "depth": 58,
+          "frontage": 21,
+          "lotnum": "21",
+          "lotsize1": 0.0279614,
+          "lotsize2": 1218
+        },
+        "summary": {
+          "legal1": "LOT:21 BLK:111 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 18",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1932
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 9110450,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:39.007Z",
+      "total": 1,
+      "transactionID": "e02c6ab8c0f10e3a39b0826d4278ff24",
+      "version": "1.0.0"
+    }
+  }
+}

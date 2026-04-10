@@ -1,0 +1,168 @@
+{
+  "fetched_at": "2026-04-10T19:29:04Z",
+  "normalized_payload": {
+    "avm_confidence": 91,
+    "avm_fsd": null,
+    "avm_high": 1600632,
+    "avm_low": 1336307,
+    "avm_value": 1468470
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2123 BAILEYS CORNER RD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2123 BAILEYS CORNER RD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9536",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "805.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 12710,
+            "avmlastmonthvalue": 1455760,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1600632,
+            "low": 1336307,
+            "scr": 91,
+            "value": 1468470,
+            "valueRange": 132162
+          },
+          "calculations": {
+            "perSizeUnit": 373.0,
+            "rangePctOfValue": 18.0,
+            "ratioTaxAmt": 89.81,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1640647.8,
+            "avmexcellentlow": 1369714.67,
+            "avmgoodhigh": 1600632.0,
+            "avmgoodlow": 1336307.0,
+            "avmpoorhigh": 1520600.4,
+            "avmpoorlow": 1269491.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "STONE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 2292,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 440,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3931,
+            "grosssizeadjusted": 3931,
+            "groundfloorsize": 2732,
+            "livingsize": 3931,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3931
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 199430863,
+          "apn": "52  00805-  01-00057",
+          "attomId": 199430863,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000142746, SB0000151642, ZI07719",
+          "latitude": "40.141143",
+          "longitude": "-74.068888"
+        },
+        "lot": {
+          "lotnum": "57",
+          "lotsize1": 4.72,
+          "lotsize2": 205603,
+          "poolind": "YES",
+          "pooltype": "POOL W/HOT TUB/SPA"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:57 BLK:805.01 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 100",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1980
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 199430863,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:04.192Z",
+      "total": 1,
+      "transactionID": "91e31f5cae96ac42ff0aff37a14e3e9a",
+      "version": "1.0.0"
+    }
+  }
+}

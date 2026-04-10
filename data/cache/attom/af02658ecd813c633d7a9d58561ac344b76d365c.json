@@ -1,0 +1,146 @@
+{
+  "fetched_at": "2026-04-10T19:25:37Z",
+  "normalized_payload": {
+    "address": "1442 GARRETT DR, WALL TOWNSHIP, NJ 07719",
+    "baths": 2.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.143306",
+    "longitude": "-74.066907",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 3118,
+    "stories": 2,
+    "year_built": 1992
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1442 GARRETT DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1442 GARRETT DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9647",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "733",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BAILEYS CORNER ESTATES PH I",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1383,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 529,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 3118,
+            "grosssizeadjusted": 3118,
+            "groundfloorsize": 1705,
+            "livingsize": 3118,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3118
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 189920149,
+          "apn": "52  00733-0000-00049",
+          "attomId": 189920149,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "c03432b4a2aa69c83904b7eb57e7b3b1",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005010771, SB0000103447, SB0000146325, SB0000151642, ZI07719",
+          "latitude": "40.143306",
+          "longitude": "-74.066907"
+        },
+        "lot": {
+          "depth": 177,
+          "frontage": 170,
+          "lotnum": "49",
+          "lotsize2": 30090
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:49 BLK:733 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 100",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1992
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189920149,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:37.102Z",
+      "total": 1,
+      "transactionID": "f6879f3a76f151bba38e64daeb961251",
+      "version": "1.0.0"
+    }
+  }
+}

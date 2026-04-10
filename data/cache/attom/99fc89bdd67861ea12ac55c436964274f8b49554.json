@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:31:58Z",
+  "normalized_payload": {
+    "avm_confidence": 92,
+    "avm_fsd": null,
+    "avm_high": 2819820,
+    "avm_low": 2402069,
+    "avm_value": 2610945
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "24 WOODLAND AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "24 WOODLAND AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1435"
+        },
+        "area": {
+          "blockNum": "21",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "AVON BY SEA",
+          "taxcodearea": "06"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 26265,
+            "avmlastmonthvalue": 2584680,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 2819820,
+            "low": 2402069,
+            "scr": 92,
+            "value": 2610945,
+            "valueRange": 208875
+          },
+          "calculations": {
+            "perSizeUnit": 931.0,
+            "rangePctOfValue": 16.0,
+            "ratioTaxAmt": 171.68,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2890315.5,
+            "avmexcellentlow": 2462120.72,
+            "avmgoodhigh": 2819820.0,
+            "avmgoodlow": 2402069.0,
+            "avmpoorhigh": 2678829.0,
+            "avmpoorlow": 2281965.55
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "HIP",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 872,
+            "fplccount": 1
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 360,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 5,
+            "bathstotal": 5.0,
+            "beds": 8,
+            "roomsTotal": 11
+          },
+          "size": {
+            "bldgsize": 2803,
+            "grosssizeadjusted": 2803,
+            "livingsize": 2803,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2803
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1908
+          }
+        },
+        "identifier": {
+          "Id": 196562603,
+          "apn": "06-00021-0000-00013",
+          "apnOrig": "06-00021-0000-00013",
+          "attomId": 196562603,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.193183",
+          "longitude": "-74.010332"
+        },
+        "lot": {
+          "depth": 140,
+          "frontage": 50,
+          "lotnum": "13",
+          "lotsize1": 0.161,
+          "lotsize2": 7000
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1908
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 196562603,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:31:58.246Z",
+      "total": 1,
+      "transactionID": "e51df39e9212e5390a8f1b1ed1e5088d",
+      "version": "1.0.0"
+    }
+  }
+}

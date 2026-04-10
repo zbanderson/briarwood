@@ -1,0 +1,161 @@
+{
+  "fetched_at": "2026-04-10T19:25:43Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 842662,
+    "avm_low": 675647,
+    "avm_value": 759155
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1425 ADRIENNE RD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1425 ADRIENNE RD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3902",
+          "postal3": "C009"
+        },
+        "area": {
+          "blockNum": "140",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 11696,
+            "avmlastmonthvalue": 747459,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 842662,
+            "low": 675647,
+            "scr": 89,
+            "value": 759155,
+            "valueRange": 83507
+          },
+          "calculations": {
+            "perSizeUnit": 433.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 112.75,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 863728.55,
+            "avmexcellentlow": 692538.18,
+            "avmgoodhigh": 842662.0,
+            "avmgoodlow": 675647.0,
+            "avmpoorhigh": 800528.9,
+            "avmpoorlow": 641864.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1072
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 1751,
+            "grosssizeadjusted": 1751,
+            "groundfloorsize": 1108,
+            "livingsize": 1751,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1751
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 195272292,
+          "apn": "52  00140-0000-00004",
+          "attomId": 195272292,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "e01d3f913b19fff3c37860bdcf6b3de1",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008829, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.178942",
+          "longitude": "-74.055269"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "4",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:4 BLK:140 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 38",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1960
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 195272292,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:43.074Z",
+      "total": 1,
+      "transactionID": "f4ff88603279ef4125deb77c5c0236ee",
+      "version": "1.0.0"
+    }
+  }
+}

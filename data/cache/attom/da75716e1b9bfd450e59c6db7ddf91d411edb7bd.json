@@ -1,0 +1,111 @@
+{
+  "fetched_at": "2026-04-10T19:21:00Z",
+  "normalized_payload": {
+    "address": "120 S CONCOURSE, NEPTUNE, NJ 07753",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.189632",
+    "longitude": "-74.029631",
+    "lot_size": null,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "120 S CONCOURSE",
+          "line2": "NEPTUNE, NJ 07753",
+          "locality": "NEPTUNE",
+          "matchCode": "ExaStr",
+          "oneLine": "120 S CONCOURSE, NEPTUNE, NJ 07753",
+          "postal1": "07753",
+          "postal2": "5254",
+          "postal3": "C023"
+        },
+        "area": {
+          "blockNum": "5607",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 9112708,
+          "apn": "35  05607-0000-00003",
+          "attomId": 9112708,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2bcd094001a15ad76e069eb855ca54e1",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, 52beca6566f9bd1be932f7a523c29ee9, 56febb377d9ebce419436864e3fbcbb0",
+            "ZI": "6d4da2d055efd694ebb250c7fff76aaf"
+          },
+          "geoid": "CO34025, CS3449890, DB3411160, SB0000156162, SB0000156163, SB0000156454, ZI07753",
+          "latitude": "40.189632",
+          "longitude": "-74.029631"
+        },
+        "lot": {
+          "lotnum": "3",
+          "lotsize2": 26779,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: 16/FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-12-08",
+          "pubDate": "2025-12-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 9112708,
+      "attomIds": [
+        9112708
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:00.825Z",
+      "total": 1,
+      "transactionID": "89c994e30d2db891b1a7695c017deaa3",
+      "version": "1.0.0"
+    }
+  }
+}

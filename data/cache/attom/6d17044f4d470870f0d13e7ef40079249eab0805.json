@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:24:24Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 1622610,
+    "avm_low": 1327590,
+    "avm_value": 1475100
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "553 LUDLOW AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "553 LUDLOW AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2220",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "57",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "48"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 15750,
+            "avmlastmonthvalue": 1459350,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1622610,
+            "low": 1327590,
+            "scr": 90,
+            "value": 1475100,
+            "valueRange": 147510
+          },
+          "calculations": {
+            "perSizeUnit": 548.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 113.01,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1663175.25,
+            "avmexcellentlow": 1360779.75,
+            "avmgoodhigh": 1622610.0,
+            "avmgoodlow": 1327590.0,
+            "avmpoorhigh": 1541479.5,
+            "avmpoorlow": 1261210.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 1344
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 2688,
+            "grosssizeadjusted": 2688,
+            "groundfloorsize": 1344,
+            "livingsize": 2688,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2688
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 42465460,
+          "apn": "48  00057-0000-00009-  02",
+          "attomId": 42465460,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.158050",
+          "longitude": "-74.034188"
+        },
+        "lot": {
+          "depth": 180,
+          "frontage": 119,
+          "lotnum": "9.02",
+          "lotsize1": 0.4917355,
+          "lotsize2": 21420,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: P/O LOT 10",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1908
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 42465460,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:24.815Z",
+      "total": 1,
+      "transactionID": "034bf4bf16515fc32b3addd8f7f662bb",
+      "version": "1.0.0"
+    }
+  }
+}

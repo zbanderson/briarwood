@@ -108,17 +108,54 @@ class HybridValueModule:
                 ),
             )
 
-        standalone_input = _standalone_primary_input(property_input)
-        primary_result = self.comparable_sales_module.run(standalone_input)
-        primary_payload = get_comparable_sales_payload(primary_result)
-        primary_house_value, primary_house_comp_confidence, primary_house_comp_set = _primary_house_value(
-            primary_payload
-        )
-        rear_income_value, rear_income_method_used, rear_income_confidence, rent_assumption_summary, rear_notes = _rear_income_value(
-            property_input,
-            income_payload=income_payload,
-            primary_house_value=primary_house_value,
-        )
+        # When the comp module already performed hybrid decomposition (comping
+        # primary dwelling only + income-capitalizing additional units), use
+        # its primary dwelling value and income value directly instead of
+        # re-running comps or re-capitalizing income (avoids double-counting).
+        comp_is_hybrid = getattr(comparable_payload, "is_hybrid_valuation", False) and comparable_payload.primary_dwelling_value
+        if comp_is_hybrid:
+            primary_house_value = float(comparable_payload.primary_dwelling_value)
+            primary_house_comp_confidence = round(float(comparable_payload.comp_confidence_score or comparable_payload.confidence or 0.0), 2)
+            primary_house_comp_set = [
+                HybridCompEntry(
+                    address=comp.address,
+                    sale_price=float(comp.sale_price),
+                    adjusted_price=float(comp.adjusted_price),
+                    sale_date=comp.sale_date,
+                    fit_label=comp.fit_label,
+                    property_type=comp.property_type,
+                )
+                for comp in comparable_payload.comps_used[:4]
+            ]
+        else:
+            standalone_input = _standalone_primary_input(property_input)
+            primary_result = self.comparable_sales_module.run(standalone_input)
+            primary_payload = get_comparable_sales_payload(primary_result)
+            primary_house_value, primary_house_comp_confidence, primary_house_comp_set = _primary_house_value(
+                primary_payload
+            )
+
+        # When the comp module already capitalized the additional unit income,
+        # reuse that value directly — the comp module applied a proper
+        # NOI / cap-rate calculation so re-capping would discard legitimate
+        # income support.
+        if comp_is_hybrid and comparable_payload.additional_unit_income_value:
+            rear_income_value = float(comparable_payload.additional_unit_income_value)
+            rear_income_method_used = "comp_module_income_cap"
+            rear_income_confidence = 0.72
+            unit_count = comparable_payload.additional_unit_count or len(property_input.unit_rents or [])
+            annual_income = comparable_payload.additional_unit_annual_income or 0
+            rent_assumption_summary = (
+                f"Rear income reused from comp module hybrid decomposition: "
+                f"{unit_count} unit(s), ${annual_income:,.0f}/yr gross."
+            )
+            rear_notes: list[str] = []
+        else:
+            rear_income_value, rear_income_method_used, rear_income_confidence, rent_assumption_summary, rear_notes = _rear_income_value(
+                property_input,
+                income_payload=income_payload,
+                primary_house_value=primary_house_value,
+            )
         optionality_premium_value, optionality_reason, optionality_confidence = _optionality_premium(
             property_input,
             primary_house_value=primary_house_value,
@@ -256,8 +293,25 @@ def _detect_hybrid_property(
 
 def _standalone_primary_input(property_input: PropertyInput) -> PropertyInput:
     data = property_input.to_dict()
+
+    # Decompose beds/baths to the primary dwelling only.
+    # Each additional unit typically represents ~1.5 beds / 1 bath.
+    additional_unit_count = len([r for r in property_input.unit_rents if r > 0])
+    if additional_unit_count == 0 and (property_input.has_back_house or property_input.adu_type):
+        additional_unit_count = 1
+    if additional_unit_count > 0 and property_input.beds:
+        data["beds"] = max(int(property_input.beds - additional_unit_count * 1.5), 1)
+    if additional_unit_count > 0 and property_input.baths:
+        data["baths"] = max(property_input.baths - additional_unit_count * 1.0, 1.0)
+
+    # sqft: if adu_sqft is provided and is larger than total sqft, the total
+    # sqft likely already represents the primary dwelling alone (common in
+    # listings that report main-house sqft separately).
     if property_input.adu_sqft and property_input.sqft:
-        data["sqft"] = max(int(property_input.sqft - property_input.adu_sqft), 0)
+        if property_input.adu_sqft < property_input.sqft:
+            data["sqft"] = max(int(property_input.sqft - property_input.adu_sqft), 400)
+        # else: sqft already represents primary dwelling — keep as-is
+
     data["property_type"] = "Single Family Residence"
     data["has_back_house"] = False
     data["adu_type"] = None

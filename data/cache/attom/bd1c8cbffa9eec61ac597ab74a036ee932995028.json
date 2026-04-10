@@ -1,0 +1,161 @@
+{
+  "fetched_at": "2026-04-10T19:24:09Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 636344,
+    "avm_low": 520645,
+    "avm_value": 578495
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "742 LEROY PL",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "742 LEROY PL, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3025",
+          "postal3": "C010"
+        },
+        "area": {
+          "blockNum": "28",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "LAKE COMO",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 5074,
+            "avmlastmonthvalue": 573421,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 636344,
+            "low": 520645,
+            "scr": 90,
+            "value": 578495,
+            "valueRange": 57849
+          },
+          "calculations": {
+            "perSizeUnit": 502.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 103.17,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 652252.6,
+            "avmexcellentlow": 533661.12,
+            "avmgoodhigh": 636344.0,
+            "avmgoodlow": 520645.0,
+            "avmpoorhigh": 604526.8,
+            "avmpoorlow": 494612.75
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {
+            "bsmtsize": 720
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1152,
+            "grosssizeadjusted": 1152,
+            "groundfloorsize": 720,
+            "livingsize": 1152,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1152
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 37560225,
+          "apn": "46  00028-0000-00005",
+          "attomId": 37560225,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.171501",
+          "longitude": "-74.029983"
+        },
+        "lot": {
+          "depth": 70,
+          "frontage": 30,
+          "lotnum": "5",
+          "lotsize1": 0.0482094,
+          "lotsize2": 2100,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:5 BLK:28 DIST:46 CITY/MUNI/TWP:LAKE COMO BORO MAP REF:TAX MAP 3",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1930
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37560225,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:09.153Z",
+      "total": 1,
+      "transactionID": "0b326015a95742d9f9e686938205aad1",
+      "version": "1.0.0"
+    }
+  }
+}

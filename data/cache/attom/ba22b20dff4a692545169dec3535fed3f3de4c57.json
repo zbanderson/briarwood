@@ -1,0 +1,146 @@
+{
+  "fetched_at": "2026-04-10T19:24:26Z",
+  "normalized_payload": {
+    "address": "9 OAK TER, NEPTUNE CITY, NJ 07753",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.192478",
+    "longitude": "-74.025636",
+    "lot_size": 0.1239669,
+    "property_type": "SFR",
+    "sqft": 1265,
+    "stories": 2,
+    "year_built": 1927
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "9 OAK TER",
+          "line2": "NEPTUNE CITY, NJ 07753",
+          "locality": "NEPTUNE CITY",
+          "matchCode": "ExaStr",
+          "oneLine": "9 OAK TER, NEPTUNE CITY, NJ 07753",
+          "postal1": "07753",
+          "postal2": "6711",
+          "postal3": "C023"
+        },
+        "area": {
+          "blockNum": "29",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SHARK RIVER ISLANDS",
+          "taxcodearea": "36"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "TYPE UNKNOWN",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 896,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 400,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1265,
+            "grosssizeadjusted": 1265,
+            "groundfloorsize": 896,
+            "livingsize": 1265,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1265
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 32568350,
+          "apn": "36  00029-0000-00023",
+          "attomId": 32568350,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "ebc660842882d6605bff7f87d2498b30",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, fc0188501629fe4f3318085b34615a29",
+            "N4": "a614ac88aa104c999f5d06da7da7e6dc",
+            "PL": "3da71385bc380ff4f95197c3c4c12b1a",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, 23787987d5170b65881dd166db8fc69d",
+            "ZI": "6d4da2d055efd694ebb250c7fff76aaf"
+          },
+          "geoid": "CO34025, CS3449920, DB3411130, PL3449920, RS0005011651, SB0000103100, ZI07753",
+          "latitude": "40.192478",
+          "longitude": "-74.025636"
+        },
+        "lot": {
+          "depth": 120,
+          "frontage": 45,
+          "lotnum": "23",
+          "lotsize1": 0.1239669,
+          "lotsize2": 5400,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:23 BLK:29 DIST:36 CITY/MUNI/TWP:NEPTUNE CITY BORO MAP REF:TAX MAP 8",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1927
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 32568350,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:26.407Z",
+      "total": 1,
+      "transactionID": "09fd432cb54e96ebc3a8473763aa0356",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "fetched_at": "2026-04-10T19:24:02Z",
+  "normalized_payload": {
+    "address": "314 CHICAGO BLVD, SEA GIRT, NJ 08750",
+    "baths": 3.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.136204",
+    "longitude": "-74.034976",
+    "lot_size": 0.3013085,
+    "property_type": "SFR",
+    "sqft": 3504,
+    "stories": 2,
+    "year_built": 1965
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "314 CHICAGO BLVD",
+          "line2": "SEA GIRT, NJ 08750",
+          "locality": "SEA GIRT",
+          "matchCode": "ExaStr",
+          "oneLine": "314 CHICAGO BLVD, SEA GIRT, NJ 08750",
+          "postal1": "08750",
+          "postal2": "2007",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "46",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SEA GIRT",
+          "taxcodearea": "43"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 1960,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 528,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3504,
+            "grosssizeadjusted": 3504,
+            "groundfloorsize": 2028,
+            "livingsize": 3504,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3504
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 194539139,
+          "apn": "43  00046-0000-00012",
+          "attomId": 194539139,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a4584e657c2102e75f9eae002549e793",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 0bc065dcf109af181cddcb53fdfde77a",
+            "PL": "b9471033aab03686ee6ae3cffbd78dd4",
+            "SB": "32513526625c5f23e140653eeb523309, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "a5916ec72d9f519a3caf65ea2325435e"
+          },
+          "geoid": "CO34025, CS3466330, DB3414730, PL3466330, ZI08750",
+          "latitude": "40.136204",
+          "longitude": "-74.034976"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 87,
+          "lotnum": "12",
+          "lotsize1": 0.3013085,
+          "lotsize2": 13125,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:12 BLK:46 DIST:43 CITY/MUNI/TWP:SEA GIRT BORO MAP REF:TAX MAP 4",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1965
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194539139,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:01.971Z",
+      "total": 1,
+      "transactionID": "8a33558caa542240ca491b5402556476",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:33:05Z",
+  "normalized_payload": {
+    "address": "505 JEFFERSON AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 1.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.188326",
+    "longitude": "-74.021541",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 913,
+    "stories": 1,
+    "year_built": 1925
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "505 JEFFERSON AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "505 JEFFERSON AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1171",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "43.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "RIVERSIDE PARK",
+          "taxcodearea": "06"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 913,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 913,
+            "grosssizeadjusted": 913,
+            "groundfloorsize": 913,
+            "livingsize": 913,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 913
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 32498587,
+          "apn": "06  00043-  01-00013",
+          "attomId": 32498587,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, ZI07717",
+          "latitude": "40.188326",
+          "longitude": "-74.021541"
+        },
+        "lot": {
+          "lotnum": "13",
+          "lotsize2": 2912,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:13 BLK:43.01 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1925
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 32498587,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:05.783Z",
+      "total": 1,
+      "transactionID": "79e82ffd4a1be6b28cd82ac6c6892250",
+      "version": "1.0.0"
+    }
+  }
+}

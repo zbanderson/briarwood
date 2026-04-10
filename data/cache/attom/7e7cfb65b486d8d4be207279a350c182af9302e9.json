@@ -1,0 +1,140 @@
+{
+  "fetched_at": "2026-04-10T19:20:51Z",
+  "normalized_payload": {
+    "address": "200 17TH AVE, BELMAR, NJ 07719",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.172120",
+    "longitude": "-74.017968",
+    "lot_size": 0.0688705,
+    "property_type": "SFR",
+    "sqft": 728,
+    "stories": 1,
+    "year_built": 1940
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "200 17TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "200 17TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2607",
+          "postal3": "C016"
+        },
+        "area": {
+          "blockNum": "161",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 200,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 728,
+            "grosssizeadjusted": 728,
+            "groundfloorsize": 728,
+            "livingsize": 728,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 728
+          },
+          "summary": {
+            "archStyle": "TRADITIONAL/OLD",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 153758396,
+          "apn": "07  00161-0000-00024",
+          "attomId": 153758396,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, ZI07719",
+          "latitude": "40.172120",
+          "longitude": "-74.017968"
+        },
+        "lot": {
+          "depth": 75,
+          "frontage": 40,
+          "lotnum": "24",
+          "lotsize1": 0.0688705,
+          "lotsize2": 3000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:24 BLK:161 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 27",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 153758396,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:51.025Z",
+      "total": 1,
+      "transactionID": "bc8de5e53ffb3e48877ba8f61b7419ba",
+      "version": "1.0.0"
+    }
+  }
+}

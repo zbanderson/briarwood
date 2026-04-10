@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:25:23Z",
+  "normalized_payload": {
+    "address": "1412 BAY PLZ, WALL TOWNSHIP, NJ 07719",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.179591",
+    "longitude": "-74.056418",
+    "lot_size": 0.23,
+    "property_type": "SFR",
+    "sqft": 1710,
+    "stories": 1,
+    "year_built": 1940
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1412 BAY PLZ",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1412 BAY PLZ, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4004"
+        },
+        "area": {
+          "blockNum": "139",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 86
+          },
+          "parking": {
+            "prkgSize": 400,
+            "prkgSpaces": "2"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1710,
+            "grosssizeadjusted": 1710,
+            "livingsize": 1710,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1710
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 199602549,
+          "apn": "52-00139-0000-00015",
+          "apnOrig": "52-00139-0000-00015",
+          "attomId": 199602549,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "e01d3f913b19fff3c37860bdcf6b3de1",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008829, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.179591",
+          "longitude": "-74.056418"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 100,
+          "lotnum": "15",
+          "lotsize1": 0.23,
+          "lotsize2": 10001
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 199602549,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:23.837Z",
+      "total": 1,
+      "transactionID": "15a711e95201da25a63543a97ae7f777",
+      "version": "1.0.0"
+    }
+  }
+}

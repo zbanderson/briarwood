@@ -1,0 +1,119 @@
+{
+  "fetched_at": "2026-04-10T19:19:10Z",
+  "normalized_payload": {
+    "address": "96 5TH AVE APT 6, BELMAR, NJ 07719",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.182310",
+    "longitude": "-74.012585",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 720,
+    "stories": 1,
+    "year_built": 1980
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "96 5TH AVE APT 6",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "96 5TH AVE APT 6, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2046"
+        },
+        "area": {
+          "blockNum": "40",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {
+            "constructiontype": "BRICK",
+            "wallType": "BRICK"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 720,
+            "grosssizeadjusted": 720,
+            "livingsize": 720,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 720
+          },
+          "summary": {
+            "archStyle": "OTHER",
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 325232914,
+          "apn": "07  00040-0000-00015-0000-C0304",
+          "attomId": 325232914,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ZI07719",
+          "latitude": "40.182310",
+          "longitude": "-74.012585"
+        },
+        "lot": {
+          "lotnum": "15"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:15 BLK:40 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 4",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1980
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 325232914,
+      "attomIds": [
+        325232914
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:19:10.831Z",
+      "total": 1,
+      "transactionID": "77528cdf6412c2b480486ecb8665c579",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:29:08Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1020500,
+    "avm_low": 754283,
+    "avm_value": 887392
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "514 LAREINE AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "514 LAREINE AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1341"
+        },
+        "area": {
+          "blockNum": "34",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -22408,
+            "avmlastmonthvalue": 909800,
+            "avmpercentchange": -2
+          },
+          "amount": {
+            "high": 1020500,
+            "low": 754283,
+            "scr": 85,
+            "value": 887392,
+            "valueRange": 133108
+          },
+          "calculations": {
+            "perSizeUnit": 523.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 128.66,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1046012.5,
+            "avmexcellentlow": 773140.08,
+            "avmgoodhigh": 1020500.0,
+            "avmgoodlow": 754283.0,
+            "avmpoorhigh": 969475.0,
+            "avmpoorlow": 716568.85
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)"
+          },
+          "interior": {
+            "bsmtsize": 672
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.5,
+            "beds": 2,
+            "roomsTotal": 12
+          },
+          "size": {
+            "bldgsize": 1696,
+            "grosssize": 1696,
+            "grosssizeadjusted": 1696,
+            "livingsize": 1696,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1696
+          },
+          "summary": {
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1914
+          }
+        },
+        "identifier": {
+          "Id": 39685287,
+          "apn": "08-00034-0000-00025",
+          "apnOrig": "08-00034-0000-00025",
+          "attomId": 39685287,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd",
+            "N4": "44270d6bad398aacd0b14587464b1883",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005009630, SB0000102476, ZI07720",
+          "latitude": "40.203990",
+          "longitude": "-74.015535"
+        },
+        "lot": {
+          "depth": 83,
+          "frontage": 50,
+          "lotnum": "25",
+          "lotsize1": 0.095,
+          "lotsize2": 4151
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1914
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 39685287,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:07.960Z",
+      "total": 1,
+      "transactionID": "87b4062beae96bd1b7d8b051797e1401",
+      "version": "1.0.0"
+    }
+  }
+}

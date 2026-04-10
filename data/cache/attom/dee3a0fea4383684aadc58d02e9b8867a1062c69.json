@@ -1,0 +1,163 @@
+{
+  "fetched_at": "2026-04-10T19:21:45Z",
+  "normalized_payload": {
+    "avm_confidence": 86,
+    "avm_fsd": null,
+    "avm_high": 796440,
+    "avm_low": 600823,
+    "avm_value": 698632
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "16 SMOCK ST",
+          "line2": "NEPTUNE, NJ 07753",
+          "locality": "NEPTUNE",
+          "matchCode": "ExaStr",
+          "oneLine": "16 SMOCK ST, NEPTUNE, NJ 07753",
+          "postal1": "07753",
+          "postal2": "6743"
+        },
+        "area": {
+          "blockNum": "21",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "36"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 93632,
+            "avmlastmonthvalue": 605000,
+            "avmpercentchange": 14
+          },
+          "amount": {
+            "high": 796440,
+            "low": 600823,
+            "scr": 86,
+            "value": 698632,
+            "valueRange": 97808
+          },
+          "calculations": {
+            "perSizeUnit": 488.0,
+            "rangePctOfValue": 28.0,
+            "ratioTaxAmt": 83.54,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 816351.0,
+            "avmexcellentlow": 615843.57,
+            "avmgoodhigh": 796440.0,
+            "avmgoodlow": 600823.0,
+            "avmpoorhigh": 756618.0,
+            "avmpoorlow": 570781.85
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 912
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 728,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1430,
+            "grosssize": 1430,
+            "grosssizeadjusted": 1430,
+            "livingsize": 1430,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1430
+          },
+          "summary": {
+            "archStyle": "TUDOR",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1927
+          }
+        },
+        "identifier": {
+          "Id": 197122912,
+          "apn": "36-00021-0000-00011",
+          "apnOrig": "36-00021-0000-00011",
+          "attomId": 197122912,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "ebc660842882d6605bff7f87d2498b30",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, fc0188501629fe4f3318085b34615a29",
+            "PL": "3da71385bc380ff4f95197c3c4c12b1a",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, 23787987d5170b65881dd166db8fc69d",
+            "ZI": "6d4da2d055efd694ebb250c7fff76aaf"
+          },
+          "geoid": "CO34025, CS3449920, DB3411130, PL3449920, SB0000103100, ZI07753",
+          "latitude": "40.194552",
+          "longitude": "-74.023983"
+        },
+        "lot": {
+          "depth": 129,
+          "frontage": 50,
+          "lotnum": "11",
+          "lotsize1": 0.148,
+          "lotsize2": 6451
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1927
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197122912,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:45.602Z",
+      "total": 1,
+      "transactionID": "b750eba77bfb635d7b43ab44067b104c",
+      "version": "1.0.0"
+    }
+  }
+}

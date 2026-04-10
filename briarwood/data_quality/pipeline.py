@@ -4,8 +4,10 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 from briarwood.data_quality.arbitration import build_property_evidence_profile, choose_field_value
+from briarwood.data_quality.eligibility import classify_comp_eligibility
 from briarwood.data_quality.normalizers import (
     is_listing_description_as_address,
+    is_malformed_address,
     normalize_address_string,
     normalize_date,
     normalize_lot_size,
@@ -13,6 +15,7 @@ from briarwood.data_quality.normalizers import (
     normalize_sqft,
     normalize_state,
     normalize_town,
+    treat_missing,
 )
 from briarwood.data_quality.provenance import FieldCandidate, FieldEvidence, PropertyEvidenceProfile
 from briarwood.data_quality.source_policy import field_group
@@ -94,6 +97,7 @@ class DataQualityPipeline:
 
     def normalize(self, record: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(record)
+        normalized["raw_address"] = treat_missing(record.get("address"))
         normalized["address"] = normalize_address_string(record.get("address"))
         normalized["town"] = normalize_town(record.get("town"))
         normalized["state"] = normalize_state(record.get("state"))
@@ -132,6 +136,8 @@ class DataQualityPipeline:
         issues.extend(validate_state(record, expected_state=self.expected_state))
         issues.extend(validate_required_fields(record, record_type=record_type))
         issues.extend(validate_numeric_ranges(record))
+        issues.extend(validate_town_address_mismatch(record))
+        issues.extend(validate_property_type_mismatch(record))
         issues.extend(validate_multi_unit_consistency(record))
         issues.extend(validate_tax_outlier(record, municipality_context))
         issues.extend(validate_field_conflicts(field_evidence))
@@ -191,7 +197,15 @@ class DataQualityPipeline:
     def classify(*, issues: list[ValidationIssue], evidence_profile: PropertyEvidenceProfile) -> str:
         comp_status = evidence_profile.summary_flags.get("comp_eligibility_status")
         if comp_status in {"accepted", "accepted_with_warnings", "needs_review", "rejected"}:
+            if comp_status == "needs_review":
+                return "needs_review"
+            gate = classify_comp_eligibility(evidence_profile)
+            if gate.status == "rejected" and comp_status != "rejected":
+                return "rejected"
             return str(comp_status)
+        gate = classify_comp_eligibility(evidence_profile)
+        if gate.status == "rejected":
+            return "rejected"
         if any(issue.severity == "error" for issue in issues):
             return "needs_review"
         if issues:
@@ -224,11 +238,14 @@ class DataQualityPipeline:
 def validate_address(record: dict[str, Any]) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     address = record.get("address")
+    raw_address = record.get("raw_address") or address
     if not address:
         issues.append(ValidationIssue("blank_address", "Address is blank.", "error", field="address", suggested_fix="Provide a real street address."))
         return issues
-    if is_listing_description_as_address(address):
+    if is_listing_description_as_address(raw_address):
         issues.append(ValidationIssue("listing_description_as_address", "Address contains listing-description text.", "error", field="address", suggested_fix="Replace with a normalized street address."))
+    if is_malformed_address(raw_address):
+        issues.append(ValidationIssue("malformed_address", "Address is malformed or not parcel-specific.", "error", field="address", suggested_fix="Normalize to a parcel-level street address."))
     return issues
 
 
@@ -293,7 +310,61 @@ def validate_multi_unit_consistency(record: dict[str, Any]) -> list[ValidationIs
                     suggested_fix="Review unit mix evidence.",
                 )
             ]
+    listing_description = str(record.get("listing_description") or "").lower()
+    if any(token in listing_description for token in ("adu", "rear house", "guest house", "cottage", "back house")) and unit_count in (None, ""):
+        return [
+            ValidationIssue(
+                "unresolved_multi_unit_ambiguity",
+                "Listing suggests extra unit utility but unit count is unresolved.",
+                "warning",
+                field="unit_count",
+                suggested_fix="Review unit count, ADU legality, and rentability.",
+            )
+        ]
     return []
+
+
+def validate_town_address_mismatch(record: dict[str, Any]) -> list[ValidationIssue]:
+    raw_address = str(record.get("raw_address") or "").lower()
+    town = str(record.get("town") or "").lower()
+    if not raw_address or not town:
+        return []
+    if "," not in raw_address:
+        return []
+    parts = [part.strip().lower() for part in raw_address.split(",") if part.strip()]
+    if len(parts) < 2:
+        return []
+    embedded_town = parts[1]
+    if embedded_town and embedded_town != town:
+        return [
+            ValidationIssue(
+                "town_mismatch",
+                "Town embedded in address does not match record town.",
+                "error",
+                field="town",
+                suggested_fix="Reconcile town with parcel address or source record.",
+            )
+        ]
+    return []
+
+
+def validate_property_type_mismatch(record: dict[str, Any]) -> list[ValidationIssue]:
+    property_type = str(record.get("property_type") or "").lower()
+    listing_description = str(record.get("listing_description") or "").lower()
+    issues: list[ValidationIssue] = []
+    if property_type in {"single_family", "single family", "single family residence"} and any(
+        token in listing_description for token in ("duplex", "triplex", "four family", "multi-family")
+    ):
+        issues.append(
+            ValidationIssue(
+                "property_type_mismatch",
+                "Listing text implies a different property type than the structured record.",
+                "warning",
+                field="property_type",
+                suggested_fix="Review property type against MOD-IV, SR1A, or ATTOM.",
+            )
+        )
+    return issues
 
 
 def validate_tax_outlier(record: dict[str, Any], municipality_context: dict[str, Any] | None) -> list[ValidationIssue]:

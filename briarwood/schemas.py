@@ -8,6 +8,19 @@ from typing import Any, Protocol
 MetricValue = float | int | str | bool | None
 
 
+@dataclass(slots=True)
+class UnitDetail:
+    """Describes one rental unit within a multi-unit property."""
+    label: str = ""            # e.g. "rear downstairs", "rear upstairs"
+    beds: int | None = None
+    baths: float | None = None
+    sqft: int | None = None
+    condition: str | None = None  # renovated / updated / maintained / dated / needs_work
+    user_rent: float | None = None       # user-provided rent for this unit
+    market_rent: float | None = None     # model-estimated market rent
+    rent_source: str | None = None       # "user_input", "market_estimate", "listing_parsed"
+
+
 class EvidenceMode(str, Enum):
     PUBLIC_RECORD = "public_record"
     LISTING_ASSISTED = "listing_assisted"
@@ -96,6 +109,7 @@ class PropertyFacts:
     has_back_house: bool | None = None
     adu_type: str | None = None
     adu_sqft: int | None = None
+    additional_units: list[dict[str, Any]] = field(default_factory=list)
     has_basement: bool | None = None
     basement_finished: bool | None = None
     has_pool: bool | None = None
@@ -210,6 +224,7 @@ class PropertyInput:
     has_back_house: bool | None = None
     adu_type: str | None = None
     adu_sqft: int | None = None
+    additional_units: list[dict[str, Any]] = field(default_factory=list)
     has_basement: bool | None = None
     basement_finished: bool | None = None
     has_pool: bool | None = None
@@ -294,6 +309,7 @@ class PropertyInput:
             has_back_house=facts.has_back_house,
             adu_type=facts.adu_type,
             adu_sqft=facts.adu_sqft,
+            additional_units=list(facts.additional_units) if facts.additional_units else [],
             has_basement=facts.has_basement,
             basement_finished=facts.basement_finished,
             has_pool=facts.has_pool,

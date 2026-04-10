@@ -1,0 +1,149 @@
+{
+  "fetched_at": "2026-04-10T19:28:58Z",
+  "normalized_payload": {
+    "address": "2084 MISTY HOLLOW DR, WALL TOWNSHIP, NJ 07719",
+    "baths": 2.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.181302",
+    "longitude": "-74.095714",
+    "lot_size": 1.36,
+    "property_type": "SFR",
+    "sqft": 2453,
+    "stories": 2,
+    "year_built": 1998
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2084 MISTY HOLLOW DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2084 MISTY HOLLOW DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9684",
+          "postal3": "R003"
+        },
+        "area": {
+          "blockNum": "771",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "MISTY HOLLOW",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1318,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 520,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2453,
+            "grosssizeadjusted": 2453,
+            "groundfloorsize": 1334,
+            "livingsize": 2453,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2453
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 25537919,
+          "apn": "52  00771-0000-00014-  08",
+          "attomId": 25537919,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "36b46125a62b80dcfa65d24febf8a17f",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005011022, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.181302",
+          "longitude": "-74.095714"
+        },
+        "lot": {
+          "depth": 386,
+          "frontage": 108,
+          "lotnum": "14.08",
+          "lotsize1": 1.36,
+          "lotsize2": 59242,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:14.08 BLK:771 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 30",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1998
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 25537919,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:28:58.161Z",
+      "total": 1,
+      "transactionID": "a4ca5ef436a63c0b0b69553bae55ee33",
+      "version": "1.0.0"
+    }
+  }
+}

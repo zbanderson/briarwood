@@ -1,0 +1,164 @@
+{
+  "fetched_at": "2026-04-10T19:25:26Z",
+  "normalized_payload": {
+    "avm_confidence": 91,
+    "avm_fsd": null,
+    "avm_high": 2244946,
+    "avm_low": 1874221,
+    "avm_value": 2059584
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2808 CONCORD DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2808 CONCORD DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9573"
+        },
+        "area": {
+          "blockNum": "804.2",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "COLONIAL HERITAGE MANOR",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 16320,
+            "avmlastmonthvalue": 2043264,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 2244946,
+            "low": 1874221,
+            "scr": 91,
+            "value": 2059584,
+            "valueRange": 185362
+          },
+          "calculations": {
+            "perSizeUnit": 532.0,
+            "rangePctOfValue": 18.0,
+            "ratioTaxAmt": 98.86,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2301069.65,
+            "avmexcellentlow": 1921076.52,
+            "avmgoodhigh": 2244946.0,
+            "avmgoodlow": 1874221.0,
+            "avmpoorhigh": 2132698.7,
+            "avmpoorlow": 1780509.95
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 2344,
+            "fplccount": 1
+          },
+          "parking": {
+            "prkgSize": 681,
+            "prkgSpaces": "3"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.5,
+            "beds": 4,
+            "roomsTotal": 10
+          },
+          "size": {
+            "bldgsize": 3866,
+            "grosssizeadjusted": 3866,
+            "livingsize": 3866,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3866
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1998
+          }
+        },
+        "identifier": {
+          "Id": 149601583,
+          "apn": "52-00804-02-00005",
+          "apnOrig": "52-00804-02-00005",
+          "attomId": 149601583,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000146325, SB0000151642, ZI07719",
+          "latitude": "40.158874",
+          "longitude": "-74.079107"
+        },
+        "lot": {
+          "depth": 201,
+          "frontage": 239,
+          "lotnum": "5",
+          "lotsize1": 1.1,
+          "lotsize2": 47916,
+          "poolind": "YES"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1998
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 149601583,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:26.739Z",
+      "total": 1,
+      "transactionID": "f83c611fcfcf7e14481fa8975a3716a6",
+      "version": "1.0.0"
+    }
+  }
+}

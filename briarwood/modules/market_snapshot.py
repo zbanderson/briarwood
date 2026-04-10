@@ -24,7 +24,8 @@ class TownMarketSnapshot:
     median_sale_price: float | None
     avg_sale_price: float | None
     sale_count: int
-    housing_median_rent: float | None
+    sale_count_trend: float | None
+    median_rent: float | None
     occupied_pct: float | None
     vacant_pct: float | None
     vacant_for_sale_pct: float | None
@@ -32,6 +33,8 @@ class TownMarketSnapshot:
     general_tax_rate: float | None
     effective_tax_rate: float | None
     equalization_ratio: float | None
+    tax_burden_context: str
+    equalization_context: str
     permit_activity_summary: str
     data_confidence: float
 
@@ -69,19 +72,22 @@ class MarketSnapshotBuilder:
         avg_sale_price = float(mean(sale_prices)) if sale_prices else None
 
         permit_summary = "ATTOM permits unavailable."
-        housing_median_rent = None
+        median_rent = None
         occupied_pct = None
         vacant_pct = None
         vacant_for_sale_pct = None
         vacant_for_rent_pct = None
+        sale_count_trend = None
         if self.attom_client is not None:
             town_key = f"{normalized_town}-{county}-{state}"
             demographics = self.attom_client.community_demographics(town_key, state=state, locality=normalized_town)
-            housing_median_rent = _as_float(demographics.normalized_payload.get("housing_median_rent"))
+            median_rent = _as_float(demographics.normalized_payload.get("housing_median_rent"))
             occupied_pct = _as_float(demographics.normalized_payload.get("occupied_pct"))
             vacant_pct = _as_float(demographics.normalized_payload.get("vacant_pct"))
             vacant_for_sale_pct = _as_float(demographics.normalized_payload.get("vacant_for_sale_pct"))
             vacant_for_rent_pct = _as_float(demographics.normalized_payload.get("vacant_for_rent_pct"))
+            sales_trend = self.attom_client.sales_trend(town_key, state=state, locality=normalized_town)
+            sale_count_trend = _as_float(sales_trend.normalized_payload.get("sale_count_trend"))
             permits = self.attom_client.building_permits(town_key, state=state, locality=normalized_town)
             permit_count = int(permits.normalized_payload.get("permit_count") or 0)
             permit_summary = (
@@ -95,7 +101,7 @@ class MarketSnapshotBuilder:
             sale_count=len(sales),
             active_count=len(active),
             has_tax_context=bool(tax_context),
-            has_demographics=housing_median_rent is not None or occupied_pct is not None,
+            has_demographics=median_rent is not None or occupied_pct is not None,
         )
         snapshot = TownMarketSnapshot(
             town=normalized_town,
@@ -103,7 +109,8 @@ class MarketSnapshotBuilder:
             median_sale_price=median_sale_price,
             avg_sale_price=avg_sale_price,
             sale_count=len(sales),
-            housing_median_rent=housing_median_rent,
+            sale_count_trend=sale_count_trend,
+            median_rent=median_rent,
             occupied_pct=occupied_pct,
             vacant_pct=vacant_pct,
             vacant_for_sale_pct=vacant_for_sale_pct,
@@ -111,6 +118,8 @@ class MarketSnapshotBuilder:
             general_tax_rate=_as_float(tax_context.get("general_tax_rate")),
             effective_tax_rate=_as_float(tax_context.get("effective_tax_rate")),
             equalization_ratio=_as_float(tax_context.get("equalization_ratio")),
+            tax_burden_context=_tax_burden_context(tax_context),
+            equalization_context=_equalization_context(tax_context),
             permit_activity_summary=permit_summary,
             data_confidence=confidence,
         )
@@ -157,3 +166,25 @@ def _as_float(value: object) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _tax_burden_context(tax_context: dict[str, Any]) -> str:
+    effective_tax_rate = _as_float(tax_context.get("effective_tax_rate"))
+    if effective_tax_rate is None:
+        return "NJ tax context unavailable."
+    if effective_tax_rate >= 2.5:
+        return f"High municipal tax burden at roughly {effective_tax_rate:.2f}%."
+    if effective_tax_rate >= 1.75:
+        return f"Moderate municipal tax burden at roughly {effective_tax_rate:.2f}%."
+    return f"Relatively lighter municipal tax burden at roughly {effective_tax_rate:.2f}%."
+
+
+def _equalization_context(tax_context: dict[str, Any]) -> str:
+    equalization_ratio = _as_float(tax_context.get("equalization_ratio"))
+    if equalization_ratio is None:
+        return "Equalization context unavailable."
+    if equalization_ratio < 85:
+        return f"Equalization ratio near {equalization_ratio:.1f} suggests assessments may lag true value."
+    if equalization_ratio > 115:
+        return f"Equalization ratio near {equalization_ratio:.1f} suggests assessments may already run above market."
+    return f"Equalization ratio near {equalization_ratio:.1f} indicates a relatively balanced assessment base."

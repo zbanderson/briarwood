@@ -1,0 +1,167 @@
+{
+  "fetched_at": "2026-04-10T19:24:08Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 1584079,
+    "avm_low": 1219600,
+    "avm_value": 1401840
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "709 18TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "709 18TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3013",
+          "postal3": "C010"
+        },
+        "area": {
+          "blockNum": "31",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 11376,
+            "avmlastmonthvalue": 1390464,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1584079,
+            "low": 1219600,
+            "scr": 87,
+            "value": 1401840,
+            "valueRange": 182239
+          },
+          "calculations": {
+            "perSizeUnit": 1100.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 200.03,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1623680.98,
+            "avmexcellentlow": 1250090.0,
+            "avmgoodhigh": 1584079.0,
+            "avmgoodlow": 1219600.0,
+            "avmpoorhigh": 1504875.05,
+            "avmpoorlow": 1158620.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 360
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 240,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1274,
+            "grosssizeadjusted": 1274,
+            "groundfloorsize": 666,
+            "livingsize": 1274,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1274
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 37879003,
+          "apn": "46  00031-0000-00022",
+          "attomId": 37879003,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.170204",
+          "longitude": "-74.028810"
+        },
+        "lot": {
+          "depth": 125,
+          "frontage": 50,
+          "lotnum": "22",
+          "lotsize1": 0.1434803,
+          "lotsize2": 6250,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:22 BLK:31 DIST:46 CITY/MUNI/TWP:LAKE COMO BORO MAP REF:TAX MAP 3",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37879003,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:08.356Z",
+      "total": 1,
+      "transactionID": "ad429f1626b123468f8e767ab47c9ee9",
+      "version": "1.0.0"
+    }
+  }
+}

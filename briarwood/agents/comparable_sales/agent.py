@@ -12,6 +12,8 @@ from briarwood.agents.comparable_sales.schemas import (
     ComparableSalesOutput,
     ComparableSalesRequest,
 )
+from briarwood.data_quality.eligibility import classify_comp_eligibility
+from briarwood.data_quality.pipeline import DataQualityPipeline
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
 from briarwood.utils import haversine_miles
 
@@ -25,6 +27,7 @@ class FileBackedComparableSalesProvider:
     def __init__(self, path: Path) -> None:
         self.path = path
         self.metadata: dict[str, object] = {}
+        self.pipeline = DataQualityPipeline()
         self._rows = self._load_rows()
 
     def _load_rows(self) -> list[ComparableSale]:
@@ -37,7 +40,25 @@ class FileBackedComparableSalesProvider:
         rows = raw.get("sales", raw)
         if not isinstance(rows, list):
             return []
-        return [ComparableSale.model_validate(item) for item in rows if isinstance(item, dict)]
+        validated_rows: list[ComparableSale] = []
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+            payload = dict(item)
+            if payload.get("quality_status") is None:
+                record_type = "sale" if payload.get("sale_date") or payload.get("sale_price") else "listing"
+                result = self.pipeline.run(payload, record_type=record_type)
+                gate = classify_comp_eligibility(result.evidence_profile)
+                payload["quality_status"] = result.status
+                payload["quality_issues"] = [issue.code for issue in result.issues]
+                provenance = dict(payload.get("source_provenance") or {})
+                provenance["comp_eligibility_gate"] = gate.status
+                provenance["comp_eligibility_reasons"] = list(gate.reasons)
+                provenance["comp_eligibility_warnings"] = list(gate.warnings)
+                provenance["summary_flags"] = dict(result.evidence_profile.summary_flags)
+                payload["source_provenance"] = provenance
+            validated_rows.append(ComparableSale.model_validate(payload))
+        return validated_rows
 
     def get_sales(self, *, town: str, state: str) -> list[ComparableSale]:
         town_key = town.strip().lower()
@@ -276,6 +297,15 @@ class ComparableSalesAgent:
         )
 
     def _passes_gate(self, request: ComparableSalesRequest, sale: ComparableSale) -> tuple[bool, str | None]:
+        quality_status = str(getattr(sale, "quality_status", "") or "").lower()
+        eligibility_gate = str((getattr(sale, "source_provenance", {}) or {}).get("comp_eligibility_gate", "")).lower()
+        if quality_status == "rejected" or eligibility_gate == "rejected":
+            return False, "comp_quality_rejected"
+        if quality_status == "needs_review":
+            return False, "comp_quality_needs_review"
+        if eligibility_gate == "market_only":
+            return False, "market_only_comp"
+
         if sale.address_verification_status in {"questioned", "unverified"}:
             return False, "address_verification_failed"
         if sale.sale_verification_status == "questioned":

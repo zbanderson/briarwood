@@ -682,6 +682,7 @@ def _write_saved_summary(property_dir: Path, report: AnalysisReport) -> None:
         "confidence": view.overall_confidence,
         "comp_trust": _comp_trust_value(view),
         "missing_input_count": len(view.evidence.missing_inputs),
+        "is_hybrid_valuation": view.comps.is_hybrid_valuation,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
     }
     # Atomic write: write to a unique tmp file in the same directory, then

@@ -1,0 +1,140 @@
+{
+  "fetched_at": "2026-04-10T19:22:20Z",
+  "normalized_payload": {
+    "address": "40 E END AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 3.0,
+    "beds": 5,
+    "garage_spaces": null,
+    "latitude": "40.194885",
+    "longitude": "-74.010731",
+    "lot_size": null,
+    "property_type": "DUPLEX",
+    "sqft": 2801,
+    "stories": 2,
+    "year_built": 1970
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "40 E END AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "40 E END AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1425",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "8",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 1508
+          },
+          "parking": {
+            "garagetype": "Carport (Unspecified)",
+            "prkgSpaces": "1",
+            "prkgType": "Carport (Unspecified)"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 5,
+            "roomsTotal": 11
+          },
+          "size": {
+            "bldgsize": 2801,
+            "grosssizeadjusted": 2801,
+            "groundfloorsize": 1508,
+            "livingsize": 2801,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2801
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 188872605,
+          "apn": "06  00008-0000-00002-  02",
+          "attomId": 188872605,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.194885",
+          "longitude": "-74.010731"
+        },
+        "lot": {
+          "depth": 195,
+          "frontage": 50,
+          "lotnum": "2.02",
+          "lotsize2": 9750,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:2.02 BLK:8 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "21",
+          "propLandUse": "DUPLEX",
+          "propclass": "Duplex, Triplex, Quadplex",
+          "propertyType": "DUPLEX (2 UNITS, ANY COMBINATION)",
+          "propsubtype": "Residential",
+          "proptype": "DUPLEX",
+          "yearbuilt": 1970
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 188872605,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:20.129Z",
+      "total": 1,
+      "transactionID": "a5a36503d278321c85c359046ccca663",
+      "version": "1.0.0"
+    }
+  }
+}

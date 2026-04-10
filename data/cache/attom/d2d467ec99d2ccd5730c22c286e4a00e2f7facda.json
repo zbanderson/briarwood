@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:26:14Z",
+  "normalized_payload": {
+    "address": "109 12TH AVE, BELMAR, NJ 07719",
+    "baths": 5.0,
+    "beds": 6,
+    "garage_spaces": null,
+    "latitude": "40.174961",
+    "longitude": "-74.015980",
+    "lot_size": 0.1147842,
+    "property_type": "SFR",
+    "sqft": 2716,
+    "stories": 3,
+    "year_built": 1922
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "109 12TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "109 12TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2413",
+          "postal3": "C019"
+        },
+        "area": {
+          "blockNum": "120",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 840,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 4,
+            "bathspartial": 1,
+            "bathstotal": 5.0,
+            "beds": 6,
+            "roomsTotal": 10
+          },
+          "size": {
+            "bldgsize": 2716,
+            "grosssizeadjusted": 2716,
+            "groundfloorsize": 1354,
+            "livingsize": 2716,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2716
+          },
+          "summary": {
+            "archStyle": "OTHER",
+            "levels": 3,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 194523902,
+          "apn": "07  00120-0000-00007",
+          "attomId": 194523902,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.174961",
+          "longitude": "-74.015980"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "7",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:7 BLK:120 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 18",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1922
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194523902,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:14.677Z",
+      "total": 1,
+      "transactionID": "c140b81cb9658ffa6c83822795f663d0",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "fetched_at": "2026-04-10T19:26:15Z",
+  "normalized_payload": {
+    "address": "1722 M ST, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.170007",
+    "longitude": "-74.041463",
+    "lot_size": 0.1721763,
+    "property_type": "SFR",
+    "sqft": 904,
+    "stories": 1,
+    "year_built": 1930
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1722 M ST",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1722 M ST, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3452",
+          "postal3": "C005"
+        },
+        "area": {
+          "blockNum": "67",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "JULIUS A ABRAMS PROP",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 864
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 360,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 904,
+            "grosssizeadjusted": 904,
+            "groundfloorsize": 904,
+            "livingsize": 904,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 904
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 197218146,
+          "apn": "52  00067-0000-00040",
+          "attomId": 197218146,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "PL": "ead49c9d92be28059bc571f18467fb11",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, PL3478350, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.170007",
+          "longitude": "-74.041463"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "40",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:40 BLK:67 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 61",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1930
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197218146,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:15.478Z",
+      "total": 1,
+      "transactionID": "73490226e628782ca66c31c316b8d999",
+      "version": "1.0.0"
+    }
+  }
+}

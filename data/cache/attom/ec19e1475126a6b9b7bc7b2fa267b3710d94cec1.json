@@ -1,0 +1,167 @@
+{
+  "fetched_at": "2026-04-10T19:22:47Z",
+  "normalized_payload": {
+    "avm_confidence": 88,
+    "avm_fsd": null,
+    "avm_high": 776638,
+    "avm_low": 610215,
+    "avm_value": 693427
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "518 13TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "518 13TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2434",
+          "postal3": "C019"
+        },
+        "area": {
+          "blockNum": "124",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "07"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 9052,
+            "avmlastmonthvalue": 684375,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 776638,
+            "low": 610215,
+            "scr": 88,
+            "value": 693427,
+            "valueRange": 83211
+          },
+          "calculations": {
+            "perSizeUnit": 634.0,
+            "rangePctOfValue": 24.0,
+            "ratioTaxAmt": 127.8,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 796053.95,
+            "avmexcellentlow": 625470.38,
+            "avmgoodhigh": 776638.0,
+            "avmgoodlow": 610215.0,
+            "avmpoorhigh": 737806.1,
+            "avmpoorlow": 579704.25
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 542
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 264,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1093,
+            "grosssizeadjusted": 1093,
+            "groundfloorsize": 828,
+            "livingsize": 1093,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1093
+          },
+          "summary": {
+            "archStyle": "TRADITIONAL/OLD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 24335205,
+          "apn": "07  00124-0000-00013",
+          "attomId": 24335205,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.176123",
+          "longitude": "-74.024461"
+        },
+        "lot": {
+          "depth": 69,
+          "frontage": 50,
+          "lotnum": "13",
+          "lotsize1": 0.0792011,
+          "lotsize2": 3450,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:13 BLK:124 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 20",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 24335205,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:46.944Z",
+      "total": 1,
+      "transactionID": "93983912a6cab9a733c10abe1cf18789",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:26:14Z",
+  "normalized_payload": {
+    "avm_confidence": 86,
+    "avm_fsd": null,
+    "avm_high": 938098,
+    "avm_low": 707687,
+    "avm_value": 822893
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1727 ELIZABETH CT",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1727 ELIZABETH CT, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3710",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "80",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 10772,
+            "avmlastmonthvalue": 812121,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 938098,
+            "low": 707687,
+            "scr": 86,
+            "value": 822893,
+            "valueRange": 115205
+          },
+          "calculations": {
+            "perSizeUnit": 761.0,
+            "rangePctOfValue": 28.0,
+            "ratioTaxAmt": 155.06,
+            "ratioTaxValue": 3.0
+          },
+          "condition": {
+            "avmexcellenthigh": 961550.45,
+            "avmexcellentlow": 725379.18,
+            "avmgoodhigh": 938098.0,
+            "avmgoodlow": 707687.0,
+            "avmpoorhigh": 891193.1,
+            "avmpoorlow": 672302.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "CONCRETE BLOCK",
+            "foundationtype": "CONCRETE",
+            "frameType": "PRE FAB",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 1080,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1080,
+            "grosssizeadjusted": 1080,
+            "groundfloorsize": 1080,
+            "livingsize": 1080,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1080
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 189738102,
+          "apn": "52  00080-0000-00020",
+          "attomId": 189738102,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.171263",
+          "longitude": "-74.048774"
+        },
+        "lot": {
+          "depth": 136,
+          "frontage": 50,
+          "lotnum": "20",
+          "lotsize2": 6800,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:20 BLK:80 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 60",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1958
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189738102,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:14.006Z",
+      "total": 1,
+      "transactionID": "9a5a2d37129ce18740ad53aed55cfcff",
+      "version": "1.0.0"
+    }
+  }
+}

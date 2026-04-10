@@ -1,0 +1,172 @@
+{
+  "fetched_at": "2026-04-10T19:22:03Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 6253520,
+    "avm_low": 4622167,
+    "avm_value": 5437844
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "302 BEACON BLVD",
+          "line2": "SEA GIRT, NJ 08750",
+          "locality": "SEA GIRT",
+          "matchCode": "ExaStr",
+          "oneLine": "302 BEACON BLVD, SEA GIRT, NJ 08750",
+          "postal1": "08750",
+          "postal2": "1504",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "45",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SEA GIRT AMD",
+          "taxcodearea": "43"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 69864,
+            "avmlastmonthvalue": 5367980,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 6253520,
+            "low": 4622167,
+            "scr": 85,
+            "value": 5437844,
+            "valueRange": 815676
+          },
+          "calculations": {
+            "perSizeUnit": 1721.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 297.0,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 6409858.0,
+            "avmexcellentlow": 4737721.18,
+            "avmgoodhigh": 6253520.0,
+            "avmgoodlow": 4622167.0,
+            "avmpoorhigh": 5940844.0,
+            "avmpoorlow": 4391058.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "bsmtsize": 1312,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 484,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathspartial": 1,
+            "bathstotal": 4.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 3158,
+            "grosssizeadjusted": 3158,
+            "groundfloorsize": 1424,
+            "livingsize": 3158,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3158
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 15953906,
+          "apn": "43  00045-0000-00020",
+          "attomId": 15953906,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a4584e657c2102e75f9eae002549e793",
+            "DB": "0bc065dcf109af181cddcb53fdfde77a, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b9471033aab03686ee6ae3cffbd78dd4",
+            "SB": "32513526625c5f23e140653eeb523309, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "a5916ec72d9f519a3caf65ea2325435e"
+          },
+          "geoid": "CO34025, CS3466330, DB3414730, PL3466330, ZI08750",
+          "latitude": "40.137064",
+          "longitude": "-74.033679"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "20",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:20 BLK:45 DIST:43 CITY/MUNI/TWP:SEA GIRT BORO MAP REF:TAX MAP 4",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2008
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 15953906,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:03.269Z",
+      "total": 1,
+      "transactionID": "eef50acdc8807a2849d93a7e98c4264e",
+      "version": "1.0.0"
+    }
+  }
+}

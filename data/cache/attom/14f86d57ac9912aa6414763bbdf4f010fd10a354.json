@@ -1,0 +1,124 @@
+{
+  "fetched_at": "2026-04-10T19:19:11Z",
+  "normalized_payload": {
+    "address": "107 3RD AVE APT B1, BELMAR, NJ 07719",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.183926",
+    "longitude": "-74.012744",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 625,
+    "stories": 1,
+    "year_built": 1965
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "107 3RD AVE APT B1",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "107 3RD AVE APT B1, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2039",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "30",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR GARDENS CONDO",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {
+            "constructiontype": "BRICK",
+            "wallType": "BRICK"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 625,
+            "grosssizeadjusted": 625,
+            "livingsize": 625,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 625
+          },
+          "summary": {
+            "archStyle": "OTHER",
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 190253254,
+          "apn": "07  00030-0000-00005-0000-C0003",
+          "attomId": 190253254,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "N4": "789affa5b777e8e238b86c0ecdc35db8",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, RS0005009958, ZI07719",
+          "latitude": "40.183926",
+          "longitude": "-74.012744"
+        },
+        "lot": {
+          "lotnum": "5",
+          "lotsize2": 376,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:5 BLK:30 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 4",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1965
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190253254,
+      "attomIds": [
+        190253254
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:19:11.483Z",
+      "total": 1,
+      "transactionID": "ab852ebf755ee1335d28d2e7f7388fb1",
+      "version": "1.0.0"
+    }
+  }
+}

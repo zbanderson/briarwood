@@ -1,0 +1,145 @@
+{
+  "fetched_at": "2026-04-10T19:21:04Z",
+  "normalized_payload": {
+    "address": "22 CHERRY CT, SPRING LAKE, NJ 07762",
+    "baths": 3.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.154546",
+    "longitude": "-74.039783",
+    "lot_size": 0.0413682,
+    "property_type": "CONDOMINIUM",
+    "sqft": 1786,
+    "stories": 2,
+    "year_built": 1978
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "22 CHERRY CT",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "22 CHERRY CT, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2101",
+          "postal3": "C010"
+        },
+        "area": {
+          "blockNum": "42.04",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SEA VIEW 2/FAIRWAY MEWS BLDG #",
+          "taxcodearea": "48"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Mixed",
+            "prkgSize": 231,
+            "prkgSpaces": "1",
+            "prkgType": "Mixed"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 2,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1786,
+            "grosssizeadjusted": 1786,
+            "groundfloorsize": 992,
+            "livingsize": 1786,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1786
+          },
+          "summary": {
+            "levels": 2,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 192778614,
+          "apn": "48  00042-  04-00017",
+          "attomId": 192778614,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "dc583bba3df2afe90fc6aead15ee3ad4",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, ND0005008468, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.154546",
+          "longitude": "-74.039783"
+        },
+        "lot": {
+          "lotnum": "17",
+          "lotsize1": 0.0413682,
+          "lotsize2": 1802,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:17 BLK:42.04 DIST:48 CITY/MUNI/TWP:SPRING LAKE HEIGHTS BOR",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1978
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 192778614,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:03.985Z",
+      "total": 1,
+      "transactionID": "ee265cbc016541bd1a9d991b2b7b6fd4",
+      "version": "1.0.0"
+    }
+  }
+}

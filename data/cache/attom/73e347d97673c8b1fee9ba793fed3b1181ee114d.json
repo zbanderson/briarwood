@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:30:04Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 833421,
+    "avm_low": 641660,
+    "avm_value": 737541
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "707 3RD AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "707 3RD AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1033",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "70",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 6693,
+            "avmlastmonthvalue": 730848,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 833421,
+            "low": 641660,
+            "scr": 87,
+            "value": 737541,
+            "valueRange": 95880
+          },
+          "calculations": {
+            "perSizeUnit": 583.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 141.58,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 854256.52,
+            "avmexcellentlow": 657701.5,
+            "avmgoodhigh": 833421.0,
+            "avmgoodlow": 641660.0,
+            "avmpoorhigh": 791749.95,
+            "avmpoorlow": 609577.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 448,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1265,
+            "grosssizeadjusted": 1265,
+            "groundfloorsize": 817,
+            "livingsize": 1265,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1265
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 3784700,
+          "apn": "08  00070-0000-00002",
+          "attomId": 3784700,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.199876",
+          "longitude": "-74.019964"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 43,
+          "lotnum": "2",
+          "lotsize1": 0.1480716,
+          "lotsize2": 6450,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:2 BLK:70 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1904
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 3784700,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:04.600Z",
+      "total": 1,
+      "transactionID": "470842d813e061a128bc3f6b2a50891f",
+      "version": "1.0.0"
+    }
+  }
+}

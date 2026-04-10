@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:24:27Z",
+  "normalized_payload": {
+    "avm_confidence": 84,
+    "avm_fsd": null,
+    "avm_high": 1618912,
+    "avm_low": 1172315,
+    "avm_value": 1395614
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "569 OCEAN RD",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "569 OCEAN RD, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1840",
+          "postal3": "C005"
+        },
+        "area": {
+          "blockNum": "23",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "VILLA PARK",
+          "taxcodearea": "48"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 15184,
+            "avmlastmonthvalue": 1380430,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1618912,
+            "low": 1172315,
+            "scr": 84,
+            "value": 1395614,
+            "valueRange": 223298
+          },
+          "calculations": {
+            "perSizeUnit": 703.0,
+            "rangePctOfValue": 32.0,
+            "ratioTaxAmt": 139.64,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1659384.8,
+            "avmexcellentlow": 1201622.88,
+            "avmgoodhigh": 1618912.0,
+            "avmgoodlow": 1172315.0,
+            "avmpoorhigh": 1537966.4,
+            "avmpoorlow": 1113699.25
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 949,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1984,
+            "grosssizeadjusted": 1984,
+            "groundfloorsize": 1005,
+            "livingsize": 1984,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1984
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 203418744,
+          "apn": "48  00023-0000-00027",
+          "attomId": 203418744,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.143325",
+          "longitude": "-74.038986"
+        },
+        "lot": {
+          "depth": 145,
+          "frontage": 40,
+          "lotnum": "27",
+          "lotsize1": 0.1331497,
+          "lotsize2": 5800,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:27 BLK:23 DIST:48 CITY/MUNI/TWP:SPRING LAKE HEIGHTS BOR MAP REF:TAX MAP 1",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1926
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 203418744,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:27.564Z",
+      "total": 1,
+      "transactionID": "295bc886f27b146b8a456db512891d3a",
+      "version": "1.0.0"
+    }
+  }
+}

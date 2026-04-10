@@ -93,6 +93,18 @@ class ComparableSalesRequest(BaseModel):
     manual_sales: list[dict[str, object]] = Field(default_factory=list)
     manual_comp_only: bool = False
 
+    # Multi-unit decomposition fields — set by ComparableSalesModule when
+    # the subject has additional rental units (ADU, back house, etc.) so
+    # the agent comps the *primary dwelling* and values extra units via
+    # income capitalization.
+    is_hybrid_valuation: bool = False
+    primary_dwelling_beds: int | None = Field(default=None, ge=0)
+    primary_dwelling_baths: float | None = Field(default=None, ge=0)
+    primary_dwelling_sqft: int | None = Field(default=None, ge=0)
+    additional_unit_annual_income: float | None = Field(default=None, ge=0)
+    additional_unit_cap_rate: float | None = Field(default=None, gt=0, lt=0.20)
+    additional_unit_count: int | None = Field(default=None, ge=0)
+
 
 class AdjustedComparable(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -166,6 +178,14 @@ class ComparableSalesOutput(BaseModel):
     lot_adjustment_range: ComparableValueRange | None = None
     blended_value_range: ComparableValueRange | None = None
     comp_confidence_score: float | None = Field(default=None, ge=0, le=1)
+    # Hybrid valuation fields for multi-unit properties
+    is_hybrid_valuation: bool = False
+    primary_dwelling_value: float | None = None
+    additional_unit_income_value: float | None = None
+    additional_unit_count: int | None = None
+    additional_unit_annual_income: float | None = None
+    additional_unit_cap_rate: float | None = None
+    hybrid_valuation_note: str | None = None
     assumptions: list[str]
     unsupported_claims: list[str]
     warnings: list[str]

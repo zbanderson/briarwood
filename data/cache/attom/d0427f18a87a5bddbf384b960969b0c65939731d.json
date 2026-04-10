@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:21:25Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 3833364,
+    "avm_low": 2833356,
+    "avm_value": 3333360
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "412 BRIGHTON AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "412 BRIGHTON AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1515",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "100",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BRIGHTON & NORTH BRIGHTON",
+          "taxcodearea": "47"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 44648,
+            "avmlastmonthvalue": 3288712,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 3833364,
+            "low": 2833356,
+            "scr": 85,
+            "value": 3333360,
+            "valueRange": 500004
+          },
+          "calculations": {
+            "perSizeUnit": 1305.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 322.69,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 3929198.1,
+            "avmexcellentlow": 2904189.9,
+            "avmgoodhigh": 3833364.0,
+            "avmgoodlow": 2833356.0,
+            "avmpoorhigh": 3641695.8,
+            "avmpoorlow": 2691688.2
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD SHINGLE"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 2553,
+            "grosssizeadjusted": 2553,
+            "groundfloorsize": 1764,
+            "livingsize": 2553,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2553
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 145643180,
+          "apn": "47  00100-0000-00020",
+          "attomId": 145643180,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.155993",
+          "longitude": "-74.030612"
+        },
+        "lot": {
+          "lotnum": "20",
+          "lotsize1": 0.1719927,
+          "lotsize2": 7492,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:20 BLK:100 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 145643180,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:25.123Z",
+      "total": 1,
+      "transactionID": "0d262d61cc00669986ad2bcd2872c249",
+      "version": "1.0.0"
+    }
+  }
+}

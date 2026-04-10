@@ -1,0 +1,134 @@
+{
+  "fetched_at": "2026-04-10T19:20:56Z",
+  "normalized_payload": {
+    "address": "609 11TH AVE, BELMAR, NJ 07719",
+    "baths": 4.0,
+    "beds": 6,
+    "garage_spaces": null,
+    "latitude": "40.177695",
+    "longitude": "-74.025008",
+    "lot_size": 0.1480946,
+    "property_type": "APARTMENT",
+    "sqft": 2025,
+    "stories": 1,
+    "year_built": 1932
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "609 11TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "609 11TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2474",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "115",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "4C   ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "TYPE UNKNOWN",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "CONCRETE BLOCK"
+          },
+          "interior": {
+            "bsmtsize": 725
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 6,
+            "roomsTotal": 12
+          },
+          "size": {
+            "bldgsize": 2025,
+            "grosssizeadjusted": 2025,
+            "groundfloorsize": 2025,
+            "livingsize": 2025,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2025
+          },
+          "summary": {
+            "levels": 1,
+            "unitsCount": "5",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 190815745,
+          "apn": "07  00115-0000-00006",
+          "attomId": 190815745,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, ZI07719",
+          "latitude": "40.177695",
+          "longitude": "-74.025008"
+        },
+        "lot": {
+          "lotnum": "6",
+          "lotsize1": 0.1480946,
+          "lotsize2": 6451
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:6 BLK:115 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 20",
+          "propIndicator": "22",
+          "propLandUse": "APARTMENT",
+          "propclass": "Apartment",
+          "propertyType": "APARTMENTS (GENERIC)",
+          "propsubtype": "Residential",
+          "proptype": "APARTMENT",
+          "yearbuilt": 1932
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-19",
+          "pubDate": "2026-03-19"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190815745,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:56.499Z",
+      "total": 1,
+      "transactionID": "da61ded509e19f1a3c35bf8e61f4d3dd",
+      "version": "1.0.0"
+    }
+  }
+}

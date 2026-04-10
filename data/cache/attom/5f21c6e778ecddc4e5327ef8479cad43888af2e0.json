@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:33:26Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1096558,
+    "avm_low": 810499,
+    "avm_value": 953529
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "513 3RD AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "513 3RD AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "9100",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "3401",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "4"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -386471,
+            "avmlastmonthvalue": 1340000,
+            "avmpercentchange": -33
+          },
+          "amount": {
+            "high": 1096558,
+            "low": 810499,
+            "scr": 85,
+            "value": 953529,
+            "valueRange": 143029
+          },
+          "calculations": {
+            "perSizeUnit": 338.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 65.4,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1123971.95,
+            "avmexcellentlow": 830761.48,
+            "avmgoodhigh": 1096558.0,
+            "avmgoodlow": 810499.0,
+            "avmpoorhigh": 1041730.1,
+            "avmpoorlow": 769974.05
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "BRICK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 784,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 5,
+            "roomsTotal": 14
+          },
+          "size": {
+            "bldgsize": 2813,
+            "grosssizeadjusted": 2813,
+            "groundfloorsize": 1204,
+            "livingsize": 2813,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2813
+          },
+          "summary": {
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 15786784,
+          "apn": "04  03401-0000-00018",
+          "attomId": 15786784,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa, 2e7fa370065620c582c90ff2708e6c73",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, PL3401960, SB0000155611, SB0000156440, SB0000157491, ZI07712",
+          "latitude": "40.223137",
+          "longitude": "-74.007422"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 40,
+          "lotnum": "18",
+          "lotsize1": 0.0469008,
+          "lotsize2": 2043
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:18 BLK:3401 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 34",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1900
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 15786784,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:26.952Z",
+      "total": 1,
+      "transactionID": "5ba039d6a09884cdac9d604487199095",
+      "version": "1.0.0"
+    }
+  }
+}

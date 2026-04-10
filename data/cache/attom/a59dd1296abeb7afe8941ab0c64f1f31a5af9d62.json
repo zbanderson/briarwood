@@ -1,0 +1,166 @@
+{
+  "fetched_at": "2026-04-10T19:26:20Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 591207,
+    "avm_low": 483714,
+    "avm_value": 537461
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "451 DEUCE DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "451 DEUCE DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9482",
+          "postal3": "R002"
+        },
+        "area": {
+          "blockNum": "800",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ALLAIRE COUNTRY CLUB BLDG 80",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -1124,
+            "avmlastmonthvalue": 538585,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 591207,
+            "low": 483714,
+            "scr": 90,
+            "value": 537461,
+            "valueRange": 53746
+          },
+          "calculations": {
+            "perSizeUnit": 470.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 90.76,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 605987.17,
+            "avmexcellentlow": 495806.85,
+            "avmgoodhigh": 591207.0,
+            "avmgoodlow": 483714.0,
+            "avmpoorhigh": 561646.65,
+            "avmpoorlow": 459528.3
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 648,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 264,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1143,
+            "grosssizeadjusted": 1143,
+            "groundfloorsize": 1143,
+            "livingsize": 1143,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1143
+          },
+          "summary": {
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 37737035,
+          "apn": "52  00800-0000-00021-0000-C0451",
+          "attomId": 37737035,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "230e6717108a1dbc386a2e8dbd13593f",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008818, SB0000103447, SB0000146325, SB0000151642, ZI07719",
+          "latitude": "40.166258",
+          "longitude": "-74.074123"
+        },
+        "lot": {
+          "lotnum": "21",
+          "lotsize2": 1011,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:21 BLK:800 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 57.1",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1997
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37737035,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:20.543Z",
+      "total": 1,
+      "transactionID": "54eb77baf138c567b8cdd72461b5c6e9",
+      "version": "1.0.0"
+    }
+  }
+}

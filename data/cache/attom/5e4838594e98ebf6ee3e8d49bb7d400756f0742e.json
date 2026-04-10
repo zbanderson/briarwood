@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:24:00Z",
+  "normalized_payload": {
+    "address": "417 BROOKLYN BLVD, SEA GIRT, NJ 08750",
+    "baths": 4.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.136166",
+    "longitude": "-74.037383",
+    "lot_size": 0.258,
+    "property_type": "SFR",
+    "sqft": 3096,
+    "stories": 1,
+    "year_built": 1958
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "417 BROOKLYN BLVD",
+          "line2": "SEA GIRT, NJ 08750",
+          "locality": "SEA GIRT",
+          "matchCode": "ExaStr",
+          "oneLine": "417 BROOKLYN BLVD, SEA GIRT, NJ 08750",
+          "postal1": "08750",
+          "postal2": "2004"
+        },
+        "area": {
+          "blockNum": "64",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "43"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "bsmtsize": 1914
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 528,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3096,
+            "grosssize": 3096,
+            "grosssizeadjusted": 3096,
+            "livingsize": 3096,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3096
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1958
+          }
+        },
+        "identifier": {
+          "Id": 196569546,
+          "apn": "43-00064-0000-00007",
+          "apnOrig": "43-00064-0000-00007",
+          "attomId": 196569546,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a4584e657c2102e75f9eae002549e793",
+            "DB": "0bc065dcf109af181cddcb53fdfde77a, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b9471033aab03686ee6ae3cffbd78dd4",
+            "SB": "32513526625c5f23e140653eeb523309, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "a5916ec72d9f519a3caf65ea2325435e"
+          },
+          "geoid": "CO34025, CS3466330, DB3414730, PL3466330, SB0000103319, ZI08750",
+          "latitude": "40.136166",
+          "longitude": "-74.037383"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 75,
+          "lotnum": "7",
+          "lotsize1": 0.258,
+          "lotsize2": 11252
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "L8",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1958
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 196569546,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:23:59.967Z",
+      "total": 1,
+      "transactionID": "2c4622307ffaf258a74809adf13067de",
+      "version": "1.0.0"
+    }
+  }
+}

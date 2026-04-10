@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:33:33Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 772206,
+    "avm_low": 570761,
+    "avm_value": 671484
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1512 SUMMERFIELD AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "1512 SUMMERFIELD AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": ""
+        },
+        "area": {
+          "blockNum": "1404",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "WEST ASBURY PARK",
+          "taxcodearea": "04"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 191284,
+            "avmlastmonthvalue": 480200,
+            "avmpercentchange": 33
+          },
+          "amount": {
+            "high": 772206,
+            "low": 570761,
+            "scr": 85,
+            "value": 671484,
+            "valueRange": 100722
+          },
+          "calculations": {
+            "perSizeUnit": 399.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 102.2,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 791511.15,
+            "avmexcellentlow": 585030.02,
+            "avmgoodhigh": 772206.0,
+            "avmgoodlow": 570761.0,
+            "avmpoorhigh": 733595.7,
+            "avmpoorlow": 542222.95
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "OTHER (NOT CLASSIFIED)"
+          },
+          "interior": {
+            "bsmtsize": 640
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 1680,
+            "grosssize": 1680,
+            "grosssizeadjusted": 1680,
+            "livingsize": 1680,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1680
+          },
+          "summary": {
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "yearbuilteffective": 1920
+          }
+        },
+        "identifier": {
+          "Id": 14414421,
+          "apn": "04-01404-0000-00007",
+          "apnOrig": "04-01404-0000-00007",
+          "attomId": 14414421,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.219198",
+          "longitude": "-74.023835"
+        },
+        "lot": {
+          "depth": 110,
+          "frontage": 50,
+          "lotnum": "7",
+          "lotsize1": 0.126,
+          "lotsize2": 5502
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "OLD 72,6",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 14414421,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:33.007Z",
+      "total": 1,
+      "transactionID": "ae2f39c79aa2305aa59fe4ba4f488fed",
+      "version": "1.0.0"
+    }
+  }
+}

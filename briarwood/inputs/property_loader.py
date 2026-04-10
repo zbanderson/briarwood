@@ -284,6 +284,7 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         has_back_house=_optional_bool(facts_payload.get("has_back_house", data.get("has_back_house"))),
         adu_type=_optional_str(facts_payload.get("adu_type", data.get("adu_type"))),
         adu_sqft=_optional_int(facts_payload.get("adu_sqft", data.get("adu_sqft"))),
+        additional_units=list(facts_payload.get("additional_units", data.get("additional_units", [])) or []),
         has_basement=_optional_bool(facts_payload.get("has_basement", data.get("has_basement"))),
         basement_finished=_optional_bool(facts_payload.get("basement_finished", data.get("basement_finished"))),
         has_pool=_optional_bool(facts_payload.get("has_pool", data.get("has_pool"))),

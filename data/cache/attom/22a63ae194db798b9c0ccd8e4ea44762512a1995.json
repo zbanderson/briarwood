@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:24:59Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1672228,
+    "avm_low": 1235995,
+    "avm_value": 1454112
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "569 ATLANTIC AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "569 ATLANTIC AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2024"
+        },
+        "area": {
+          "blockNum": "75",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "48"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7276,
+            "avmlastmonthvalue": 1446836,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1672228,
+            "low": 1235995,
+            "scr": 85,
+            "value": 1454112,
+            "valueRange": 218116
+          },
+          "calculations": {
+            "perSizeUnit": 800.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 148.17,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1714033.7,
+            "avmexcellentlow": 1266894.88,
+            "avmgoodhigh": 1672228.0,
+            "avmgoodlow": 1235995.0,
+            "avmpoorhigh": 1588616.6,
+            "avmpoorlow": 1174195.25
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1816,
+            "grosssize": 1816,
+            "grosssizeadjusted": 1816,
+            "livingsize": 1816,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1816
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 197205033,
+          "apn": "48-00075-0000-00009",
+          "apnOrig": "48-00075-0000-00009",
+          "attomId": 197205033,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.146440",
+          "longitude": "-74.038154"
+        },
+        "lot": {
+          "depth": 125,
+          "frontage": 50,
+          "lotnum": "9",
+          "lotsize1": 0.144,
+          "lotsize2": 6251
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197205033,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:59.556Z",
+      "total": 1,
+      "transactionID": "c20f36c71caed9f2afaf5e41298441ec",
+      "version": "1.0.0"
+    }
+  }
+}

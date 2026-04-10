@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:24:25Z",
+  "normalized_payload": {
+    "address": "16 DEVON CT, SPRING LAKE, NJ 07762",
+    "baths": 2.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.163130",
+    "longitude": "-74.033156",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 1784,
+    "stories": 3,
+    "year_built": 1985
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "16 DEVON CT",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "16 DEVON CT, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2294",
+          "postal3": "C008"
+        },
+        "area": {
+          "blockNum": "61",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "DAVON COURT BLDG 03",
+          "taxcodearea": "48"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 200,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1784,
+            "grosssizeadjusted": 1784,
+            "groundfloorsize": 750,
+            "livingsize": 1784,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1784
+          },
+          "summary": {
+            "levels": 3,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 186560596,
+          "apn": "48  00061-0000-00002-  17",
+          "attomId": 186560596,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "N4": "8c85cd095befcd29c50dd3d4538d80b1",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.163130",
+          "longitude": "-74.033156"
+        },
+        "lot": {
+          "lotnum": "2.17",
+          "lotsize2": 696960,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:2.17 BLK:61 DIST:48 CITY/MUNI/TWP:SPRING LAKE HEIGHTS BOR",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1985
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 186560596,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:25.483Z",
+      "total": 1,
+      "transactionID": "9c8ddda6d70d417e280c8f38419fed12",
+      "version": "1.0.0"
+    }
+  }
+}

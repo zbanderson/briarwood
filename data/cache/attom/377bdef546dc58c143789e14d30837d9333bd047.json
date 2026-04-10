@@ -1,0 +1,116 @@
+{
+  "fetched_at": "2026-04-10T19:25:21Z",
+  "normalized_payload": {
+    "address": "3303 BEECHWOOD CT, WALL TOWNSHIP, NJ 07719",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.172032",
+    "longitude": "-74.095212",
+    "lot_size": 0.054,
+    "property_type": "SFR",
+    "sqft": 2194,
+    "stories": null,
+    "year_built": 2021
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "3303 BEECHWOOD CT",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "3303 BEECHWOOD CT, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9782"
+        },
+        "area": {
+          "blockNum": "774",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": ""
+        },
+        "building": {
+          "construction": {
+            "constructiontype": "BRICK",
+            "wallType": "BRICK"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 2194,
+            "grosssizeadjusted": 2194,
+            "livingsize": 2194,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2194
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2021
+          }
+        },
+        "identifier": {
+          "Id": 333260896,
+          "apn": "52-00774-0000-00008-3303",
+          "apnOrig": "52-00774-0000-00008-3303",
+          "attomId": 333260896,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ZI07719",
+          "latitude": "40.172032",
+          "longitude": "-74.095212"
+        },
+        "lot": {
+          "lotnum": "8",
+          "lotsize1": 0.054,
+          "lotsize2": 2365
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2021
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 333260896,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:20.971Z",
+      "total": 1,
+      "transactionID": "6a032fd628199c0d32dfbd168cf10ea7",
+      "version": "1.0.0"
+    }
+  }
+}

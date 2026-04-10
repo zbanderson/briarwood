@@ -1,0 +1,140 @@
+{
+  "fetched_at": "2026-04-10T19:23:03Z",
+  "normalized_payload": {
+    "address": "212 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 3.0,
+    "beds": 5,
+    "garage_spaces": null,
+    "latitude": "40.204852",
+    "longitude": "-74.009452",
+    "lot_size": 0.1147842,
+    "property_type": "SFR",
+    "sqft": 2334,
+    "stories": 2,
+    "year_built": 1902
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "212 OCEAN PARK AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "212 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1417",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "FRAME",
+            "foundationtype": "BRICK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 264,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 5,
+            "roomsTotal": 11
+          },
+          "size": {
+            "bldgsize": 2334,
+            "grosssizeadjusted": 2334,
+            "groundfloorsize": 1136,
+            "livingsize": 2334,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2334
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 187210989,
+          "apn": "08  00024-0000-00011",
+          "attomId": 187210989,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.204852",
+          "longitude": "-74.009452"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "11",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:11 BLK:24 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1902
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 187210989,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:23:03.217Z",
+      "total": 1,
+      "transactionID": "b9375bf0775865d71d0e87988e8bf006",
+      "version": "1.0.0"
+    }
+  }
+}

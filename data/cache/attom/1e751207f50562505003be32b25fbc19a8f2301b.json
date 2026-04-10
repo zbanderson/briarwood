@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:29:41Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1021000,
+    "avm_low": 777800,
+    "avm_value": 911800
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "27 1/2 ATLANTIC AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "27 1/2 ATLANTIC AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1174"
+        },
+        "area": {
+          "blockNum": "80",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -4200,
+            "avmlastmonthvalue": 916000,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1021000,
+            "low": 777800,
+            "scr": 85,
+            "value": 911800,
+            "valueRange": 109200
+          },
+          "calculations": {
+            "perSizeUnit": 754.0,
+            "rangePctOfValue": 26.67,
+            "ratioTaxAmt": 147.92,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1046525.0,
+            "avmexcellentlow": 797245.0,
+            "avmgoodhigh": 1021000.0,
+            "avmgoodlow": 777800.0,
+            "avmpoorhigh": 969950.0,
+            "avmpoorlow": 738910.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 394
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1208,
+            "grosssizeadjusted": 1208,
+            "livingsize": 1208,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1208
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1926
+          }
+        },
+        "identifier": {
+          "Id": 196555935,
+          "apn": "08-00080-0000-00012",
+          "apnOrig": "08-00080-0000-00012",
+          "attomId": 196555935,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, ZI07720",
+          "latitude": "40.197903",
+          "longitude": "-74.016823"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 5,
+          "lotnum": "12",
+          "lotsize1": 0.037,
+          "lotsize2": 1625
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1926
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 196555935,
+      "attomIds": [
+        196555935
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:41.491Z",
+      "total": 1,
+      "transactionID": "e96f7b6874dc065a06a5d498cf35f0b2",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "fetched_at": "2026-04-10T19:30:56Z",
+  "normalized_payload": {
+    "address": "201 OCEAN AVE, BRADLEY BEACH, NJ 07720",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.197483",
+    "longitude": "-74.008943",
+    "lot_size": null,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": 1981
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "201 OCEAN AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "201 OCEAN AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1187",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "66",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 251586019,
+          "apn": "08  00066-0000-00013",
+          "attomId": 251586019,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N4": "a2199cb5a2af5d6d6c8591dccff3831b",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005010029, SB0000102476, ZI07720",
+          "latitude": "40.197483",
+          "longitude": "-74.008943"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 98,
+          "lotnum": "13",
+          "lotsize2": 9959,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT",
+          "yearbuilt": 1981
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 251586019,
+      "attomIds": [
+        251586019
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:56.690Z",
+      "total": 1,
+      "transactionID": "830c4061f46138a7e7576724db101883",
+      "version": "1.0.0"
+    }
+  }
+}

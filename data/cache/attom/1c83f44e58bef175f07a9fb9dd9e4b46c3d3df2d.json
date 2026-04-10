@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:25:13Z",
+  "normalized_payload": {
+    "address": "1314 NEW BRUNSWICK AVE, MANASQUAN, NJ 08736",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.131476",
+    "longitude": "-74.064526",
+    "lot_size": 0.1147842,
+    "property_type": "SFR",
+    "sqft": 792,
+    "stories": 1,
+    "year_built": 1950
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1314 NEW BRUNSWICK AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "1314 NEW BRUNSWICK AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "1218",
+          "postal3": "C009"
+        },
+        "area": {
+          "blockNum": "301",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "HIGH VIEW PK/MANASQUAN",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 792
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 792,
+            "grosssizeadjusted": 792,
+            "groundfloorsize": 792,
+            "livingsize": 792,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 792
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 200124872,
+          "apn": "52  00301-0000-00008",
+          "attomId": 200124872,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "13038042c3997706d59bb616f8b8113c",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005009414, SB0000103447, SB0000146325, SB0000151642, ZI08736",
+          "latitude": "40.131476",
+          "longitude": "-74.064526"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "8",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:8 BLK:301 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 107",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200124872,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:13.173Z",
+      "total": 1,
+      "transactionID": "2d10684148c904fcbc2eae5107569b0a",
+      "version": "1.0.0"
+    }
+  }
+}

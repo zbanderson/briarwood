@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:26:00Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 651394,
+    "avm_low": 532959,
+    "avm_value": 592177
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "725 17TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "725 17TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3011",
+          "postal3": "C010"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 8317,
+            "avmlastmonthvalue": 583860,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 651394,
+            "low": 532959,
+            "scr": 90,
+            "value": 592177,
+            "valueRange": 59217
+          },
+          "calculations": {
+            "perSizeUnit": 676.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 89.76,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 667678.85,
+            "avmexcellentlow": 546282.98,
+            "avmgoodhigh": 651394.0,
+            "avmgoodlow": 532959.0,
+            "avmpoorhigh": 618824.3,
+            "avmpoorlow": 506311.05
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "TYPE UNKNOWN",
+            "foundationtype": "CONCRETE",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 672
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 876,
+            "grosssizeadjusted": 876,
+            "groundfloorsize": 876,
+            "livingsize": 876,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 876
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 3569697,
+          "apn": "46  00024-0000-00029",
+          "attomId": 3569697,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.172945",
+          "longitude": "-74.029215"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "29",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:29 BLK:24 DIST:46 CITY/MUNI/TWP:LAKE COMO BORO MAP REF:TAX MAP 1",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1952
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 3569697,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:00.332Z",
+      "total": 1,
+      "transactionID": "f190b32792bbb754c55a73d654692d8a",
+      "version": "1.0.0"
+    }
+  }
+}

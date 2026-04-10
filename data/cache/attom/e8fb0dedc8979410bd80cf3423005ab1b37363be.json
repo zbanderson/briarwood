@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:28:52Z",
+  "normalized_payload": {
+    "address": "2011 DIANA RD, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.183502",
+    "longitude": "-74.056655",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 858,
+    "stories": 1,
+    "year_built": 1953
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2011 DIANA RD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2011 DIANA RD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4008",
+          "postal3": "C009"
+        },
+        "area": {
+          "blockNum": "125",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SHARK RIVER MANOR",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "bsmtsize": 858
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 858,
+            "grosssizeadjusted": 858,
+            "groundfloorsize": 858,
+            "livingsize": 858,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 858
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 26520377,
+          "apn": "52  00125-0000-00015",
+          "attomId": 26520377,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "e01d3f913b19fff3c37860bdcf6b3de1",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008829, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.183502",
+          "longitude": "-74.056655"
+        },
+        "lot": {
+          "depth": 110,
+          "frontage": 52,
+          "lotnum": "15",
+          "lotsize2": 5720,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:15 BLK:125 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 37",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1953
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 26520377,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:28:52.752Z",
+      "total": 1,
+      "transactionID": "2176ce2a6ccaf836a0414929196251fb",
+      "version": "1.0.0"
+    }
+  }
+}

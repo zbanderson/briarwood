@@ -1,0 +1,166 @@
+{
+  "fetched_at": "2026-04-10T19:24:11Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 3630239,
+    "avm_low": 2683220,
+    "avm_value": 3156730
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "305 4TH AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "305 4TH AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1015",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "23",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SPRING LAKE BEACH IMPROV CO",
+          "taxcodearea": "47"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 406730,
+            "avmlastmonthvalue": 2750000,
+            "avmpercentchange": 13
+          },
+          "amount": {
+            "high": 3630239,
+            "low": 2683220,
+            "scr": 85,
+            "value": 3156730,
+            "valueRange": 473509
+          },
+          "calculations": {
+            "perSizeUnit": 766.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 309.39,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 3720994.97,
+            "avmexcellentlow": 2750300.5,
+            "avmgoodhigh": 3630239.0,
+            "avmgoodlow": 2683220.0,
+            "avmpoorhigh": 3448727.05,
+            "avmpoorlow": 2549059.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 588,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 4,
+            "bathspartial": 1,
+            "bathstotal": 5.0,
+            "beds": 7,
+            "roomsTotal": 15
+          },
+          "size": {
+            "bldgsize": 4119,
+            "grosssizeadjusted": 4119,
+            "groundfloorsize": 1796,
+            "livingsize": 4119,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 4119
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 48692310,
+          "apn": "47  00023-0000-00018",
+          "attomId": 48692310,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.144164",
+          "longitude": "-74.033335"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "18",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:18 BLK:23 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1910
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 48692310,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:11.246Z",
+      "total": 1,
+      "transactionID": "ea125ed9d7450759f981ba56b13ced80",
+      "version": "1.0.0"
+    }
+  }
+}

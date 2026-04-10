@@ -1,0 +1,137 @@
+{
+  "fetched_at": "2026-04-10T19:20:45Z",
+  "normalized_payload": {
+    "address": "104 SALEM AVE, SPRING LAKE, NJ 07762",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.144004",
+    "longitude": "-74.027505",
+    "lot_size": null,
+    "property_type": "HOTEL",
+    "sqft": 10125,
+    "stories": 3,
+    "year_built": 1888
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "104 SALEM AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "104 SALEM AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1040",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "30",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "4A   ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "47"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD SHINGLE"
+          },
+          "interior": {
+            "bsmtsize": 108,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "roomsTotal": 17
+          },
+          "size": {
+            "bldgsize": 10125,
+            "grosssize": 10125,
+            "grosssizeadjusted": 10125,
+            "groundfloorsize": 3790,
+            "livingsize": 10125,
+            "sizeInd": "BUILDING SQFT",
+            "universalsize": 10125
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 45354772,
+          "apn": "47  00030-0000-00018-  01",
+          "attomId": 45354772,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.144004",
+          "longitude": "-74.027505"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 116,
+          "lotnum": "18.01",
+          "lotsize2": 17400,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:18.01 BLK:30 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "23",
+          "propLandUse": "HOTEL",
+          "propclass": "Hotel, Motel",
+          "propertyType": "BED & BREAKFAST",
+          "propsubtype": "Commercial",
+          "proptype": "HOTEL",
+          "yearbuilt": 1888
+        },
+        "utilities": {
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 45354772,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:45.597Z",
+      "total": 1,
+      "transactionID": "b426d81fd87daae0f46aee9a01b78ccb",
+      "version": "1.0.0"
+    }
+  }
+}

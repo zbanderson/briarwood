@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:25:17Z",
+  "normalized_payload": {
+    "avm_confidence": 79,
+    "avm_fsd": null,
+    "avm_high": 1041570,
+    "avm_low": 680033,
+    "avm_value": 860802
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1800 PINE TERRACE # 1802",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1800 PINE TERRACE # 1802, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2920"
+        },
+        "area": {
+          "blockNum": "16",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR PINES",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 5577,
+            "avmlastmonthvalue": 855225,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1041570,
+            "low": 680033,
+            "scr": 79,
+            "value": 860802,
+            "valueRange": 180768
+          },
+          "calculations": {
+            "perSizeUnit": 939.0,
+            "rangePctOfValue": 42.0,
+            "ratioTaxAmt": 110.56,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1067609.25,
+            "avmexcellentlow": 697033.82,
+            "avmgoodhigh": 1041570.0,
+            "avmgoodlow": 680033.0,
+            "avmpoorhigh": 989491.5,
+            "avmpoorlow": 646031.35
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 916,
+            "grosssizeadjusted": 916,
+            "groundfloorsize": 916,
+            "livingsize": 916,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 916
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 197204971,
+          "apn": "46  00016-0000-00032",
+          "attomId": 197204971,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.171045",
+          "longitude": "-74.025069"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 40,
+          "lotnum": "32",
+          "lotsize1": 0.0918274,
+          "lotsize2": 4000
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:32 BLK:16 DIST:46 CITY/MUNI/TWP:LAKE COMO BORO MAP REF:TAX MAP 4",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197204971,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:16.976Z",
+      "total": 1,
+      "transactionID": "b92b515d96a805fa21d49c42f94d9491",
+      "version": "1.0.0"
+    }
+  }
+}

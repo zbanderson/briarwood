@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-10T19:33:37Z",
+  "normalized_payload": {
+    "avm_confidence": 63,
+    "avm_fsd": null,
+    "avm_high": 315949,
+    "avm_low": 145290,
+    "avm_value": 230620
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1205 WASHINGTON AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "1205 WASHINGTON AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6346",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "1301",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "4"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -92,
+            "avmlastmonthvalue": 230712,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 315949,
+            "low": 145290,
+            "scr": 63,
+            "value": 230620,
+            "valueRange": 85329
+          },
+          "calculations": {
+            "perSizeUnit": 200.0,
+            "rangePctOfValue": 74.0,
+            "ratioTaxAmt": 64.65,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 323847.72,
+            "avmexcellentlow": 148922.25,
+            "avmgoodhigh": 315949.0,
+            "avmgoodlow": 145290.0,
+            "avmpoorhigh": 300151.55,
+            "avmpoorlow": 138025.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 1152,
+            "grosssizeadjusted": 1152,
+            "groundfloorsize": 576,
+            "livingsize": 1152,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1152
+          },
+          "summary": {
+            "levels": 2,
+            "unitsCount": "1",
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 20448946,
+          "apn": "04  01301-0000-00019",
+          "attomId": 20448946,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.220098",
+          "longitude": "-74.019728"
+        },
+        "lot": {
+          "depth": 107,
+          "frontage": 18,
+          "lotnum": "19",
+          "lotsize1": 0.0442149,
+          "lotsize2": 1926
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:19 BLK:1301 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 13",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 20448946,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:37.024Z",
+      "total": 1,
+      "transactionID": "f57cd96c43ea559ec034304230575a74",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -21,6 +21,24 @@
     "has_back_house": true,
     "adu_type": "detached_cottage",
     "adu_sqft": 1380,
+    "additional_units": [
+      {
+        "label": "rear downstairs",
+        "beds": 2,
+        "baths": 1,
+        "sqft": 700,
+        "condition": "remodeled",
+        "user_rent": 2500.0
+      },
+      {
+        "label": "rear upstairs",
+        "beds": 1,
+        "baths": 1,
+        "sqft": 480,
+        "condition": "dated",
+        "user_rent": 1500.0
+      }
+    ],
     "has_basement": true,
     "basement_finished": false,
     "has_pool": false,

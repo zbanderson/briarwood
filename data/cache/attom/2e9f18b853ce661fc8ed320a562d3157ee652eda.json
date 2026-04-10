@@ -1,0 +1,167 @@
+{
+  "fetched_at": "2026-04-10T19:28:53Z",
+  "normalized_payload": {
+    "avm_confidence": 81,
+    "avm_fsd": null,
+    "avm_high": 743550,
+    "avm_low": 506113,
+    "avm_value": 624832
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1306 MONMOUTH BLVD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1306 MONMOUTH BLVD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4232",
+          "postal3": "C008"
+        },
+        "area": {
+          "blockNum": "209",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "MONMOUTH PLEASURE CLUB ASSOCIA",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 5120,
+            "avmlastmonthvalue": 619712,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 743550,
+            "low": 506113,
+            "scr": 81,
+            "value": 624832,
+            "valueRange": 118718
+          },
+          "calculations": {
+            "perSizeUnit": 277.0,
+            "rangePctOfValue": 38.0,
+            "ratioTaxAmt": 86.85,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 762138.75,
+            "avmexcellentlow": 518765.82,
+            "avmgoodhigh": 743550.0,
+            "avmgoodlow": 506113.0,
+            "avmpoorhigh": 706372.5,
+            "avmpoorlow": 480807.35
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 2096
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 360,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2250,
+            "grosssizeadjusted": 2250,
+            "groundfloorsize": 2250,
+            "livingsize": 2250,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2250
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 187222011,
+          "apn": "52  00209-0000-00001",
+          "attomId": 187222011,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "761dc40b52bcee3da9d9745158a1ceea",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008768, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.181184",
+          "longitude": "-74.066728"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 100,
+          "lotnum": "1",
+          "lotsize1": 0.2295684,
+          "lotsize2": 10000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:1 BLK:209 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 36",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1912
+        },
+        "utilities": {
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 187222011,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:28:53.844Z",
+      "total": 1,
+      "transactionID": "3f90c7228f003d7e5145d3ff6ae40dd4",
+      "version": "1.0.0"
+    }
+  }
+}

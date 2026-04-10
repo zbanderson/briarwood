@@ -1,0 +1,118 @@
+{
+  "fetched_at": "2026-04-10T19:25:47Z",
+  "normalized_payload": {
+    "address": "1501 OCEAN AVE, BELMAR, NJ 07719",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.172864",
+    "longitude": "-74.015987",
+    "lot_size": 1.15,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1501 OCEAN AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1501 OCEAN AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2501",
+          "postal3": "C016"
+        },
+        "area": {
+          "blockNum": "150",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "OCEAN VISTA CONDOS",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 50330280,
+          "apn": "07  00150-0000-00001",
+          "attomId": 50330280,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602",
+            "N4": "9bba2c91a3079568d96fdf68ec6ede9a",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, RS0005010037, SB0000102429, ZI07719",
+          "latitude": "40.172864",
+          "longitude": "-74.015987"
+        },
+        "lot": {
+          "depth": 250,
+          "frontage": 200,
+          "lotnum": "1",
+          "lotsize1": 1.15,
+          "lotsize2": 50000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 50330280,
+      "attomIds": [
+        50330280
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:47.656Z",
+      "total": 1,
+      "transactionID": "83a3c0b20c2500e8bd9befe0bc7a3504",
+      "version": "1.0.0"
+    }
+  }
+}

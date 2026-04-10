@@ -1,0 +1,118 @@
+{
+  "fetched_at": "2026-04-10T19:21:59Z",
+  "normalized_payload": {
+    "address": "210 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.204759",
+    "longitude": "-74.009145",
+    "lot_size": 0.305326,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "210 OCEAN PARK AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "210 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1489",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SUMMER WINDS/BRADLEY BEACH",
+          "taxcodearea": "8"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 42755585,
+          "apn": "08  00024-0000-00009-  01",
+          "attomId": 42755585,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N4": "d1fec603fecaf9120bedb640ae9c45f4",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005009631, SB0000102476, ZI07720",
+          "latitude": "40.204759",
+          "longitude": "-74.009145"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 133,
+          "lotnum": "9.01",
+          "lotsize1": 0.305326,
+          "lotsize2": 13300,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 42755585,
+      "attomIds": [
+        42755585
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:59.336Z",
+      "total": 1,
+      "transactionID": "e8b49b38e9e1ef6eeeb54a63cce0bb3b",
+      "version": "1.0.0"
+    }
+  }
+}

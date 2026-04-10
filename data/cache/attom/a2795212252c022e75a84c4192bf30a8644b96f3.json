@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:30:53Z",
+  "normalized_payload": {
+    "address": "205 CENTRAL AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 1.5,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.198537",
+    "longitude": "-74.012172",
+    "lot_size": 0.148,
+    "property_type": "SFR",
+    "sqft": 2448,
+    "stories": 2,
+    "year_built": 1966
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "205 CENTRAL AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "205 CENTRAL AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1127"
+        },
+        "area": {
+          "blockNum": "68",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BRADLEY BEACH",
+          "taxcodearea": "08"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1008
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 0,
+            "bathspartial": 1,
+            "bathstotal": 1.5,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2448,
+            "grosssizeadjusted": 2448,
+            "livingsize": 2448,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2448
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1966
+          }
+        },
+        "identifier": {
+          "Id": 50083951,
+          "apn": "08-00068-0000-00007",
+          "apnOrig": "08-00068-0000-00007",
+          "attomId": 50083951,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.198537",
+          "longitude": "-74.012172"
+        },
+        "lot": {
+          "depth": 110,
+          "frontage": 6,
+          "lotnum": "7",
+          "lotsize1": 0.148,
+          "lotsize2": 6447
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1966
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-02",
+          "pubDate": "2026-04-02"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 50083951,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:52.988Z",
+      "total": 1,
+      "transactionID": "e5d4175bb4dd8d11a6f2abcaf1b26299",
+      "version": "1.0.0"
+    }
+  }
+}

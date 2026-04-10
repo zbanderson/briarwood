@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-10T19:30:59Z",
+  "normalized_payload": {
+    "address": "1 MADISON AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 2.5,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.196012",
+    "longitude": "-74.014786",
+    "lot_size": 0.088,
+    "property_type": "SFR",
+    "sqft": 1629,
+    "stories": 1,
+    "year_built": 1940
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1 MADISON AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "1 MADISON AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1142"
+        },
+        "area": {
+          "blockNum": "85",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 648,
+            "fplccount": 1
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 176,
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.5,
+            "beds": 3,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1629,
+            "grosssizeadjusted": 1629,
+            "livingsize": 1629,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1629
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 190815849,
+          "apn": "08-00085-0000-00018",
+          "apnOrig": "08-00085-0000-00018",
+          "attomId": 190815849,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "0c681e7e925f43acf1c9667deda1c5c1, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, bfea690b7241bbdcc51682fae6f5d7cd",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.196012",
+          "longitude": "-74.014786"
+        },
+        "lot": {
+          "depth": 72,
+          "frontage": 53,
+          "lotnum": "18",
+          "lotsize1": 0.088,
+          "lotsize2": 3816
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-07",
+          "pubDate": "2026-04-07"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190815849,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:59.489Z",
+      "total": 1,
+      "transactionID": "07a290a769f618b4f61616caf123dae2",
+      "version": "1.0.0"
+    }
+  }
+}

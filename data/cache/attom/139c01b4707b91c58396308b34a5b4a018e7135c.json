@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:29:37Z",
+  "normalized_payload": {
+    "address": "411 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 3.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.204971",
+    "longitude": "-74.013197",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 1316,
+    "stories": 2,
+    "year_built": 2008
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "411 OCEAN PARK AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "411 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1420",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "29",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1316,
+            "grosssizeadjusted": 1316,
+            "groundfloorsize": 658,
+            "livingsize": 1316,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1316
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 37398929,
+          "apn": "08  00029-0000-00005",
+          "attomId": 37398929,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1",
+            "N4": "44270d6bad398aacd0b14587464b1883",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005009630, SB0000102476, ZI07720",
+          "latitude": "40.204971",
+          "longitude": "-74.013197"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 18,
+          "lotnum": "5",
+          "lotsize2": 1800,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:5 BLK:29 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2008
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37398929,
+      "attomIds": [
+        37398929
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:37.238Z",
+      "total": 1,
+      "transactionID": "9902a8961d2d836f25e4159216a05853",
+      "version": "1.0.0"
+    }
+  }
+}

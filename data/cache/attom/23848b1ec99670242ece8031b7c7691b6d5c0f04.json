@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:25:18Z",
+  "normalized_payload": {
+    "address": "1807 BRIDLEMERE AVE, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.5,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.159547",
+    "longitude": "-74.092988",
+    "lot_size": 1.38,
+    "property_type": "SFR",
+    "sqft": 3113,
+    "stories": 2,
+    "year_built": 1995
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1807 BRIDLEMERE AVE",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1807 BRIDLEMERE AVE, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9525"
+        },
+        "area": {
+          "blockNum": "804",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)"
+          },
+          "interior": {
+            "bsmtsize": 1578,
+            "fplccount": 1
+          },
+          "parking": {
+            "prkgSize": 408,
+            "prkgSpaces": "2"
+          },
+          "rooms": {
+            "bathsfull": 0,
+            "bathspartial": 1,
+            "bathstotal": 1.5,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 3113,
+            "grosssizeadjusted": 3113,
+            "livingsize": 3113,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3113
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1995
+          }
+        },
+        "identifier": {
+          "Id": 189861285,
+          "apn": "52-00804-0000-00095",
+          "apnOrig": "52-00804-0000-00095",
+          "attomId": 189861285,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "7851367d31b329ebe544ecf0a0ef59c2",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005012001, SB0000103447, SB0000146325, SB0000151642, ZI07719",
+          "latitude": "40.159547",
+          "longitude": "-74.092988"
+        },
+        "lot": {
+          "depth": 251,
+          "frontage": 208,
+          "lotnum": "95",
+          "lotsize1": 1.38,
+          "lotsize2": 60113,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1995
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189861285,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:18.471Z",
+      "total": 1,
+      "transactionID": "578d35db9c3d506775243e096a490fd9",
+      "version": "1.0.0"
+    }
+  }
+}

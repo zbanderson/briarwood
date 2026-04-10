@@ -1,0 +1,170 @@
+{
+  "fetched_at": "2026-04-10T19:25:33Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 962463,
+    "avm_low": 771704,
+    "avm_value": 867084
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "3005 ALICIA DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "3005 ALICIA DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4401",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "214",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ROCKAFELLER ESTATES SEC IV",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 10638,
+            "avmlastmonthvalue": 856446,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 962463,
+            "low": 771704,
+            "scr": 89,
+            "value": 867084,
+            "valueRange": 95379
+          },
+          "calculations": {
+            "perSizeUnit": 446.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 93.32,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 986524.58,
+            "avmexcellentlow": 790996.6,
+            "avmgoodhigh": 962463.0,
+            "avmgoodlow": 771704.0,
+            "avmpoorhigh": 914339.85,
+            "avmpoorlow": 733118.8
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 960,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 550,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1943,
+            "grosssizeadjusted": 1943,
+            "groundfloorsize": 978,
+            "livingsize": 1943,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1943
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 2264359,
+          "apn": "52  00214-0000-00015",
+          "attomId": 2264359,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "5515291b3386adacecea0c40cf6c3cdf",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005010056, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.191944",
+          "longitude": "-74.065356"
+        },
+        "lot": {
+          "depth": 168,
+          "frontage": 150,
+          "lotnum": "15",
+          "lotsize2": 25200
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:15 BLK:214 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 18",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1977
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 2264359,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:33.618Z",
+      "total": 1,
+      "transactionID": "9953357beefa400e3eca088980c024ea",
+      "version": "1.0.0"
+    }
+  }
+}

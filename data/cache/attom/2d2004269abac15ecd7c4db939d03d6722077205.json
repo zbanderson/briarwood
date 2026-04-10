@@ -1,0 +1,163 @@
+{
+  "fetched_at": "2026-04-10T19:31:49Z",
+  "normalized_payload": {
+    "avm_confidence": 82,
+    "avm_fsd": null,
+    "avm_high": 2854420,
+    "avm_low": 1983580,
+    "avm_value": 2419000
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "203 WASHINGTON AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "203 WASHINGTON AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1223",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "50",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 27000,
+            "avmlastmonthvalue": 2392000,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 2854420,
+            "low": 1983580,
+            "scr": 82,
+            "value": 2419000,
+            "valueRange": 435420
+          },
+          "calculations": {
+            "perSizeUnit": 754.0,
+            "rangePctOfValue": 36.0,
+            "ratioTaxAmt": 186.82,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2925780.5,
+            "avmexcellentlow": 2033169.5,
+            "avmgoodhigh": 2854420.0,
+            "avmgoodlow": 1983580.0,
+            "avmpoorhigh": 2711699.0,
+            "avmpoorlow": 1884401.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 884,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3204,
+            "grosssizeadjusted": 3204,
+            "groundfloorsize": 1238,
+            "livingsize": 3204,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3204
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 196567807,
+          "apn": "06  00050-0000-00008",
+          "attomId": 196567807,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 16d59496aaa728a6b3dba5afa4dc5ba8, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.188792",
+          "longitude": "-74.014823"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "8",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:8 BLK:50 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 196567807,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:31:49.277Z",
+      "total": 1,
+      "transactionID": "2c2e7e480fe450ab7f5f0bc8b449499c",
+      "version": "1.0.0"
+    }
+  }
+}

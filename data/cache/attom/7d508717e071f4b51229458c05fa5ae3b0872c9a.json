@@ -1,0 +1,170 @@
+{
+  "fetched_at": "2026-04-10T19:33:34Z",
+  "normalized_payload": {
+    "avm_confidence": 92,
+    "avm_fsd": null,
+    "avm_high": 947372,
+    "avm_low": 807021,
+    "avm_value": 877197
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "16 ROLLING MEADOWS BLVD S",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "16 ROLLING MEADOWS BLVD S, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "8533",
+          "postal3": "C035"
+        },
+        "area": {
+          "blockNum": "1.09",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ROLLING MDWS/WAYSIDE PH 01",
+          "taxcodearea": "37"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 13840,
+            "avmlastmonthvalue": 863357,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 947372,
+            "low": 807021,
+            "scr": 92,
+            "value": 877197,
+            "valueRange": 70175
+          },
+          "calculations": {
+            "perSizeUnit": 383.0,
+            "rangePctOfValue": 16.0,
+            "ratioTaxAmt": 88.56,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 971056.3,
+            "avmexcellentlow": 827196.52,
+            "avmgoodhigh": 947372.0,
+            "avmgoodlow": 807021.0,
+            "avmpoorhigh": 900003.4,
+            "avmpoorlow": 766669.95
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 441,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 2288,
+            "grosssizeadjusted": 2288,
+            "groundfloorsize": 1696,
+            "livingsize": 2288,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2288
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 187655199,
+          "apn": "37  00001-  09-00135",
+          "attomId": 187655199,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "9d956f562c0a08c2dbe685cc988c240b",
+            "DB": "4c8f87d5465e0202dc9a7a0877ebf881",
+            "N2": "8250d7050ff07bf0308ae7804c55b550",
+            "N4": "300f035d591bdd78fb46a72d8a834c60",
+            "SB": "a6a1d4c3add92b534293c94be6eb7abb, b841174ad3ae377af27768248fe596fe, 2da1edbd05bc69c856707739eb7ecd1d",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3454270, DB3412060, ND0004854389, RS0005010257, SB0000103198, SB0000149845, SB0000151620, ZI07712",
+          "latitude": "40.261210",
+          "longitude": "-74.070045"
+        },
+        "lot": {
+          "depth": 110,
+          "frontage": 55,
+          "lotnum": "135",
+          "lotsize1": 0.1388889,
+          "lotsize2": 6050
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:135 BLK:1.09 DIST:37 CITY/MUNI/TWP:OCEAN TWP MAP REF:TAX MAP 21",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2006
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 187655199,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:33.981Z",
+      "total": 1,
+      "transactionID": "b721b9dfe970dcfdf033dbd88705e952",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "fetched_at": "2026-04-10T19:26:12Z",
+  "normalized_payload": {
+    "avm_confidence": 86,
+    "avm_fsd": null,
+    "avm_high": 1005387,
+    "avm_low": 758450,
+    "avm_value": 881919
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "405 16TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "405 16TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3003",
+          "postal3": "C016"
+        },
+        "area": {
+          "blockNum": "1",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SOUTH BELMAR MON CO",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7641,
+            "avmlastmonthvalue": 874278,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1005387,
+            "low": 758450,
+            "scr": 86,
+            "value": 881919,
+            "valueRange": 123468
+          },
+          "calculations": {
+            "perSizeUnit": 1312.0,
+            "rangePctOfValue": 28.0,
+            "ratioTaxAmt": 116.64,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1030521.68,
+            "avmexcellentlow": 777411.25,
+            "avmgoodhigh": 1005387.0,
+            "avmgoodlow": 758450.0,
+            "avmpoorhigh": 955117.65,
+            "avmpoorlow": 720527.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 672,
+            "grosssizeadjusted": 672,
+            "groundfloorsize": 672,
+            "livingsize": 672,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 672
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 200756000,
+          "apn": "46  00001-0000-00029",
+          "attomId": 200756000,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.173352",
+          "longitude": "-74.022291"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 40,
+          "lotnum": "29",
+          "lotsize1": 0.0918274,
+          "lotsize2": 4000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: RELOCATION SALE",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200756000,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:12.055Z",
+      "total": 1,
+      "transactionID": "64d66bbc5ef1844c6e5b023553c0c388",
+      "version": "1.0.0"
+    }
+  }
+}

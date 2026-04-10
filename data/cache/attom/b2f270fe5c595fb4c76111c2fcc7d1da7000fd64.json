@@ -1,0 +1,140 @@
+{
+  "fetched_at": "2026-04-10T19:33:45Z",
+  "normalized_payload": {
+    "address": "403 SEWALL AVE, ASBURY PARK, NJ 07712",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.218628",
+    "longitude": "-74.006305",
+    "lot_size": 0.0757576,
+    "property_type": "SFR",
+    "sqft": 1234,
+    "stories": 2,
+    "year_built": 1935
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "403 SEWALL AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "403 SEWALL AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6636",
+          "postal3": "C044"
+        },
+        "area": {
+          "blockNum": "3202",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ASBURY PARK",
+          "taxcodearea": "4"
+        },
+        "building": {
+          "construction": {
+            "condition": "EXCELLENT",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 224
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1234,
+            "grosssizeadjusted": 1234,
+            "groundfloorsize": 624,
+            "livingsize": 1234,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1234
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 10789603,
+          "apn": "04  03202-0000-00008",
+          "attomId": 10789603,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa, 2e7fa370065620c582c90ff2708e6c73",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, PL3401960, ZI07712",
+          "latitude": "40.218628",
+          "longitude": "-74.006305"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 33,
+          "lotnum": "8",
+          "lotsize1": 0.0757576,
+          "lotsize2": 3300
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:8 BLK:3202 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 32",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1935
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 10789603,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:45.642Z",
+      "total": 1,
+      "transactionID": "666e8755b0c86a1c711499b5151ca54f",
+      "version": "1.0.0"
+    }
+  }
+}

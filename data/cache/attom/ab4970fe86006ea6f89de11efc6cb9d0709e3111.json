@@ -1,0 +1,155 @@
+{
+  "fetched_at": "2026-04-10T19:30:28Z",
+  "normalized_payload": {
+    "avm_confidence": 70,
+    "avm_fsd": null,
+    "avm_high": 776500,
+    "avm_low": 429200,
+    "avm_value": 610600
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "200 OCEAN PARK AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "200 OCEAN PARK AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1478",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "1    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "OCEAN CLUB",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 12100,
+            "avmlastmonthvalue": 598500,
+            "avmpercentchange": 2
+          },
+          "amount": {
+            "high": 776500,
+            "low": 429200,
+            "scr": 70,
+            "value": 610600,
+            "valueRange": 165900
+          },
+          "calculations": {
+            "perSizeUnit": 942.0,
+            "rangePctOfValue": 56.88
+          },
+          "condition": {
+            "avmexcellenthigh": 795912.5,
+            "avmexcellentlow": 439930.0,
+            "avmgoodhigh": 776500.0,
+            "avmgoodlow": 429200.0,
+            "avmpoorhigh": 737675.0,
+            "avmpoorlow": 407740.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "SLAB",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 1,
+            "roomsTotal": 2
+          },
+          "size": {
+            "bldgsize": 648,
+            "grosssizeadjusted": 648,
+            "livingsize": 648,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 648
+          },
+          "summary": {
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 100085793,
+          "apn": "08  00024-0000-00006-  03",
+          "attomId": 100085793,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1",
+            "N4": "9213db0142505109ab57de1ebfe32463",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005009631, SB0000102476, ZI07720",
+          "latitude": "40.204831",
+          "longitude": "-74.008706"
+        },
+        "lot": {
+          "lotnum": "6.03",
+          "lotsize2": 23313,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:6.03 BLK:24 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1963
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 100085793,
+      "attomIds": [
+        100085793,
+        249077692
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:28.469Z",
+      "total": 1,
+      "transactionID": "a9944e2211d95d481e34b592b8e5c99d",
+      "version": "1.0.0"
+    }
+  }
+}

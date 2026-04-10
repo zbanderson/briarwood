@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:25:20Z",
+  "normalized_payload": {
+    "address": "1024 17TH AVE, WALL TOWNSHIP, NJ 07719",
+    "baths": 2.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.172315",
+    "longitude": "-74.037597",
+    "lot_size": 0.149,
+    "property_type": "SFR",
+    "sqft": 2140,
+    "stories": 2,
+    "year_built": 1925
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1024 17TH AVE",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1024 17TH AVE, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3105"
+        },
+        "area": {
+          "blockNum": "16",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR HLDNS",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1388
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 10
+          },
+          "size": {
+            "bldgsize": 2140,
+            "grosssizeadjusted": 2140,
+            "livingsize": 2140,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2140
+          },
+          "summary": {
+            "archStyle": "CONTEMPORARY",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1925
+          }
+        },
+        "identifier": {
+          "Id": 187221948,
+          "apn": "52-00016-0000-00046",
+          "apnOrig": "52-00016-0000-00046",
+          "attomId": 187221948,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "7cb62a9bfd5a7056022a7d780f253eef",
+            "PL": "ead49c9d92be28059bc571f18467fb11",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, PL3478350, RS0005009960, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.172315",
+          "longitude": "-74.037597"
+        },
+        "lot": {
+          "depth": 55,
+          "frontage": 118,
+          "lotnum": "46",
+          "lotsize1": 0.149,
+          "lotsize2": 6490
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1925
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 187221948,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:20.113Z",
+      "total": 1,
+      "transactionID": "924bf2507b0f16bed687b3e1dcb8e027",
+      "version": "1.0.0"
+    }
+  }
+}

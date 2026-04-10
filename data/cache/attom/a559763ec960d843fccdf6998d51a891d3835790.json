@@ -1,0 +1,170 @@
+{
+  "fetched_at": "2026-04-10T19:29:02Z",
+  "normalized_payload": {
+    "avm_confidence": 91,
+    "avm_fsd": null,
+    "avm_high": 2711309,
+    "avm_low": 2263570,
+    "avm_value": 2487440
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2128 SHADOW LN",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2128 SHADOW LN, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9741",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "805",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "PLAT-MAJOR SUB",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 21080,
+            "avmlastmonthvalue": 2466360,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 2711309,
+            "low": 2263570,
+            "scr": 91,
+            "value": 2487440,
+            "valueRange": 223869
+          },
+          "calculations": {
+            "perSizeUnit": 479.0,
+            "rangePctOfValue": 18.0,
+            "ratioTaxAmt": 98.56,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2779091.72,
+            "avmexcellentlow": 2320159.25,
+            "avmgoodhigh": 2711309.0,
+            "avmgoodlow": 2263570.0,
+            "avmpoorhigh": 2575743.55,
+            "avmpoorlow": 2150391.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 2868,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 826,
+            "prkgSpaces": "3",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathspartial": 2,
+            "bathstotal": 5.0,
+            "beds": 4,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 5184,
+            "grosssizeadjusted": 5184,
+            "groundfloorsize": 2868,
+            "livingsize": 5184,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 5184
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 152521828,
+          "apn": "52  00805-0000-00025-  03",
+          "attomId": 152521828,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ZI07719",
+          "latitude": "40.145197",
+          "longitude": "-74.085123"
+        },
+        "lot": {
+          "lotnum": "25.03",
+          "lotsize1": 1.48,
+          "lotsize2": 64469,
+          "poolind": "YES",
+          "pooltype": "POOL W/HOT TUB/SPA"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:25.03 BLK:805 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 82",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2010
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 152521828,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:02.294Z",
+      "total": 1,
+      "transactionID": "01bb43269e79eafdf2a50562bb3977cd",
+      "version": "1.0.0"
+    }
+  }
+}

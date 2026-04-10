@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:25:08Z",
+  "normalized_payload": {
+    "address": "4 MAIN ST, MANASQUAN, NJ 08736",
+    "baths": 2.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.126808",
+    "longitude": "-74.053487",
+    "lot_size": 0.264899,
+    "property_type": "SFR",
+    "sqft": 2023,
+    "stories": 2,
+    "year_built": 1888
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "4 MAIN ST",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "4 MAIN ST, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "2911",
+          "postal3": "C006"
+        },
+        "area": {
+          "blockNum": "34",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "29"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "STONE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "WOOD SIDING"
+          },
+          "interior": {
+            "bsmtsize": 676,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 336,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2023,
+            "grosssizeadjusted": 2023,
+            "groundfloorsize": 1171,
+            "livingsize": 2023,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2023
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 190816325,
+          "apn": "29  00034-0000-00001",
+          "attomId": 190816325,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, SB0000102963, SB0000102964, ZI08736",
+          "latitude": "40.126808",
+          "longitude": "-74.053487"
+        },
+        "lot": {
+          "lotnum": "1",
+          "lotsize1": 0.264899,
+          "lotsize2": 11539,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:1 BLK:34 DIST:29 CITY/MUNI/TWP:MANASQUAN BORO MAP REF:TAX MAP 6",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1888
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190816325,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:08.364Z",
+      "total": 1,
+      "transactionID": "b7701f565bcefbb2799689f0bdf55c77",
+      "version": "1.0.0"
+    }
+  }
+}

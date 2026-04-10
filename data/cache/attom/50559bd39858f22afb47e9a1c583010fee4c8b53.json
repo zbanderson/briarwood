@@ -1,0 +1,161 @@
+{
+  "fetched_at": "2026-04-10T19:25:31Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 821225,
+    "avm_low": 671912,
+    "avm_value": 746569
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2608 GARFIELD ST",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2608 GARFIELD ST, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4120"
+        },
+        "area": {
+          "blockNum": "266",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "IMPERIAL PARK",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 14181,
+            "avmlastmonthvalue": 732388,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 821225,
+            "low": 671912,
+            "scr": 90,
+            "value": 746569,
+            "valueRange": 74656
+          },
+          "calculations": {
+            "perSizeUnit": 396.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 92.66,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 841755.62,
+            "avmexcellentlow": 688709.8,
+            "avmgoodhigh": 821225.0,
+            "avmgoodlow": 671912.0,
+            "avmpoorhigh": 780163.75,
+            "avmpoorlow": 638316.4
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GAMBREL",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplccount": 1
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.5,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1882,
+            "grosssizeadjusted": 1882,
+            "livingsize": 1882,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1882
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2007
+          }
+        },
+        "identifier": {
+          "Id": 29846144,
+          "apn": "52-00266-0000-00002",
+          "apnOrig": "52-00266-0000-00002",
+          "attomId": 29846144,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "761dc40b52bcee3da9d9745158a1ceea",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008768, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.177679",
+          "longitude": "-74.065581"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "2",
+          "lotsize1": 0.115,
+          "lotsize2": 5001
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2007
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 29846144,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:31.027Z",
+      "total": 1,
+      "transactionID": "cf3a5abb5ff21011135572d1807837ee",
+      "version": "1.0.0"
+    }
+  }
+}

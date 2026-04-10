@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:32:09Z",
+  "normalized_payload": {
+    "address": "406 RIVERSIDE AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 2.0,
+    "beds": 5,
+    "garage_spaces": null,
+    "latitude": "40.188430",
+    "longitude": "-74.019289",
+    "lot_size": 0.2533517,
+    "property_type": "SFR",
+    "sqft": 1758,
+    "stories": 2,
+    "year_built": 1931
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "406 RIVERSIDE AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "406 RIVERSIDE AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "3102",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "47",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 672,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 240,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 1758,
+            "grosssizeadjusted": 1758,
+            "groundfloorsize": 784,
+            "livingsize": 1758,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1758
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 200459086,
+          "apn": "06  00047-0000-00007-  01",
+          "attomId": 200459086,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.188430",
+          "longitude": "-74.019289"
+        },
+        "lot": {
+          "depth": 178,
+          "frontage": 62,
+          "lotnum": "7.01",
+          "lotsize1": 0.2533517,
+          "lotsize2": 11036,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "ADDITIONAL LOTS: 7.02",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1931
+        },
+        "utilities": {
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200459086,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:32:09.477Z",
+      "total": 1,
+      "transactionID": "44094db5436b4142d0b9804c53cb74ce",
+      "version": "1.0.0"
+    }
+  }
+}

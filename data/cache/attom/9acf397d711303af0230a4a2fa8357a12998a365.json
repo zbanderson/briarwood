@@ -1,0 +1,162 @@
+{
+  "fetched_at": "2026-04-10T19:25:13Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 351210,
+    "avm_low": 259590,
+    "avm_value": 305400
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1314 NEW BRUNSWICK AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "1314 NEW BRUNSWICK AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "1218",
+          "postal3": "C009"
+        },
+        "area": {
+          "blockNum": "301",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "HIGH VIEW PK/MANASQUAN",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 2310,
+            "avmlastmonthvalue": 303090,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 351210,
+            "low": 259590,
+            "scr": 85,
+            "value": 305400,
+            "valueRange": 45810
+          },
+          "calculations": {
+            "perSizeUnit": 385.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 62.85,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 359990.25,
+            "avmexcellentlow": 266079.75,
+            "avmgoodhigh": 351210.0,
+            "avmgoodlow": 259590.0,
+            "avmpoorhigh": 333649.5,
+            "avmpoorlow": 246610.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 792
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 792,
+            "grosssizeadjusted": 792,
+            "groundfloorsize": 792,
+            "livingsize": 792,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 792
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 200124872,
+          "apn": "52  00301-0000-00008",
+          "attomId": 200124872,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "13038042c3997706d59bb616f8b8113c",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005009414, SB0000103447, SB0000146325, SB0000151642, ZI08736",
+          "latitude": "40.131476",
+          "longitude": "-74.064526"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "8",
+          "lotsize1": 0.1147842,
+          "lotsize2": 5000
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:8 BLK:301 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 107",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200124872,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:13.456Z",
+      "total": 1,
+      "transactionID": "717894e3de0aff749abb5b86a4272213",
+      "version": "1.0.0"
+    }
+  }
+}

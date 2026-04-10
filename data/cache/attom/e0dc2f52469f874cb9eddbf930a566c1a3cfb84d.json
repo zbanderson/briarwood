@@ -1,0 +1,168 @@
+{
+  "fetched_at": "2026-04-10T19:23:58Z",
+  "normalized_payload": {
+    "avm_confidence": 82,
+    "avm_fsd": null,
+    "avm_high": 669679,
+    "avm_low": 465370,
+    "avm_value": 567525
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "79 INSKIP AVE",
+          "line2": "OCEAN GROVE, NJ 07756",
+          "locality": "OCEAN GROVE",
+          "matchCode": "ExaStr",
+          "oneLine": "79 INSKIP AVE, OCEAN GROVE, NJ 07756",
+          "postal1": "07756",
+          "postal2": "1119",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "284",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "35"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 5750,
+            "avmlastmonthvalue": 561775,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 669679,
+            "low": 465370,
+            "scr": 82,
+            "value": 567525,
+            "valueRange": 102154
+          },
+          "calculations": {
+            "perSizeUnit": 565.0,
+            "rangePctOfValue": 36.0,
+            "ratioTaxAmt": 46.24,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 686420.98,
+            "avmexcellentlow": 477004.25,
+            "avmgoodhigh": 669679.0,
+            "avmgoodlow": 465370.0,
+            "avmpoorhigh": 636195.05,
+            "avmpoorlow": 442101.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 170,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1003,
+            "grosssizeadjusted": 1003,
+            "groundfloorsize": 1003,
+            "livingsize": 1003,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1003
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 203327197,
+          "apn": "35  00284-0000-00007",
+          "attomId": 203327197,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2bcd094001a15ad76e069eb855ca54e1",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd",
+            "PL": "197854cf9fb3c69a14c030b496e77100",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, 0b79a917bdab41f929d398ac6f1d28d5, 52beca6566f9bd1be932f7a523c29ee9",
+            "ZI": "6c07fc84537e5ad8b000934709abe9a1"
+          },
+          "geoid": "CO34025, CS3449890, DB3411160, PL3454480, SB0000156162, SB0000156163, SB0000156718, ZI07756",
+          "latitude": "40.207762",
+          "longitude": "-74.010605"
+        },
+        "lot": {
+          "depth": 60,
+          "frontage": 31,
+          "lotnum": "7",
+          "lotsize1": 0.0426997,
+          "lotsize2": 1860,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:7 BLK:284 DIST:35 CITY/MUNI/TWP:NEPTUNE TWP MAP REF:TAX MAP 6",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1924
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 203327197,
+      "attomIds": [
+        203327197
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:23:58.427Z",
+      "total": 1,
+      "transactionID": "3f30a14aecee063ade07f29adce1a279",
+      "version": "1.0.0"
+    }
+  }
+}

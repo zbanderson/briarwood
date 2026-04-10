@@ -1,12 +1,13 @@
 {
   "property_id": "119-4th-ave-avon-by-the-sea-nj-07717",
-  "address": "119 4th Ave, Avon By The Sea, NJ 07717",
-  "label": "119 4th Ave",
+  "address": "119 4Th Ave",
+  "label": "119 4Th Ave",
   "ask_price": 1699000.0,
-  "bcv": 967885.44,
+  "bcv": 899549.18,
   "pricing_view": "appears overpriced",
-  "confidence": 0.48,
+  "confidence": 0.49,
   "comp_trust": "Seed / Review Only",
   "missing_input_count": 12,
-  "timestamp": "2026-04-10T08:55:18"
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-10T11:43:28"
 }

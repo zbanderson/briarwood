@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-10T19:24:40Z",
+  "normalized_payload": {
+    "avm_confidence": 75,
+    "avm_fsd": null,
+    "avm_high": 2668000,
+    "avm_low": 2028000,
+    "avm_value": 2143000
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "609 SUSSEX AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "609 SUSSEX AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2056",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "70",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BOROUGH/SPG LAKE HEIGHTS"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 119000,
+            "avmlastmonthvalue": 2024000,
+            "avmpercentchange": 5
+          },
+          "amount": {
+            "high": 2668000,
+            "low": 2028000,
+            "scr": 75,
+            "value": 2143000,
+            "valueRange": 525000
+          },
+          "calculations": {
+            "perSizeUnit": 735.0,
+            "rangePctOfValue": 29.86,
+            "ratioTaxAmt": 120.28,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2734700.0,
+            "avmexcellentlow": 2078700.0,
+            "avmgoodhigh": 2668000.0,
+            "avmgoodlow": 2028000.0,
+            "avmpoorhigh": 2534600.0,
+            "avmpoorlow": 1926600.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 2912,
+            "grosssizeadjusted": 2912,
+            "livingsize": 2912,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2912
+          },
+          "summary": {
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 327400477,
+          "apn": "48  00070-0000-00014-  02",
+          "attomId": 327400477,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, f81499f8520816004d1dfe731e9a84a2",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, SB0000103375, ZI07762",
+          "latitude": "40.149600",
+          "longitude": "-74.037994"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "14.02",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:14.02 BLK:70 DIST:48 CITY/MUNI/TWP:SPRING LAKE HEIGHTS BOR MAP REF:TAX MAP 2",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2019
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 327400477,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:40.336Z",
+      "total": 1,
+      "transactionID": "60867fb767b5f27fecc959b256a8d6fb",
+      "version": "1.0.0"
+    }
+  }
+}

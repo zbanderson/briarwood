@@ -1,0 +1,157 @@
+{
+  "fetched_at": "2026-04-10T19:24:04Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1407186,
+    "avm_low": 1040094,
+    "avm_value": 1223640
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1807 LAUREL TER",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1807 LAUREL TER, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2913"
+        },
+        "area": {
+          "blockNum": "16",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 18120,
+            "avmlastmonthvalue": 1205520,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1407186,
+            "low": 1040094,
+            "scr": 85,
+            "value": 1223640,
+            "valueRange": 183546
+          },
+          "calculations": {
+            "perSizeUnit": 2060.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 142.22,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1442365.65,
+            "avmexcellentlow": 1066096.35,
+            "avmgoodhigh": 1407186.0,
+            "avmgoodlow": 1040094.0,
+            "avmpoorhigh": 1336826.7,
+            "avmpoorlow": 988089.3
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 594,
+            "grosssize": 594,
+            "grosssizeadjusted": 594,
+            "livingsize": 594,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 594
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 203229925,
+          "apn": "46-00016-0000-00003",
+          "apnOrig": "46-00016-0000-00003",
+          "attomId": 203229925,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.170820",
+          "longitude": "-74.024507"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 60,
+          "lotnum": "3",
+          "lotsize1": 0.138,
+          "lotsize2": 5998
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 203229925,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:04.122Z",
+      "total": 1,
+      "transactionID": "eedd675a019589a9dc7058d946007b4e",
+      "version": "1.0.0"
+    }
+  }
+}

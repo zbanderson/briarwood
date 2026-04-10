@@ -1,0 +1,141 @@
+{
+  "fetched_at": "2026-04-10T19:19:09Z",
+  "normalized_payload": {
+    "address": "120 S CONCOURSE APT 104, NEPTUNE, NJ 07753",
+    "baths": 2.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.189519",
+    "longitude": "-74.029459",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 1170,
+    "stories": 1,
+    "year_built": 1990
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "120 S CONCOURSE APT 104",
+          "line2": "NEPTUNE, NJ 07753",
+          "locality": "NEPTUNE",
+          "matchCode": "ExaStr",
+          "oneLine": "120 S CONCOURSE APT 104, NEPTUNE, NJ 07753",
+          "postal1": "07753",
+          "postal2": "5254",
+          "postal3": "C023"
+        },
+        "area": {
+          "blockNum": "5607",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SOUTHPORTE",
+          "taxcodearea": "35"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 200,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1170,
+            "grosssizeadjusted": 1170,
+            "groundfloorsize": 1170,
+            "livingsize": 1170,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1170
+          },
+          "summary": {
+            "archStyle": "CONDO/APARTMENT",
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 251593355,
+          "apn": "35  05607-0000-00003-0000-C104",
+          "attomId": 251593355,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2bcd094001a15ad76e069eb855ca54e1",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, 52beca6566f9bd1be932f7a523c29ee9, 56febb377d9ebce419436864e3fbcbb0",
+            "ZI": "6d4da2d055efd694ebb250c7fff76aaf"
+          },
+          "geoid": "CO34025, CS3449890, DB3411160, SB0000156162, SB0000156163, SB0000156454, ZI07753",
+          "latitude": "40.189519",
+          "longitude": "-74.029459"
+        },
+        "lot": {
+          "lotnum": "3",
+          "lotsize2": 419,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: 16",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1990
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 251593355,
+      "attomIds": [
+        251593355
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:19:09.385Z",
+      "total": 1,
+      "transactionID": "90fd6864fe96e31f1751023dd7754660",
+      "version": "1.0.0"
+    }
+  }
+}

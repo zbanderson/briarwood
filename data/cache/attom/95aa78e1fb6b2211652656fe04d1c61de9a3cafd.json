@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:30:11Z",
+  "normalized_payload": {
+    "address": "705 CENTRAL AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 3.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.203459",
+    "longitude": "-74.010742",
+    "lot_size": 0.0573921,
+    "property_type": "SFR",
+    "sqft": 1604,
+    "stories": 2,
+    "year_built": 1919
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "705 CENTRAL AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "705 CENTRAL AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1326",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "36",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BRADLEY BEACH",
+          "taxcodearea": "8"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 560,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1604,
+            "grosssizeadjusted": 1604,
+            "groundfloorsize": 852,
+            "livingsize": 1604,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1604
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 2301995,
+          "apn": "08  00036-0000-00013",
+          "attomId": 2301995,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, ZI07720",
+          "latitude": "40.203459",
+          "longitude": "-74.010742"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 50,
+          "lotnum": "13",
+          "lotsize1": 0.0573921,
+          "lotsize2": 2500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:13 BLK:36 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1919
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 2301995,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:11.277Z",
+      "total": 1,
+      "transactionID": "a62a58bb993e10b996902c3c753c9d98",
+      "version": "1.0.0"
+    }
+  }
+}

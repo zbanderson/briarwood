@@ -1,0 +1,156 @@
+{
+  "fetched_at": "2026-04-10T19:24:56Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 762195,
+    "avm_low": 611130,
+    "avm_value": 686663
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1724 WHITE ST",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1724 WHITE ST, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3034"
+        },
+        "area": {
+          "blockNum": "7",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "46"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7098,
+            "avmlastmonthvalue": 679565,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 762195,
+            "low": 611130,
+            "scr": 89,
+            "value": 686663,
+            "valueRange": 75532
+          },
+          "calculations": {
+            "perSizeUnit": 656.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 83.38,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 781249.87,
+            "avmexcellentlow": 626408.25,
+            "avmgoodhigh": 762195.0,
+            "avmgoodlow": 611130.0,
+            "avmpoorhigh": 724085.25,
+            "avmpoorlow": 580573.5
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 1046,
+            "grosssize": 1046,
+            "grosssizeadjusted": 1046,
+            "livingsize": 1046,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1046
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 186560485,
+          "apn": "46-00007-0000-00015",
+          "apnOrig": "46-00007-0000-00015",
+          "attomId": 186560485,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "cfa9ba8807fe6dcb726e664195a0037c",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "0fc5f9a522f7b31a0d515a11c4ece5dd",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3437560, DB3415150, PL3437560, ZI07719",
+          "latitude": "40.172102",
+          "longitude": "-74.023823"
+        },
+        "lot": {
+          "depth": 105,
+          "frontage": 50,
+          "lotnum": "15",
+          "lotsize1": 0.121,
+          "lotsize2": 5249
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 186560485,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:56.941Z",
+      "total": 1,
+      "transactionID": "3ed9fce93685ccad583e74f9b6fbdbb3",
+      "version": "1.0.0"
+    }
+  }
+}

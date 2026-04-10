@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:25:59Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 573515,
+    "avm_low": 469240,
+    "avm_value": 521378
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1420 JANET PL",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1420 JANET PL, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3725",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "80",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 6405,
+            "avmlastmonthvalue": 514973,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 573515,
+            "low": 469240,
+            "scr": 90,
+            "value": 521378,
+            "valueRange": 52137
+          },
+          "calculations": {
+            "perSizeUnit": 366.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 79.6,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 587852.88,
+            "avmexcellentlow": 480971.0,
+            "avmgoodhigh": 573515.0,
+            "avmgoodlow": 469240.0,
+            "avmpoorhigh": 544839.25,
+            "avmpoorlow": 445778.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 360,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1424,
+            "grosssizeadjusted": 1424,
+            "groundfloorsize": 840,
+            "livingsize": 1424,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1424
+          },
+          "summary": {
+            "archStyle": "BI-LEVEL",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 189738103,
+          "apn": "52  00080-0000-00028",
+          "attomId": 189738103,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "1a72a2f1695d921984fa995a452183b2",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005009569, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.171264",
+          "longitude": "-74.049207"
+        },
+        "lot": {
+          "depth": 158,
+          "frontage": 104,
+          "lotnum": "28",
+          "lotsize2": 16432,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:28 BLK:80 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 60",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1971
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189738103,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:59.552Z",
+      "total": 1,
+      "transactionID": "98cd0b02128ef12d7bbe725f21b54f30",
+      "version": "1.0.0"
+    }
+  }
+}

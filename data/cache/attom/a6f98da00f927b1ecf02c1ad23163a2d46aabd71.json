@@ -1,0 +1,171 @@
+{
+  "fetched_at": "2026-04-10T19:28:52Z",
+  "normalized_payload": {
+    "avm_confidence": 86,
+    "avm_fsd": null,
+    "avm_high": 1730246,
+    "avm_low": 1305273,
+    "avm_value": 1517760
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2113 SHADOWBROOK DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2113 SHADOWBROOK DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9754",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "793",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ROLLING OAKS",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 12245,
+            "avmlastmonthvalue": 1505515,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1730246,
+            "low": 1305273,
+            "scr": 86,
+            "value": 1517760,
+            "valueRange": 212486
+          },
+          "calculations": {
+            "perSizeUnit": 261.0,
+            "rangePctOfValue": 28.0,
+            "ratioTaxAmt": 70.08,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1773502.15,
+            "avmexcellentlow": 1337904.82,
+            "avmgoodhigh": 1730246.0,
+            "avmgoodlow": 1305273.0,
+            "avmpoorhigh": 1643733.7,
+            "avmpoorlow": 1240009.35
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 2615,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Mixed",
+            "prkgSize": 952,
+            "prkgSpaces": "4",
+            "prkgType": "Mixed"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 5,
+            "roomsTotal": 13
+          },
+          "size": {
+            "bldgsize": 5795,
+            "grosssizeadjusted": 5795,
+            "groundfloorsize": 3791,
+            "livingsize": 5795,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 5795
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 190413714,
+          "apn": "52  00793-0000-00017",
+          "attomId": 190413714,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "7adc2ad6d429d16503a5863a4db94fab",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005010258, SB0000103447, SB0000142746, SB0000151642, ZI07719",
+          "latitude": "40.142452",
+          "longitude": "-74.080192"
+        },
+        "lot": {
+          "depth": 276,
+          "frontage": 210,
+          "lotnum": "17",
+          "lotsize1": 1.33,
+          "lotsize2": 57960,
+          "poolind": "YES",
+          "pooltype": "POOL W/HOT TUB/SPA"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:17 BLK:793 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 99",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1989
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 190413714,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:28:52.079Z",
+      "total": 1,
+      "transactionID": "cedecc71e015c60cfd881e72fca9fbaa",
+      "version": "1.0.0"
+    }
+  }
+}

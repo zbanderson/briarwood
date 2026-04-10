@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:20:20Z",
+  "normalized_payload": {
+    "address": "503 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 4.0,
+    "beds": 6,
+    "garage_spaces": null,
+    "latitude": "40.192077",
+    "longitude": "-74.009802",
+    "lot_size": 0.3326446,
+    "property_type": "SFR",
+    "sqft": 4647,
+    "stories": 3,
+    "year_built": 1923
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "503 OCEAN AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "503 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1460",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "23",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1098,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathspartial": 1,
+            "bathstotal": 4.0,
+            "beds": 6,
+            "roomsTotal": 12
+          },
+          "size": {
+            "bldgsize": 4647,
+            "grosssizeadjusted": 4647,
+            "groundfloorsize": 2192,
+            "livingsize": 4647,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 4647
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 188884127,
+          "apn": "06  00023-0000-00016-  01",
+          "attomId": 188884127,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 16d59496aaa728a6b3dba5afa4dc5ba8, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.192077",
+          "longitude": "-74.009802"
+        },
+        "lot": {
+          "depth": 126,
+          "frontage": 115,
+          "lotnum": "16.01",
+          "lotsize1": 0.3326446,
+          "lotsize2": 14490,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:16.01 BLK:23 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1923
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 188884127,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:20.321Z",
+      "total": 1,
+      "transactionID": "45206b484eab9de60c6f5eea7e8cfbe5",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:25:05Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 1287723,
+    "avm_low": 991432,
+    "avm_value": 1139578
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "207 4TH AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "207 4TH AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "3318"
+        },
+        "area": {
+          "blockNum": "174",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "QUAY/MANASQUAN",
+          "taxcodearea": "29"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 27578,
+            "avmlastmonthvalue": 1112000,
+            "avmpercentchange": 2
+          },
+          "amount": {
+            "high": 1287723,
+            "low": 991432,
+            "scr": 87,
+            "value": 1139578,
+            "valueRange": 148145
+          },
+          "calculations": {
+            "perSizeUnit": 775.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 103.19,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1319916.08,
+            "avmexcellentlow": 1016217.8,
+            "avmgoodhigh": 1287723.0,
+            "avmgoodlow": 991432.0,
+            "avmpoorhigh": 1223336.85,
+            "avmpoorlow": 941860.4
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1470,
+            "grosssize": 1470,
+            "grosssizeadjusted": 1470,
+            "livingsize": 1470,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1470
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1986
+          }
+        },
+        "identifier": {
+          "Id": 37772742,
+          "apn": "29-00174-0000-00081",
+          "apnOrig": "29-00174-0000-00081",
+          "attomId": 37772742,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, SB0000102963, SB0000102964, ZI08736",
+          "latitude": "40.111710",
+          "longitude": "-74.037033"
+        },
+        "lot": {
+          "lotnum": "81",
+          "lotsize1": 0.098,
+          "lotsize2": 4260
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "ADDITIONAL LOTS: 81.02",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1986
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37772742,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:05.778Z",
+      "total": 1,
+      "transactionID": "d25dfed8d8672ccdf62da08766fca04c",
+      "version": "1.0.0"
+    }
+  }
+}

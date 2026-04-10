@@ -1,0 +1,183 @@
+{
+  "fetched_at": "2026-04-10T19:30:03Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 977787,
+    "avm_low": 722712,
+    "avm_value": 850250
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "631 OCEAN AVE APT 312",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "631 OCEAN AVE APT 312, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1376",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "39",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BEACH PLAZA CONDO BLDG 3",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 0,
+            "avmlastmonthvalue": 850250,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 977787,
+            "low": 722712,
+            "scr": 85,
+            "value": 850250,
+            "valueRange": 127537
+          },
+          "calculations": {
+            "perSizeUnit": 747.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 119.93,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1002231.68,
+            "avmexcellentlow": 740779.8,
+            "avmgoodhigh": 977787.0,
+            "avmgoodlow": 722712.0,
+            "avmpoorhigh": 928897.65,
+            "avmpoorlow": 686576.4
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Basement",
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Basement"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1138,
+            "grosssizeadjusted": 1138,
+            "groundfloorsize": 808,
+            "livingsize": 1138,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1138
+          },
+          "summary": {
+            "levels": 2,
+            "unitsCount": "1",
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 45468180,
+          "apn": "08  00039-0000-00015",
+          "attomId": 45468180,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd",
+            "N4": "c1d8b2672ffa78722554c53ebd5372c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, RS0005011780, SB0000102476, ZI07720",
+          "latitude": "40.202180",
+          "longitude": "-74.007746"
+        },
+        "lot": {
+          "lotnum": "15",
+          "lotsize2": 234553,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:15 BLK:39 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1984
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 45468180,
+      "attomIds": [
+        45468180,
+        190815800,
+        14300626,
+        201597312,
+        7263798,
+        188864606,
+        186556686,
+        8997982,
+        48542613,
+        187211013,
+        200989439,
+        200989438,
+        195182641,
+        187211014,
+        199789015
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:03.207Z",
+      "total": 1,
+      "transactionID": "de1208e22f6a1f99115b408734973205",
+      "version": "1.0.0"
+    }
+  }
+}

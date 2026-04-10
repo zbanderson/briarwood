@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:24:57Z",
+  "normalized_payload": {
+    "address": "411 ATLANTIC AVE, SPRING LAKE, NJ 07762",
+    "baths": 3.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.145604",
+    "longitude": "-74.033816",
+    "lot_size": 0.172,
+    "property_type": "SFR",
+    "sqft": 2696,
+    "stories": 2,
+    "year_built": 1969
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "411 ATLANTIC AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "411 ATLANTIC AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1122"
+        },
+        "area": {
+          "blockNum": "27",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "SPRING LAKE BEACH",
+          "taxcodearea": "47"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 336,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2696,
+            "grosssizeadjusted": 2696,
+            "livingsize": 2696,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2696
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1969
+          }
+        },
+        "identifier": {
+          "Id": 186673913,
+          "apn": "47-00027-0000-00007",
+          "apnOrig": "47-00027-0000-00007",
+          "attomId": 186673913,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, ZI07762",
+          "latitude": "40.145604",
+          "longitude": "-74.033816"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "7",
+          "lotsize1": 0.172,
+          "lotsize2": 7501,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1969
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 186673913,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:57.558Z",
+      "total": 1,
+      "transactionID": "bf48a02d7ea75b09eb3bb352e74b3abc",
+      "version": "1.0.0"
+    }
+  }
+}

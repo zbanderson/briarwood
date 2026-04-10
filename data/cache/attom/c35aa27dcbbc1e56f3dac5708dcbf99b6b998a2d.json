@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:33:41Z",
+  "normalized_payload": {
+    "avm_confidence": 94,
+    "avm_fsd": null,
+    "avm_high": 868915,
+    "avm_low": 770548,
+    "avm_value": 819732
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "4 MAGNOLIA CT",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "4 MAGNOLIA CT, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "8539"
+        },
+        "area": {
+          "blockNum": "1.9",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "ROLLING MDWS/WAYSIDE PH 01",
+          "taxcodearea": "37"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 3301,
+            "avmlastmonthvalue": 816431,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 868915,
+            "low": 770548,
+            "scr": 94,
+            "value": 819732,
+            "valueRange": 49183
+          },
+          "calculations": {
+            "perSizeUnit": 449.0,
+            "rangePctOfValue": 12.0,
+            "ratioTaxAmt": 90.06,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 890637.87,
+            "avmexcellentlow": 789811.7,
+            "avmgoodhigh": 868915.0,
+            "avmgoodlow": 770548.0,
+            "avmpoorhigh": 825469.25,
+            "avmpoorlow": 732020.6
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplccount": 1
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 441,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1824,
+            "grosssize": 1824,
+            "grosssizeadjusted": 1824,
+            "livingsize": 1824,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1824
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2003
+          }
+        },
+        "identifier": {
+          "Id": 45545572,
+          "apn": "37-00001-09-00155",
+          "apnOrig": "37-00001-09-00155",
+          "attomId": 45545572,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "9d956f562c0a08c2dbe685cc988c240b",
+            "DB": "4c8f87d5465e0202dc9a7a0877ebf881",
+            "N2": "8250d7050ff07bf0308ae7804c55b550",
+            "N4": "300f035d591bdd78fb46a72d8a834c60",
+            "SB": "a6a1d4c3add92b534293c94be6eb7abb, b841174ad3ae377af27768248fe596fe, 2da1edbd05bc69c856707739eb7ecd1d",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3454270, DB3412060, ND0004854389, RS0005010257, SB0000103198, SB0000149845, SB0000151620, ZI07712",
+          "latitude": "40.260806",
+          "longitude": "-74.072009"
+        },
+        "lot": {
+          "depth": 110,
+          "frontage": 60,
+          "lotnum": "155",
+          "lotsize1": 0.152,
+          "lotsize2": 6599
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2003
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 45545572,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:41.359Z",
+      "total": 1,
+      "transactionID": "215945ffd5965fa38bb505c1d8f95006",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "fetched_at": "2026-04-10T19:22:22Z",
+  "normalized_payload": {
+    "avm_confidence": 84,
+    "avm_fsd": null,
+    "avm_high": 2192166,
+    "avm_low": 1587431,
+    "avm_value": 1889799
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "342 LINCOLN AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "342 LINCOLN AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1213",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "32",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 18000,
+            "avmlastmonthvalue": 1871799,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 2192166,
+            "low": 1587431,
+            "scr": 84,
+            "value": 1889799,
+            "valueRange": 302367
+          },
+          "calculations": {
+            "perSizeUnit": 839.0,
+            "rangePctOfValue": 32.0,
+            "ratioTaxAmt": 191.91,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2246970.15,
+            "avmexcellentlow": 1627116.78,
+            "avmgoodhigh": 2192166.0,
+            "avmgoodlow": 1587431.0,
+            "avmpoorhigh": 2082557.7,
+            "avmpoorlow": 1508059.45
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GAMBREL",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 960,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 400,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 2251,
+            "grosssizeadjusted": 2251,
+            "groundfloorsize": 960,
+            "livingsize": 2251,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2251
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 198549954,
+          "apn": "06  00032-0000-00011",
+          "attomId": 198549954,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.190608",
+          "longitude": "-74.018289"
+        },
+        "lot": {
+          "lotnum": "11",
+          "lotsize2": 5000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:11 BLK:32 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 198549954,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:22.365Z",
+      "total": 1,
+      "transactionID": "5843a10208c919f2e05725c34292cfb6",
+      "version": "1.0.0"
+    }
+  }
+}

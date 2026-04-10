@@ -1,0 +1,143 @@
+{
+  "fetched_at": "2026-04-10T19:32:22Z",
+  "normalized_payload": {
+    "address": "20 POOLE AVE, AVON BY THE SEA, NJ 07717",
+    "baths": 4.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.187493",
+    "longitude": "-74.022540",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 3744,
+    "stories": 3,
+    "year_built": 2008
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "20 POOLE AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "20 POOLE AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1112",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "43.02",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "RIVERSIDE PARK",
+          "taxcodearea": "6"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 1280,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Mixed",
+            "prkgSize": 462,
+            "prkgSpaces": "2",
+            "prkgType": "Mixed"
+          },
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 4,
+            "roomsTotal": 11
+          },
+          "size": {
+            "bldgsize": 3744,
+            "grosssizeadjusted": 3744,
+            "groundfloorsize": 1685,
+            "livingsize": 3744,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3744
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 3,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 32423868,
+          "apn": "06  00043-  02-00002",
+          "attomId": 32423868,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.187493",
+          "longitude": "-74.022540"
+        },
+        "lot": {
+          "lotnum": "2",
+          "lotsize2": 4089,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: 2.01",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2008
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 32423868,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:32:22.823Z",
+      "total": 1,
+      "transactionID": "43304c7b79ea522df7d313e677031de4",
+      "version": "1.0.0"
+    }
+  }
+}

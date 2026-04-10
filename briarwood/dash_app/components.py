@@ -5443,6 +5443,12 @@ def _price_insight(view: PropertyAnalysisView, report: AnalysisReport) -> html.D
 
     direction = "discount" if pct > 0 else "premium"
     text = f"You're buying at a {abs(pct) * 100:.0f}% {direction} to our comp-anchored value.{ppsf_ctx}"
+    if view.comps.is_hybrid_valuation:
+        text += (
+            f" (Hybrid valuation: primary dwelling {view.comps.primary_dwelling_value_text}"
+            f" + {view.comps.additional_unit_count} rental unit(s)"
+            f" {view.comps.additional_unit_income_value_text} via income cap.)"
+        )
     tone = "positive" if pct > 0.04 else "warning" if pct < -0.04 else "neutral"
     return _section_insight_callout(text, tone)
 
@@ -6764,6 +6770,7 @@ def render_overview_section(view: PropertyAnalysisView, *, compact: bool = False
 
 
 def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -> html.Div:
+    comps_sublabel = "hybrid" if view.comps.is_hybrid_valuation else None
     return html.Div(
         [
             inline_metric_strip([
@@ -6771,7 +6778,7 @@ def render_value_section(view: PropertyAnalysisView, *, compact: bool = False) -
                 ("Net Delta", _fmt_signed_currency(view.net_opportunity_delta_value), _fmt_signed_pct(view.net_opportunity_delta_pct) if view.net_opportunity_delta_pct is not None else None),
                 ("Basis", _fmt_compact(view.all_in_basis), _capex_basis_source_label(view.capex_basis_source)),
                 ("Confidence", f"{view.value.confidence:.0%}", None),
-                ("Comps", view.comps.comparable_value_text, None),
+                ("Comps", view.comps.comparable_value_text, comps_sublabel),
             ]),
             _net_opportunity_delta_block(view),
             _comp_review_block(view),
@@ -7118,17 +7125,80 @@ def _comp_review_block(view: PropertyAnalysisView) -> html.Div:
     rows = view.comps.rows
     if not rows:
         return html.Div("No comparable sales available.", style={"fontSize": "12px", "color": TEXT_MUTED})
-    return html.Div(
-        [
-            html.Div("Comparable Sales", style=SECTION_HEADER_STYLE),
+
+    children: list = []
+
+    # Hybrid valuation banner for multi-unit properties
+    if view.comps.is_hybrid_valuation:
+        unit_label = "unit" if view.comps.additional_unit_count == 1 else "units"
+        children.append(
+            html.Div("Hybrid Valuation — Multi-Unit Property", style=SECTION_HEADER_STYLE),
+        )
+        children.append(
             html.Div(
-                "Scan locality first, then sale and adjusted pricing, with direct map links for quick orientation.",
-                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "8px"},
+                "Briarwood comps the primary dwelling against single-family sales, then values additional rental units via income capitalization.",
+                style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "4px"},
             ),
-            html.Div([_comp_card(row) for row in rows], style={"display": "grid", "gap": "8px"}),
-        ],
-        style={"display": "grid", "gap": "8px"},
+        )
+        children.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Primary Dwelling", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_SECONDARY}),
+                            html.Div(view.comps.primary_dwelling_value_text, style={"fontSize": "16px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                            html.Div(f"Comped against {view.comps.comp_count_text} SFR sales", style={"fontSize": "10px", "color": TEXT_MUTED}),
+                        ],
+                        style={"flex": "1", "textAlign": "center", "padding": "8px"},
+                    ),
+                    html.Div("+", style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_MUTED, "alignSelf": "center"}),
+                    html.Div(
+                        [
+                            html.Div(f"{view.comps.additional_unit_count} Rental {unit_label.title()}", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_SECONDARY}),
+                            html.Div(view.comps.additional_unit_income_value_text, style={"fontSize": "16px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                            html.Div(f"{view.comps.additional_unit_annual_income_text}/yr @ {view.comps.additional_unit_cap_rate_text} cap", style={"fontSize": "10px", "color": TEXT_MUTED}),
+                        ],
+                        style={"flex": "1", "textAlign": "center", "padding": "8px"},
+                    ),
+                    html.Div("=", style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_MUTED, "alignSelf": "center"}),
+                    html.Div(
+                        [
+                            html.Div("Combined Value", style={"fontSize": "11px", "fontWeight": "600", "color": TEXT_SECONDARY}),
+                            html.Div(view.comps.comparable_value_text, style={"fontSize": "16px", "fontWeight": "700", "color": ACCENT_BLUE}),
+                        ],
+                        style={"flex": "1", "textAlign": "center", "padding": "8px"},
+                    ),
+                ],
+                style={
+                    "display": "flex",
+                    "gap": "4px",
+                    "alignItems": "center",
+                    "backgroundColor": BG_SURFACE_2,
+                    "borderRadius": "6px",
+                    "padding": "6px 10px",
+                    "marginBottom": "8px",
+                },
+            ),
+        )
+        children.append(
+            html.Div("Primary Dwelling Comps", style=SECTION_HEADER_STYLE),
+        )
+    else:
+        children.append(
+            html.Div("Comparable Sales", style=SECTION_HEADER_STYLE),
+        )
+
+    children.append(
+        html.Div(
+            "Scan locality first, then sale and adjusted pricing, with direct map links for quick orientation.",
+            style={"fontSize": "11px", "color": TEXT_MUTED, "marginBottom": "8px"},
+        ),
     )
+    children.append(
+        html.Div([_comp_card(row) for row in rows], style={"display": "grid", "gap": "8px"}),
+    )
+
+    return html.Div(children, style={"display": "grid", "gap": "8px"})
 
 
 def _active_listing_block(view: PropertyAnalysisView) -> html.Div | None:

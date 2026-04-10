@@ -21,6 +21,19 @@ class TownTaxIntelligence:
     last_updated: str | None = None
 
 
+@dataclass(slots=True)
+class ParcelIdentityContext:
+    town: str
+    county: str
+    parcel_id: str
+    block: str | None = None
+    lot: str | None = None
+    qualification_code: str | None = None
+    property_class: str | None = None
+    source_file: str = ""
+    last_updated: str | None = None
+
+
 class NJTaxIntelligenceStore:
     def __init__(self, rows: list[TownTaxIntelligence] | None = None) -> None:
         self.rows = rows or []
@@ -49,6 +62,26 @@ class NJTaxIntelligenceStore:
             return None
         matches.sort(key=lambda row: row.tax_year, reverse=True)
         return matches[0]
+
+
+class ParcelIdentityStore:
+    def __init__(self, rows: list[ParcelIdentityContext] | None = None) -> None:
+        self.rows = rows or []
+        self._index = {(row.town, row.county, row.parcel_id): row for row in self.rows}
+
+    @classmethod
+    def load_csv(cls, path: str | Path) -> "ParcelIdentityStore":
+        filepath = Path(path)
+        with filepath.open("r", encoding="utf-8-sig") as fh:
+            reader = csv.DictReader(fh)
+            rows = [row for row in reader]
+        records = [normalize_parcel_identity_row(row, source_file=str(filepath)) for row in rows]
+        return cls([record for record in records if record is not None])
+
+    def get(self, *, town: str, county: str, parcel_id: str) -> ParcelIdentityContext | None:
+        normalized_town = normalize_town(town) or "Unknown"
+        normalized_county = normalize_county_name(county)
+        return self._index.get((normalized_town, normalized_county, parcel_id.strip()))
 
 
 def normalize_nj_tax_row(row: dict[str, Any], *, source_file: str) -> TownTaxIntelligence | None:
@@ -85,6 +118,42 @@ def town_tax_context(store: NJTaxIntelligenceStore, *, town: str, county: str, t
         "source_file": record.source_file,
         "last_updated": record.last_updated,
     }
+
+
+def parcel_identity_context(store: ParcelIdentityStore, *, town: str, county: str, parcel_id: str) -> dict[str, Any]:
+    record = store.get(town=town, county=county, parcel_id=parcel_id)
+    if record is None:
+        return {}
+    return {
+        "town": record.town,
+        "county": record.county,
+        "parcel_id": record.parcel_id,
+        "block": record.block,
+        "lot": record.lot,
+        "qualification_code": record.qualification_code,
+        "property_class": record.property_class,
+        "source_file": record.source_file,
+        "last_updated": record.last_updated,
+    }
+
+
+def normalize_parcel_identity_row(row: dict[str, Any], *, source_file: str) -> ParcelIdentityContext | None:
+    town = normalize_town(row.get("town") or row.get("municipality")) or "Unknown"
+    county = normalize_county_name(row.get("county"))
+    parcel_id = _optional_text(row.get("parcel_id") or row.get("pams_pin") or row.get("parcel"))
+    if town == "Unknown" or county == "Unknown" or not parcel_id:
+        return None
+    return ParcelIdentityContext(
+        town=town,
+        county=county,
+        parcel_id=parcel_id,
+        block=_optional_text(row.get("block")),
+        lot=_optional_text(row.get("lot")),
+        qualification_code=_optional_text(row.get("qualification_code") or row.get("qual")),
+        property_class=_optional_text(row.get("property_class") or row.get("class")),
+        source_file=source_file,
+        last_updated=_optional_text(row.get("last_updated") or row.get("updated_at")),
+    )
 
 
 def normalize_county_name(value: object) -> str:

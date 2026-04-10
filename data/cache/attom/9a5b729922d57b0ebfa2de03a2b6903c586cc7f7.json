@@ -1,0 +1,137 @@
+{
+  "fetched_at": "2026-04-10T19:22:57Z",
+  "normalized_payload": {
+    "address": "1511 RIVER RD, BELMAR, NJ 07719",
+    "baths": 2.0,
+    "beds": 5,
+    "garage_spaces": null,
+    "latitude": "40.178371",
+    "longitude": "-74.037533",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 2617,
+    "stories": 2,
+    "year_built": 1903
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1511 RIVER RD",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1511 RIVER RD, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2850",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "230",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2617,
+            "grosssizeadjusted": 2617,
+            "groundfloorsize": 1438,
+            "livingsize": 2617,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2617
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 195264668,
+          "apn": "07  00230-0000-00001",
+          "attomId": 195264668,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "fe99d8182b407c607a0ccf685e0b3338",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008649, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.178371",
+          "longitude": "-74.037533"
+        },
+        "lot": {
+          "depth": 117,
+          "frontage": 66,
+          "lotnum": "1",
+          "lotsize2": 7722,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:1 BLK:230 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 29",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1903
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 195264668,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:57.822Z",
+      "total": 1,
+      "transactionID": "1c726884709e843578085c748f2ecabc",
+      "version": "1.0.0"
+    }
+  }
+}

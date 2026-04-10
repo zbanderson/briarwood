@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:33:28Z",
+  "normalized_payload": {
+    "address": "68 ROLLING MEADOWS BLVD S, ASBURY PARK, NJ 07712",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.263315",
+    "longitude": "-74.067410",
+    "lot_size": 0.163,
+    "property_type": "SFR",
+    "sqft": 1658,
+    "stories": 1,
+    "year_built": 2003
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "68 ROLLING MEADOWS BLVD S",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "68 ROLLING MEADOWS BLVD S, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "8534"
+        },
+        "area": {
+          "blockNum": "1.11",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "37"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1658,
+            "fplccount": 1
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 441,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1658,
+            "grosssize": 1658,
+            "grosssizeadjusted": 1658,
+            "livingsize": 1658,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1658
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2003
+          }
+        },
+        "identifier": {
+          "Id": 194335653,
+          "apn": "37-00001-11-00006",
+          "apnOrig": "37-00001-11-00006",
+          "attomId": 194335653,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "9d956f562c0a08c2dbe685cc988c240b",
+            "DB": "4c8f87d5465e0202dc9a7a0877ebf881",
+            "N2": "8250d7050ff07bf0308ae7804c55b550",
+            "N4": "300f035d591bdd78fb46a72d8a834c60",
+            "SB": "a6a1d4c3add92b534293c94be6eb7abb, b841174ad3ae377af27768248fe596fe, 2da1edbd05bc69c856707739eb7ecd1d",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3454270, DB3412060, ND0004854389, RS0005010257, SB0000103198, SB0000149845, SB0000151620, ZI07712",
+          "latitude": "40.263315",
+          "longitude": "-74.067410"
+        },
+        "lot": {
+          "depth": 129,
+          "frontage": 55,
+          "lotnum": "6",
+          "lotsize1": 0.163,
+          "lotsize2": 7096
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2003
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-06",
+          "pubDate": "2026-04-06"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194335653,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:28.391Z",
+      "total": 1,
+      "transactionID": "152775fac755954e44536a868088fdbd",
+      "version": "1.0.0"
+    }
+  }
+}

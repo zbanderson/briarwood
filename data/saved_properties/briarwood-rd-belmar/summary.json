@@ -3,10 +3,11 @@
   "address": "1223 Briarwood Rd",
   "label": "1223 Briarwood Rd",
   "ask_price": 674200.0,
-  "bcv": 805380.82,
+  "bcv": 770637.82,
   "pricing_view": "appears undervalued",
-  "confidence": 0.72,
-  "comp_trust": "Seed / Review Only",
+  "confidence": 0.7,
+  "comp_trust": "Public Record Matched",
   "missing_input_count": 5,
-  "timestamp": "2026-04-10T10:45:57"
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-10T15:34:27"
 }

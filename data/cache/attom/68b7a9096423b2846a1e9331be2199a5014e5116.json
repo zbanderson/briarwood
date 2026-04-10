@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-04-10T19:22:15Z",
+  "normalized_payload": {
+    "address": "809 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.194882",
+    "longitude": "-74.009257",
+    "lot_size": null,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "809 OCEAN AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "809 OCEAN AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1448",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "8",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 331632622,
+          "apn": "06  00008-0000-00005",
+          "attomId": 331632622,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "N4": "cdfe4a13db8a6e85bed4ba57f32d6e78",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, ZI07717",
+          "latitude": "40.194882",
+          "longitude": "-74.009257"
+        },
+        "lot": {
+          "lotnum": "5",
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {
+          "coolingtype": "UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 331632622,
+      "attomIds": [
+        331632622
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:15.350Z",
+      "total": 1,
+      "transactionID": "01bf58860f4216e683bd13178727329b",
+      "version": "1.0.0"
+    }
+  }
+}

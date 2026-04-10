@@ -1,0 +1,169 @@
+{
+  "fetched_at": "2026-04-10T19:25:57Z",
+  "normalized_payload": {
+    "avm_confidence": 86,
+    "avm_fsd": null,
+    "avm_high": 1372788,
+    "avm_low": 1035612,
+    "avm_value": 1204200
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1801 A ST",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1801 A ST, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2621",
+          "postal3": "C006"
+        },
+        "area": {
+          "blockNum": "182",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "BELMAR PARK TR",
+          "taxcodearea": "07"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 16800,
+            "avmlastmonthvalue": 1187400,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1372788,
+            "low": 1035612,
+            "scr": 86,
+            "value": 1204200,
+            "valueRange": 168588
+          },
+          "calculations": {
+            "perSizeUnit": 528.0,
+            "rangePctOfValue": 28.0,
+            "ratioTaxAmt": 116.72,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1407107.7,
+            "avmexcellentlow": 1061502.3,
+            "avmgoodhigh": 1372788.0,
+            "avmgoodlow": 1035612.0,
+            "avmpoorhigh": 1304148.6,
+            "avmpoorlow": 983831.4
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "BRICK",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "bsmtsize": 1140,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 400,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2280,
+            "grosssizeadjusted": 2280,
+            "groundfloorsize": 1140,
+            "livingsize": 2280,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2280
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 195444701,
+          "apn": "07  00182-0000-00001",
+          "attomId": 195444701,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, ZI07719",
+          "latitude": "40.170777",
+          "longitude": "-74.018487"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 60,
+          "lotnum": "1",
+          "lotsize1": 0.137741,
+          "lotsize2": 6000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:1 BLK:182 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 27",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 195444701,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:57.005Z",
+      "total": 1,
+      "transactionID": "0738a7f3d63e73cccadd1681f9bca1f0",
+      "version": "1.0.0"
+    }
+  }
+}

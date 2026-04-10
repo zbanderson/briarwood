@@ -1,0 +1,160 @@
+{
+  "fetched_at": "2026-04-10T19:30:38Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 921137,
+    "avm_low": 753658,
+    "avm_value": 837398
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "29 MAIN ST",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "29 MAIN ST, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1067",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "82",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -11318,
+            "avmlastmonthvalue": 848716,
+            "avmpercentchange": -1
+          },
+          "amount": {
+            "high": 921137,
+            "low": 753658,
+            "scr": 90,
+            "value": 837398,
+            "valueRange": 83739
+          },
+          "calculations": {
+            "perSizeUnit": 604.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 134.0,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 944165.42,
+            "avmexcellentlow": 772499.45,
+            "avmgoodhigh": 921137.0,
+            "avmgoodlow": 753658.0,
+            "avmpoorhigh": 875080.15,
+            "avmpoorlow": 715975.1
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 888,
+            "prkgSpaces": "4",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1386,
+            "grosssizeadjusted": 1386,
+            "groundfloorsize": 882,
+            "livingsize": 1386,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1386
+          },
+          "summary": {
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 194531018,
+          "apn": "08  00082-0000-00008",
+          "attomId": 194531018,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 0c681e7e925f43acf1c9667deda1c5c1, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, ZI07720",
+          "latitude": "40.197946",
+          "longitude": "-74.020198"
+        },
+        "lot": {
+          "depth": 125,
+          "frontage": 43,
+          "lotnum": "8",
+          "lotsize1": 0.123393,
+          "lotsize2": 5375,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:8 BLK:82 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1944
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194531018,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:38.136Z",
+      "total": 1,
+      "transactionID": "2e6a8bfa0b966b57690531cfe3186ae1",
+      "version": "1.0.0"
+    }
+  }
+}

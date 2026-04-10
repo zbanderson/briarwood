@@ -1,0 +1,138 @@
+{
+  "fetched_at": "2026-04-10T19:26:13Z",
+  "normalized_payload": {
+    "address": "1727 ELIZABETH CT, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.171263",
+    "longitude": "-74.048774",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 1080,
+    "stories": 1,
+    "year_built": 1958
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1727 ELIZABETH CT",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1727 ELIZABETH CT, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3710",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "80",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "CONCRETE BLOCK",
+            "foundationtype": "CONCRETE",
+            "frameType": "PRE FAB",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 1080,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1080,
+            "grosssizeadjusted": 1080,
+            "groundfloorsize": 1080,
+            "livingsize": 1080,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1080
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 189738102,
+          "apn": "52  00080-0000-00020",
+          "attomId": 189738102,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.171263",
+          "longitude": "-74.048774"
+        },
+        "lot": {
+          "depth": 136,
+          "frontage": 50,
+          "lotnum": "20",
+          "lotsize2": 6800,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:20 BLK:80 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 60",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1958
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189738102,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:13.625Z",
+      "total": 1,
+      "transactionID": "b623102ee30390a25737ca629ea2af9c",
+      "version": "1.0.0"
+    }
+  }
+}

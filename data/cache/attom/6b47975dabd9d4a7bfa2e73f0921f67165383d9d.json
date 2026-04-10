@@ -1,0 +1,137 @@
+{
+  "fetched_at": "2026-04-10T19:33:42Z",
+  "normalized_payload": {
+    "address": "1538 BANGS AVE, ASBURY PARK, NJ 07712",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.218788",
+    "longitude": "-74.024769",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 1264,
+    "stories": 1,
+    "year_built": 1955
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1538 BANGS AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "1538 BANGS AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6354",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "1003",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "RIDGE AVE",
+          "taxcodearea": "04"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1184,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1264,
+            "grosssizeadjusted": 1264,
+            "groundfloorsize": 1264,
+            "livingsize": 1264,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1264
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 10144308,
+          "apn": "04  01003-0000-00022",
+          "attomId": 10144308,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, ZI07712",
+          "latitude": "40.218788",
+          "longitude": "-74.024769"
+        },
+        "lot": {
+          "depth": 151,
+          "frontage": 55,
+          "lotnum": "22",
+          "lotsize2": 8305
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:22 BLK:1003 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 10",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1955
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 10144308,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:42.041Z",
+      "total": 1,
+      "transactionID": "74f8bf93301ff982b5d41c9e76906946",
+      "version": "1.0.0"
+    }
+  }
+}

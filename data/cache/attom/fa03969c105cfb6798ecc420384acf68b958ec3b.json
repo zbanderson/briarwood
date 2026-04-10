@@ -1,0 +1,135 @@
+{
+  "fetched_at": "2026-04-10T19:29:06Z",
+  "normalized_payload": {
+    "address": "213 LAREINE AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 3.0,
+    "beds": 7,
+    "garage_spaces": null,
+    "latitude": "40.202567",
+    "longitude": "-74.010069",
+    "lot_size": 0.1721763,
+    "property_type": "SFR",
+    "sqft": 2810,
+    "stories": 3,
+    "year_built": 1919
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "213 LAREINE AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "213 LAREINE AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1900",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "40",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 784,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 7,
+            "roomsTotal": 13
+          },
+          "size": {
+            "bldgsize": 2810,
+            "grosssizeadjusted": 2810,
+            "groundfloorsize": 1556,
+            "livingsize": 2810,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2810
+          },
+          "summary": {
+            "levels": 3,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 198549990,
+          "apn": "08  00040-0000-00004",
+          "attomId": 198549990,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1, bfea690b7241bbdcc51682fae6f5d7cd",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.202567",
+          "longitude": "-74.010069"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "4",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:4 BLK:40 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1919
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 198549990,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:06.718Z",
+      "total": 1,
+      "transactionID": "985c3eeac10a1d59b059eae09622b459",
+      "version": "1.0.0"
+    }
+  }
+}

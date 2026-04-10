@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:25:04Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 2404072,
+    "avm_low": 1850923,
+    "avm_value": 2127498
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "355 CEDAR AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "355 CEDAR AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "3732"
+        },
+        "area": {
+          "blockNum": "121",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "29"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -47502,
+            "avmlastmonthvalue": 2175000,
+            "avmpercentchange": -2
+          },
+          "amount": {
+            "high": 2404072,
+            "low": 1850923,
+            "scr": 87,
+            "value": 2127498,
+            "valueRange": 276574
+          },
+          "calculations": {
+            "perSizeUnit": 1463.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 254.33,
+            "ratioTaxValue": 4.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2464173.8,
+            "avmexcellentlow": 1897196.07,
+            "avmgoodhigh": 2404072.0,
+            "avmgoodlow": 1850923.0,
+            "avmpoorhigh": 2283868.4,
+            "avmpoorlow": 1758376.85
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1454,
+            "grosssizeadjusted": 1454,
+            "livingsize": 1454,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1454
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1995
+          }
+        },
+        "identifier": {
+          "Id": 200884963,
+          "apn": "29-00121-0000-00034-01",
+          "apnOrig": "29-00121-0000-00034-01",
+          "attomId": 200884963,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, SB0000102963, SB0000102964, ZI08736",
+          "latitude": "40.116472",
+          "longitude": "-74.043941"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "34.1",
+          "lotsize1": 0.115,
+          "lotsize2": 5001
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ALSO LOT 35 NIT 1A",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1995
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200884963,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:04.723Z",
+      "total": 1,
+      "transactionID": "545be10ed1d9f94fe6a9a3ba7582b18e",
+      "version": "1.0.0"
+    }
+  }
+}

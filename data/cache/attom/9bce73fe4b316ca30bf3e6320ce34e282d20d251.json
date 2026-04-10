@@ -1,0 +1,169 @@
+{
+  "fetched_at": "2026-04-10T19:26:03Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 949674,
+    "avm_low": 701933,
+    "avm_value": 825804
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "4709 MEGILL RD",
+          "line2": "WALL TOWNSHIP, NJ 07753",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "4709 MEGILL RD, WALL TOWNSHIP, NJ 07753",
+          "postal1": "07753",
+          "postal2": "6923",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "931",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 11424,
+            "avmlastmonthvalue": 814380,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 949674,
+            "low": 701933,
+            "scr": 85,
+            "value": 825804,
+            "valueRange": 123870
+          },
+          "calculations": {
+            "perSizeUnit": 402.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 80.46,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 973415.85,
+            "avmexcellentlow": 719481.32,
+            "avmgoodhigh": 949674.0,
+            "avmgoodlow": 701933.0,
+            "avmpoorhigh": 902190.3,
+            "avmpoorlow": 666836.35
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1004,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Mixed",
+            "prkgSize": 483,
+            "prkgSpaces": "2",
+            "prkgType": "Mixed"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2054,
+            "grosssizeadjusted": 2054,
+            "groundfloorsize": 1196,
+            "livingsize": 2054,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2054
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 198285616,
+          "apn": "52  00931-0000-00030",
+          "attomId": 198285616,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "fc1fb3ce7c7cb35a528370aeb66afaf9",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "6d4da2d055efd694ebb250c7fff76aaf"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005009962, SB0000103447, SB0000144532, SB0000151642, ZI07753",
+          "latitude": "40.201860",
+          "longitude": "-74.118271"
+        },
+        "lot": {
+          "depth": 225,
+          "frontage": 100,
+          "lotnum": "30",
+          "lotsize2": 22500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:30 BLK:931 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 9",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1993
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 198285616,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:03.778Z",
+      "total": 1,
+      "transactionID": "5d7d9553e9e5500ff4ce89cd5d3f2478",
+      "version": "1.0.0"
+    }
+  }
+}

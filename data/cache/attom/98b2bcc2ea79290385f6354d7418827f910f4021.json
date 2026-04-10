@@ -1,0 +1,143 @@
+{
+  "fetched_at": "2026-04-10T19:33:35Z",
+  "normalized_payload": {
+    "address": "804 PROSPECT AVE, ASBURY PARK, NJ 07712",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.223155",
+    "longitude": "-74.022728",
+    "lot_size": 0.1402663,
+    "property_type": "SFR",
+    "sqft": 1204,
+    "stories": 1,
+    "year_built": 1956
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "804 PROSPECT AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "804 PROSPECT AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "5709",
+          "postal3": "C008"
+        },
+        "area": {
+          "blockNum": "1903",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "4"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1204
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 480,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1204,
+            "grosssizeadjusted": 1204,
+            "groundfloorsize": 1204,
+            "livingsize": 1204,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1204
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 3593974,
+          "apn": "04  01903-0000-00016",
+          "attomId": 3593974,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.223155",
+          "longitude": "-74.022728"
+        },
+        "lot": {
+          "depth": 65,
+          "frontage": 94,
+          "lotnum": "16",
+          "lotsize1": 0.1402663,
+          "lotsize2": 6110
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:16 BLK:1903 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 19",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1956
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 3593974,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:35.607Z",
+      "total": 1,
+      "transactionID": "d56d94e2c79840b5f1546642d3182263",
+      "version": "1.0.0"
+    }
+  }
+}

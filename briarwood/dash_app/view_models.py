@@ -815,6 +815,14 @@ class CompsViewModel:
     unsupported_claims: list[str] = field(default_factory=list)
     rows: list[CompReviewRow] = field(default_factory=list)
     active_listing_rows: list[ActiveListingViewRow] = field(default_factory=list)
+    # Hybrid valuation fields for multi-unit properties
+    is_hybrid_valuation: bool = False
+    primary_dwelling_value_text: str = ""
+    additional_unit_income_value_text: str = ""
+    additional_unit_count: int = 0
+    additional_unit_annual_income_text: str = ""
+    additional_unit_cap_rate_text: str = ""
+    hybrid_valuation_note: str = ""
 
 
 @dataclass(slots=True)
@@ -1711,6 +1719,13 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             unsupported_claims=list(comparable_sales.unsupported_claims),
             rows=_comp_rows(report),
             active_listing_rows=active_listing_rows,
+            is_hybrid_valuation=bool(getattr(comparable_sales, "is_hybrid_valuation", False)),
+            primary_dwelling_value_text=_fmt_currency(getattr(comparable_sales, "primary_dwelling_value", None)),
+            additional_unit_income_value_text=_fmt_currency(getattr(comparable_sales, "additional_unit_income_value", None)),
+            additional_unit_count=int(getattr(comparable_sales, "additional_unit_count", 0) or 0),
+            additional_unit_annual_income_text=_fmt_currency(getattr(comparable_sales, "additional_unit_annual_income", None)),
+            additional_unit_cap_rate_text=f"{getattr(comparable_sales, 'additional_unit_cap_rate', 0) or 0:.1%}",
+            hybrid_valuation_note=str(getattr(comparable_sales, "hybrid_valuation_note", "") or ""),
         ),
         forward=ForwardViewModel(
             summary=forward_module.summary,

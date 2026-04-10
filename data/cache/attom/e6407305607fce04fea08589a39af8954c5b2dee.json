@@ -1,0 +1,167 @@
+{
+  "fetched_at": "2026-04-10T19:25:39Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 699518,
+    "avm_low": 538567,
+    "avm_value": 619043
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1211 18TH AVE",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1211 18TH AVE, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3435",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "71",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 9538,
+            "avmlastmonthvalue": 609505,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 699518,
+            "low": 538567,
+            "scr": 87,
+            "value": 619043,
+            "valueRange": 80475
+          },
+          "calculations": {
+            "perSizeUnit": 496.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 109.97,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 717005.95,
+            "avmexcellentlow": 552031.17,
+            "avmgoodhigh": 699518.0,
+            "avmgoodlow": 538567.0,
+            "avmpoorhigh": 664542.1,
+            "avmpoorlow": 511638.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 390,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 200,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1248,
+            "grosssizeadjusted": 1248,
+            "groundfloorsize": 780,
+            "livingsize": 1248,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1248
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 52659552,
+          "apn": "52  00071-0000-00022",
+          "attomId": 52659552,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "PL": "ead49c9d92be28059bc571f18467fb11",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, PL3478350, ZI07719",
+          "latitude": "40.168778",
+          "longitude": "-74.042791"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "22",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:22 BLK:71 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 67",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1950
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 52659552,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:39.341Z",
+      "total": 1,
+      "transactionID": "97bb9c900aee1002c0031de6476ebaed",
+      "version": "1.0.0"
+    }
+  }
+}

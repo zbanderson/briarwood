@@ -1,0 +1,132 @@
+{
+  "fetched_at": "2026-04-10T19:29:05Z",
+  "normalized_payload": {
+    "avm_confidence": 88,
+    "avm_fsd": null,
+    "avm_high": 951100,
+    "avm_low": 803100,
+    "avm_value": 876400
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "3434 GLEN OAKS LN",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "3434 GLEN OAKS LN, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9783",
+          "postal3": "R003"
+        },
+        "area": {
+          "blockNum": "774",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -7400,
+            "avmlastmonthvalue": 883800,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 951100,
+            "low": 803100,
+            "scr": 88,
+            "value": 876400,
+            "valueRange": 74700
+          },
+          "calculations": {
+            "perSizeUnit": 366.0,
+            "rangePctOfValue": 16.89,
+            "ratioTaxAmt": 71.18,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 974877.5,
+            "avmexcellentlow": 823177.5,
+            "avmgoodhigh": 951100.0,
+            "avmgoodlow": 803100.0,
+            "avmpoorhigh": 903545.0,
+            "avmpoorlow": 762945.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {},
+          "interior": {
+            "fplctype": "UNKNOWN"
+          },
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 2392,
+            "grosssizeadjusted": 2392,
+            "livingsize": 2392,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2392
+          },
+          "summary": {}
+        },
+        "identifier": {
+          "Id": 333260938,
+          "apn": "52  00774-0000-00008-3434",
+          "attomId": 333260938,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.172032",
+          "longitude": "-74.095212"
+        },
+        "lot": {
+          "lotnum": "8.3434",
+          "lotsize1": 0.0710055,
+          "lotsize2": 3093
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:8.3434 BLK:774 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 41.1",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 2022
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 333260938,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:05.113Z",
+      "total": 1,
+      "transactionID": "98b7529b14fc7c07a5bb91e51bebd287",
+      "version": "1.0.0"
+    }
+  }
+}

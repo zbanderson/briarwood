@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-10T19:25:06Z",
+  "normalized_payload": {
+    "address": "198 3RD AVE, MANASQUAN, NJ 08736",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.112038",
+    "longitude": "-74.035581",
+    "lot_size": 0.0655647,
+    "property_type": "SFR",
+    "sqft": 864,
+    "stories": 1,
+    "year_built": 1957
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "198 3RD AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "198 3RD AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "3336",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "177",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "29"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "STUCCO"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Basement",
+            "prkgSize": 992,
+            "prkgSpaces": "4",
+            "prkgType": "Garage, Basement"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 864,
+            "grosssizeadjusted": 864,
+            "groundfloorsize": 864,
+            "livingsize": 864,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 864
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 194531586,
+          "apn": "29  00177-0000-00025-  03",
+          "attomId": 194531586,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, ZI08736",
+          "latitude": "40.112038",
+          "longitude": "-74.035581"
+        },
+        "lot": {
+          "depth": 68,
+          "frontage": 42,
+          "lotnum": "25.03",
+          "lotsize1": 0.0655647,
+          "lotsize2": 2856
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:25.03 BLK:177 DIST:29 CITY/MUNI/TWP:MANASQUAN BORO MAP REF:TAX MAP 30",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1957
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 194531586,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:06.418Z",
+      "total": 1,
+      "transactionID": "32a1429811ada4794fef4d42d8cfef32",
+      "version": "1.0.0"
+    }
+  }
+}

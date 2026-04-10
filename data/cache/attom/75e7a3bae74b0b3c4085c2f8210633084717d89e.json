@@ -1,0 +1,145 @@
+{
+  "fetched_at": "2026-04-10T19:24:12Z",
+  "normalized_payload": {
+    "address": "418 MONMOUTH AVE, SPRING LAKE, NJ 07762",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.147328",
+    "longitude": "-74.033814",
+    "lot_size": 0.1721763,
+    "property_type": "SFR",
+    "sqft": 1634,
+    "stories": 2,
+    "year_built": 1972
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "418 MONMOUTH AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "418 MONMOUTH AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1131",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "38",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "1    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "47"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 230,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1634,
+            "grosssizeadjusted": 1634,
+            "groundfloorsize": 1502,
+            "livingsize": 1634,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1634
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 200395764,
+          "apn": "47  00038-0000-00017",
+          "attomId": 200395764,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, ZI07762",
+          "latitude": "40.147328",
+          "longitude": "-74.033814"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "17",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "poolind": "YES",
+          "pooltype": "IN-GROUND VINYL POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:17 BLK:38 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1972
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200395764,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:24:11.911Z",
+      "total": 1,
+      "transactionID": "c2f7f57d675395eab8ac8ac08ce3957e",
+      "version": "1.0.0"
+    }
+  }
+}

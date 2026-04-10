@@ -1,0 +1,144 @@
+{
+  "fetched_at": "2026-04-10T19:29:03Z",
+  "normalized_payload": {
+    "address": "2123 BAILEYS CORNER RD, WALL TOWNSHIP, NJ 07719",
+    "baths": 3.0,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.141143",
+    "longitude": "-74.068888",
+    "lot_size": 4.72,
+    "property_type": "SFR",
+    "sqft": 3931,
+    "stories": 2,
+    "year_built": 1980
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2123 BAILEYS CORNER RD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2123 BAILEYS CORNER RD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9536",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "805.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "STONE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 2292,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 440,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 3931,
+            "grosssizeadjusted": 3931,
+            "groundfloorsize": 2732,
+            "livingsize": 3931,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 3931
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 199430863,
+          "apn": "52  00805-  01-00057",
+          "attomId": 199430863,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000142746, SB0000151642, ZI07719",
+          "latitude": "40.141143",
+          "longitude": "-74.068888"
+        },
+        "lot": {
+          "lotnum": "57",
+          "lotsize1": 4.72,
+          "lotsize2": 205603,
+          "poolind": "YES",
+          "pooltype": "POOL W/HOT TUB/SPA"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:57 BLK:805.01 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 100",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1980
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 199430863,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:29:03.895Z",
+      "total": 1,
+      "transactionID": "563c417a1195e4fcaa1d5c53fa5942ba",
+      "version": "1.0.0"
+    }
+  }
+}

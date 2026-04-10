@@ -1,0 +1,137 @@
+{
+  "fetched_at": "2026-04-10T19:22:57Z",
+  "normalized_payload": {
+    "address": "1204 OAKWOOD RD, BELMAR, NJ 07719",
+    "baths": 3.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.177846",
+    "longitude": "-74.039092",
+    "lot_size": 0.0918274,
+    "property_type": "SFR",
+    "sqft": 1715,
+    "stories": 2,
+    "year_built": 1945
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1204 OAKWOOD RD",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1204 OAKWOOD RD, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2843",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "235",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 760,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1715,
+            "grosssizeadjusted": 1715,
+            "groundfloorsize": 955,
+            "livingsize": 1715,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1715
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 200122899,
+          "apn": "07  00235-0000-00040",
+          "attomId": 200122899,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602",
+            "N2": "3225d846739d55e34e857d095bc1d30d",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008830, PL3404930, ZI07719",
+          "latitude": "40.177846",
+          "longitude": "-74.039092"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 40,
+          "lotnum": "40",
+          "lotsize1": 0.0918274,
+          "lotsize2": 4000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:40 BLK:235 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 30",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1945
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200122899,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:56.957Z",
+      "total": 1,
+      "transactionID": "d72450ee438c018083edd290a46b8924",
+      "version": "1.0.0"
+    }
+  }
+}

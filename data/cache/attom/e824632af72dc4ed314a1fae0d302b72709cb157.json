@@ -1,0 +1,163 @@
+{
+  "fetched_at": "2026-04-10T19:20:34Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 928632,
+    "avm_low": 744579,
+    "avm_value": 836606
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "98 PARKER AVE",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "98 PARKER AVE, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "3006",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "61",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "29"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -16063,
+            "avmlastmonthvalue": 852669,
+            "avmpercentchange": -1
+          },
+          "amount": {
+            "high": 928632,
+            "low": 744579,
+            "scr": 89,
+            "value": 836606,
+            "valueRange": 92026
+          },
+          "calculations": {
+            "perSizeUnit": 843.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 115.97,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 951847.8,
+            "avmexcellentlow": 763193.48,
+            "avmgoodhigh": 928632.0,
+            "avmgoodlow": 744579.0,
+            "avmpoorhigh": 882200.4,
+            "avmpoorlow": 707350.05
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "ASPHALT",
+            "wallType": "VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 528,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 992,
+            "grosssizeadjusted": 992,
+            "groundfloorsize": 992,
+            "livingsize": 992,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 992
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 188846206,
+          "apn": "29  00061-0000-00007-  01",
+          "attomId": 188846206,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, SB0000102963, SB0000102964, ZI08736",
+          "latitude": "40.125224",
+          "longitude": "-74.046641"
+        },
+        "lot": {
+          "lotnum": "7.01",
+          "lotsize1": 0.1620523,
+          "lotsize2": 7059,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:7.01 BLK:61 DIST:29 CITY/MUNI/TWP:MANASQUAN BORO MAP REF:TAX MAP 11",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1973
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 188846206,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:34.195Z",
+      "total": 1,
+      "transactionID": "e2a260a3a790e67c7cfb6862249136a0",
+      "version": "1.0.0"
+    }
+  }
+}

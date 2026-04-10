@@ -1,0 +1,105 @@
+{
+  "fetched_at": "2026-04-10T19:21:21Z",
+  "normalized_payload": {
+    "address": "501 MAIN ST, AVON BY THE SEA, NJ 07717",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.193000",
+    "longitude": "-74.021977",
+    "lot_size": null,
+    "property_type": "TAX EXEMPT",
+    "sqft": null,
+    "stories": null,
+    "year_built": null
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "501 MAIN ST",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "501 MAIN ST, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1044",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "13.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "15F  ",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "building": {
+          "construction": {},
+          "interior": {
+            "fplctype": "UNKNOWN"
+          },
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "BUILDING SQFT"
+          },
+          "summary": {}
+        },
+        "identifier": {
+          "Id": 1000949711,
+          "apn": "06  00013-  01-00002",
+          "attomId": 1000949711,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "N4": "e193005aeb957138ff054f5b5e8fa608",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025",
+          "latitude": "40.193000",
+          "longitude": "-74.021977"
+        },
+        "lot": {
+          "lotnum": "2"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "FACILITY NAME: COMMON ELEMENT",
+          "propIndicator": "90",
+          "propLandUse": "TAX EXEMPT",
+          "propclass": "Exempt",
+          "propertyType": "EXEMPT (FULL OR PARTIAL)",
+          "propsubtype": "OTHER / UNKNOWN",
+          "proptype": "TAX EXEMPT"
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 1000949711,
+      "attomIds": [
+        1000949711
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:20.965Z",
+      "total": 1,
+      "transactionID": "5a8eed9719fa408f0f4bb74cf04ee63e",
+      "version": "1.0.0"
+    }
+  }
+}

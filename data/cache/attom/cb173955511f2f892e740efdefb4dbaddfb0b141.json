@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:31:00Z",
+  "normalized_payload": {
+    "address": "405 OCEAN AVE, BRADLEY BEACH, NJ 07720",
+    "baths": 5.0,
+    "beds": 8,
+    "garage_spaces": null,
+    "latitude": "40.199870",
+    "longitude": "-74.008225",
+    "lot_size": 0.1721763,
+    "property_type": "SFR",
+    "sqft": 4932,
+    "stories": 3,
+    "year_built": 2000
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "405 OCEAN AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "405 OCEAN AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1233",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "52",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "08"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 726,
+            "prkgSpaces": "3",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathspartial": 2,
+            "bathstotal": 5.0,
+            "beds": 8,
+            "roomsTotal": 17
+          },
+          "size": {
+            "bldgsize": 4932,
+            "grosssizeadjusted": 4932,
+            "groundfloorsize": 1920,
+            "livingsize": 4932,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 4932
+          },
+          "summary": {
+            "levels": 3,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 200819882,
+          "apn": "08  00052-0000-00019",
+          "attomId": 200819882,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.199870",
+          "longitude": "-74.008225"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "19",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500,
+          "poolind": "YES",
+          "pooltype": "POOL W/HOT TUB/SPA"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:19 BLK:52 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2000
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200819882,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:31:00.318Z",
+      "total": 1,
+      "transactionID": "29159bd1c4f788dc8196f5e77019957e",
+      "version": "1.0.0"
+    }
+  }
+}

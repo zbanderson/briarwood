@@ -1,0 +1,143 @@
+{
+  "fetched_at": "2026-04-10T19:25:44Z",
+  "normalized_payload": {
+    "address": "1728 J ST, WALL TOWNSHIP, NJ 07719",
+    "baths": 3.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.170380",
+    "longitude": "-74.036054",
+    "lot_size": 0.5165289,
+    "property_type": "SFR",
+    "sqft": 2105,
+    "stories": 2,
+    "year_built": 1913
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1728 J ST",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1728 J ST, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3124",
+          "postal3": "C005"
+        },
+        "area": {
+          "blockNum": "24",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 1200,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 900,
+            "prkgSpaces": "4",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 2105,
+            "grosssizeadjusted": 2105,
+            "groundfloorsize": 1414,
+            "livingsize": 2105,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2105
+          },
+          "summary": {
+            "archStyle": "TRADITIONAL/OLD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 199572263,
+          "apn": "52  00024-0000-00048",
+          "attomId": 199572263,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "PL": "ead49c9d92be28059bc571f18467fb11",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, PL3478350, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.170380",
+          "longitude": "-74.036054"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 150,
+          "lotnum": "48",
+          "lotsize1": 0.5165289,
+          "lotsize2": 22500,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: 49,50",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1913
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 199572263,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:44.676Z",
+      "total": 1,
+      "transactionID": "5358928b9be07d44316d50c04ef697df",
+      "version": "1.0.0"
+    }
+  }
+}

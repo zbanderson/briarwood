@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:33:38Z",
+  "normalized_payload": {
+    "address": "1104 HECK ST, ASBURY PARK, NJ 07712",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.222774",
+    "longitude": "-74.004230",
+    "lot_size": 0.0550964,
+    "property_type": "SFR",
+    "sqft": 1608,
+    "stories": 2,
+    "year_built": 1873
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1104 HECK ST",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "1104 HECK ST, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6014",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "3403",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "04"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 808,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1608,
+            "grosssizeadjusted": 1608,
+            "groundfloorsize": 808,
+            "livingsize": 1608,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1608
+          },
+          "summary": {
+            "archStyle": "TRADITIONAL/OLD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 197489823,
+          "apn": "04  03403-0000-00010",
+          "attomId": 197489823,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa, 2e7fa370065620c582c90ff2708e6c73",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, PL3401960, ZI07712",
+          "latitude": "40.222774",
+          "longitude": "-74.004230"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 48,
+          "lotnum": "10",
+          "lotsize1": 0.0550964,
+          "lotsize2": 2400
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:10 BLK:3403 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 34",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1873
+        },
+        "utilities": {
+          "heatingtype": "HOT WATER",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197489823,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:38.806Z",
+      "total": 1,
+      "transactionID": "519370ea5f829cbe30cae677b9219528",
+      "version": "1.0.0"
+    }
+  }
+}

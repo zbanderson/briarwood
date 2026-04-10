@@ -116,7 +116,12 @@ class CurrentValueModule:
                 price_history=property_input.price_history,
                 days_on_market=property_input.days_on_market,
                 effective_annual_rent=(
-                    income.effective_monthly_rent * 12 if income.effective_monthly_rent is not None else None
+                    # When the comp module already used hybrid valuation (comping
+                    # primary dwelling + income-capitalizing additional units),
+                    # exclude the income component here to avoid double-counting
+                    # the rental unit income.
+                    None if getattr(comparable_sales, "is_hybrid_valuation", False)
+                    else (income.effective_monthly_rent * 12 if income.effective_monthly_rent is not None else None)
                 ),
                 cap_rate_assumption=self.settings.income_cap_rate_assumption,
                 town_median_price=(town_context.median_price if town_context else None),

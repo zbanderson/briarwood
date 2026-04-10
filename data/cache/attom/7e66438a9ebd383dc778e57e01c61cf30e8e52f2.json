@@ -1,0 +1,158 @@
+{
+  "fetched_at": "2026-04-10T19:33:35Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 800196,
+    "avm_low": 591449,
+    "avm_value": 695823
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1235 WASHINGTON AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "1235 WASHINGTON AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6346",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "1301",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "04"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 204823,
+            "avmlastmonthvalue": 491000,
+            "avmpercentchange": 34
+          },
+          "amount": {
+            "high": 800196,
+            "low": 591449,
+            "scr": 85,
+            "value": 695823,
+            "valueRange": 104373
+          },
+          "calculations": {
+            "perSizeUnit": 420.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 132.21,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 820200.9,
+            "avmexcellentlow": 606235.22,
+            "avmgoodhigh": 800196.0,
+            "avmgoodlow": 591449.0,
+            "avmpoorhigh": 760186.2,
+            "avmpoorlow": 561876.55
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "FAIR",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 720
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1656,
+            "grosssizeadjusted": 1656,
+            "groundfloorsize": 828,
+            "livingsize": 1656,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1656
+          },
+          "summary": {
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 7759132,
+          "apn": "04  01301-0000-00027",
+          "attomId": 7759132,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.220248",
+          "longitude": "-74.021179"
+        },
+        "lot": {
+          "depth": 121,
+          "frontage": 50,
+          "lotnum": "27",
+          "lotsize2": 6050
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:27 BLK:1301 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 13",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1930
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 7759132,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:34.914Z",
+      "total": 1,
+      "transactionID": "e734feea3041240a466e7ce133b99805",
+      "version": "1.0.0"
+    }
+  }
+}

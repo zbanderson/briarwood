@@ -1,0 +1,171 @@
+{
+  "fetched_at": "2026-04-10T19:33:29Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 412482,
+    "avm_low": 304878,
+    "avm_value": 358680
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "632 CHURCH STREET # 624",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "632 CHURCH STREET # 624, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6312",
+          "postal3": "C011"
+        },
+        "area": {
+          "blockNum": "1605",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "4"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -186420,
+            "avmlastmonthvalue": 545100,
+            "avmpercentchange": -41
+          },
+          "amount": {
+            "high": 412482,
+            "low": 304878,
+            "scr": 85,
+            "value": 358680,
+            "valueRange": 53802
+          },
+          "calculations": {
+            "perSizeUnit": 296.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 57.47,
+            "ratioTaxValue": 0.0
+          },
+          "condition": {
+            "avmexcellenthigh": 422794.05,
+            "avmexcellentlow": 312499.95,
+            "avmgoodhigh": 412482.0,
+            "avmgoodlow": 304878.0,
+            "avmpoorhigh": 391857.9,
+            "avmpoorlow": 289634.1
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 594,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 264,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1210,
+            "grosssizeadjusted": 1210,
+            "groundfloorsize": 594,
+            "livingsize": 1210,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1210
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 200723545,
+          "apn": "04  01605-0000-00029",
+          "attomId": 200723545,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, SB0000155611, SB0000156440, SB0000156698, ZI07712",
+          "latitude": "40.221522",
+          "longitude": "-74.019556"
+        },
+        "lot": {
+          "depth": 145,
+          "frontage": 60,
+          "lotnum": "29",
+          "lotsize1": 0.1997245,
+          "lotsize2": 8700
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:29 BLK:1605 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 16",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1990
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200723545,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:29.604Z",
+      "total": 1,
+      "transactionID": "a62b0e1517f51b810c92bb68b6a689c1",
+      "version": "1.0.0"
+    }
+  }
+}

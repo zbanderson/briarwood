@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-10T19:26:05Z",
+  "normalized_payload": {
+    "address": "1624 DUMONT TER, WALL TOWNSHIP, NJ 07719",
+    "baths": 2.0,
+    "beds": 6,
+    "garage_spaces": null,
+    "latitude": "40.174392",
+    "longitude": "-74.059075",
+    "lot_size": 0.2869605,
+    "property_type": "SFR",
+    "sqft": 2648,
+    "stories": 2,
+    "year_built": 1938
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1624 DUMONT TER",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1624 DUMONT TER, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "3866",
+          "postal3": "C012"
+        },
+        "area": {
+          "blockNum": "260.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 6,
+            "roomsTotal": 10
+          },
+          "size": {
+            "bldgsize": 2648,
+            "grosssizeadjusted": 2648,
+            "groundfloorsize": 1526,
+            "livingsize": 2648,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2648
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 187197153,
+          "apn": "52  00260-  01-00017",
+          "attomId": 187197153,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.174392",
+          "longitude": "-74.059075"
+        },
+        "lot": {
+          "depth": 125,
+          "frontage": 100,
+          "lotnum": "17",
+          "lotsize1": 0.2869605,
+          "lotsize2": 12500,
+          "poolind": "YES",
+          "pooltype": "IN-GROUND VINYL POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:17 BLK:260.01 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 46",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1938
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 187197153,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:05.164Z",
+      "total": 1,
+      "transactionID": "f91dcd65ff73716f9ee10a4644032947",
+      "version": "1.0.0"
+    }
+  }
+}

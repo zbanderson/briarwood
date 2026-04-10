@@ -1,0 +1,144 @@
+{
+  "fetched_at": "2026-04-10T19:33:42Z",
+  "normalized_payload": {
+    "address": "12 RUBIN LN, ASBURY PARK, NJ 07712",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.236338",
+    "longitude": "-74.052390",
+    "lot_size": 0.1432507,
+    "property_type": "SFR",
+    "sqft": 1859,
+    "stories": 1,
+    "year_built": 2011
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "12 RUBIN LN",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "12 RUBIN LN, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "8720",
+          "postal3": "C031"
+        },
+        "area": {
+          "blockNum": "150.01",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "CEDAR VLG/OCEAN PH 3",
+          "taxcodearea": "37"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "SLAB",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 420,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1859,
+            "grosssizeadjusted": 1859,
+            "groundfloorsize": 1859,
+            "livingsize": 1859,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1859
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 48705966,
+          "apn": "37  00150-  01-00024",
+          "attomId": 48705966,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "9d956f562c0a08c2dbe685cc988c240b",
+            "DB": "4c8f87d5465e0202dc9a7a0877ebf881",
+            "N2": "a45fa22cb0e208cc4743a3f37dc678f6",
+            "SB": "a6a1d4c3add92b534293c94be6eb7abb, b841174ad3ae377af27768248fe596fe, 2da1edbd05bc69c856707739eb7ecd1d",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3454270, DB3412060, ND0004854684, SB0000103198, SB0000149845, SB0000151620, ZI07712",
+          "latitude": "40.236338",
+          "longitude": "-74.052390"
+        },
+        "lot": {
+          "depth": 120,
+          "frontage": 52,
+          "lotnum": "24",
+          "lotsize1": 0.1432507,
+          "lotsize2": 6240
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:24 BLK:150.01 DIST:37 CITY/MUNI/TWP:OCEAN TWP MAP REF:TAX MAP 75",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2011
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 48705966,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:42.817Z",
+      "total": 1,
+      "transactionID": "d15fec571d5f13bfa34a14e61f5ad8d0",
+      "version": "1.0.0"
+    }
+  }
+}

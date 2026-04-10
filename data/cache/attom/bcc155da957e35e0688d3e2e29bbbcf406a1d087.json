@@ -1,0 +1,161 @@
+{
+  "fetched_at": "2026-04-10T19:22:21Z",
+  "normalized_payload": {
+    "avm_confidence": 88,
+    "avm_fsd": null,
+    "avm_high": 1494599,
+    "avm_low": 1174328,
+    "avm_value": 1334464
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "432 GARFIELD AVE",
+          "line2": "AVON BY THE SEA, NJ 07717",
+          "locality": "AVON BY THE SEA",
+          "matchCode": "ExaStr",
+          "oneLine": "432 GARFIELD AVE, AVON BY THE SEA, NJ 07717",
+          "postal1": "07717",
+          "postal2": "1147",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "26",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "6"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 14883,
+            "avmlastmonthvalue": 1319581,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 1494599,
+            "low": 1174328,
+            "scr": 88,
+            "value": 1334464,
+            "valueRange": 160135
+          },
+          "calculations": {
+            "perSizeUnit": 1003.0,
+            "rangePctOfValue": 24.0,
+            "ratioTaxAmt": 152.33,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1531963.98,
+            "avmexcellentlow": 1203686.2,
+            "avmgoodhigh": 1494599.0,
+            "avmgoodlow": 1174328.0,
+            "avmpoorhigh": 1419869.05,
+            "avmpoorlow": 1115611.6
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {
+            "bsmtsize": 834,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1330,
+            "grosssizeadjusted": 1330,
+            "groundfloorsize": 862,
+            "livingsize": 1330,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1330
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 150143959,
+          "apn": "06  00026-0000-00012",
+          "attomId": 150143959,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "2104ede95480f2c8dca25a75dad30b69",
+            "DB": "16d59496aaa728a6b3dba5afa4dc5ba8, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "7b4fd4abc1572f08c047a0c47fff2aea",
+            "SB": "32fe47325f79a416b2843c71eb2a84dd, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "b61a61eb9478ae582d85f1448eef4985"
+          },
+          "geoid": "CO34025, CS3402440, DB3401140, PL3402440, SB0000102419, ZI07717",
+          "latitude": "40.191780",
+          "longitude": "-74.020210"
+        },
+        "lot": {
+          "depth": 80,
+          "frontage": 50,
+          "lotnum": "12",
+          "lotsize1": 0.0918274,
+          "lotsize2": 4000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:12 BLK:26 DIST:06 CITY/MUNI/TWP:AVON BY THE SEA BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1914
+        },
+        "utilities": {
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 150143959,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:21.322Z",
+      "total": 1,
+      "transactionID": "9722973681cb18c5a147d73698422841",
+      "version": "1.0.0"
+    }
+  }
+}

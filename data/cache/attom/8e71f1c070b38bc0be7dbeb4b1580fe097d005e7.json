@@ -1,0 +1,166 @@
+{
+  "fetched_at": "2026-04-10T19:25:40Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 2579839,
+    "avm_low": 1906838,
+    "avm_value": 2243339
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "707 N LAKE DR",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "707 N LAKE DR, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2244",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "73",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 33220,
+            "avmlastmonthvalue": 2210119,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 2579839,
+            "low": 1906838,
+            "scr": 85,
+            "value": 2243339,
+            "valueRange": 336500
+          },
+          "calculations": {
+            "perSizeUnit": 1169.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 176.23,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2644334.97,
+            "avmexcellentlow": 1954508.95,
+            "avmgoodhigh": 2579839.0,
+            "avmgoodlow": 1906838.0,
+            "avmpoorhigh": 2450847.05,
+            "avmpoorlow": 1811496.1
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "GOOD",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 859,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 1918,
+            "grosssizeadjusted": 1918,
+            "groundfloorsize": 1023,
+            "livingsize": 1918,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1918
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 200866441,
+          "apn": "07  00073-0000-00006",
+          "attomId": 200866441,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.180928",
+          "longitude": "-74.020652"
+        },
+        "lot": {
+          "depth": 73,
+          "frontage": 107,
+          "lotnum": "6",
+          "lotsize2": 7811,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:6 BLK:73 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 11",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1903
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 200866441,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:40.281Z",
+      "total": 1,
+      "transactionID": "1fd3f59bf3ce607995701469a01e141e",
+      "version": "1.0.0"
+    }
+  }
+}

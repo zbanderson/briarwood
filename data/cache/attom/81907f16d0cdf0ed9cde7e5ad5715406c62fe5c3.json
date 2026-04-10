@@ -1,0 +1,169 @@
+{
+  "fetched_at": "2026-04-10T19:20:55Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 1779530,
+    "avm_low": 1315305,
+    "avm_value": 1547418
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "405 10TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "405 10TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2314",
+          "postal3": "C003"
+        },
+        "area": {
+          "blockNum": "103",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7625,
+            "avmlastmonthvalue": 1539793,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 1779530,
+            "low": 1315305,
+            "scr": 85,
+            "value": 1547418,
+            "valueRange": 232112
+          },
+          "calculations": {
+            "perSizeUnit": 643.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 133.27,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1824018.25,
+            "avmexcellentlow": 1348187.62,
+            "avmgoodhigh": 1779530.0,
+            "avmgoodlow": 1315305.0,
+            "avmpoorhigh": 1690553.5,
+            "avmpoorlow": 1249539.75
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "BRICK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 1608,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 462,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 4,
+            "bathstotal": 4.0,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2403,
+            "grosssizeadjusted": 2403,
+            "groundfloorsize": 1620,
+            "livingsize": 2403,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2403
+          },
+          "summary": {
+            "archStyle": "TRADITIONAL/OLD",
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 141202564,
+          "apn": "07  00103-0000-00003",
+          "attomId": 141202564,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, a048e9d907305f71f3fa8493c02a7602",
+            "N2": "a647537121ecfca689b5f923b2a453a5",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008776, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.177948",
+          "longitude": "-74.020417"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "3",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:3 BLK:103 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 15",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1925
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 141202564,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:55.047Z",
+      "total": 1,
+      "transactionID": "8cee80dcfc17abee9dae2b8d4fbdc91d",
+      "version": "1.0.0"
+    }
+  }
+}

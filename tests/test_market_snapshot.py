@@ -15,10 +15,13 @@ class MarketSnapshotTests(unittest.TestCase):
         fixture_dir = Path(__file__).resolve().parent / "fixtures"
         demographics = json.loads((fixture_dir / "attom" / "community_demographics.json").read_text())
         permits = json.loads((fixture_dir / "attom" / "building_permits.json").read_text())
+        sales_trend = {"salestrend": {"salescounttrend": 0.08, "medsalepricetrend": 0.11}}
 
         def transport(url, params, headers, timeout):
             if "community" in url:
                 return demographics
+            if "sale/trend" in url:
+                return sales_trend
             if "buildingpermit" in url:
                 return permits
             return {}
@@ -52,7 +55,9 @@ class MarketSnapshotTests(unittest.TestCase):
         self.assertEqual(snapshot.town, "Belmar")
         self.assertEqual(snapshot.sale_count, 2)
         self.assertEqual(snapshot.median_sale_price, 900000.0)
-        self.assertEqual(snapshot.housing_median_rent, 3085.0)
+        self.assertEqual(snapshot.median_rent, 3085.0)
+        self.assertIsNotNone(snapshot.sale_count_trend)
         self.assertAlmostEqual(snapshot.effective_tax_rate or 0.0, 1.928)
+        self.assertTrue(snapshot.tax_burden_context)
+        self.assertTrue(snapshot.equalization_context)
         self.assertIn("permit", snapshot.permit_activity_summary.lower())
-

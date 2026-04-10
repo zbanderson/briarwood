@@ -18,6 +18,7 @@ LISTING_DESCRIPTION_HINTS = (
     "marina",
     "downtown",
 )
+MALFORMED_ADDRESS_TOKENS = ("unit available", "call agent", "investor special", "see remarks")
 
 
 def treat_missing(value: object) -> object | None:
@@ -43,6 +44,17 @@ def normalize_address_string(value: object) -> str | None:
         if parts:
             text = parts[0]
     return text.title() if text else None
+
+
+def strip_redundant_address_suffix(value: object) -> str | None:
+    text = treat_missing(value)
+    if text is None:
+        return None
+    assert isinstance(text, str)
+    cleaned = ADDRESS_SUFFIX_RE.sub("", text).strip(" ,")
+    cleaned = ZIP_RE.sub("", cleaned).strip(" ,")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned or None
 
 
 def normalize_town(value: object) -> str | None:
@@ -84,7 +96,7 @@ def normalize_lot_size(value: object) -> float | None:
     if number is None:
         return None
     number = float(number)
-    if number > 5000:
+    if number > 10:
         number = number / 43560.0
     return round(number, 4) if number > 0 else None
 
@@ -128,3 +140,18 @@ def is_listing_description_as_address(value: object) -> bool:
         return any(hint in lowered for hint in LISTING_DESCRIPTION_HINTS)
     return sum(1 for hint in LISTING_DESCRIPTION_HINTS if hint in lowered) >= 2
 
+
+def is_malformed_address(value: object) -> bool:
+    text = treat_missing(value)
+    if text is None:
+        return True
+    assert isinstance(text, str)
+    lowered = text.lower()
+    if any(token in lowered for token in MALFORMED_ADDRESS_TOKENS):
+        return True
+    if len(text) < 6:
+        return True
+    if not re.search(r"\d", text):
+        return True
+    street_tokens = ("st", "street", "ave", "avenue", "rd", "road", "blvd", "drive", "dr", "lane", "ln", "way", "place", "pl", "court", "ct")
+    return not any(re.search(rf"\b{token}\b", lowered) for token in street_tokens)

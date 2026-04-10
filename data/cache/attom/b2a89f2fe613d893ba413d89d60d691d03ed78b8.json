@@ -1,0 +1,133 @@
+{
+  "fetched_at": "2026-04-10T19:25:14Z",
+  "normalized_payload": {
+    "avm_confidence": 67,
+    "avm_fsd": null,
+    "avm_high": 530200,
+    "avm_low": 294600,
+    "avm_value": 398400
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "387 PERRINE BLVD",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "387 PERRINE BLVD, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": ""
+        },
+        "area": {
+          "blockNum": "134",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "D V PERRINE",
+          "taxcodearea": "29"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 72500,
+            "avmlastmonthvalue": 325900,
+            "avmpercentchange": 20
+          },
+          "amount": {
+            "high": 530200,
+            "low": 294600,
+            "scr": 67,
+            "value": 398400,
+            "valueRange": 131800
+          },
+          "calculations": {
+            "rangePctOfValue": 59.14,
+            "ratioTaxAmt": 263.3,
+            "ratioTaxValue": 4.0
+          },
+          "condition": {
+            "avmexcellenthigh": 543455.0,
+            "avmexcellentlow": 301965.0,
+            "avmgoodhigh": 530200.0,
+            "avmgoodlow": 294600.0,
+            "avmpoorhigh": 503690.0,
+            "avmpoorlow": 279870.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {},
+          "interior": {},
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "sizeInd": "LIVING SQFT"
+          },
+          "summary": {
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 186564049,
+          "apn": "29  00134-0000-00001-  01",
+          "attomId": 186564049,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "a6a445aed48f541a91a93a07279a00cf",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "b115a03fbe70f4361ea88ba29d62cba3",
+            "SB": "53c2e205a43f6cb43aadd7da8ae9f8f8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3443050, DB3409420, PL3443050, SB0000102963, SB0000102964, ZI08736",
+          "latitude": "40.113634",
+          "longitude": "-74.045022"
+        },
+        "lot": {
+          "lotnum": "1.01",
+          "lotsize1": 0.0151515,
+          "lotsize2": 660,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:1.01 BLK:134 DIST:29 CITY/MUNI/TWP:MANASQUAN BORO MAP REF:TAX MAP 23",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR"
+        },
+        "utilities": {
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 186564049,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:14.401Z",
+      "total": 1,
+      "transactionID": "1e6d1e888adff81507e6d6517f127196",
+      "version": "1.0.0"
+    }
+  }
+}

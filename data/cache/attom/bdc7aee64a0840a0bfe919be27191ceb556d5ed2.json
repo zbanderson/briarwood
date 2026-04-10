@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:21:54Z",
+  "normalized_payload": {
+    "address": "1320 STATE ROUTE 71 APT 111, BELMAR, NJ 07719",
+    "baths": 1.0,
+    "beds": 1,
+    "garage_spaces": null,
+    "latitude": "40.176145",
+    "longitude": "-74.031600",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 750,
+    "stories": 1,
+    "year_built": 1973
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1320 STATE ROUTE 71 APT 111",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1320 STATE ROUTE 71 APT 111, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2871",
+          "postal3": "C015"
+        },
+        "area": {
+          "blockNum": "137",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "DINA MANOR",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "BRICK",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 1,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 750,
+            "grosssizeadjusted": 750,
+            "groundfloorsize": 750,
+            "livingsize": 750,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 750
+          },
+          "summary": {
+            "archStyle": "OTHER",
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 37568827,
+          "apn": "07  00137-0000-00013-0000-C0111",
+          "attomId": 37568827,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N4": "8a75e3c5698cefdb660da4c67e4895f3",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, RS0005009789, SB0000102429, ZI07719",
+          "latitude": "40.176145",
+          "longitude": "-74.031600"
+        },
+        "lot": {
+          "lotnum": "13",
+          "lotsize2": 489,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "ADDITIONAL LOTS: COMMON ELEMENTS",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1973
+        },
+        "utilities": {
+          "heatingtype": "BASEBOARD",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 37568827,
+      "attomIds": [
+        37568827,
+        42297203,
+        48518800,
+        193545201,
+        194854154,
+        194854205,
+        194856895,
+        196374575,
+        197948792,
+        198131208,
+        199156426,
+        199156428,
+        199317780,
+        199725664,
+        199803422,
+        200228129,
+        203747208,
+        203747210,
+        205128336,
+        28967821,
+        155157865,
+        158492873,
+        187756772,
+        187761657,
+        189127009,
+        189458044,
+        189458057,
+        190003102,
+        191200798
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:54.434Z",
+      "total": 1,
+      "transactionID": "2f56e8886336bf19b574620219e53ba5",
+      "version": "1.0.0"
+    }
+  }
+}

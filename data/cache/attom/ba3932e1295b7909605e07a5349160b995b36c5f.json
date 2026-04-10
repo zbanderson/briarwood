@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-04-10T19:30:34Z",
+  "normalized_payload": {
+    "address": "19 PACIFIC AVE, BRADLEY BEACH, NJ 07720",
+    "baths": null,
+    "beds": null,
+    "garage_spaces": null,
+    "latitude": "40.197534",
+    "longitude": "-74.019322",
+    "lot_size": null,
+    "property_type": "SFR",
+    "sqft": 1003,
+    "stories": null,
+    "year_built": 1924
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "19 PACIFIC AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "19 PACIFIC AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1171",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "83",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "muncode": "MO",
+          "munname": "MONMOUTH"
+        },
+        "building": {
+          "construction": {},
+          "interior": {
+            "fplctype": "UNKNOWN"
+          },
+          "parking": {},
+          "rooms": {},
+          "size": {
+            "bldgsize": 1003,
+            "grosssizeadjusted": 1003,
+            "livingsize": 1003,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1003
+          },
+          "summary": {}
+        },
+        "identifier": {
+          "Id": 1003822206,
+          "apn": "08  00083-0000-00006-  01",
+          "attomId": 1003822206,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Street",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025",
+          "latitude": "40.197534",
+          "longitude": "-74.019322"
+        },
+        "lot": {
+          "lotnum": "6.01"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:6.01 BLK:83 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO MAP REF:TAX MAP 16",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1924
+        },
+        "utilities": {},
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 1003822206,
+      "attomIds": [
+        1003822206
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:30:34.002Z",
+      "total": 1,
+      "transactionID": "6cbab2a44989c8d7c3d8e365a2e780cd",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "fetched_at": "2026-04-10T19:25:44Z",
+  "normalized_payload": {
+    "avm_confidence": 82,
+    "avm_fsd": null,
+    "avm_high": 2095492,
+    "avm_low": 1456189,
+    "avm_value": 1775841
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "142 OVAL RD",
+          "line2": "MANASQUAN, NJ 08736",
+          "locality": "MANASQUAN",
+          "matchCode": "ExaStr",
+          "oneLine": "142 OVAL RD, MANASQUAN, NJ 08736",
+          "postal1": "08736",
+          "postal2": "2000",
+          "postal3": "C007"
+        },
+        "area": {
+          "blockNum": "817",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -1770,
+            "avmlastmonthvalue": 1777611,
+            "avmpercentchange": 0
+          },
+          "amount": {
+            "high": 2095492,
+            "low": 1456189,
+            "scr": 82,
+            "value": 1775841,
+            "valueRange": 319651
+          },
+          "calculations": {
+            "perSizeUnit": 418.0,
+            "rangePctOfValue": 36.0,
+            "ratioTaxAmt": 108.18,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 2147879.3,
+            "avmexcellentlow": 1492593.72,
+            "avmgoodhigh": 2095492.0,
+            "avmgoodlow": 1456189.0,
+            "avmpoorhigh": 1990717.4,
+            "avmpoorlow": 1383379.55
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "SLAB",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "BRICK"
+          },
+          "interior": {
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Basement",
+            "prkgSize": 635,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Basement"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 4247,
+            "grosssizeadjusted": 4247,
+            "groundfloorsize": 4247,
+            "livingsize": 4247,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 4247
+          },
+          "summary": {
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 197048869,
+          "apn": "52  00817-0000-00002-0142",
+          "attomId": 197048869,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "63511dfeb2a6c6baee70dd5a8b8a5a05",
+            "SB": "eb386eb95eecdd289b0f44d8895ed093, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "1cfbdaa7e3769366f262abbb15c859c4"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005011205, SB0000103447, SB0000146325, SB0000151642, ZI08736",
+          "latitude": "40.114803",
+          "longitude": "-74.072083"
+        },
+        "lot": {
+          "lotnum": "2.0142",
+          "lotsize2": 1568,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:2.0142 BLK:817 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 1261",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 2006
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 197048869,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:43.994Z",
+      "total": 1,
+      "transactionID": "88fa451fd012d6214d62dcf09d3ae8d7",
+      "version": "1.0.0"
+    }
+  }
+}

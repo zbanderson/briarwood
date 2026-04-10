@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-10T19:26:08Z",
+  "normalized_payload": {
+    "address": "2216 XANADU LN, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.169198",
+    "longitude": "-74.049124",
+    "lot_size": null,
+    "property_type": "CONDOMINIUM",
+    "sqft": 1135,
+    "stories": 1,
+    "year_built": 2009
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "2216 XANADU LN",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "2216 XANADU LN, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "5504",
+          "postal3": "C017"
+        },
+        "area": {
+          "blockNum": "80",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "XANADU/WALL BLDG B",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "SLAB",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "STUCCO"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Basement",
+            "prkgSize": 190,
+            "prkgType": "Garage, Basement"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 2
+          },
+          "size": {
+            "bldgsize": 1135,
+            "grosssizeadjusted": 1135,
+            "groundfloorsize": 1135,
+            "livingsize": 1135,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1135
+          },
+          "summary": {
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 147042785,
+          "apn": "52  00080-0000-00012-2216",
+          "attomId": 147042785,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "d1d1e85bbaeff18b2def27fb3f7d0055",
+            "SB": "1f3a8d148c3087201398ec5a4e60f0ef, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005010499, SB0000103447, SB0000140996, SB0000151642, ZI07719",
+          "latitude": "40.169198",
+          "longitude": "-74.049124"
+        },
+        "lot": {
+          "lotnum": "12.2216",
+          "lotsize2": 318688,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:12.2216 BLK:80 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 60.1",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 2009
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 147042785,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:08.092Z",
+      "total": 1,
+      "transactionID": "d9b2c44b4f75ef39c4c7d791d57d5225",
+      "version": "1.0.0"
+    }
+  }
+}

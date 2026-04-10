@@ -52,3 +52,24 @@ class AttomClientTests(unittest.TestCase):
         self.assertTrue(response.ok)
         self.assertEqual(response.normalized_payload["tax_amount"], 12850)
         self.assertEqual(response.normalized_payload["assessed_total"], 585000)
+        self.assertIsNotNone(response.fetched_at)
+
+    def test_attom_client_normalizes_batch_endpoints(self) -> None:
+        fixture_dir = Path(__file__).resolve().parent / "fixtures" / "attom"
+        community_payload = json.loads((fixture_dir / "community_demographics.json").read_text())
+        permits_payload = json.loads((fixture_dir / "building_permits.json").read_text())
+
+        def transport(url, params, headers, timeout):
+            if "community" in url:
+                return community_payload
+            return permits_payload
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            client = AttomClient(api_key="test-key", cache_dir=tmpdir, transport=transport)
+            demographics = client.community_demographics("belmar-town", locality="Belmar", state="NJ")
+            permits = client.building_permits("belmar-town", locality="Belmar", state="NJ")
+
+        self.assertTrue(demographics.ok)
+        self.assertIn("housing_median_rent", demographics.normalized_payload)
+        self.assertTrue(permits.ok)
+        self.assertIn("permit_count", permits.normalized_payload)

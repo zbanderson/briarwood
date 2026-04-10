@@ -1,0 +1,144 @@
+{
+  "fetched_at": "2026-04-10T19:21:36Z",
+  "normalized_payload": {
+    "address": "808 ALLAIRE RD, SPRING LAKE, NJ 07762",
+    "baths": 1.0,
+    "beds": 2,
+    "garage_spaces": null,
+    "latitude": "40.157929",
+    "longitude": "-74.038490",
+    "lot_size": 0.2066116,
+    "property_type": "TOWNHOUSE/ROWHOUSE",
+    "sqft": 1545,
+    "stories": 2,
+    "year_built": 1951
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "808 ALLAIRE RD",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "808 ALLAIRE RD, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "2202",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "82",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "48"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    "
+          },
+          "interior": {
+            "bsmtsize": 804,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 264,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1545,
+            "grosssizeadjusted": 1545,
+            "groundfloorsize": 1113,
+            "livingsize": 1545,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1545
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 42667295,
+          "apn": "48  00082-0000-00016",
+          "attomId": 42667295,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "c83fccd8e030493f18e0c19227fded92",
+            "DB": "f81499f8520816004d1dfe731e9a84a2, b1f9cf98dab5cbdbb652049626b7039c",
+            "N4": "419d2081565584b79973b864e6e52fad",
+            "PL": "f701379e67e80498ba48f03da9e788d2",
+            "SB": "d408f21c1f2a62032c1469ec63d897b1, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470140, DB3415600, PL3470140, RS0005011829, SB0000103375, ZI07762",
+          "latitude": "40.157929",
+          "longitude": "-74.038490"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 60,
+          "lotnum": "16",
+          "lotsize1": 0.2066116,
+          "lotsize2": 9000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:16 BLK:82 DIST:48 CITY/MUNI/TWP:SPRING LAKE HEIGHTS BOR",
+          "propIndicator": "10",
+          "propLandUse": "TOWNHOUSE/ROWHOUSE",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "ROW HOUSE",
+          "propsubtype": "Residential",
+          "proptype": "TOWNHOUSE/ROWHOUSE",
+          "yearbuilt": 1951
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 42667295,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:36.403Z",
+      "total": 1,
+      "transactionID": "c6efac428c5439b0efdae600f7db9c92",
+      "version": "1.0.0"
+    }
+  }
+}

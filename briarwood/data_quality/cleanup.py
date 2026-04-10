@@ -7,7 +7,7 @@ from briarwood.data_quality.pipeline import (
     DataQualityPipeline,
     ValidationIssue,
 )
-from briarwood.data_quality.normalizers import normalize_address_string, normalize_town
+from briarwood.data_quality.normalizers import normalize_address_string, normalize_town, strip_redundant_address_suffix
 
 
 @dataclass(slots=True)
@@ -44,7 +44,11 @@ def normalize_record(record: dict[str, Any]) -> tuple[dict[str, Any], list[str]]
     updated = dict(record)
     notes: list[str] = []
     original_address = updated.get("address")
-    normalized_address = normalize_address_string(original_address)
+    stripped_address = strip_redundant_address_suffix(original_address)
+    if stripped_address and stripped_address != original_address:
+        updated["address"] = stripped_address
+        notes.append("stripped_redundant_address_suffix")
+    normalized_address = normalize_address_string(updated.get("address"))
     if normalized_address and normalized_address != original_address:
         updated["address"] = normalized_address
         notes.append("normalized_address")

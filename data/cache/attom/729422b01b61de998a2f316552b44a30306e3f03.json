@@ -1,0 +1,157 @@
+{
+  "fetched_at": "2026-04-10T19:22:54Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 728094,
+    "avm_low": 583787,
+    "avm_value": 655941
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1006 MADISON AVE",
+          "line2": "BRADLEY BEACH, NJ 07720",
+          "locality": "BRADLEY BEACH",
+          "matchCode": "ExaStr",
+          "oneLine": "1006 MADISON AVE, BRADLEY BEACH, NJ 07720",
+          "postal1": "07720",
+          "postal2": "1527",
+          "postal3": "C001"
+        },
+        "area": {
+          "blockNum": "16",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "8"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 7923,
+            "avmlastmonthvalue": 648018,
+            "avmpercentchange": 1
+          },
+          "amount": {
+            "high": 728094,
+            "low": 583787,
+            "scr": 89,
+            "value": 655941,
+            "valueRange": 72153
+          },
+          "calculations": {
+            "perSizeUnit": 914.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 141.59,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 746296.35,
+            "avmexcellentlow": 598381.67,
+            "avmgoodhigh": 728094.0,
+            "avmgoodlow": 583787.0,
+            "avmpoorhigh": 691689.3,
+            "avmpoorlow": 554597.65
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "PIER",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 4
+          },
+          "size": {
+            "bldgsize": 717,
+            "grosssizeadjusted": 717,
+            "groundfloorsize": 717,
+            "livingsize": 717,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 717
+          },
+          "summary": {
+            "archStyle": "BUNGALOW",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 2301979,
+          "apn": "08  00016-0000-00020",
+          "attomId": 2301979,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "16dc81b3fc0dee1144f8aa5de26c4701",
+            "DB": "bfea690b7241bbdcc51682fae6f5d7cd, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, 0c681e7e925f43acf1c9667deda1c5c1",
+            "PL": "5a456aa9b27c49f0683ac49724f58756",
+            "SB": "de7618c8f103aec825226d889bfbdfe8, f75571e64593fd61dce03f6c9b87358b, a16cbf0dfb7aadac47d791f6bd3fba26",
+            "ZI": "2795e990df349e8fe4b408e9236e35b2"
+          },
+          "geoid": "CO34025, CS3406970, DB3402130, PL3406970, SB0000102476, ZI07720",
+          "latitude": "40.206042",
+          "longitude": "-74.011690"
+        },
+        "lot": {
+          "depth": 50,
+          "frontage": 25,
+          "lotnum": "20",
+          "lotsize1": 0.0286961,
+          "lotsize2": 1250,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:20 BLK:16 DIST:08 CITY/MUNI/TWP:BRADLEY BEACH BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1914
+        },
+        "utilities": {
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 2301979,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:22:54.352Z",
+      "total": 1,
+      "transactionID": "8234b96e4a45d637f7232ca426d6742f",
+      "version": "1.0.0"
+    }
+  }
+}

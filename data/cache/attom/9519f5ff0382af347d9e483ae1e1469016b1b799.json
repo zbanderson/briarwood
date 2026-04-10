@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:26:25Z",
+  "normalized_payload": {
+    "address": "510 13TH AVE, BELMAR, NJ 07719",
+    "baths": 2.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.176104",
+    "longitude": "-74.023725",
+    "lot_size": 0.1905418,
+    "property_type": "SFR",
+    "sqft": 1432,
+    "stories": 2,
+    "year_built": 1922
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "510 13TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "510 13TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2434",
+          "postal3": "C019"
+        },
+        "area": {
+          "blockNum": "124",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 608,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {
+            "garagetype": "Garage, Built-in",
+            "prkgSize": 576,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Built-in"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1432,
+            "grosssizeadjusted": 1432,
+            "groundfloorsize": 824,
+            "livingsize": 1432,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1432
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 24335204,
+          "apn": "07  00124-0000-00017",
+          "attomId": 24335204,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, b1f9cf98dab5cbdbb652049626b7039c, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.176104",
+          "longitude": "-74.023725"
+        },
+        "lot": {
+          "depth": 166,
+          "frontage": 50,
+          "lotnum": "17",
+          "lotsize1": 0.1905418,
+          "lotsize2": 8300,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:17 BLK:124 DIST:07 CITY/MUNI/TWP:BELMAR BORO MAP REF:TAX MAP 20",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1922
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 24335204,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:25.756Z",
+      "total": 1,
+      "transactionID": "354bc8bac44eefcc3ff5326bb66e5aae",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "fetched_at": "2026-04-10T19:21:57Z",
+  "normalized_payload": {
+    "avm_confidence": 81,
+    "avm_fsd": null,
+    "avm_high": 563300,
+    "avm_low": 419200,
+    "avm_value": 475300
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "200 MONMOUTH AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "200 MONMOUTH AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1127",
+          "postal3": "C004"
+        },
+        "area": {
+          "blockNum": "40",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "HEWITT WELLINGTON CONDO HOTEL",
+          "taxcodearea": "47"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": -28800,
+            "avmlastmonthvalue": 504100,
+            "avmpercentchange": -5
+          },
+          "amount": {
+            "high": 563300,
+            "low": 419200,
+            "scr": 81,
+            "value": 475300,
+            "valueRange": 88000
+          },
+          "calculations": {
+            "perSizeUnit": 1237.0,
+            "rangePctOfValue": 30.32,
+            "ratioTaxAmt": 320.61,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 577382.5,
+            "avmexcellentlow": 429680.0,
+            "avmgoodhigh": 563300.0,
+            "avmgoodlow": 419200.0,
+            "avmpoorhigh": 535135.0,
+            "avmpoorlow": 398240.0
+          },
+          "eventDate": "2026-03-13"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "HIP",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 1,
+            "roomsTotal": 2
+          },
+          "size": {
+            "bldgsize": 384,
+            "grosssizeadjusted": 384,
+            "groundfloorsize": 384,
+            "livingsize": 384,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 384
+          },
+          "summary": {
+            "archStyle": "CONDO/APARTMENT",
+            "levels": 1,
+            "unitsCount": "1",
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 205128272,
+          "apn": "47  00040-0000-00017-  19",
+          "attomId": 205128272,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.146551",
+          "longitude": "-74.028609"
+        },
+        "lot": {
+          "lotnum": "17.19",
+          "lotsize2": 30000,
+          "pooltype": "NO POOL"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:17.19 BLK:40 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "11",
+          "propLandUse": "CONDOMINIUM",
+          "propclass": "Condominium (residential)",
+          "propertyType": "CONDOMINIUM",
+          "propsubtype": "Residential",
+          "proptype": "CONDOMINIUM",
+          "yearbuilt": 1900
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 205128272,
+      "attomIds": [
+        205128272,
+        205670282,
+        205128593,
+        205669693,
+        327396867,
+        205128161,
+        200678663,
+        205670439,
+        205055222,
+        205669589,
+        32429464,
+        32830503,
+        205670306,
+        205671014,
+        204522815,
+        205670370,
+        28983260,
+        205670031,
+        205669544,
+        251586139,
+        32429466,
+        205055268,
+        205669727,
+        205669905,
+        205128247,
+        205669989,
+        205055362,
+        205128542,
+        32429465,
+        37722441,
+        205669572,
+        205669846,
+        205128187,
+        205670095
+      ],
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:57.559Z",
+      "total": 1,
+      "transactionID": "f425acea34714626c642b104928aa567",
+      "version": "1.0.0"
+    }
+  }
+}

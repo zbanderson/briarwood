@@ -1,0 +1,169 @@
+{
+  "fetched_at": "2026-04-10T19:21:24Z",
+  "normalized_payload": {
+    "avm_confidence": 87,
+    "avm_fsd": null,
+    "avm_high": 3913818,
+    "avm_low": 3013293,
+    "avm_value": 3463556
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "204 MONROE AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "204 MONROE AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1721"
+        },
+        "area": {
+          "blockNum": "147",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "LORRAINE ESTATES",
+          "taxcodearea": "47"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 119245,
+            "avmlastmonthvalue": 3344311,
+            "avmpercentchange": 3
+          },
+          "amount": {
+            "high": 3913818,
+            "low": 3013293,
+            "scr": 87,
+            "value": 3463556,
+            "valueRange": 450262
+          },
+          "calculations": {
+            "perSizeUnit": 1373.0,
+            "rangePctOfValue": 26.0,
+            "ratioTaxAmt": 304.17,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 4011663.45,
+            "avmexcellentlow": 3088625.32,
+            "avmgoodhigh": 3913818.0,
+            "avmgoodlow": 3013293.0,
+            "avmpoorhigh": 3718127.1,
+            "avmpoorlow": 2862628.35
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 812,
+            "fplccount": 1
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 528,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathspartial": 1,
+            "bathstotal": 3.5,
+            "beds": 5,
+            "roomsTotal": 9
+          },
+          "size": {
+            "bldgsize": 2521,
+            "grosssizeadjusted": 2521,
+            "livingsize": 2521,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2521
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1929
+          }
+        },
+        "identifier": {
+          "Id": 198979115,
+          "apn": "47-00147-0000-00058",
+          "apnOrig": "47-00147-0000-00058",
+          "attomId": 198979115,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "N4": "7c75fba04bc7c6c8bb96ad549f6bd57c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, RS0005012242, SB0000144525, ZI07762",
+          "latitude": "40.164841",
+          "longitude": "-74.024024"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "58",
+          "lotsize1": 0.172,
+          "lotsize2": 7501
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "ALSO LOT59 NIT 1A",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1929
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 198979115,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:21:24.216Z",
+      "total": 1,
+      "transactionID": "95ca2b43b721ec98b12699cdf7eeeec3",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "fetched_at": "2026-04-10T19:26:19Z",
+  "normalized_payload": {
+    "address": "1890 CLEVELAND AVE, WALL TOWNSHIP, NJ 07719",
+    "baths": 1.5,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "40.176998",
+    "longitude": "-74.066599",
+    "lot_size": 0.191,
+    "property_type": "SFR",
+    "sqft": 2424,
+    "stories": 2,
+    "year_built": 2015
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1890 CLEVELAND AVE",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1890 CLEVELAND AVE, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "4179"
+        },
+        "area": {
+          "blockNum": "266",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 288,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 0,
+            "bathspartial": 1,
+            "bathstotal": 1.5,
+            "beds": 4,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2424,
+            "grosssizeadjusted": 2424,
+            "livingsize": 2424,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2424
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 2015
+          }
+        },
+        "identifier": {
+          "Id": 326744899,
+          "apn": "52-00266-0000-00013-01",
+          "apnOrig": "52-00266-0000-00013-01",
+          "attomId": 326744899,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N2": "761dc40b52bcee3da9d9745158a1ceea",
+            "SB": "576714a1f573c1da83d1fdebd0c3575c, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, ND0005008768, SB0000103447, SB0000144532, SB0000151642, ZI07719",
+          "latitude": "40.176998",
+          "longitude": "-74.066599"
+        },
+        "lot": {
+          "depth": 128,
+          "frontage": 65,
+          "lotnum": "13.1",
+          "lotsize1": 0.191,
+          "lotsize2": 8320,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2015
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-26",
+          "pubDate": "2026-03-26"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 326744899,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:26:19.396Z",
+      "total": 1,
+      "transactionID": "204cdd2a31d975d64313927073bf11c2",
+      "version": "1.0.0"
+    }
+  }
+}

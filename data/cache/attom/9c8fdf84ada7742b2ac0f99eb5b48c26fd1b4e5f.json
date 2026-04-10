@@ -1,0 +1,145 @@
+{
+  "fetched_at": "2026-04-10T19:20:48Z",
+  "normalized_payload": {
+    "address": "219 WORTHINGTON AVE, SPRING LAKE, NJ 07762",
+    "baths": 3.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.159909",
+    "longitude": "-74.027553",
+    "lot_size": 0.2582645,
+    "property_type": "SFR",
+    "sqft": 2624,
+    "stories": 2,
+    "year_built": 1955
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "219 WORTHINGTON AVE",
+          "line2": "SPRING LAKE, NJ 07762",
+          "locality": "SPRING LAKE",
+          "matchCode": "ExaStr",
+          "oneLine": "219 WORTHINGTON AVE, SPRING LAKE, NJ 07762",
+          "postal1": "07762",
+          "postal2": "1643",
+          "postal3": "C002"
+        },
+        "area": {
+          "blockNum": "118",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "47"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD SHINGLE"
+          },
+          "interior": {
+            "bsmtsize": 950,
+            "bsmttype": "FINISHED"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 273,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 3,
+            "bathstotal": 3.0,
+            "beds": 3,
+            "roomsTotal": 8
+          },
+          "size": {
+            "bldgsize": 2624,
+            "grosssizeadjusted": 2624,
+            "groundfloorsize": 1891,
+            "livingsize": 2624,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2624
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "levels": 2,
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 189726743,
+          "apn": "47  00118-0000-00010",
+          "attomId": 189726743,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "742ccfd41cdacc983269a1908bf3ae4b",
+            "DB": "0a8de175bcf70889f739eb6959f871ec, b1f9cf98dab5cbdbb652049626b7039c",
+            "PL": "a1b44b614ecb4cece16e3bc5ceac609d",
+            "SB": "682e81c0009c15728110e6a0fb76d8d8, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "131840144fa04d6c90cb66d4b0409d28"
+          },
+          "geoid": "CO34025, CS3470110, DB3415570, PL3470110, SB0000144525, ZI07762",
+          "latitude": "40.159909",
+          "longitude": "-74.027553"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 75,
+          "lotnum": "10",
+          "lotsize1": 0.2582645,
+          "lotsize2": 11250,
+          "poolind": "YES",
+          "pooltype": "SPA/HOT TUB (ONLY)"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:10 BLK:118 DIST:47 CITY/MUNI/TWP:SPRING LAKE BORO",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1955
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-03-17",
+          "pubDate": "2026-03-17"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 189726743,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:20:48.315Z",
+      "total": 1,
+      "transactionID": "0522db21cafae87f08f1354a0f9dc754",
+      "version": "1.0.0"
+    }
+  }
+}

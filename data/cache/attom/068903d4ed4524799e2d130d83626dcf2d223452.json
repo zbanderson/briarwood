@@ -1,0 +1,171 @@
+{
+  "fetched_at": "2026-04-10T19:25:31Z",
+  "normalized_payload": {
+    "avm_confidence": 89,
+    "avm_fsd": null,
+    "avm_high": 1495164,
+    "avm_low": 1198825,
+    "avm_value": 1346995
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1908 SHERWOOD DR",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "1908 SHERWOOD DR, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9723",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "795",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "subdname": "HIDDEN BROOK",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 41737,
+            "avmlastmonthvalue": 1305258,
+            "avmpercentchange": 3
+          },
+          "amount": {
+            "high": 1495164,
+            "low": 1198825,
+            "scr": 89,
+            "value": 1346995,
+            "valueRange": 148169
+          },
+          "calculations": {
+            "perSizeUnit": 685.0,
+            "rangePctOfValue": 22.0,
+            "ratioTaxAmt": 107.78,
+            "ratioTaxValue": 2.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1532543.1,
+            "avmexcellentlow": 1228795.62,
+            "avmgoodhigh": 1495164.0,
+            "avmgoodlow": 1198825.0,
+            "avmpoorhigh": 1420405.8,
+            "avmpoorlow": 1138883.75
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE BLOCK",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "bsmtsize": 1206,
+            "bsmttype": "FINISHED",
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 546,
+            "prkgSpaces": "2",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1966,
+            "grosssizeadjusted": 1966,
+            "groundfloorsize": 1966,
+            "livingsize": 1966,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1966
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 7486531,
+          "apn": "52  00795-0000-00005",
+          "attomId": 7486531,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "N4": "ca59ed1689ba089fcad0cee0011a0bf3",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, RS0005011827, SB0000103447, SB0000142746, SB0000151642, ZI07719",
+          "latitude": "40.142460",
+          "longitude": "-74.076724"
+        },
+        "lot": {
+          "depth": 243,
+          "frontage": 206,
+          "lotnum": "5",
+          "lotsize2": 50058,
+          "poolind": "YES",
+          "pooltype": "IN-GROUND VINYL POOL"
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "LOT:5 BLK:795 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 99",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1974
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 7486531,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:31.921Z",
+      "total": 1,
+      "transactionID": "e8622f312a25ed114720d94a3901bc26",
+      "version": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "fetched_at": "2026-04-10T19:25:29Z",
+  "normalized_payload": {
+    "avm_confidence": 90,
+    "avm_fsd": null,
+    "avm_high": 1669140,
+    "avm_low": 1365660,
+    "avm_value": 1517400
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "3125 ALLAIRE RD",
+          "line2": "WALL TOWNSHIP, NJ 07719",
+          "locality": "WALL TOWNSHIP",
+          "matchCode": "ExaStr",
+          "oneLine": "3125 ALLAIRE RD, WALL TOWNSHIP, NJ 07719",
+          "postal1": "07719",
+          "postal2": "9126",
+          "postal3": "R001"
+        },
+        "area": {
+          "blockNum": "805",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "52"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 565300,
+            "avmlastmonthvalue": 952100,
+            "avmpercentchange": 45
+          },
+          "amount": {
+            "high": 1669140,
+            "low": 1365660,
+            "scr": 90,
+            "value": 1517400,
+            "valueRange": 151740
+          },
+          "calculations": {
+            "perSizeUnit": 921.0,
+            "rangePctOfValue": 20.0,
+            "ratioTaxAmt": 154.16,
+            "ratioTaxValue": 3.0
+          },
+          "condition": {
+            "avmexcellenthigh": 1710868.5,
+            "avmexcellentlow": 1399801.5,
+            "avmgoodhigh": 1669140.0,
+            "avmgoodlow": 1365660.0,
+            "avmpoorhigh": 1585683.0,
+            "avmpoorlow": 1297377.0
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "foundationtype": "CONCRETE",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 1646,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {
+            "garagetype": "Garage, Attached",
+            "prkgSize": 308,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Attached"
+          },
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 3,
+            "roomsTotal": 7
+          },
+          "size": {
+            "bldgsize": 1646,
+            "grosssizeadjusted": 1646,
+            "groundfloorsize": 1646,
+            "livingsize": 1646,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1646
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "levels": 1,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 19942482,
+          "apn": "52  00805-0000-00091",
+          "attomId": 19942482,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "557532feafba7048ebd3cf3bfcfebbf1",
+            "DB": "4c787950b55fc6deb63181021a1e8886",
+            "SB": "a37090061b009b881099cfedd5b10de7, f01288e6af617f46725f74817abf0c03, 8594561e32698068cfdc7d3291a0adf1",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3476460, DB3416890, SB0000103447, SB0000142746, SB0000151642, ZI07719",
+          "latitude": "40.149043",
+          "longitude": "-74.091370"
+        },
+        "lot": {
+          "lotnum": "91",
+          "lotsize1": 3.9,
+          "lotsize2": 169884
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:91 BLK:805 DIST:52 CITY/MUNI/TWP:WALL TWP MAP REF:TAX MAP 82",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1985
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 19942482,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:25:29.229Z",
+      "total": 1,
+      "transactionID": "af75b874aaffc836dc4ae80708904bc8",
+      "version": "1.0.0"
+    }
+  }
+}

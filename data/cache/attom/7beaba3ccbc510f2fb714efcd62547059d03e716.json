@@ -1,0 +1,155 @@
+{
+  "fetched_at": "2026-04-10T19:33:38Z",
+  "normalized_payload": {
+    "avm_confidence": 85,
+    "avm_fsd": null,
+    "avm_high": 603023,
+    "avm_low": 445712,
+    "avm_value": 524368
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "130 BORDEN AVE",
+          "line2": "ASBURY PARK, NJ 07712",
+          "locality": "ASBURY PARK",
+          "matchCode": "ExaStr",
+          "oneLine": "130 BORDEN AVE, ASBURY PARK, NJ 07712",
+          "postal1": "07712",
+          "postal2": "6715",
+          "postal3": "C008"
+        },
+        "area": {
+          "blockNum": "1103",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2    ",
+          "loctype": "VIEW - NONE",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "4"
+        },
+        "avm": {
+          "AVMChange": {
+            "avmamountchange": 18268,
+            "avmlastmonthvalue": 506100,
+            "avmpercentchange": 3
+          },
+          "amount": {
+            "high": 603023,
+            "low": 445712,
+            "scr": 85,
+            "value": 524368,
+            "valueRange": 78655
+          },
+          "calculations": {
+            "perSizeUnit": 236.0,
+            "rangePctOfValue": 30.0,
+            "ratioTaxAmt": 78.69,
+            "ratioTaxValue": 1.0
+          },
+          "condition": {
+            "avmexcellenthigh": 618098.57,
+            "avmexcellentlow": 456854.8,
+            "avmgoodhigh": 603023.0,
+            "avmgoodlow": 445712.0,
+            "avmpoorhigh": 572871.85,
+            "avmpoorlow": 423426.4
+          },
+          "eventDate": "2026-03-25"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "foundationtype": "CONCRETE BLOCK",
+            "roofShape": "GABLE",
+            "roofcover": "SHINGLE                    ",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 6,
+            "roomsTotal": 10
+          },
+          "size": {
+            "bldgsize": 2214,
+            "grosssizeadjusted": 2214,
+            "groundfloorsize": 1404,
+            "livingsize": 2214,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2214
+          },
+          "summary": {
+            "levels": 2,
+            "view": "VIEW - NONE",
+            "viewCode": "000"
+          }
+        },
+        "identifier": {
+          "Id": 7095065,
+          "apn": "04  01103-0000-00007",
+          "attomId": 7095065,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "66744bf97c239ddc29f59876a62042c9",
+            "DB": "1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "N2": "528c64ccde26c2ade6cfc70ddc91ce57",
+            "PL": "b01405b6722691c4b05adc2fc3c1c259",
+            "SB": "f2aae12234e134da6a89df831edbc53a, a16cbf0dfb7aadac47d791f6bd3fba26, f1be21cf8624f02d2eada41d8bacf3fa",
+            "ZI": "64547c4bdf621867638edcef3655c913"
+          },
+          "geoid": "CO34025, CS3401960, DB3400930, ND0005008485, PL3401960, ZI07712",
+          "latitude": "40.216238",
+          "longitude": "-74.021512"
+        },
+        "lot": {
+          "depth": 150,
+          "frontage": 50,
+          "lotnum": "7",
+          "lotsize1": 0.1721763,
+          "lotsize2": 7500
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "LOT:7 BLK:1103 DIST:04 CITY/MUNI/TWP:ASBURY PARK CITY MAP REF:TAX MAP 11",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1920
+        },
+        "utilities": {
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-08",
+          "pubDate": "2026-04-08"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 7095065,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:33:38.128Z",
+      "total": 1,
+      "transactionID": "e322d04315d53ddcf53bb4eb99e27048",
+      "version": "1.0.0"
+    }
+  }
+}
