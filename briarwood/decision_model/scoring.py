@@ -26,6 +26,7 @@ from briarwood.decision_model.scoring_config import (
 )
 from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.schemas import AnalysisReport, PropertyInput
+from briarwood.truth import classify_confidence
 
 
 # ── Data classes ───────────────────────────────────────────────────────────────
@@ -1468,27 +1469,12 @@ def _extract_confidence_for_narrative(report: AnalysisReport) -> tuple[str, str,
     town_mod = report.module_results.get("town_county_outlook")
     town_conf = town_mod.confidence if town_mod else 0.0
 
-    weak_count = 0
-    strong_count = 0
-    if comp_count < 3:
-        weak_count += 1
-    elif comp_count >= 5:
-        strong_count += 1
-    if rent_source in ("missing",):
-        weak_count += 1
-    elif rent_source in ("manual_input", "provided"):
-        strong_count += 1
-    if town_conf < 0.50:
-        weak_count += 1
-    elif town_conf >= 0.75:
-        strong_count += 1
-
-    if weak_count >= 2 or overall < 0.55:
-        level = "Provisional"
-    elif strong_count >= 3 and overall >= 0.75:
-        level = "Grounded"
-    else:
-        level = "Estimated"
+    level = classify_confidence(
+        overall_confidence=overall,
+        comp_count=comp_count,
+        rent_source=rent_source,
+        town_confidence=float(town_conf),
+    ).narrative_level
 
     # Collect top missing inputs from metric statuses
     _impact_labels = {

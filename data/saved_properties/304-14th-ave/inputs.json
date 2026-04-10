@@ -5,10 +5,12 @@
     "town": "Belmar",
     "state": "NJ",
     "county": "Monmouth",
+    "latitude": 40.1744882,
+    "longitude": -74.0192363,
     "beds": 6,
     "baths": 4.0,
     "sqft": 1298,
-    "lot_size": 0.899,
+    "lot_size": 0.0899,
     "property_type": "Triplex",
     "condition_profile": "maintained",
     "capex_lane": "light",
@@ -33,14 +35,14 @@
   },
   "market_signals": {},
   "user_assumptions": {
-    "occupancy_strategy": "owner_occupy_partial",
-    "owner_occupied_unit_count": 1,
+    "occupancy_strategy": "full_rental",
+    "owner_occupied_unit_count": null,
     "estimated_monthly_rent": 4500.0,
     "back_house_monthly_rent": 3500.0,
     "seasonal_monthly_rent": null,
     "unit_rents": [
       2500.0,
-      2000.0
+      1500.0
     ],
     "rent_confidence_override": null,
     "insurance": 2500.0,

@@ -15,6 +15,7 @@ from briarwood.modules.market_value_history import get_market_value_history_payl
 from briarwood.modules.rental_ease import get_rental_ease_payload
 from briarwood.modules.scarcity_support import get_scarcity_support_payload
 from briarwood.modules.town_county_outlook import get_town_county_outlook_payload
+from briarwood.modules.value_drivers import ValueDriversOutput, get_value_drivers_payload
 from briarwood.schemas import AnalysisReport, LocationIntelligenceOutput, ScenarioOutput, ValuationOutput
 
 
@@ -62,3 +63,7 @@ def get_rental_ease(report: AnalysisReport) -> RentalEaseOutput:
 
 def get_location_intelligence(report: AnalysisReport) -> LocationIntelligenceOutput:
     return get_location_intelligence_payload(report.get_module("location_intelligence"))
+
+
+def get_value_drivers(report: AnalysisReport) -> ValueDriversOutput:
+    return get_value_drivers_payload(report.get_module("value_drivers"))

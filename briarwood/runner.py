@@ -28,6 +28,7 @@ from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
+from briarwood.modules.value_drivers import ValueDriversModule
 from briarwood.schemas import AnalysisReport, PropertyInput
 from briarwood.reports.renderer import render_tear_sheet_html, write_tear_sheet_html
 from briarwood.reports.tear_sheet import build_tear_sheet
@@ -107,6 +108,7 @@ def build_engine(
             market_momentum_signal_module,
             renovation_scenario_module,
             teardown_scenario_module,
+            ValueDriversModule(),
         ]
     )
 

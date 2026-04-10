@@ -55,7 +55,7 @@ _BENCHMARKS: dict[str, float] = {
 }
 
 # Whether lower values are "better" for this metric
-_BENCHMARK_LOWER_BETTER: set[str] = {"ptr", "dom", "risk_score"}
+_BENCHMARK_LOWER_BETTER: set[str] = {"ptr", "dom"}
 
 
 def _benchmark_context(value: float, key: str) -> str | None:
@@ -4242,11 +4242,91 @@ def _value_snapshot_top_section(view: PropertyAnalysisView, report: AnalysisRepo
         style={**CARD_STYLE, "padding": "14px 16px"},
     )
 
+    market_anchors_block = html.Div(
+        [
+            html.Div("Market Anchors", style={**LABEL_STYLE, "marginBottom": "6px"}),
+            html.Div(
+                "Segmented comp ranges show how direct comps, income-style comps, location, and lot context are shaping the valuation rather than hiding everything inside one number.",
+                style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(item.label, style=LABEL_STYLE),
+                            html.Div(item.range_text, style={"fontSize": "18px", "fontWeight": "800", "lineHeight": "1.15", "color": TEXT_PRIMARY}),
+                            html.Div(f"Confidence {item.confidence_text}", style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+                            html.Div(item.detail, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "6px"}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
+                    )
+                    for item in view.value.market_anchors
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))", "gap": "10px"},
+            ) if view.value.market_anchors else html.Div("Segmented market anchors are not yet available for this property.", style={"fontSize": "12px", "color": TEXT_MUTED}),
+        ],
+        style={**CARD_STYLE, "padding": "14px 16px"},
+    )
+
+    value_drivers_block = html.Div(
+        [
+            html.Div("What's Driving Value?", style={**LABEL_STYLE, "marginBottom": "6px"}),
+            html.Div(
+                "These are the property-specific factors Briarwood sees as most responsible for the gap between the direct market anchor and the adjusted value.",
+                style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(item.label, style=LABEL_STYLE),
+                            html.Div(item.impact_text, style={"fontSize": "20px", "fontWeight": "800", "lineHeight": "1.1", "color": TONE_POSITIVE_TEXT if item.impact_text.startswith("+") else TONE_WARNING_TEXT if item.impact_text.startswith("-") else TEXT_PRIMARY}),
+                            html.Div(f"Confidence {item.confidence_text}", style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+                            html.Div(item.description, style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "6px"}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
+                    )
+                    for item in view.value.value_drivers[:5]
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))", "gap": "10px"},
+            ) if view.value.value_drivers else html.Div("Property-specific value drivers are not yet available for this property.", style={"fontSize": "12px", "color": TEXT_MUTED}),
+        ],
+        style={**CARD_STYLE, "padding": "14px 16px"},
+    )
+
+    value_bridge_block = html.Div(
+        [
+            html.Div("Value Bridge", style={**LABEL_STYLE, "marginBottom": "6px"}),
+            html.Div(
+                "Start from the direct market anchor, then step through the main property-specific adjustments until you reach Briarwood's adjusted value.",
+                style={"fontSize": "12px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div(step.label, style=LABEL_STYLE),
+                            html.Div(step.value_text, style={"fontSize": "18px", "fontWeight": "800", "lineHeight": "1.1", "color": TEXT_PRIMARY}),
+                            html.Div(f"Confidence {step.confidence_text}", style={"fontSize": "11px", "lineHeight": "1.45", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+                        ],
+                        style={**CARD_STYLE, "padding": "12px 14px", "boxShadow": "none", "borderColor": BORDER_SUBTLE},
+                    )
+                    for step in view.value.value_bridge
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "10px"},
+            ) if view.value.value_bridge else html.Div("Value bridge is not yet available for this property.", style={"fontSize": "12px", "color": TEXT_MUTED}),
+        ],
+        style={**CARD_STYLE, "padding": "14px 16px"},
+    )
+
     return _property_analysis_section(
         "Section A - Value Snapshot",
         "Answer the value question once: what we think it is worth today, how that compares to ask, and what the 12-month range looks like from here.",
         [
             value_box,
+            market_anchors_block,
+            value_drivers_block,
+            value_bridge_block,
             forward_chart_block,
             html.Div(comp_positioning_dot_plot(view, report), style={"marginTop": "10px"}),
         ],
@@ -6224,9 +6304,9 @@ _TOUR_STEPS: list[dict[str, str | list[str]]] = [
             "  Unsupported (<2.0) — not enough to act on",
             "",
             "Confidence tells you how much to trust the analysis:",
-            "  Grounded — built on verified data",
-            "  Estimated — reasonable but uses assumptions",
-            "  Provisional — directional only, key inputs missing",
+            "  High — built on strong direct support",
+            "  Medium — directionally useful, but still assumption-heavy",
+            "  Low — directional only, key facts are still thin or missing",
         ],
     },
     {
@@ -6254,7 +6334,7 @@ _TOUR_STEPS: list[dict[str, str | list[str]]] = [
             "  Days Listed — how long the property has been on market",
             "  Upside / Base / Downside — the three scenario outcomes",
             "",
-            "Metric labels like 'Grounded' or 'Estimated' next to values",
+            "Metric labels like 'High' or 'Medium' next to values",
             "tell you how much trust to place in that specific number.",
         ],
     },

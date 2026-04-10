@@ -47,6 +47,7 @@ class DashViewModelTests(unittest.TestCase):
         self.assertTrue(any(item.key == "rent" for item in view.evidence.assumption_statuses))
         self.assertEqual(len(view.evidence.metric_statuses), 8)
         self.assertGreater(view.overall_confidence, 0)
+        self.assertIn(view.confidence_level, {"High", "Medium", "Low"})
         self.assertIn("town_context_confidence", view.compare_metrics)
         self.assertIn("subject_ppsf_vs_town", view.compare_metrics)
         self.assertIn("town_relative_opportunity_score", view.compare_metrics)
@@ -59,8 +60,13 @@ class DashViewModelTests(unittest.TestCase):
         assert view.decision is not None
         self.assertIn(view.decision.recommendation, {"Buy", "Neutral", "Avoid"})
         self.assertEqual(view.decision.recommendation, view.recommendation_tier)
+        self.assertIn(view.decision.confidence_level, {"High", "Medium", "Low"})
         self.assertGreaterEqual(view.decision.conviction_score, 0)
         self.assertLessEqual(view.decision.conviction_score, 100)
+        self.assertIs(view.valuation, view.value)
+        self.assertTrue(view.value.market_anchors)
+        self.assertTrue(view.value.value_drivers)
+        self.assertTrue(view.value.value_bridge)
         self.assertIn("positive", view.decision.decision_drivers)
         self.assertIn("negative", view.decision.decision_drivers)
         self.assertTrue(view.entry_basis_label)
@@ -78,7 +84,7 @@ class DashViewModelTests(unittest.TestCase):
             self.assertTrue(view.risk_location.location_anchor_summary)
         self.assertIsNotNone(view.positioning_summary)
         self.assertTrue(view.decision.risk_statement.startswith("Risk stance:"))
-        self.assertTrue(view.decision.summary_view.startswith("Positioning:"))
+        self.assertTrue(view.decision.summary_view.startswith("Recommendation:"))
         self.assertIsNotNone(view.report_card)
         assert view.report_card is not None
         self.assertEqual(
@@ -106,6 +112,10 @@ class DashViewModelTests(unittest.TestCase):
         self.assertLessEqual(summary.comparison_summary.confidence, 100)
         self.assertTrue(summary.comparison_summary.reasons_for_winner or summary.comparison_summary.strengths_of_loser)
         self.assertTrue(summary.comparison_summary.flip_condition)
+        risk_row = next((row for row in summary.rows if row.metric == "Risk Score"), None)
+        self.assertIsNotNone(risk_row)
+        assert risk_row is not None
+        self.assertTrue(risk_row.higher_is_better)
 
     def test_evidence_rows_include_source_coverage(self) -> None:
         report = self.reports["briarwood-rd-belmar"]
@@ -180,6 +190,9 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("Score Report Card", text)
         self.assertIn("ASSUMPTION SUMMARY", text)
         self.assertTrue("Current Value Snapshot" in text or "Section A - Value Snapshot" in text)
+        self.assertIn("Market Anchors", text)
+        self.assertIn("What's Driving Value?", text)
+        self.assertIn("Value Bridge", text)
         self.assertIn("Buy As-Is", text)
         self.assertIn("Buy + Renovate", text)
         self.assertIn("Town Pulse", text)

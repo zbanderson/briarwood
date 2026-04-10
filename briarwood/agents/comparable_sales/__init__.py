@@ -16,6 +16,7 @@ from briarwood.agents.comparable_sales.schemas import (
     ComparableSale,
     ComparableSalesOutput,
     ComparableSalesRequest,
+    ComparableValueRange,
 )
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "ComparableSalesAgent",
     "ComparableSalesOutput",
     "ComparableSalesRequest",
+    "ComparableValueRange",
     "FileBackedComparableSalesProvider",
     "load_public_record_rows",
     "load_comp_rows",

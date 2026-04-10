@@ -38,7 +38,7 @@ def build_compare_summary(views: list[PropertyAnalysisView]) -> CompareSummary:
 
 
 # Metrics where lower values are better for the buyer
-_LOWER_IS_BETTER = {"ask_price", "risk_score", "taxes", "dom", "price_to_rent"}
+_LOWER_IS_BETTER = {"ask_price", "taxes", "dom", "price_to_rent"}
 _COMPARISON_WEIGHTS: dict[str, float] = {
     "entry_basis": 0.25,
     "income_support": 0.20,

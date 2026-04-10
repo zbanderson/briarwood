@@ -17,6 +17,7 @@ from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.teardown_scenario import TeardownScenarioModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
+from briarwood.modules.value_drivers import ValueDriversModule
 from briarwood.schemas import EvidenceMode, PropertyInput, ScenarioOutput, ValuationOutput
 from briarwood.settings import CostValuationSettings
 
@@ -69,10 +70,26 @@ class ModuleTests(unittest.TestCase):
             ScarcitySupportModule(),
             LocationIntelligenceModule(),
             LocalIntelligenceModule(),
+            ValueDriversModule(),
         ]
 
         for module in modules:
-            result = module.run(property_input)
+            if module.name == "value_drivers":
+                current_value_result = CurrentValueModule().run(property_input)
+                income_result = IncomeSupportModule().run(property_input)
+                location_result = LocationIntelligenceModule().run(property_input)
+                town_result = TownCountyOutlookModule().run(property_input)
+                result = module.run(
+                    property_input,
+                    prior_results={
+                        "current_value": current_value_result,
+                        "income_support": income_result,
+                        "location_intelligence": location_result,
+                        "town_county_outlook": town_result,
+                    },
+                )
+            else:
+                result = module.run(property_input)
             self.assertIsInstance(result.metrics, dict)
             self.assertIsInstance(result.score, float)
             self.assertIsInstance(result.confidence, float)
@@ -153,6 +170,8 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("net_opportunity_delta_value", result.metrics)
         self.assertIn("net_opportunity_delta_pct", result.metrics)
         self.assertIn("all_in_basis", result.metrics)
+        self.assertIn("blended_value_midpoint", result.metrics)
+        self.assertIn("comp_confidence_score", result.metrics)
         self.assertGreaterEqual(result.confidence, 0.0)
 
     def test_comparable_sales_module_returns_payload(self) -> None:
@@ -160,8 +179,44 @@ class ModuleTests(unittest.TestCase):
 
         self.assertIn("comparable_value", result.metrics)
         self.assertIn("comp_count", result.metrics)
+        self.assertIn("comp_confidence_score", result.metrics)
+        self.assertIn("blended_value_midpoint", result.metrics)
         self.assertGreater(result.metrics["comp_count"], 0)
         self.assertGreaterEqual(result.confidence, 0.0)
+        payload = result.payload
+        self.assertIsNotNone(payload)
+        self.assertIsNotNone(payload.direct_value_range)
+        self.assertIsNotNone(payload.blended_value_range)
+        self.assertGreaterEqual(float(payload.comp_confidence_score or 0.0), 0.0)
+        self.assertTrue(any(getattr(comp, "segmentation_bucket", None) for comp in payload.comps_used))
+
+    def test_value_drivers_module_builds_bridge_from_base_to_adjusted_value(self) -> None:
+        property_input = sample_property()
+        current_value_result = CurrentValueModule().run(property_input)
+        income_result = IncomeSupportModule().run(property_input)
+        location_result = LocationIntelligenceModule().run(property_input)
+        town_result = TownCountyOutlookModule().run(property_input)
+
+        result = ValueDriversModule().run(
+            property_input,
+            prior_results={
+                "current_value": current_value_result,
+                "income_support": income_result,
+                "location_intelligence": location_result,
+                "town_county_outlook": town_result,
+            },
+        )
+
+        self.assertIn("driver_count", result.metrics)
+        self.assertGreaterEqual(result.metrics["driver_count"], 1)
+        self.assertIsNotNone(result.payload)
+        payload = result.payload
+        self.assertAlmostEqual(
+            payload.base_value + sum(driver.estimated_value_impact for driver in payload.drivers),
+            payload.adjusted_value,
+            places=2,
+        )
+        self.assertGreaterEqual(len(payload.bridge), 2)
 
     def test_current_value_confidence_is_capped_when_rent_missing(self) -> None:
         property_input = sample_property()

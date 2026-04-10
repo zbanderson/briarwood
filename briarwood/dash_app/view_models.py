@@ -23,6 +23,7 @@ from briarwood.modules.town_aggregation_diagnostics import get_town_context
 from briarwood.local_intelligence.classification import bucket_town_signals
 from briarwood.local_intelligence.models import ImpactDirection, SignalStatus, TownSignal
 from briarwood.local_intelligence.summarize import build_town_summary
+from briarwood.truth import classify_confidence
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
     get_current_value,
@@ -31,6 +32,7 @@ from briarwood.reports.section_helpers import (
     get_scarcity_support,
     get_scenario_output,
     get_town_county_outlook,
+    get_value_drivers,
 )
 from briarwood.reports.sections.conclusion_section import build_conclusion_section
 from briarwood.reports.sections.thesis_section import build_thesis_section
@@ -104,6 +106,28 @@ def _fmt_number(value: float | int | None, suffix: str = "") -> str:
     if isinstance(value, float) and not value.is_integer():
         return f"{value:,.1f}{suffix}"
     return f"{int(value):,}{suffix}"
+
+
+def _parse_confidence_text(value: str | None) -> float | None:
+    if not value or value == "Unavailable":
+        return None
+    cleaned = value.replace("%", "").strip()
+    try:
+        return float(cleaned) / 100.0
+    except ValueError:
+        return None
+
+
+def _parse_currency_text(value: str | None) -> float | None:
+    if not value or value == "Unavailable":
+        return None
+    cleaned = value.replace("$", "").replace(",", "").strip()
+    sign = -1.0 if cleaned.startswith("-") else 1.0
+    cleaned = cleaned.lstrip("+-").strip()
+    try:
+        return float(cleaned) * sign
+    except ValueError:
+        return None
 
 
 def _scenario_stress_value(scenario: object) -> float | None:
@@ -584,11 +608,37 @@ class EvidenceViewModel:
 @dataclass(slots=True)
 class ValueViewModel:
     component_rows: list[tuple[str, str, str]] = field(default_factory=list)
+    market_anchors: list["MarketAnchorViewModel"] = field(default_factory=list)
+    value_drivers: list["ValueDriverViewModel"] = field(default_factory=list)
+    value_bridge: list["ValueBridgeStepViewModel"] = field(default_factory=list)
     pricing_view: str = ""
     assumptions: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     unsupported_claims: list[str] = field(default_factory=list)
     confidence: float = 0.0
+
+
+@dataclass(slots=True)
+class MarketAnchorViewModel:
+    label: str
+    range_text: str
+    confidence_text: str
+    detail: str
+
+
+@dataclass(slots=True)
+class ValueDriverViewModel:
+    label: str
+    impact_text: str
+    confidence_text: str
+    description: str
+
+
+@dataclass(slots=True)
+class ValueBridgeStepViewModel:
+    label: str
+    value_text: str
+    confidence_text: str
 
 
 @dataclass(slots=True)
@@ -884,9 +934,13 @@ class PropertyAnalysisView:
     category_scores: Any | None = None  # dict[str, CategoryScore] from engine
     lens_scores: Any | None = None  # LensScores from decision_model
     # Confidence layer
-    confidence_level: str = "Estimated"  # "Grounded", "Estimated", "Provisional"
+    confidence_level: str = "Medium"  # "High", "Medium", "Low"
     confidence_factors: list[ConfidenceFactorItem] = field(default_factory=list)
     top_input_impacts: list[InputImpactItem] = field(default_factory=list)
+
+    @property
+    def valuation(self) -> ValueViewModel:
+        return self.value
 
 
 def _coverage_lists(property_input: PropertyInput | None) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -943,7 +997,7 @@ def _compute_confidence_level(
     report: AnalysisReport,
     overall_confidence: float,
 ) -> tuple[str, list[ConfidenceFactorItem]]:
-    """Compute composite confidence level (High/Medium/Low) with factor breakdown."""
+    """Compute shared confidence band (High/Medium/Low) with factor breakdown."""
     factors: list[ConfidenceFactorItem] = []
 
     # 1. Comp quality
@@ -994,17 +1048,14 @@ def _compute_confidence_level(
     else:
         factors.append(ConfidenceFactorItem("Missing inputs", f"{non_critical_count} gaps ({', '.join(critical_missing)})", "weak"))
 
-    # Determine level
-    weak_count = sum(1 for f in factors if f.level == "weak")
-    strong_count = sum(1 for f in factors if f.level == "strong")
-    if weak_count >= 2 or overall_confidence < 0.55:
-        level = "Provisional"
-    elif strong_count >= 3 and overall_confidence >= 0.75:
-        level = "Grounded"
-    else:
-        level = "Estimated"
+    assessment = classify_confidence(
+        overall_confidence=overall_confidence,
+        comp_count=comp_count,
+        rent_source=rent_source,
+        town_confidence=float(town_conf),
+    )
 
-    return level, factors
+    return assessment.band, factors
 
 
 _INPUT_IMPACT_MAP: dict[str, tuple[str, str]] = {
@@ -1117,6 +1168,63 @@ def _component_rows(report: AnalysisReport) -> list[tuple[str, str, str]]:
     return rows
 
 
+def _fmt_range(low: float | None, midpoint: float | None, high: float | None) -> str:
+    if midpoint is not None and low is not None and high is not None:
+        return f"{_fmt_currency(low)} - {_fmt_currency(high)}"
+    if midpoint is not None:
+        return _fmt_currency(midpoint)
+    return "Unavailable"
+
+
+def _market_anchor_rows(report: AnalysisReport) -> list[MarketAnchorViewModel]:
+    current_value = get_current_value(report)
+    anchors = [
+        ("Direct Comps", getattr(current_value, "direct_value_range", None)),
+        ("Income-Adjusted", getattr(current_value, "income_adjusted_value_range", None)),
+        ("Location Adjustment", getattr(current_value, "location_adjustment_range", None)),
+        ("Lot Adjustment", getattr(current_value, "lot_adjustment_range", None)),
+        ("Blended Range", getattr(current_value, "blended_value_range", None)),
+    ]
+    rows: list[MarketAnchorViewModel] = []
+    for label, anchor in anchors:
+        if anchor is None:
+            continue
+        rows.append(
+            MarketAnchorViewModel(
+                label=label,
+                range_text=_fmt_range(getattr(anchor, "low", None), getattr(anchor, "midpoint", None), getattr(anchor, "high", None)),
+                confidence_text=_fmt_pct(getattr(anchor, "confidence", None)),
+                detail=getattr(anchor, "explanation", "") or "No detail available.",
+            )
+        )
+    return rows
+
+
+def _value_driver_rows(report: AnalysisReport) -> tuple[list[ValueDriverViewModel], list[ValueBridgeStepViewModel]]:
+    try:
+        payload = get_value_drivers(report)
+    except (KeyError, TypeError):
+        return [], []
+    drivers = [
+        ValueDriverViewModel(
+            label=item.label,
+            impact_text=_fmt_currency_delta(item.estimated_value_impact),
+            confidence_text=_fmt_pct(item.confidence),
+            description=item.description,
+        )
+        for item in payload.drivers
+    ]
+    bridge = [
+        ValueBridgeStepViewModel(
+            label=item.label,
+            value_text=_fmt_currency(item.value),
+            confidence_text=_fmt_pct(item.confidence),
+        )
+        for item in payload.bridge
+    ]
+    return drivers, bridge
+
+
 def _comp_rows(report: AnalysisReport) -> list[CompReviewRow]:
     output = get_comparable_sales(report)
     rows: list[CompReviewRow] = []
@@ -1222,6 +1330,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     rental_ease = get_rental_ease(report)
     town_county = get_town_county_outlook(report)
     scarcity = get_scarcity_support(report)
+    value_driver_rows, value_bridge_rows = _value_driver_rows(report)
     risk = report.get_module("risk_constraints")
     liquidity_metrics, liquidity_supporting, liquidity_unsupported = _liquidity_metrics(report)
     market_momentum_metrics, market_momentum_drivers, market_momentum_unsupported = _market_momentum_metrics(report)
@@ -1414,6 +1523,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         ),
         value=ValueViewModel(
             component_rows=_component_rows(report),
+            market_anchors=_market_anchor_rows(report),
+            value_drivers=value_driver_rows,
+            value_bridge=value_bridge_rows,
             pricing_view=current_value.pricing_view,
             assumptions=list(current_value.assumptions),
             warnings=list(current_value.warnings),
@@ -1802,11 +1914,11 @@ def _assumption_transparency_items(
 
 
 def _confidence_level(confidence: float) -> str:
-    if confidence >= 0.8:
-        return "Grounded"
-    if confidence >= 0.62:
-        return "Estimated"
-    return "Provisional"
+    if confidence >= 0.75:
+        return "High"
+    if confidence >= 0.55:
+        return "Medium"
+    return "Low"
 
 
 def _driver_strength(score: float) -> str:
@@ -2132,302 +2244,153 @@ def _strategy_fit_label(lens_scores: Any | None) -> str:
     return ranked[0][0]
 
 
+def _category_display_label(category_key: str | None) -> str:
+    mapping = {
+        "price_context": "Price context",
+        "economic_support": "Hold economics",
+        "optionality": "Strategic optionality",
+        "market_position": "Market position",
+        "risk_layer": "Downside resilience",
+    }
+    return mapping.get(str(category_key or ""), "Overall underwriting")
+
+
 def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
-    score_tier = view.recommendation_tier or recommendation_label_from_score(float(view.final_score or 0.0))
+    recommendation = view.recommendation_tier or recommendation_label_from_score(float(view.final_score or 0.0))
     final_score = float(view.final_score or 0.0)
-    confidence_score = max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100))
-    valuation_pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
-    monthly_cash_flow = view.compare_metrics.get("monthly_cash_flow")
-    income_support_ratio = view.compare_metrics.get("income_support_ratio")
-    price_to_rent = view.compare_metrics.get("price_to_rent")
-    liquidity_score = view.risk_location.liquidity_score
-    risk_score = view.risk_location.risk_score
-    momentum_score = view.risk_location.market_momentum_score
-    subject_ppsf_vs_town = view.compare_metrics.get("subject_ppsf_vs_town")
-    town_adjusted_value_gap = view.compare_metrics.get("town_adjusted_value_gap")
-    town_context_confidence = view.compare_metrics.get("town_context_confidence")
     confidence_level = view.confidence_level or _confidence_level(view.overall_confidence)
+    confidence_score = max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100))
     best_fit = _strategy_fit_label(view.lens_scores)
-    display_fit = best_fit
-    fit_context = ""
-    renovated_value = view.compare_metrics.get("renovated_bcv")
-    assumption_map = {item.key: item for item in (view.evidence.assumption_statuses if view.evidence else [])}
-    rent_assumption = assumption_map.get("rent")
-    financing_assumption = assumption_map.get("financing")
-    condition_assumption = assumption_map.get("condition_profile")
-    capex_assumption = assumption_map.get("capex")
-    critical_assumption_keys = ("rent", "financing", "condition_profile", "capex")
-    critical_missing = [assumption_map[key].label for key in critical_assumption_keys if assumption_map.get(key) is not None and assumption_map[key].status == "missing"]
-    critical_estimated = [assumption_map[key].label for key in critical_assumption_keys if assumption_map.get(key) is not None and assumption_map[key].status == "estimated"]
-    total_assumptions = len(view.evidence.assumption_statuses) if view.evidence else 0
-    confirmed_assumptions = sum(1 for item in (view.evidence.assumption_statuses if view.evidence else []) if item.status == "confirmed")
-    missing_assumptions = sum(1 for item in (view.evidence.assumption_statuses if view.evidence else []) if item.status == "missing")
-    assumption_completeness_score = 100 if total_assumptions == 0 else max(0, min(int(round((confirmed_assumptions / total_assumptions) * 100 - (missing_assumptions * 8))), 100))
+    display_fit = "Value-Add / Renovation" if best_fit == "Redevelopment" else best_fit
 
-    supporting_factors: list[str] = []
-    risks: list[str] = []
-    dependencies: list[str] = []
-    disqualifiers: list[str] = []
-    hard_constraints: list[str] = []
-    positive_candidates: list[tuple[float, DecisionDriverItem]] = []
-    negative_candidates: list[tuple[float, DecisionDriverItem]] = []
+    category_scores = view.category_scores or {}
+    ranked_categories = sorted(
+        category_scores.items(),
+        key=lambda item: getattr(item[1], "score", 0.0),
+        reverse=True,
+    )
+    strongest_category_key = ranked_categories[0][0] if ranked_categories else None
+    weakest_category_key = ranked_categories[-1][0] if ranked_categories else None
+    strongest_dimension = _category_display_label(strongest_category_key)
+    weakest_dimension = _category_display_label(weakest_category_key)
+    dominant_value_driver = max(
+        (
+            driver
+            for driver in view.value.value_drivers
+            if abs(_parse_currency_text(driver.impact_text) or 0.0) > 0
+        ),
+        key=lambda item: abs(_parse_currency_text(item.impact_text) or 0.0),
+        default=None,
+    )
 
-    def _add_driver(metric: str, direction: str, score: float, summary: str, value: float | None) -> None:
-        item = DecisionDriverItem(
-            metric=metric,
-            direction=direction,
-            strength=_driver_strength(score),
-            summary=f"{summary} ({_signal_summary(metric, value)})" if value is not None else summary,
+    assumption_statuses = view.evidence.assumption_statuses if view.evidence else []
+    missing_assumptions = [item for item in assumption_statuses if item.status == "missing"]
+    estimated_assumptions = [item for item in assumption_statuses if item.status == "estimated"]
+    confirmed_assumptions = sum(1 for item in assumption_statuses if item.status == "confirmed")
+    total_assumptions = len(assumption_statuses)
+    assumption_completeness = 1.0 if total_assumptions == 0 else confirmed_assumptions / total_assumptions
+
+    conviction_score = max(
+        0,
+        min(
+            int(
+                round(
+                    (final_score / 5.0) * 60.0
+                    + (view.overall_confidence or 0.0) * 30.0
+                    + assumption_completeness * 10.0
+                    + (
+                        min(
+                            8.0,
+                            ((_parse_confidence_text(dominant_value_driver.confidence_text) or 0.0) * 8.0),
+                        )
+                        if dominant_value_driver is not None
+                        else 0.0
+                    )
+                )
+            ),
+            100,
+        ),
+    )
+
+    positive_drivers = [
+        DecisionDriverItem(metric="reason", direction="+", strength="moderate", summary=item)
+        for item in (view.top_reasons or [])[:3]
+    ]
+    negative_drivers = [
+        DecisionDriverItem(metric="risk", direction="-", strength="moderate", summary=item)
+        for item in (view.top_risks or [])[:3]
+    ]
+
+    primary_risk = view.biggest_risk or (view.top_risks[0] if view.top_risks else "No single risk dominates yet.")
+    if weakest_category_key:
+        break_condition = f"{weakest_dimension} is the weakest scored dimension. Main risk: {primary_risk}"
+    else:
+        break_condition = primary_risk
+
+    dependency_lines: list[str] = []
+    for item in missing_assumptions[:2]:
+        dependency_lines.append(f"{item.label.lower()} is still missing")
+    for item in estimated_assumptions[:2]:
+        line = f"{item.label.lower()} is still estimated"
+        if line not in dependency_lines:
+            dependency_lines.append(line)
+    for item in (view.what_changes_call or [])[:2]:
+        if item and item not in dependency_lines:
+            dependency_lines.append(item)
+    dependencies = dependency_lines[:3]
+
+    if missing_assumptions:
+        required_belief = " / ".join(
+            f"{item.label.lower()} needs to be confirmed"
+            for item in missing_assumptions[:2]
         )
-        if direction == "+":
-            positive_candidates.append((score, item))
-        else:
-            negative_candidates.append((score, item))
-
-    if valuation_pct is not None:
-        if valuation_pct >= 0.12:
-            supporting_factors.append(f"material value cushion of about {valuation_pct * 100:.0f}%")
-            _add_driver("valuation_gap", "+", min(38.0, valuation_pct * 220.0), "Value support is meaningfully above basis", valuation_pct)
-        elif valuation_pct >= 0.04:
-            supporting_factors.append(f"modest value cushion of about {valuation_pct * 100:.0f}%")
-            _add_driver("valuation_gap", "+", min(26.0, valuation_pct * 180.0), "Value support is ahead of basis", valuation_pct)
-        elif valuation_pct <= -0.20:
-            disqualifiers.append(f"basis looks rich by about {abs(valuation_pct) * 100:.0f}%")
-            _add_driver("valuation_gap", "-", min(40.0, abs(valuation_pct) * 180.0), "Basis is materially ahead of current value support", valuation_pct)
-        elif valuation_pct <= -0.10:
-            risks.append(f"basis looks rich by about {abs(valuation_pct) * 100:.0f}%")
-            _add_driver("valuation_gap", "-", min(30.0, abs(valuation_pct) * 150.0), "Basis is rich versus current value support", valuation_pct)
-        elif valuation_pct <= -0.04:
-            risks.append(f"basis is slightly rich versus current support ({abs(valuation_pct) * 100:.0f}%)")
-            _add_driver("valuation_gap", "-", min(18.0, abs(valuation_pct) * 120.0), "Basis is slightly rich versus support", valuation_pct)
+    elif estimated_assumptions:
+        required_belief = " / ".join(
+            f"{item.label.lower()} needs to hold close to the current underwriting"
+            for item in estimated_assumptions[:2]
+        )
+    elif view.what_changes_call:
+        required_belief = " / ".join(view.what_changes_call[:2])
     else:
-        dependencies.append("valuation support is still incomplete")
+        required_belief = "Core underwriting assumptions need to hold close to the current base case."
 
-    if isinstance(subject_ppsf_vs_town, (int, float)) and isinstance(town_context_confidence, (int, float)) and town_context_confidence >= 0.45:
-        if subject_ppsf_vs_town <= 0.92:
-            supporting_factors.append("screens cheap relative to the town's median pricing band")
-            _add_driver("subject_ppsf_vs_town", "+", min(22.0, (1.0 - subject_ppsf_vs_town) * 180.0), "Subject PPSF screens below the town baseline", subject_ppsf_vs_town)
-        elif subject_ppsf_vs_town >= 1.10:
-            risks.append("screens rich relative to the town's median pricing band")
-            _add_driver("subject_ppsf_vs_town", "-", min(22.0, (subject_ppsf_vs_town - 1.0) * 180.0), "Subject PPSF screens above the town baseline", subject_ppsf_vs_town)
-    elif view.town_context.get("qa_flags"):
-        dependencies.append("town-level context is still noisy")
-
-    if isinstance(monthly_cash_flow, (int, float)):
-        if monthly_cash_flow >= 250:
-            supporting_factors.append("rent support materially offsets monthly carry")
-            _add_driver("monthly_cash_flow", "+", min(32.0, monthly_cash_flow / 40.0), "Carry is supported by monthly income", monthly_cash_flow)
-        elif monthly_cash_flow >= -250:
-            supporting_factors.append("carry looks manageable, but only modestly supported")
-            _add_driver("monthly_cash_flow", "+", 12.0, "Carry looks manageable under the current base case", monthly_cash_flow)
-        elif monthly_cash_flow >= -750:
-            risks.append("carry still needs meaningful monthly support")
-            _add_driver("monthly_cash_flow", "-", min(26.0, abs(monthly_cash_flow) / 35.0), "Carry needs meaningful support to work", monthly_cash_flow)
-        elif best_fit == "Rental Investor":
-            disqualifiers.append("carry is too negative for a pure rental hold")
-            _add_driver("monthly_cash_flow", "-", min(40.0, abs(monthly_cash_flow) / 30.0), "Carry is too negative for an investor-led hold", monthly_cash_flow)
-        else:
-            risks.append("carry still needs owner subsidy under current assumptions")
-            _add_driver("monthly_cash_flow", "-", min(30.0, abs(monthly_cash_flow) / 35.0), "Carry still needs owner subsidy", monthly_cash_flow)
+    if recommendation_rank(recommendation) >= recommendation_rank("Neutral"):
+        thesis = (
+            f"{recommendation} based on Briarwood's current score of {final_score:.2f}/5. "
+            f"Strongest support comes from {strongest_dimension.lower()}."
+        )
     else:
-        dependencies.append("monthly carry is still estimated")
+        thesis = (
+            f"{recommendation} because Briarwood's current score is {final_score:.2f}/5 "
+            f"and the thesis is constrained most by {weakest_dimension.lower()}."
+        )
+    if dominant_value_driver is not None:
+        thesis = f"{thesis} Dominant value driver: {dominant_value_driver.label.lower()} ({dominant_value_driver.impact_text})."
 
-    if isinstance(income_support_ratio, (int, float)) and income_support_ratio >= 1.05:
-        supporting_factors.append("income support clears the carry profile")
-        _add_driver("income_support_ratio", "+", min(28.0, (income_support_ratio - 1.0) * 120.0 + 12.0), "Rent coverage supports the underwriting", income_support_ratio)
-    elif isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.75:
-        if best_fit == "Rental Investor":
-            disqualifiers.append("income support is weak for an investor-led thesis")
-        else:
-            risks.append("income support is weak")
-        _add_driver("income_support_ratio", "-", min(36.0, (0.9 - income_support_ratio) * 90.0 + 10.0), "Rent coverage is weak for the current basis", income_support_ratio)
-    elif isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.9:
-        risks.append("income support is only partial")
-        _add_driver("income_support_ratio", "-", min(20.0, (0.95 - income_support_ratio) * 80.0 + 6.0), "Rent coverage is only partial", income_support_ratio)
-
-    if liquidity_score < 35:
-        disqualifiers.append("exit liquidity is thin enough to constrain the thesis")
-        _add_driver("liquidity_score", "-", min(34.0, (50.0 - liquidity_score) * 0.9 + 8.0), "Exit liquidity is thin", liquidity_score)
-    elif liquidity_score < 50:
-        risks.append("exit liquidity is mixed")
-        _add_driver("liquidity_score", "-", min(20.0, (55.0 - liquidity_score) * 0.8 + 4.0), "Exit liquidity is mixed", liquidity_score)
-    else:
-        supporting_factors.append("exit liquidity is serviceable")
-        _add_driver("liquidity_score", "+", min(20.0, (liquidity_score - 50.0) * 0.6 + 6.0), "Exit liquidity is serviceable", liquidity_score)
-
-    if momentum_score >= 65:
-        supporting_factors.append("market backdrop is a constructive tailwind")
-        _add_driver("market_momentum_score", "+", min(18.0, (momentum_score - 60.0) * 0.8 + 6.0), "Market momentum is supportive", momentum_score)
-    elif momentum_score < 45:
-        risks.append("market backdrop is not helping much")
-        _add_driver("market_momentum_score", "-", min(18.0, (45.0 - momentum_score) * 0.8 + 6.0), "Market momentum is not helping", momentum_score)
-
-    if isinstance(price_to_rent, (int, float)):
-        if price_to_rent <= 15:
-            supporting_factors.append("price-to-rent profile is supportive")
-            _add_driver("price_to_rent", "+", min(18.0, (16.0 - price_to_rent) * 2.6 + 6.0), "Price-to-rent is supportive", price_to_rent)
-        elif price_to_rent >= 22:
-            risks.append("price-to-rent looks stretched")
-            _add_driver("price_to_rent", "-", min(18.0, (price_to_rent - 20.0) * 2.5 + 4.0), "Price-to-rent looks stretched", price_to_rent)
-
-    if view.capex_lane.lower() in {"moderate", "heavy"}:
-        capex_confirmed = any(item.source_kind == "confirmed" and item.label == "CapEx" for item in view.evidence.transparency_items)
-        if capex_confirmed:
-            risks.append(f"{view.capex_lane.lower()} capex burden still matters")
-        else:
-            dependencies.append("capex burden is still inferred")
-            risks.append(f"{view.capex_lane.lower()} capex burden is not yet confirmed")
-
-    if confidence_level == "Provisional":
-        dependencies.append("critical inputs still rely on estimates or missing facts")
-
-    if rent_assumption is not None:
-        if rent_assumption.status == "missing":
-            dependencies.insert(0, "rent assumption is still missing")
-        elif rent_assumption.status == "estimated":
-            dependencies.insert(0, "rent assumption is still estimated")
-    if financing_assumption is not None:
-        if financing_assumption.status == "missing":
-            dependencies.insert(0, "financing assumptions are still missing")
-        elif financing_assumption.status == "estimated":
-            dependencies.insert(0, "financing assumptions are only partially confirmed")
-    if capex_assumption is not None:
-        if capex_assumption.status == "missing":
-            dependencies.insert(0, "capex scope is still missing")
-        elif capex_assumption.status == "estimated":
-            dependencies.insert(0, "capex burden is still inferred")
-    if condition_assumption is not None and condition_assumption.status == "missing":
-        dependencies.insert(0, "condition still needs to be confirmed")
-
-    if best_fit == "Primary Residence":
-        supporting_factors.append("best lens is owner-occupant rather than pure investor")
-    elif best_fit == "Redevelopment":
-        display_fit = "Value-Add / Renovation"
-        supporting_factors.append("upside is more strategy-driven than hold-driven")
-        if isinstance(renovated_value, (int, float)):
-            fit_context = f"As a renovated case, Briarwood estimates value around {_fmt_currency(renovated_value)}."
-        elif view.bull_case is not None:
-            fit_context = f"This reads more like a renovation/value-add case than a teardown. Briarwood's upside anchor is about {_fmt_currency(view.bull_case)} in the bull case."
-    if confidence_score < 40:
-        hard_constraints.append("extremely weak confidence")
-    elif confidence_score < 60:
-        hard_constraints.append("sub-60 confidence")
-    if liquidity_score < 30:
-        hard_constraints.append("severe liquidity constraint")
-    if isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.60:
-        hard_constraints.append("major income support failure")
-    if isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow <= -1500:
-        hard_constraints.append("major income support failure")
-    if isinstance(valuation_pct, (int, float)) and valuation_pct <= -0.20:
-        hard_constraints.append("severe downside risk")
-    if risk_score <= 30:
-        hard_constraints.append("severe downside risk")
-
-    high_risk_flags: list[str] = []
-    if liquidity_score < 45:
-        high_risk_flags.append("liquidity")
-    if isinstance(income_support_ratio, (int, float)) and income_support_ratio < 0.75:
-        high_risk_flags.append("income")
-    if isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow <= -750:
-        high_risk_flags.append("carry")
-    if isinstance(valuation_pct, (int, float)) and valuation_pct <= -0.10:
-        high_risk_flags.append("valuation")
-    if risk_score <= 40:
-        high_risk_flags.append("risk")
-    if view.capex_lane.lower() in {"heavy"} and capex_assumption is not None and capex_assumption.status != "confirmed":
-        high_risk_flags.append("capex")
-
-    recommendation = score_tier
-
-    major_positive = [item for score, item in positive_candidates if score >= 18]
-    major_negative = [item for score, item in negative_candidates if score >= 18]
-    if major_positive and not major_negative:
-        signal_agreement_score = 88
-    elif major_negative and not major_positive:
-        signal_agreement_score = 32
-    elif major_positive and major_negative:
-        signal_agreement_score = 54
-    else:
-        signal_agreement_score = 62
-
-    town_clarity = 60.0
-    if isinstance(town_context_confidence, (int, float)):
-        town_clarity = max(20.0, min(town_context_confidence * 100.0, 100.0))
-    market_clarity_score = max(0, min(int(round((liquidity_score * 0.45) + (momentum_score * 0.30) + (town_clarity * 0.25))), 100))
-    conviction_raw = (
-        confidence_score * 0.35
-        + assumption_completeness_score * 0.25
-        + signal_agreement_score * 0.20
-        + market_clarity_score * 0.20
-    )
-    if hard_constraints:
-        conviction_raw -= 8.0
-    conviction_score = max(0, min(int(round(conviction_raw)), 100))
-
-    positive_candidates.sort(key=lambda item: item[0], reverse=True)
-    negative_candidates.sort(key=lambda item: item[0], reverse=True)
-    positive_drivers = [item for _, item in positive_candidates[:3]]
-    negative_drivers = [item for _, item in negative_candidates[:3]]
-
-    if recommendation_rank(recommendation) >= recommendation_rank("Neutral") and positive_drivers:
-        lead_driver = positive_drivers[0]
-    elif negative_drivers:
-        lead_driver = negative_drivers[0]
-    elif positive_drivers:
-        lead_driver = positive_drivers[0]
-    else:
-        lead_driver = DecisionDriverItem(metric="score", direction="+", strength="light", summary="The score profile is broadly balanced.")
-
-    primary_driver = lead_driver.metric
-    if lead_driver.metric == "valuation_gap":
-        decisive_driver = "Value support versus basis"
-    elif lead_driver.metric in {"monthly_cash_flow", "income_support_ratio", "price_to_rent"}:
-        decisive_driver = "Hold economics"
-    elif lead_driver.metric == "liquidity_score":
-        decisive_driver = "Exit liquidity"
-    elif lead_driver.metric == "subject_ppsf_vs_town":
-        decisive_driver = "Town-relative pricing"
-    elif lead_driver.metric == "market_momentum_score":
-        decisive_driver = "Market backdrop"
-    else:
-        decisive_driver = f"{display_fit} fit"
-
-    if lead_driver.direction == "+":
-        thesis = f"Primary driver: {decisive_driver}. Signal: {lead_driver.summary}."
-    else:
-        thesis = f"Primary constraint: {decisive_driver}. Signal: {lead_driver.summary}."
-
-    break_candidates: list[str] = []
-    if isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow < 0:
-        break_candidates.append("rent support would need to miss the current carry profile")
-    if capex_assumption is not None and capex_assumption.status != "confirmed":
-        break_candidates.append("capex scope could widen beyond the current lane")
-    if isinstance(valuation_pct, (int, float)) and valuation_pct >= 0:
-        break_candidates.append("value support could compress back toward basis")
-    elif isinstance(valuation_pct, (int, float)) and valuation_pct < 0:
-        break_candidates.append("valuation would need to improve materially versus basis")
-    if liquidity_score < 50:
-        break_candidates.append("liquidity could stay too thin for a clean exit path")
-    break_condition = " / ".join(break_candidates[:2]) if break_candidates else (
-        negative_drivers[0].summary if negative_drivers else "No single condition dominates the downside."
+    decisive_driver = (
+        dominant_value_driver.label
+        if dominant_value_driver is not None
+        else strongest_dimension if recommendation_rank(recommendation) >= recommendation_rank("Neutral") else weakest_dimension
     )
 
-    belief_candidates: list[str] = []
-    if rent_assumption is not None and rent_assumption.status != "confirmed":
-        belief_candidates.append("rent assumptions need to prove out close to the current base case")
-    if financing_assumption is not None and financing_assumption.status != "confirmed":
-        belief_candidates.append("financing terms need to stay near the modeled case")
-    if capex_assumption is not None and capex_assumption.status != "confirmed":
-        belief_candidates.append("capex has to stay inside the current lane")
-    if condition_assumption is not None and condition_assumption.status != "confirmed":
-        belief_candidates.append("condition needs to be no worse than the current underwriting assumes")
-    required_belief = " / ".join(belief_candidates[:2]) if belief_candidates else (
-        "Core underwriting assumptions need to hold close to the current base case."
+    fit_context = ""
+    if display_fit == "Value-Add / Renovation" and view.bull_case is not None:
+        fit_context = f"This reads more like a value-add case than a plain hold. The current upside anchor is about {_fmt_currency(view.bull_case)}."
+
+    risk_statement = f"Risk stance: {view.risk_skew_label}. Main risk: {primary_risk}."
+    summary_view = (
+        f"Recommendation: {recommendation}. "
+        f"Confidence: {confidence_level}. "
+        f"Strongest dimension: {strongest_dimension}."
     )
 
-    risk_statement = f"Risk stance: {view.risk_skew_label}. Main risk: {break_condition}."
-    positioning_summary_line = view.positioning_summary.summary_line if view.positioning_summary is not None else "Positioning summary unavailable."
-    summary_view = f"Positioning: {positioning_summary_line}. Recommendation: {recommendation}."
+    disqualifiers: list[str] = []
+    if recommendation == "Avoid":
+        disqualifiers.append(primary_risk)
+    if confidence_level == "Low":
+        disqualifiers.append("confidence is still too low for a high-conviction call")
+    if view.risk_location.liquidity_score < 35:
+        disqualifiers.append("exit liquidity is still thin")
 
     return DecisionViewModel(
         recommendation=recommendation,
@@ -2444,12 +2407,12 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
         required_belief=required_belief,
         risk_statement=risk_statement,
         summary_view=summary_view,
-        primary_risk=break_condition,
+        primary_risk=primary_risk,
         what_changes_view=required_belief,
         primary_driver=decisive_driver,
         fit_context=fit_context,
-        supporting_factors=supporting_factors[:4],
-        risks=risks[:3],
-        dependencies=dependencies[:3],
-        disqualifiers=(hard_constraints + disqualifiers)[:3],
+        supporting_factors=(view.top_reasons or [])[:4],
+        risks=(view.top_risks or [])[:3],
+        dependencies=dependencies,
+        disqualifiers=disqualifiers[:3],
     )

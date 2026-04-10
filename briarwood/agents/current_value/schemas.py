@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
+from briarwood.agents.comparable_sales.schemas import ComparableValueRange
 
 
 class CurrentValueComponents(BaseModel):
@@ -89,6 +90,12 @@ class CurrentValueOutput(BaseModel):
     components: CurrentValueComponents
     weights: CurrentValueWeights
     value_drivers: list[CurrentValueTraceItem] = Field(default_factory=list)
+    direct_value_range: ComparableValueRange | None = None
+    income_adjusted_value_range: ComparableValueRange | None = None
+    location_adjustment_range: ComparableValueRange | None = None
+    lot_adjustment_range: ComparableValueRange | None = None
+    blended_value_range: ComparableValueRange | None = None
+    comp_confidence_score: float | None = Field(default=None, ge=0, le=1)
     modeled_fields: list[str] = Field(default_factory=list)
     non_modeled_fields: list[str] = Field(default_factory=list)
     confidence: float

@@ -3,6 +3,17 @@ from __future__ import annotations
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
+class ComparableValueRange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    low: float | None = None
+    midpoint: float | None = None
+    high: float | None = None
+    comp_count: int = 0
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    explanation: str = ""
+
+
 class ComparableSale(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -116,6 +127,11 @@ class AdjustedComparable(BaseModel):
     why_comp: list[str]
     cautions: list[str]
     adjustments_summary: list[str]
+    segmentation_bucket: str | None = None
+    proximity_score: float | None = Field(default=None, ge=0, le=1)
+    recency_score: float | None = Field(default=None, ge=0, le=1)
+    data_quality_score: float | None = Field(default=None, ge=0, le=1)
+    weighted_score: float | None = Field(default=None, ge=0, le=1)
     source_summary: str | None = None
     location_tags: list[str] = Field(default_factory=list)
     condition_profile: str | None = None
@@ -137,6 +153,12 @@ class ComparableSalesOutput(BaseModel):
     dataset_as_of: str | None = None
     curation_summary: str | None = None
     verification_summary: str | None = None
+    direct_value_range: ComparableValueRange | None = None
+    income_adjusted_value_range: ComparableValueRange | None = None
+    location_adjustment_range: ComparableValueRange | None = None
+    lot_adjustment_range: ComparableValueRange | None = None
+    blended_value_range: ComparableValueRange | None = None
+    comp_confidence_score: float | None = Field(default=None, ge=0, le=1)
     assumptions: list[str]
     unsupported_claims: list[str]
     warnings: list[str]
