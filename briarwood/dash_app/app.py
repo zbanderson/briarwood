@@ -41,6 +41,12 @@ from briarwood.dash_app.components import (
     render_what_if_metrics,
     renovation_value_trajectory_chart,
 )
+from briarwood.dash_app.simple_view import (
+    render_simple_view,
+    render_price_support,
+    render_financials,
+    render_scenarios,
+)
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
     SAVED_PROPERTY_DIR,
@@ -2563,6 +2569,10 @@ def _build_layout():
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
+            # Property view screen state: "simple", "price_support", "financials", "scenarios", "full"
+            dcc.Store(id="property-view-screen", data="simple"),
+            # User role for framing toggle: "homebuyer" or "investor"
+            dcc.Store(id="user-role", storage_type="local", data="homebuyer"),
             # User preferences (persists in browser localStorage)
             dcc.Store(id="user-preferences", storage_type="local", data={
                 "role": None,  # "investor", "owner", "developer", or None (show all)
@@ -3527,6 +3537,8 @@ def compare_current_property_to_market(_n_clicks: int, property_id: str | None):
     Input("town-pulse-filter", "data"),
     Input("selected-market-town", "data"),
     Input("market-sort-mode", "data"),
+    Input("property-view-screen", "data"),
+    State("user-role", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -3536,6 +3548,8 @@ def render_main_tab(
     town_pulse_filter: str | None,
     selected_market_town: str | None,
     market_sort_mode: str | None,
+    view_screen: str | None,
+    user_role: str | None,
 ):
     if tab == "quick_decision":
         tab = "tear_sheet"
@@ -3585,16 +3599,33 @@ def render_main_tab(
             getattr(report.property_input, "town", None),
             getattr(report.property_input, "state", None),
         )
-        return _build_page_container(
-            eyebrow=identity["locality"],
-            title="Property Analysis",
-            subtitle=f"Start with the fast decision read on {identity['street']}, then open deeper pricing, scenario, and evidence layers only when you need them.",
-            content=render_tear_sheet_body(
+
+        # Screen-based routing: simple view is default, Layer 2 on action
+        screen = view_screen or "simple"
+        role = user_role or "homebuyer"
+
+        if screen == "price_support":
+            content = render_price_support(view, report)
+        elif screen == "financials":
+            content = render_financials(view, report)
+        elif screen == "scenarios":
+            content = render_scenarios(view, report)
+        elif screen == "full":
+            content = render_tear_sheet_body(
                 view,
                 report,
                 town_pulse_filter=town_pulse_filter or "all",
-            ),
-            max_width="1140px",
+            )
+        else:
+            content = render_simple_view(view, report, user_role=role)
+
+        return _build_page_container(
+            eyebrow=identity["locality"],
+            title="",
+            subtitle="",
+            content=content,
+            max_width="780px",
+            show_header=False,
         )
 
     if tab == "scenarios":
@@ -3668,6 +3699,35 @@ def render_main_tab(
         )
 
     return _empty_state("Select a tab.")
+
+
+# ── Simple view action button callback ────────────────────────────────────────
+
+@app.callback(
+    Output("property-view-screen", "data"),
+    Input({"type": "simple-view-action", "screen": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def handle_simple_view_action(n_clicks_list):
+    """Route action button clicks to the correct Layer 2 screen."""
+    if not ctx.triggered_id or not any(n_clicks_list):
+        return no_update
+    screen = ctx.triggered_id.get("screen", "simple")
+    return screen
+
+
+# ── Role toggle callback ─────────────────────────────────────────────────────
+
+@app.callback(
+    Output("user-role", "data"),
+    Input({"type": "role-toggle", "role": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def handle_role_toggle(n_clicks_list):
+    """Switch between homebuyer and investor framing."""
+    if not ctx.triggered_id or not any(n_clicks_list):
+        return no_update
+    return ctx.triggered_id.get("role", "homebuyer")
 
 
 def _build_market_property_candidates(
