@@ -439,54 +439,71 @@ def _render_action_buttons() -> html.Div:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def render_price_support(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def render_price_support(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
     """Layer 2: How we got to the number + comp charts."""
     from briarwood.dash_app.components import (
         comp_positioning_dot_plot,
         forward_fan_chart,
-        forward_waterfall_chart,
     )
 
-    # Build value waterfall from comp analysis
     waterfall_rows = _build_value_waterfall(view, report)
+
+    # Narrative block — differs by role
+    if user_role == "investor":
+        narrative = _price_support_investor_narrative(view)
+    else:
+        narrative = _price_support_homebuyer_narrative(view)
 
     return html.Div(
         [
             _back_button(),
             html.Div(
                 [
-                    html.Div("HOW WE GOT TO THE NUMBER", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    html.Div(waterfall_rows),
+                    html.Div("HOW WE GOT TO THE NUMBER", style=_LAYER2_HEADER),
+                    narrative,
+                    html.Div(waterfall_rows, style={"marginTop": "16px"}),
                 ],
                 style=CARD_STYLE,
             ),
             html.Div(
                 [
-                    html.Div("COMP POSITIONING", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+                    html.Div("COMP POSITIONING", style=_LAYER2_HEADER),
+                    html.Div(
+                        _comp_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
                     comp_positioning_dot_plot(view, report),
                 ],
                 style=CARD_STYLE,
             ),
             html.Div(
                 [
-                    html.Div("FORWARD VALUE", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    forward_fan_chart(view),
+                    html.Div("FORWARD VALUE", style=_LAYER2_HEADER),
+                    html.Div(
+                        _forward_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
+                    forward_fan_chart(view, chart_height=320),
                 ],
                 style=CARD_STYLE,
             ),
         ],
         className="briarwood-fade-in",
-        style={
-            "display": "grid",
-            "gap": "16px",
-            "maxWidth": "860px",
-            "margin": "0 auto",
-            "padding": "24px 24px 48px",
-        },
+        style=_LAYER2_GRID,
     )
 
 
-def render_financials(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def render_financials(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
     """Layer 2: What it costs to own + income waterfall."""
     from briarwood.dash_app.components import _economics_inputs, income_carry_waterfall
 
@@ -507,63 +524,31 @@ def render_financials(view: PropertyAnalysisView, report: AnalysisReport) -> htm
     for label, amount in line_items:
         if amount is None or amount == 0:
             continue
-        rows.append(
-            html.Div(
-                [
-                    html.Span(label, style={"fontSize": "14px", "color": TEXT_PRIMARY}),
-                    html.Span(
-                        f"${amount:,.0f}/mo",
-                        style={"fontSize": "14px", "fontFamily": FONT_MONO, "fontWeight": "500", "color": TEXT_PRIMARY},
-                    ),
-                ],
-                className="value-waterfall-row",
-            )
-        )
+        rows.append(_kv_row(label, f"${amount:,.0f}/mo"))
 
-    # Total
     if total_cost is not None:
-        rows.append(
-            html.Div(
-                [
-                    html.Span("Total carry", style={"fontSize": "15px", "fontWeight": "700", "color": TEXT_PRIMARY}),
-                    html.Span(
-                        f"${total_cost:,.0f}/mo",
-                        style={"fontSize": "15px", "fontFamily": FONT_MONO, "fontWeight": "700", "color": TEXT_PRIMARY},
-                    ),
-                ],
-                className="value-waterfall-row value-waterfall-total",
-            )
-        )
+        rows.append(_kv_row("Total carry", f"${total_cost:,.0f}/mo", bold=True))
 
-    # Rent and net
     if rent is not None:
-        rows.append(
-            html.Div(
-                [
-                    html.Span("Rental income", style={"fontSize": "14px", "color": ACCENT_GREEN}),
-                    html.Span(
-                        f"${rent:,.0f}/mo",
-                        style={"fontSize": "14px", "fontFamily": FONT_MONO, "fontWeight": "500", "color": ACCENT_GREEN},
-                    ),
-                ],
-                className="value-waterfall-row",
-            )
-        )
+        rows.append(_kv_row("Rental income", f"${rent:,.0f}/mo", color=ACCENT_GREEN))
 
     if net is not None:
         net_color = ACCENT_GREEN if net <= 0 else ACCENT_RED
         sign = "+" if net <= 0 else "-"
-        rows.append(
-            html.Div(
-                [
-                    html.Span("Net position", style={"fontSize": "15px", "fontWeight": "700", "color": net_color}),
-                    html.Span(
-                        f"{sign}${abs(net):,.0f}/mo",
-                        style={"fontSize": "15px", "fontFamily": FONT_MONO, "fontWeight": "700", "color": net_color},
-                    ),
-                ],
-                className="value-waterfall-row value-waterfall-total",
-            )
+        rows.append(_kv_row("Net position", f"{sign}${abs(net):,.0f}/mo", bold=True, color=net_color))
+
+    # Investor metrics card
+    investor_card = None
+    if user_role == "investor":
+        investor_card = _financials_investor_metrics(view)
+
+    # Homebuyer context line
+    if user_role == "homebuyer":
+        context = _financials_homebuyer_context(total_cost, rent, net)
+    else:
+        context = html.Div(
+            view.income_support.summary if view.income_support.summary else "Income and carry analysis based on current market rents.",
+            style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "4px"},
         )
 
     return html.Div(
@@ -571,31 +556,32 @@ def render_financials(view: PropertyAnalysisView, report: AnalysisReport) -> htm
             _back_button(),
             html.Div(
                 [
-                    html.Div("WHAT IT COSTS TO OWN", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    html.Div(rows),
+                    html.Div("WHAT IT COSTS TO OWN", style=_LAYER2_HEADER),
+                    context,
+                    html.Div(rows, style={"marginTop": "12px"}),
                 ],
                 style=CARD_STYLE,
             ),
+            investor_card,
             html.Div(
                 [
-                    html.Div("INCOME WATERFALL", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+                    html.Div("INCOME WATERFALL", style=_LAYER2_HEADER),
                     income_carry_waterfall(view, report),
                 ],
                 style=CARD_STYLE,
             ),
         ],
         className="briarwood-fade-in",
-        style={
-            "display": "grid",
-            "gap": "16px",
-            "maxWidth": "860px",
-            "margin": "0 auto",
-            "padding": "24px 24px 48px",
-        },
+        style=_LAYER2_GRID,
     )
 
 
-def render_scenarios(view: PropertyAnalysisView, report: AnalysisReport) -> html.Div:
+def render_scenarios(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
     """Layer 2: Three scenario cards + forward chart."""
     from briarwood.dash_app.components import forward_fan_chart, _economics_inputs
 
@@ -604,34 +590,39 @@ def render_scenarios(view: PropertyAnalysisView, report: AnalysisReport) -> html
     cost = metrics.get("gross_monthly_cost")
     net = metrics.get("net_monthly_cost")
 
+    # Scenario cards — investor gets extra stats
+    live_metrics = [
+        ("Monthly cost", f"${cost:,.0f}" if cost else "N/A"),
+        ("5yr equity", f"${view.base_case:,.0f}" if view.base_case else "N/A"),
+        ("Upside", view.forward.upside_pct_text if view.forward else "N/A"),
+    ]
+    rent_metrics = [
+        ("Net monthly", f"${abs(net):,.0f}" if net else "N/A"),
+        ("Rental yield", view.income_support.gross_yield_text if view.income_support.gross_yield else "N/A"),
+        ("Rental ease", view.income_support.rental_ease_label),
+    ]
+    reno_metrics = [
+        ("Capital lane", dejargon(view.capex_lane) if view.capex_lane else "N/A"),
+        ("Condition", view.condition_profile or "N/A"),
+        ("Upside potential", view.optionality_label or "N/A"),
+    ]
+
+    if user_role == "investor":
+        rent_metrics.extend([
+            ("Debt coverage", view.income_support.dscr_text),
+            ("Cash return", view.income_support.cash_on_cash_return_text),
+            ("Price to rent", view.income_support.price_to_rent_text),
+        ])
+        if view.forward:
+            live_metrics.append(("Downside", view.forward.downside_pct_text))
+
     scenario_cards = html.Div(
         [
-            _scenario_card(
-                "LIVE IN IT",
-                [
-                    ("Monthly cost", f"${cost:,.0f}" if cost else "N/A"),
-                    ("5yr equity", f"${view.base_case:,.0f}" if view.base_case else "N/A"),
-                    ("Upside", view.forward.upside_pct_text if view.forward else "N/A"),
-                ],
-            ),
-            _scenario_card(
-                "RENT IT OUT",
-                [
-                    ("Net monthly", f"${abs(net):,.0f}" if net else "N/A"),
-                    ("Rental yield", view.income_support.gross_yield_text if view.income_support.gross_yield else "N/A"),
-                    ("Rental ease", view.income_support.rental_ease_label),
-                ],
-            ),
-            _scenario_card(
-                "RENOVATE",
-                [
-                    ("CapEx lane", dejargon(view.capex_lane) if view.capex_lane else "N/A"),
-                    ("Condition", view.condition_profile or "N/A"),
-                    ("Upside potential", view.optionality_label or "N/A"),
-                ],
-            ),
+            _scenario_card("LIVE IN IT", live_metrics),
+            _scenario_card("RENT IT OUT", rent_metrics),
+            _scenario_card("RENOVATE", reno_metrics),
         ],
-        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(200px, 1fr))", "gap": "12px"},
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "12px"},
     )
 
     return html.Div(
@@ -640,20 +631,18 @@ def render_scenarios(view: PropertyAnalysisView, report: AnalysisReport) -> html
             scenario_cards,
             html.Div(
                 [
-                    html.Div("FORWARD OUTLOOK", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    forward_fan_chart(view),
+                    html.Div("FORWARD OUTLOOK", style=_LAYER2_HEADER),
+                    html.Div(
+                        _forward_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
+                    forward_fan_chart(view, chart_height=320),
                 ],
                 style=CARD_STYLE,
             ),
         ],
         className="briarwood-fade-in",
-        style={
-            "display": "grid",
-            "gap": "16px",
-            "maxWidth": "860px",
-            "margin": "0 auto",
-            "padding": "24px 24px 48px",
-        },
+        style=_LAYER2_GRID,
     )
 
 
@@ -687,6 +676,163 @@ def _back_button() -> html.Div:
             n_clicks=0,
             style={"padding": "8px 16px", "fontSize": "13px"},
         ),
+    )
+
+
+# ── Shared Layer 2 styles and helpers ────────────────────────────────────────
+
+_LAYER2_HEADER: dict = {**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}
+
+_LAYER2_GRID: dict = {
+    "display": "grid",
+    "gap": "16px",
+    "maxWidth": "860px",
+    "margin": "0 auto",
+    "padding": "24px 24px 48px",
+}
+
+
+def _kv_row(label: str, value: str, *, bold: bool = False, color: str | None = None) -> html.Div:
+    c = color or TEXT_PRIMARY
+    fw = "700" if bold else "500"
+    fs = "15px" if bold else "14px"
+    return html.Div(
+        [
+            html.Span(label, style={"fontSize": fs, "fontWeight": fw, "color": c}),
+            html.Span(value, style={"fontSize": fs, "fontFamily": FONT_MONO, "fontWeight": fw, "color": c}),
+        ],
+        className=f"value-waterfall-row{' value-waterfall-total' if bold else ''}",
+    )
+
+
+def _stat_row(label: str, value: str) -> html.Div:
+    """A compact stat row for investor metrics tables."""
+    return html.Div(
+        [
+            html.Span(label, style={"fontSize": "13px", "color": TEXT_SECONDARY}),
+            html.Span(value, style={"fontSize": "14px", "fontFamily": FONT_MONO, "fontWeight": "600", "color": TEXT_PRIMARY}),
+        ],
+        style={
+            "display": "flex",
+            "justifyContent": "space-between",
+            "padding": "8px 0",
+            "borderBottom": f"1px solid {BORDER}",
+        },
+    )
+
+
+# ── Price Support narratives ─────────────────────────────────────────────────
+
+
+def _price_support_homebuyer_narrative(view: PropertyAnalysisView) -> html.Div:
+    """Plain English explanation of the valuation for homebuyers."""
+    bcv = view.bcv
+    ask = view.ask_price
+    lines: list[str] = []
+
+    if bcv is not None and ask is not None:
+        diff_pct = (bcv - ask) / ask * 100
+        if diff_pct > 5:
+            lines.append(f"We estimate this property is worth about ${bcv:,.0f}, which is {abs(diff_pct):.0f}% above the asking price. That suggests room to negotiate or a solid entry point.")
+        elif diff_pct < -5:
+            lines.append(f"We estimate this property is worth about ${bcv:,.0f}, which is {abs(diff_pct):.0f}% below the asking price. You may want to negotiate down or wait for a price reduction.")
+        else:
+            lines.append(f"We estimate this property is worth about ${bcv:,.0f}, which is close to the asking price. The price looks fair at current market levels.")
+    elif bcv is not None:
+        lines.append(f"We estimate this property is worth about ${bcv:,.0f} based on comparable sales and market conditions.")
+
+    lines.append("The table below shows how we built up to that number.")
+
+    return html.Div(
+        [html.Div(line, style={"fontSize": "14px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "6px"}) for line in lines],
+    )
+
+
+def _price_support_investor_narrative(view: PropertyAnalysisView) -> html.Div:
+    """Statistical context for investors."""
+    comps = view.comps
+    value_vm = view.value
+
+    stats: list[html.Div] = []
+    stats.append(_stat_row("Comparable value", comps.comparable_value_text))
+    stats.append(_stat_row("Comp count", comps.comp_count_text))
+    stats.append(_stat_row("Confidence", comps.confidence_text))
+    stats.append(_stat_row("Verification", comps.verification_summary))
+    stats.append(_stat_row("Dataset", comps.dataset_name))
+
+    if value_vm.confidence > 0:
+        stats.append(_stat_row("Value confidence", f"{value_vm.confidence:.0%}"))
+    if view.value_low is not None and view.value_high is not None:
+        stats.append(_stat_row("Value range", f"${view.value_low:,.0f} – ${view.value_high:,.0f}"))
+
+    return html.Div(stats, style={"marginTop": "8px"})
+
+
+def _comp_context_line(view: PropertyAnalysisView) -> str:
+    """One-liner about comp positioning."""
+    comps = view.comps
+    parts: list[str] = []
+    if comps.comp_count_text and comps.comp_count_text != "0":
+        parts.append(f"{comps.comp_count_text} sold comps")
+    if comps.active_listing_count_text and comps.active_listing_count_text != "0":
+        parts.append(f"{comps.active_listing_count_text} active listings")
+    if parts:
+        return f"Showing {' and '.join(parts)} by price vs. similarity."
+    return "Comparable sales positioning relative to the subject property."
+
+
+def _forward_context_line(view: PropertyAnalysisView) -> str:
+    """One-liner about forward outlook."""
+    if view.forward:
+        return f"Bull case {view.forward.upside_pct_text} upside, bear case {view.forward.downside_pct_text} downside over 12 months."
+    return "Projected value range based on market conditions and property characteristics."
+
+
+# ── Financials helpers ───────────────────────────────────────────────────────
+
+
+def _financials_homebuyer_context(
+    total_cost: float | None,
+    rent: float | None,
+    net: float | None,
+) -> html.Div:
+    """Plain English summary for homebuyers."""
+    lines: list[str] = []
+    if total_cost is not None and rent is not None and net is not None:
+        if net <= 0:
+            lines.append(f"If you rent this property out, the rental income covers your monthly costs with ${abs(net):,.0f} left over each month.")
+        else:
+            lines.append(f"If you rent this property out, you'd still need to cover ${abs(net):,.0f}/mo out of pocket after rental income.")
+    elif total_cost is not None:
+        lines.append(f"Your estimated total monthly cost to own this property is ${total_cost:,.0f}.")
+
+    lines.append("Here's how the costs break down.")
+
+    return html.Div(
+        [html.Div(line, style={"fontSize": "14px", "lineHeight": "1.6", "color": TEXT_SECONDARY, "marginBottom": "6px"}) for line in lines],
+    )
+
+
+def _financials_investor_metrics(view: PropertyAnalysisView) -> html.Div:
+    """Investor-only card with return metrics."""
+    inc = view.income_support
+    stats: list[html.Div] = []
+    stats.append(_stat_row("Gross yield", inc.gross_yield_text))
+    stats.append(_stat_row("Cash return", inc.cash_on_cash_return_text))
+    stats.append(_stat_row("Debt coverage (DSCR)", inc.dscr_text))
+    stats.append(_stat_row("Price to rent", inc.price_to_rent_text))
+    stats.append(_stat_row("Income coverage", inc.income_support_ratio_text))
+    stats.append(_stat_row("Rental ease", inc.rental_ease_label))
+    stats.append(_stat_row("Rent source", inc.rent_source_label or inc.rent_source_type))
+    if inc.operating_cash_flow_text:
+        stats.append(_stat_row("Operating cash flow", inc.operating_cash_flow_text))
+
+    return html.Div(
+        [
+            html.Div("INVESTOR METRICS", style=_LAYER2_HEADER),
+            html.Div(stats, style={"marginTop": "8px"}),
+        ],
+        style=CARD_STYLE,
     )
 
 

@@ -3574,11 +3574,11 @@ def render_main_tab(
         role = user_role or "homebuyer"
 
         if screen == "price_support":
-            content = render_price_support(view, report)
+            content = render_price_support(view, report, user_role=role)
         elif screen == "financials":
-            content = render_financials(view, report)
+            content = render_financials(view, report, user_role=role)
         elif screen == "scenarios":
-            content = render_scenarios(view, report)
+            content = render_scenarios(view, report, user_role=role)
         elif screen == "full":
             content = render_tear_sheet_body(
                 view,
@@ -3593,7 +3593,7 @@ def render_main_tab(
             title="",
             subtitle="",
             content=content,
-            max_width="780px",
+            max_width="960px",
             show_header=False,
         )
 
