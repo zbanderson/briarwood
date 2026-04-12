@@ -1,12 +1,13 @@
 {
   "property_id": "11-test-ave-belmar-nj-07719",
-  "address": "11 Test Ave, Belmar, NJ 07719",
+  "address": "11 Test Ave",
   "label": "11 Test Ave",
   "ask_price": 700000.0,
-  "bcv": 769637.75,
+  "bcv": 777273.72,
   "pricing_view": "appears undervalued",
   "confidence": 0.55,
-  "comp_trust": "Seed / Review Only",
+  "comp_trust": "Public Record Matched",
   "missing_input_count": 5,
-  "timestamp": "2026-04-10T08:55:18"
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-12T15:49:24"
 }

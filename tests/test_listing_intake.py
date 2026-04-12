@@ -137,10 +137,12 @@ class ListingIntakeTests(unittest.TestCase):
     def test_json_loader_infers_listing_assisted_when_listing_fields_are_present(self) -> None:
         property_input = load_property_from_json("data/sample_property.json")
 
+        self.assertEqual(property_input.town, "Asbury Park")
         self.assertEqual(property_input.source_metadata.evidence_mode, EvidenceMode.LISTING_ASSISTED)
         self.assertEqual(property_input.coverage_for("price_ask").status, InputCoverageStatus.SOURCED)
         self.assertEqual(property_input.coverage_for("rent_estimate").status, InputCoverageStatus.USER_SUPPLIED)
         self.assertEqual(property_input.coverage_for("insurance_estimate").status, InputCoverageStatus.USER_SUPPLIED)
+        self.assertEqual(property_input.coverage_for("market_history").status, InputCoverageStatus.SOURCED)
 
     def test_zillow_url_listing_returns_partial_result_with_warning(self) -> None:
         service = ListingIntakeService()

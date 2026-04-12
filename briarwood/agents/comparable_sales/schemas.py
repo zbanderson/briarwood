@@ -14,6 +14,97 @@ class ComparableValueRange(BaseModel):
     explanation: str = ""
 
 
+class BaseCompSelectionItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    address: str
+    sale_price: float
+    distance_miles: float | None = None
+    similarity_score: float = Field(ge=0, le=1)
+    match_reasons: list[str] = Field(default_factory=list)
+    mismatch_flags: list[str] = Field(default_factory=list)
+    selection_tier: str = ""
+
+
+class BaseCompSupportSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comp_count: int = 0
+    same_town_count: int = 0
+    median_distance: float | None = None
+    support_quality: str = Field(default="thin", pattern="^(strong|moderate|thin)$")
+    notes: list[str] = Field(default_factory=list)
+
+
+class BaseCompSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    selected_comps: list[BaseCompSelectionItem] = Field(default_factory=list)
+    base_shell_value: float | None = None
+    support_summary: BaseCompSupportSummary = Field(default_factory=BaseCompSupportSummary)
+
+
+class FeatureAdjustment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    amount: float | None = None
+    method: str
+    support_type: str
+    note: str = ""
+
+
+class LocationAdjustment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    amount: float | None = None
+    method: str
+    support_type: str
+    note: str = ""
+
+
+class TownTransferAdjustment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    amount: float | None = None
+    from_town: str | None = None
+    to_town: str | None = None
+    method: str
+    support_type: str
+    note: str = ""
+
+
+class SupportSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    direct_support_count: int = 0
+    translated_support_count: int = 0
+    same_town_count: int = 0
+    income_support_count: int = 0
+    location_support_count: int = 0
+    primary_mode: str = ""
+    notes: list[str] = Field(default_factory=list)
+
+
+class ComparableCompAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    base_shell_value: float | None = None
+    feature_adjustments: dict[str, FeatureAdjustment] = Field(default_factory=dict)
+    location_adjustments: dict[str, LocationAdjustment] = Field(default_factory=dict)
+    town_transfer_adjustments: dict[str, TownTransferAdjustment] = Field(default_factory=dict)
+    adjusted_value: float | None = None
+    support_summary: SupportSummary = Field(default_factory=SupportSummary)
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    feature_engine: dict[str, object] | None = None
+    location_engine: dict[str, object] | None = None
+    town_transfer_engine: dict[str, object] | None = None
+    confidence_engine: dict[str, object] | None = None
+
+
 class ComparableSale(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -151,6 +242,8 @@ class AdjustedComparable(BaseModel):
     recency_score: float | None = Field(default=None, ge=0, le=1)
     data_quality_score: float | None = Field(default=None, ge=0, le=1)
     weighted_score: float | None = Field(default=None, ge=0, le=1)
+    base_similarity_score: float | None = Field(default=None, ge=0, le=1)
+    base_selection_tier: str | None = None
     source_summary: str | None = None
     location_tags: list[str] = Field(default_factory=list)
     condition_profile: str | None = None
@@ -170,6 +263,7 @@ class ComparableSalesOutput(BaseModel):
     median_sale_age_days: int | None = None
     dataset_name: str | None = None
     dataset_as_of: str | None = None
+    base_comp_selection: BaseCompSelection | None = None
     curation_summary: str | None = None
     verification_summary: str | None = None
     direct_value_range: ComparableValueRange | None = None
@@ -178,6 +272,7 @@ class ComparableSalesOutput(BaseModel):
     lot_adjustment_range: ComparableValueRange | None = None
     blended_value_range: ComparableValueRange | None = None
     comp_confidence_score: float | None = Field(default=None, ge=0, le=1)
+    comp_analysis: ComparableCompAnalysis | None = None
     # Hybrid valuation fields for multi-unit properties
     is_hybrid_valuation: bool = False
     primary_dwelling_value: float | None = None

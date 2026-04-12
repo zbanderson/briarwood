@@ -3,11 +3,11 @@
   "address": "119 4Th Ave",
   "label": "119 4Th Ave",
   "ask_price": 1699000.0,
-  "bcv": 899549.18,
+  "bcv": 888014.0,
   "pricing_view": "appears overpriced",
-  "confidence": 0.49,
-  "comp_trust": "Seed / Review Only",
-  "missing_input_count": 12,
+  "confidence": 0.45,
+  "comp_trust": "Public Record Matched",
+  "missing_input_count": 15,
   "is_hybrid_valuation": false,
-  "timestamp": "2026-04-10T11:43:28"
+  "timestamp": "2026-04-12T15:49:33"
 }

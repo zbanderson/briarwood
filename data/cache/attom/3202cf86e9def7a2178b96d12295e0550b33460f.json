@@ -1,0 +1,142 @@
+{
+  "fetched_at": "2026-04-10T19:44:33Z",
+  "normalized_payload": {
+    "address": "1223 BRIARWOOD RD, BELMAR, NJ 07719",
+    "baths": 1.0,
+    "beds": 3,
+    "garage_spaces": null,
+    "latitude": "40.177206",
+    "longitude": "-74.035135",
+    "lot_size": 0.085,
+    "property_type": "SFR",
+    "sqft": 1196,
+    "stories": 2,
+    "year_built": 1918
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1223 BRIARWOOD RD",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1223 BRIARWOOD RD, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2825"
+        },
+        "area": {
+          "blockNum": "224",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "07"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "FRAME",
+            "frameType": "WOOD",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "ALUMINUM/VINYL"
+          },
+          "interior": {
+            "bsmtsize": 99
+          },
+          "parking": {
+            "garagetype": "Garage, Detached",
+            "prkgSize": 240,
+            "prkgSpaces": "1",
+            "prkgType": "Garage, Detached"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 3,
+            "roomsTotal": 6
+          },
+          "size": {
+            "bldgsize": 1196,
+            "grosssizeadjusted": 1196,
+            "livingsize": 1196,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1196
+          },
+          "summary": {
+            "archStyle": "COLONIAL",
+            "bldgsNum": 1,
+            "levels": 2,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1918
+          }
+        },
+        "identifier": {
+          "Id": 42883448,
+          "apn": "07-00224-0000-00010",
+          "apnOrig": "07-00224-0000-00010",
+          "attomId": 42883448,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "CS": "85269a95a4e910455805781db678788e",
+            "DB": "a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7, b1f9cf98dab5cbdbb652049626b7039c",
+            "N2": "fe99d8182b407c607a0ccf685e0b3338",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, ND0005008649, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.177206",
+          "longitude": "-74.035135"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 37,
+          "lotnum": "10",
+          "lotsize1": 0.085,
+          "lotsize2": 3698
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1918
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "waterType": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2026-04-07",
+          "pubDate": "2026-04-07"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 42883448,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-10T19:44:33.873Z",
+      "total": 1,
+      "transactionID": "941d4244d95d687e2373f74fd6206bb1",
+      "version": "1.0.0"
+    }
+  }
+}

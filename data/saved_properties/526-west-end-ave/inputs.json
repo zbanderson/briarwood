@@ -1,0 +1,137 @@
+{
+  "property_id": "526-west-end-ave",
+  "facts": {
+    "address": "526 West End Ave",
+    "town": "Avon by the Sea",
+    "state": "NJ",
+    "county": "Monmouth",
+    "latitude": 40.1949884,
+    "longitude": -74.0198027,
+    "beds": 4,
+    "baths": 2.0,
+    "sqft": 1584,
+    "lot_size": 0.11,
+    "property_type": "Single Family Residence",
+    "condition_profile": "maintained",
+    "capex_lane": "light",
+    "year_built": 1935,
+    "garage_spaces": 1,
+    "garage_type": "detached",
+    "has_detached_garage": true,
+    "has_back_house": true,
+    "adu_type": "detached_cottage",
+    "adu_sqft": 400,
+    "has_basement": true,
+    "basement_finished": false,
+    "has_pool": false,
+    "parking_spaces": 2,
+    "corner_lot": false,
+    "driveway_off_street": true,
+    "purchase_price": 1499000.0,
+    "taxes": 7900.0,
+    "monthly_hoa": 0.0,
+    "days_on_market": 79,
+    "listing_description": "Is it a beach house? Is it an investment... its both!. These happy little cottages by the sea. This property along Sylvan Lake features a main house with 3 bedrooms 1 bath, updated kitchen, fabulous front porch and classic hardwood floors, original molding. The Lakeside cottage features 1-2 bedrooms 1 bath and a lakefront porch. use the detached garage for storage. Enjoy all that the quaint oceanside town of Avon by the Sea has to offer. Walk to beaches, restaurants and shops. The cottage is rented as an annual rental until 3/31/2027. Collect the income and enjoy your own little piece of paradise."
+  },
+  "market_signals": {},
+  "user_assumptions": {
+    "occupancy_strategy": "owner_occupy_partial",
+    "owner_occupied_unit_count": 1,
+    "estimated_monthly_rent": 4000.0,
+    "back_house_monthly_rent": 2100.0,
+    "seasonal_monthly_rent": null,
+    "unit_rents": [],
+    "rent_confidence_override": null,
+    "insurance": 2500.0,
+    "monthly_maintenance_reserve_override": 300.0,
+    "condition_profile_override": "maintained",
+    "condition_confirmed": true,
+    "capex_lane_override": "light",
+    "capex_confirmed": true,
+    "repair_capex_budget": null,
+    "strategy_intent": null,
+    "hold_period_years": null,
+    "risk_tolerance": null,
+    "manual_comp_inputs": []
+  },
+  "source_metadata": {
+    "evidence_mode": "public_record",
+    "provenance": [
+      "manual_subject_entry"
+    ],
+    "source_coverage": {
+      "address": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "price_ask": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "beds_baths": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "sqft": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "lot_size": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "taxes": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "hoa": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "listing_history": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "rent_estimate": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "occupancy_strategy": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "rent_confidence": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "insurance_estimate": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "comp_support": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "condition_assumption": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "capex_assumption": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "capex_budget": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "strategy_intent": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "scarcity_inputs": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      }
+    }
+  }
+}

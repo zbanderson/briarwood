@@ -153,6 +153,8 @@ class MarketAnalyzerTests(unittest.TestCase):
         self.assertGreater(outputs[0].investability_score, outputs[1].investability_score)
         self.assertGreater(outputs[0].catalyst_score, outputs[1].catalyst_score)
         self.assertIn("sell_through_rate", outputs[0].metrics)
+        self.assertIn("price_trend_pct", outputs[0].metrics)
+        self.assertIn("dom_trend_pct", outputs[0].metrics)
         self.assertIn("price_to_rent_ratio", outputs[0].metrics)
         self.assertIn("Alpha", outputs[0].narrative)
         self.assertGreaterEqual(outputs[0].metrics["confirmed_catalysts"], 1)

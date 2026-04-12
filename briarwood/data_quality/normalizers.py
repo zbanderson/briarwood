@@ -7,6 +7,30 @@ import re
 MISSING_TEXT = {"", "n/a", "na", "none", "null", "unknown", "--", "-", "tbd"}
 ZIP_RE = re.compile(r"\b\d{5}(?:-\d{4})?\b")
 ADDRESS_SUFFIX_RE = re.compile(r",?\s*[A-Za-z .'-]+,\s*[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?$")
+TOWN_ALIASES = {
+    "asb": "Asbury Park",
+    "asbury": "Asbury Park",
+    "ap": "Asbury Park",
+    "avon": "Avon-by-the-Sea",
+    "avon by sea": "Avon-by-the-Sea",
+    "avon by the sea": "Avon-by-the-Sea",
+    "avonbythesea": "Avon-by-the-Sea",
+    "spring lake hts": "Spring Lake Heights",
+    "wall": "Wall Township",
+    "wall twp": "Wall Township",
+}
+COUNTY_BY_ZIP = {
+    "02445": "Norfolk",
+    "07719": "Monmouth",
+}
+COUNTY_BY_TOWN_STATE = {
+    ("brookline", "MA"): "Norfolk",
+    ("belmar", "NJ"): "Monmouth",
+    ("asbury park", "NJ"): "Monmouth",
+    ("avon-by-the-sea", "NJ"): "Monmouth",
+    ("spring lake heights", "NJ"): "Monmouth",
+    ("wall township", "NJ"): "Monmouth",
+}
 LISTING_DESCRIPTION_HINTS = (
     "welcome to",
     "beautiful",
@@ -64,7 +88,10 @@ def normalize_town(value: object) -> str | None:
     assert isinstance(text, str)
     cleaned = re.sub(r"[-_]+", " ", text)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned.title() if cleaned else None
+    if not cleaned:
+        return None
+    alias = TOWN_ALIASES.get(cleaned.lower())
+    return alias or cleaned.title()
 
 
 def normalize_state(value: object) -> str | None:
@@ -73,6 +100,22 @@ def normalize_state(value: object) -> str | None:
         return None
     assert isinstance(text, str)
     return text.strip().upper()[:2] or None
+
+
+def infer_county(*, town: object, state: object, zip_code: object = None) -> str | None:
+    normalized_zip = treat_missing(zip_code)
+    if isinstance(normalized_zip, str):
+        zip_match = ZIP_RE.search(normalized_zip)
+        if zip_match:
+            county = COUNTY_BY_ZIP.get(zip_match.group(0)[:5])
+            if county:
+                return county
+
+    normalized_town = normalize_town(town)
+    normalized_state = normalize_state(state)
+    if normalized_town and normalized_state:
+        return COUNTY_BY_TOWN_STATE.get((normalized_town.lower(), normalized_state))
+    return None
 
 
 def normalize_numeric(value: object) -> float | int | None:

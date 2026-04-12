@@ -1,0 +1,13 @@
+{
+  "property_id": "526-west-end-ave",
+  "address": "526 West End Ave",
+  "label": "526 West End Ave",
+  "ask_price": 1499000.0,
+  "bcv": 1914397.54,
+  "pricing_view": "appears undervalued",
+  "confidence": 0.63,
+  "comp_trust": "Public Record Matched",
+  "missing_input_count": 8,
+  "is_hybrid_valuation": true,
+  "timestamp": "2026-04-12T15:49:27"
+}

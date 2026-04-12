@@ -276,6 +276,34 @@ class ManualCompWorkflowTests(unittest.TestCase):
             finally:
                 dash_data.SAVED_PROPERTY_DIR = original_saved_dir
 
+    def test_register_manual_analysis_normalizes_town_aliases_before_geocoding(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            original_saved_dir = dash_data.SAVED_PROPERTY_DIR
+            dash_data.SAVED_PROPERTY_DIR = Path(temp_dir)
+            try:
+                with patch.object(dash_data, "geocode_address", return_value=(40.186, -74.016)) as mocked_geocode:
+                    property_id, _output_path = dash_data.register_manual_analysis(
+                        {
+                            "address": "526 W End Ave",
+                            "town": "Avon By The Sea",
+                            "state": "nj",
+                            "purchase_price": 1499000,
+                            "beds": 5,
+                            "baths": 2.0,
+                            "sqft": 1584,
+                        },
+                        [],
+                    )
+
+                report = dash_data.load_reports([property_id])[property_id]
+                mocked_geocode.assert_called_once_with("526 W End Ave, Avon-by-the-Sea, NJ")
+                self.assertEqual(report.property_input.town, "Avon-by-the-Sea")
+                self.assertEqual(report.property_input.county, "Monmouth")
+                self.assertEqual(report.property_input.latitude, 40.186)
+                self.assertEqual(report.property_input.longitude, -74.016)
+            finally:
+                dash_data.SAVED_PROPERTY_DIR = original_saved_dir
+
     def test_saved_property_summary_lists_recent_manual_analysis(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             original_saved_dir = dash_data.SAVED_PROPERTY_DIR

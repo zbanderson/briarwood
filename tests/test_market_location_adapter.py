@@ -54,6 +54,27 @@ class MarketLocationAdapterTests(unittest.TestCase):
         self.assertIn("train", enriched.market_signals.landmark_points)
         self.assertEqual(enriched.source_metadata.source_coverage["landmark_points"].status, InputCoverageStatus.SOURCED)
 
+    def test_public_record_adapter_normalizes_town_aliases_before_enrichment(self) -> None:
+        canonical = PublicRecordAdapter().build(
+            {
+                "property_id": "asb-pr-1",
+                "address": "1205 Jeffrey Street",
+                "town": "Asb",
+                "state": "nj",
+                "beds": 3,
+                "baths": 2.0,
+                "sqft": 1400,
+                "purchase_price": 940000,
+            }
+        )
+
+        enriched = MarketLocationAdapter().enrich(canonical)
+
+        self.assertEqual(enriched.facts.town, "Asbury Park")
+        self.assertEqual(enriched.facts.state, "NJ")
+        self.assertIsNotNone(enriched.market_signals.market_history_current_value)
+        self.assertEqual(enriched.source_metadata.source_coverage["market_history"].status, InputCoverageStatus.SOURCED)
+
 
 if __name__ == "__main__":
     unittest.main()

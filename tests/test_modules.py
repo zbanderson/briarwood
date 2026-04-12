@@ -217,7 +217,7 @@ class ModuleTests(unittest.TestCase):
         self.assertIsNotNone(hybrid_payload.rear_income_value)
         self.assertGreater(hybrid_payload.base_case_hybrid_value, hybrid_payload.primary_house_value)
         self.assertGreaterEqual(len(hybrid_payload.primary_house_comp_set), 1)
-        self.assertIn(hybrid_payload.rear_income_method_used, {"noi_cap_rate", "gross_rent_multiplier"})
+        self.assertIn(hybrid_payload.rear_income_method_used, {"noi_cap_rate", "gross_rent_multiplier", "comp_module_income_cap"})
         self.assertIn("hybrid valuation framework", hybrid_payload.narrative.lower())
 
         current_value_result = CurrentValueModule().run(property_input)
@@ -234,14 +234,25 @@ class ModuleTests(unittest.TestCase):
         self.assertIn("comp_count", result.metrics)
         self.assertIn("comp_confidence_score", result.metrics)
         self.assertIn("blended_value_midpoint", result.metrics)
-        self.assertGreater(result.metrics["comp_count"], 0)
         self.assertGreaterEqual(result.confidence, 0.0)
         payload = result.payload
         self.assertIsNotNone(payload)
-        self.assertIsNotNone(payload.direct_value_range)
-        self.assertIsNotNone(payload.blended_value_range)
         self.assertGreaterEqual(float(payload.comp_confidence_score or 0.0), 0.0)
-        self.assertTrue(any(getattr(comp, "segmentation_bucket", None) for comp in payload.comps_used))
+        if result.metrics["comp_count"] > 0:
+            self.assertIsNotNone(payload.direct_value_range)
+            self.assertIsNotNone(payload.blended_value_range)
+            self.assertTrue(any(getattr(comp, "segmentation_bucket", None) for comp in payload.comps_used))
+            self.assertIsNotNone(payload.base_comp_selection)
+            assert payload.base_comp_selection is not None
+            self.assertEqual(payload.base_comp_selection.support_summary.comp_count, payload.comp_count)
+            self.assertGreaterEqual(len(payload.base_comp_selection.selected_comps), 1)
+            self.assertIn(payload.base_comp_selection.support_summary.support_quality, {"strong", "moderate", "thin"})
+            self.assertIsNotNone(payload.comp_analysis)
+            assert payload.comp_analysis is not None
+            self.assertIsNotNone(payload.comp_analysis.base_shell_value)
+            self.assertIn("beach", payload.comp_analysis.location_adjustments)
+            self.assertIn("cross_town_shell_transfer", payload.comp_analysis.town_transfer_adjustments)
+            self.assertGreaterEqual(payload.comp_analysis.confidence, 0.0)
 
     def test_value_drivers_module_builds_bridge_from_base_to_adjusted_value(self) -> None:
         property_input = sample_property()

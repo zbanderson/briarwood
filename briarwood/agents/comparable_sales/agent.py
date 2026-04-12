@@ -8,10 +8,13 @@ import json
 
 from briarwood.agents.comparable_sales.schemas import (
     AdjustedComparable,
+    BaseCompSelection,
     ComparableSale,
     ComparableSalesOutput,
     ComparableSalesRequest,
 )
+from briarwood.base_comp_selector import build_base_comp_selection
+from briarwood.data_quality.normalizers import normalize_state, normalize_town
 from briarwood.data_quality.eligibility import classify_comp_eligibility
 from briarwood.data_quality.pipeline import DataQualityPipeline
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
@@ -61,12 +64,14 @@ class FileBackedComparableSalesProvider:
         return validated_rows
 
     def get_sales(self, *, town: str, state: str) -> list[ComparableSale]:
-        town_key = town.strip().lower()
-        state_key = state.strip().upper()
+        town_key = normalize_town(town)
+        state_key = normalize_state(state)
+        if town_key is None or state_key is None:
+            return []
         return [
             row
             for row in self._rows
-            if row.town.strip().lower() == town_key and row.state.strip().upper() == state_key
+            if normalize_town(row.town) == town_key and normalize_state(row.state) == state_key
         ]
 
 
@@ -186,7 +191,7 @@ class ComparableSalesAgent:
             )
 
         adjusted.sort(key=lambda row: (row.fit_label != "strong", -row.similarity_score, row.sale_age_days))
-        comps_used = adjusted[:5]
+        comps_used, base_comp_selection = build_base_comp_selection(request=request, adjusted_comps=adjusted)
         if not comps_used:
             return self._empty_output(
                 town=request.town,
@@ -198,7 +203,7 @@ class ComparableSalesAgent:
                 ],
             )
 
-        weighted_value = self._weighted_value(comps_used)
+        weighted_value = base_comp_selection.base_shell_value or self._weighted_value(comps_used)
         confidence = self._confidence(request, comps_used, history_points=history_points)
         freshest_sale_date = max((comp.sale_date for comp in comps_used), default=None)
         median_sale_age_days = self._median_sale_age_days(comps_used)
@@ -207,7 +212,7 @@ class ComparableSalesAgent:
         curation_summary = self._curation_summary(comps_used)
         verification_summary = self._verification_summary(comps_used, rejected_count, rejection_reasons)
         assumptions.append(
-            "Comparable-sale value uses same-town sale comps, conservative similarity filters, and town-level market history for time adjustment when available."
+            "Comparable-sale value now starts with a strict same-town base-shell selector, then expands through controlled local tolerance bands before any broader evidence is considered."
         )
         assumptions.append(
             "Questioned or unverified comp addresses are screened out of the active comp set until they are manually confirmed."
@@ -238,6 +243,8 @@ class ComparableSalesAgent:
         support_note = self._support_note(comps_used)
         if support_note:
             warnings.append(support_note)
+        if base_comp_selection.support_summary.support_quality == "thin":
+            warnings.append("Base comp selector marked direct shell support as thin.")
 
         summary = (
             f"Briarwood formed a comparable-sales value around ${weighted_value:,.0f} using {len(comps_used)} "
@@ -259,6 +266,7 @@ class ComparableSalesAgent:
             median_sale_age_days=median_sale_age_days,
             dataset_name=dataset_name,
             dataset_as_of=dataset_as_of,
+            base_comp_selection=base_comp_selection,
             curation_summary=curation_summary,
             verification_summary=verification_summary,
             assumptions=assumptions,
@@ -288,6 +296,7 @@ class ComparableSalesAgent:
             median_sale_age_days=None,
             dataset_name=self._dataset_name(),
             dataset_as_of=self._dataset_as_of(),
+            base_comp_selection=BaseCompSelection(),
             curation_summary=None,
             verification_summary=None,
             assumptions=[],

@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import logging
+import pickle
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore
+from briarwood.decision_engine import build_decision
 from briarwood.evidence import (
     compute_confidence_breakdown,
     compute_critical_assumption_statuses,
@@ -22,9 +25,16 @@ from briarwood.recommendations import (
 from briarwood.modules.town_aggregation_diagnostics import get_town_context, normalize_town_name
 from briarwood.modules.market_analyzer import MarketAnalysisOutput, analyze_markets
 from briarwood.modules.hybrid_value import get_hybrid_value_payload
+from briarwood.modules.value_finder import (
+    PropertyValueFinderOutput,
+    ValueFinderOutput,
+    analyze_property_value_finder,
+    analyze_value_finder,
+)
 from briarwood.local_intelligence.classification import bucket_town_signals
 from briarwood.local_intelligence.models import ImpactDirection, SignalStatus, TownSignal
 from briarwood.local_intelligence.summarize import build_town_summary
+from briarwood.risk_bar import RiskBarItem, build_risk_bar
 from briarwood.truth import classify_confidence
 from briarwood.reports.section_helpers import (
     get_comparable_sales,
@@ -42,6 +52,8 @@ from briarwood.schemas import AnalysisReport, InputCoverageStatus, PropertyInput
 
 ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_LISTINGS_PATH = ROOT / "data" / "comps" / "active_listings.json"
+VIEW_MODEL_CACHE_DIR = ROOT / ".cache" / "view_models"
+MARKET_ANALYSIS_CACHE_TTL = timedelta(hours=12)
 
 
 def _fmt_currency(value: float | None) -> str:
@@ -829,9 +841,13 @@ class CompsViewModel:
 class DecisionViewModel:
     recommendation: str
     conviction_score: int
+    conviction: float
     best_fit: str
     confidence_level: str
     thesis: str
+    primary_reason: str
+    secondary_reason: str
+    required_beliefs: list[str]
     decisive_driver: str
     decision_drivers: dict[str, list["DecisionDriverItem"]]
     break_condition: str
@@ -906,20 +922,43 @@ class HybridValueViewModel:
 
 
 @dataclass(slots=True)
-class MarketCardViewModel:
+class ValueFinderViewModel:
+    bullets: list[str] = field(default_factory=list)
+    supporting_signal: str = ""
+    confidence_note: str = ""
+
+
+@dataclass(slots=True)
+class ValueFinderCandidateViewModel:
+    property_id: str
+    address: str
     town: str
-    score: float
-    short_narrative: str
-    key_metrics: dict[str, str] = field(default_factory=dict)
-    market_condition: str = ""
-    town_slug: str = ""
+    opportunity_signal: str
+    pricing_posture: str
+    short_summary: str
+    ask_price_text: str
+    briarwood_value_text: str
+    dom_text: str
+    value_gap_text: str
 
 
 @dataclass(slots=True)
 class MarketViewModel:
-    markets: list[MarketCardViewModel] = field(default_factory=list)
+    town_name: str
+    market_signal: str
+    trend: str
+    key_metrics: dict[str, str] = field(default_factory=dict)
+    signals: list[str] = field(default_factory=list)
+    score: float | None = None
+    town_slug: str = ""
+
+
+@dataclass(slots=True)
+class MarketsPageViewModel:
+    markets: list[MarketViewModel] = field(default_factory=list)
     selected_town: str | None = None
     selected_market: MarketAnalysisOutput | None = None
+    sort_mode: str = "strongest"
 
 
 @dataclass(slots=True)
@@ -961,6 +1000,7 @@ class PropertyAnalysisView:
     risk_skew_label: str
     positioning_summary: PositioningSummaryViewModel
     report_card: ReportCardViewModel
+    risk_bar: list[RiskBarItem]
     top_positives: list[str]
     top_risks: list[str]
     metric_chips: list[MetricChip]
@@ -987,10 +1027,11 @@ class PropertyAnalysisView:
     confidence_level: str = "Medium"  # "High", "Medium", "Low"
     confidence_factors: list[ConfidenceFactorItem] = field(default_factory=list)
     top_input_impacts: list[InputImpactItem] = field(default_factory=list)
-    markets: list[MarketCardViewModel] = field(default_factory=list)
-    market_view: MarketViewModel | None = None
+    markets: list[MarketViewModel] = field(default_factory=list)
+    market_view: MarketsPageViewModel | None = None
     property_evidence_summary: PropertyEvidenceSummaryViewModel | None = None
     hybrid_value: HybridValueViewModel | None = None
+    value_finder: ValueFinderViewModel | None = None
 
     @property
     def valuation(self) -> ValueViewModel:
@@ -1317,14 +1358,41 @@ def _screening_summary(report: AnalysisReport) -> str:
     return f"{output.comp_count} kept | {output.rejected_count} screened out" + (f" | {reasons}" if reasons else "")
 
 
-def _market_condition_label(score: float | None) -> str:
-    if score is None:
-        return "Mixed"
-    if score >= 6.6:
-        return "Seller Market"
-    if score <= 4.0:
-        return "Buyer Market"
-    return "Balanced"
+def _market_signal_label(metrics: dict[str, Any]) -> str:
+    buyer_vs_seller = _as_float(metrics.get("buyer_vs_seller_score"))
+    sell_through = _as_float(metrics.get("sell_through_rate"))
+    avg_dom = _as_float(metrics.get("avg_dom"))
+    if (
+        (buyer_vs_seller is not None and buyer_vs_seller >= 6.6)
+        or (sell_through is not None and sell_through >= 0.35)
+        or (avg_dom is not None and avg_dom <= 25)
+    ):
+        return "Tight Market"
+    if (
+        (buyer_vs_seller is not None and buyer_vs_seller <= 4.0)
+        or (sell_through is not None and sell_through <= 0.18)
+        or (avg_dom is not None and avg_dom >= 55)
+    ):
+        return "Soft Market"
+    return "Balanced Market"
+
+
+def _market_trend_label(metrics: dict[str, Any]) -> str:
+    price_trend = _as_float(metrics.get("price_trend_pct"))
+    dom_trend = _as_float(metrics.get("dom_trend_pct"))
+    sell_through = _as_float(metrics.get("sell_through_rate"))
+    score = 0.0
+    if price_trend is not None:
+        score += 1.0 if price_trend >= 0.03 else -1.0 if price_trend <= -0.03 else 0.0
+    if dom_trend is not None:
+        score += 0.8 if dom_trend <= -0.08 else -0.8 if dom_trend >= 0.08 else 0.0
+    if sell_through is not None:
+        score += 0.6 if sell_through >= 0.30 else -0.6 if sell_through <= 0.18 else 0.0
+    if score >= 0.75:
+        return "Improving"
+    if score <= -0.75:
+        return "Weakening"
+    return "Stable"
 
 
 def _score_band(score: float) -> str:
@@ -1337,37 +1405,255 @@ def _score_band(score: float) -> str:
     return "missing"
 
 
-def _short_market_narrative(analysis: MarketAnalysisOutput) -> str:
-    sentence = analysis.narrative.strip().split(". ")[0].strip()
-    return sentence if sentence.endswith(".") else f"{sentence}."
-
-
-def _market_card_view_model(analysis: MarketAnalysisOutput) -> MarketCardViewModel:
+def _market_signal_lines(analysis: MarketAnalysisOutput) -> list[str]:
     metrics = analysis.metrics
-    return MarketCardViewModel(
-        town=analysis.town,
-        score=analysis.market_score,
-        short_narrative=_short_market_narrative(analysis),
+    lines: list[str] = []
+    inventory_count = metrics.get("inventory_count")
+    inventory_pressure = _as_float(metrics.get("months_of_supply"))
+    if inventory_count is not None:
+        if inventory_pressure is not None:
+            lines.append(f"Inventory at {int(inventory_count)} listings, or about {inventory_pressure:.1f} months of supply.")
+        else:
+            lines.append(f"Inventory currently shows {int(inventory_count)} active listings.")
+    avg_dom = _as_float(metrics.get("avg_dom"))
+    dom_trend = _as_float(metrics.get("dom_trend_pct"))
+    if avg_dom is not None:
+        if dom_trend is not None and dom_trend >= 0.08:
+            lines.append("DOM is rising, which points to buyer leverage increasing.")
+        elif dom_trend is not None and dom_trend <= -0.08:
+            lines.append("DOM is compressing, which suggests demand is tightening.")
+        else:
+            lines.append(f"Homes are taking about {avg_dom:.0f} days to move.")
+    price_trend = _as_float(metrics.get("price_trend_pct"))
+    if price_trend is not None:
+        direction = "up" if price_trend > 0 else "down"
+        lines.append(f"Median sale pricing is {direction} about {abs(price_trend) * 100:.0f}% versus the prior period.")
+    sell_through = _as_float(metrics.get("sell_through_rate"))
+    if sell_through is not None and not any("demand" in line.lower() for line in lines):
+        if sell_through >= 0.35:
+            lines.append("Sell-through remains strong relative to current inventory.")
+        elif sell_through <= 0.18:
+            lines.append("Turnover is slower, so buyers have more room to negotiate.")
+    if not lines:
+        lines.append("Market read is directionally useful, but turnover history is still thin.")
+    return lines[:2]
+
+
+def _price_history_entry_price(entry: dict[str, Any]) -> float | None:
+    for key in ("price", "list_price", "value", "event_price"):
+        value = entry.get(key)
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            cleaned = value.replace("$", "").replace(",", "").strip()
+            try:
+                return float(cleaned)
+            except ValueError:
+                continue
+    return None
+
+
+def _price_history_metrics(entries: list[dict[str, Any]]) -> tuple[int | None, float | None, int | None]:
+    if not entries:
+        return None, None, None
+    prices = [_price_history_entry_price(entry) for entry in entries]
+    prices = [price for price in prices if price is not None]
+    price_cut_count = 0
+    total_price_cut_pct = 0.0
+    relist_count = 0
+    previous_price: float | None = None
+    for entry in entries:
+        text = _clean_text(entry.get("event") or entry.get("status") or entry.get("description")).lower()
+        price = _price_history_entry_price(entry)
+        if "relist" in text:
+            relist_count += 1
+        if previous_price not in (None, 0) and price not in (None, 0) and price < previous_price:
+            price_cut_count += 1
+            total_price_cut_pct += (previous_price - price) / previous_price
+        previous_price = price if price is not None else previous_price
+    if price_cut_count == 0 and prices:
+        total_drop = (max(prices) - min(prices)) / max(prices) if max(prices) > 0 else 0.0
+        if total_drop > 0.0:
+            price_cut_count = 1
+            total_price_cut_pct = total_drop
+    return (
+        price_cut_count or None,
+        round(total_price_cut_pct, 4) if total_price_cut_pct > 0 else None,
+        relist_count or None,
+    )
+
+
+def _build_value_finder_output(
+    report: AnalysisReport,
+    *,
+    market_analysis: MarketAnalysisOutput | None = None,
+) -> ValueFinderOutput:
+    property_input = report.property_input
+    current_value = get_current_value(report)
+    comp_low = getattr(current_value, "direct_value_range", None).low if getattr(current_value, "direct_value_range", None) is not None else None
+    comp_mid = getattr(current_value, "direct_value_range", None).midpoint if getattr(current_value, "direct_value_range", None) is not None else None
+    comp_high = getattr(current_value, "direct_value_range", None).high if getattr(current_value, "direct_value_range", None) is not None else None
+    town_metrics = market_analysis.metrics if market_analysis is not None else {}
+    price_cut_count, total_price_cut_pct, relist_count = _price_history_metrics(
+        list(property_input.price_history) if property_input is not None else []
+    )
+    asking_price = current_value.ask_price
+    subject_ppsf = (
+        asking_price / property_input.sqft
+        if property_input is not None and asking_price not in (None, 0) and property_input.sqft not in (None, 0)
+        else None
+    )
+    return analyze_value_finder(
+        asking_price=asking_price,
+        briarwood_value=current_value.briarwood_current_value,
+        comp_median=comp_mid,
+        comp_low=comp_low,
+        comp_high=comp_high,
+        days_on_market=property_input.days_on_market if property_input is not None else None,
+        price_cut_count=price_cut_count,
+        total_price_cut_pct=total_price_cut_pct,
+        town_dom_trend=_as_float(town_metrics.get("dom_trend_pct")),
+        town_inventory_trend=_as_float(town_metrics.get("inventory_trend_pct")),
+        subject_price_per_sqft=subject_ppsf,
+        cohort_price_per_sqft=_as_float(town_metrics.get("avg_price_per_sqft")),
+        confidence=float(current_value.confidence),
+        similar_listing_dom=_as_float(town_metrics.get("avg_dom")),
+        relist_count=relist_count,
+    )
+
+
+def build_value_finder_view_model(
+    report: AnalysisReport,
+    *,
+    market_analysis: MarketAnalysisOutput | None = None,
+) -> ValueFinderViewModel:
+    output = analyze_property_value_finder(report)
+    return ValueFinderViewModel(
+        bullets=list(output.bullets),
+        supporting_signal=f"{len(output.bullets)} supported value signal{'s' if len(output.bullets) != 1 else ''}" if output.bullets else "No strong value edge surfaced",
+        confidence_note="Value Finder only surfaces bullets backed by actual property facts or structured model outputs.",
+    )
+
+
+def build_value_finder_candidate_view_model(
+    report: AnalysisReport,
+    *,
+    market_analysis: MarketAnalysisOutput | None = None,
+) -> ValueFinderCandidateViewModel:
+    output = _build_value_finder_output(report, market_analysis=market_analysis)
+    property_input = report.property_input
+    current_value = get_current_value(report)
+    return ValueFinderCandidateViewModel(
+        property_id=report.property_id,
+        address=(property_input.address if property_input is not None else report.address).split(",")[0],
+        town=property_input.town if property_input is not None else "",
+        opportunity_signal=output.opportunity_signal,
+        pricing_posture=output.pricing_posture,
+        short_summary=output.short_summary,
+        ask_price_text=_fmt_currency(current_value.ask_price),
+        briarwood_value_text=_fmt_currency(current_value.briarwood_current_value),
+        dom_text=_fmt_number(property_input.days_on_market if property_input is not None else None, " days"),
+        value_gap_text=_fmt_pct(output.value_gap_pct) if output.value_gap_pct is not None else "Unavailable",
+    )
+
+
+def _market_view_model(analysis: MarketAnalysisOutput) -> MarketViewModel:
+    metrics = analysis.metrics
+    inventory_text = _fmt_number(metrics.get("inventory_count"))
+    inventory_subtitle = (
+        f"{metrics['months_of_supply']:.1f} mos supply"
+        if _as_float(metrics.get("months_of_supply")) is not None
+        else "Current only"
+    )
+    return MarketViewModel(
+        town_name=analysis.town,
+        market_signal=_market_signal_label(metrics),
+        trend=_market_trend_label(metrics),
         key_metrics={
+            "Inventory": f"{inventory_text} ({inventory_subtitle})",
+            "Median Price": _fmt_currency(metrics.get("median_price")),
             "DOM": _fmt_number(metrics.get("avg_dom"), "d"),
-            "$/SF": _fmt_currency(metrics.get("avg_price_per_sqft")),
+            "Price Trend": _fmt_pct(metrics.get("price_trend_pct"), scale_100=False),
         },
-        market_condition=_market_condition_label(metrics.get("buyer_vs_seller_score")),
+        signals=_market_signal_lines(analysis),
+        score=analysis.market_score,
         town_slug=analysis.town.lower().replace(" ", "-"),
     )
 
 
-def build_market_view_model(selected_town: str | None = None) -> MarketViewModel:
+def _market_analysis_cache_path(sort_mode: str) -> Path:
+    return VIEW_MODEL_CACHE_DIR / f"market_analyses_{sort_mode}.pkl"
+
+
+def _load_cached_market_analyses_from_disk(sort_mode: str) -> tuple[MarketAnalysisOutput, ...] | None:
+    cache_path = _market_analysis_cache_path(sort_mode)
+    if not cache_path.exists():
+        return None
+    try:
+        with cache_path.open("rb") as fh:
+            payload = pickle.load(fh)
+    except (OSError, ValueError, pickle.PickleError) as exc:
+        logger.warning("Unable to read market analysis cache %s: %s", cache_path, exc)
+        return None
+    created_at = payload.get("created_at") if isinstance(payload, dict) else None
+    analyses = payload.get("analyses") if isinstance(payload, dict) else None
+    if not isinstance(created_at, datetime) or analyses is None:
+        return None
+    if datetime.now(timezone.utc) - created_at > MARKET_ANALYSIS_CACHE_TTL:
+        return None
+    try:
+        return tuple(analyses)
+    except TypeError:
+        return None
+
+
+def _persist_market_analyses_to_disk(sort_mode: str, analyses: tuple[MarketAnalysisOutput, ...]) -> None:
+    cache_path = _market_analysis_cache_path(sort_mode)
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with cache_path.open("wb") as fh:
+            pickle.dump({"created_at": datetime.now(timezone.utc), "analyses": analyses}, fh)
+    except OSError as exc:
+        logger.warning("Unable to persist market analysis cache %s: %s", cache_path, exc)
+
+
+@lru_cache(maxsize=4)
+def _cached_market_analyses(sort_mode: str) -> tuple[MarketAnalysisOutput, ...]:
+    cached = _load_cached_market_analyses_from_disk(sort_mode)
+    if cached is not None:
+        return cached
     analyses = analyze_markets()
-    cards = [_market_card_view_model(item) for item in analyses]
+    if sort_mode == "weakest":
+        analyses = sorted(analyses, key=lambda item: (item.market_score, item.town))
+    elif sort_mode == "improving":
+        analyses = sorted(
+            analyses,
+            key=lambda item: (
+                0 if _market_trend_label(item.metrics) == "Improving" else 1 if _market_trend_label(item.metrics) == "Stable" else 2,
+                -(item.metrics.get("price_trend_pct") or 0.0),
+                -(item.market_score or 0.0),
+                item.town,
+            ),
+        )
+    else:
+        analyses = sorted(analyses, key=lambda item: (-item.market_score, item.town))
+    analyses_tuple = tuple(analyses)
+    _persist_market_analyses_to_disk(sort_mode, analyses_tuple)
+    return analyses_tuple
+
+
+def build_market_view_model(selected_town: str | None = None, *, sort_mode: str = "strongest") -> MarketsPageViewModel:
+    analyses = _cached_market_analyses(sort_mode)
+    cards = [_market_view_model(item) for item in analyses]
     normalized_selected = normalize_town_name(selected_town) if selected_town else None
     selected = next((item for item in analyses if item.town == normalized_selected), None)
     if selected is None and analyses:
         selected = analyses[0]
-    return MarketViewModel(
+    return MarketsPageViewModel(
         markets=cards,
         selected_town=selected.town if selected is not None else None,
         selected_market=selected,
+        sort_mode=sort_mode,
     )
 
 
@@ -1518,6 +1804,10 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     market_view_model = build_market_view_model(property_input.town if property_input else None)
     property_evidence_summary = build_property_evidence_summary_view_model(property_input)
     hybrid_value_view = build_hybrid_value_view_model(report)
+    value_finder_view = build_value_finder_view_model(
+        report,
+        market_analysis=market_view_model.selected_market,
+    )
 
     positives = list(town_county.score.demand_drivers[:2]) + list(scarcity.demand_drivers[:1])
     risks = list(rental_ease.risks[:2]) + list(town_county.score.demand_risks[:2])
@@ -1643,6 +1933,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             else None
         ),
     }
+    risk_bar = build_risk_bar(report)
 
     view = PropertyAnalysisView(
         property_id=report.property_id,
@@ -1682,6 +1973,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         risk_skew_label=risk_skew_label,
         positioning_summary=positioning_summary,
         report_card=initial_report_card,
+        risk_bar=risk_bar,
         top_positives=positives,
         top_risks=risks,
         metric_chips=_metric_chips(
@@ -1856,6 +2148,7 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         market_view=market_view_model,
         property_evidence_summary=property_evidence_summary,
         hybrid_value=hybrid_value_view,
+        value_finder=value_finder_view,
     )
     view.evidence.transparency_items = _assumption_transparency_items(
         property_input,
@@ -1929,7 +2222,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     view.top_input_impacts = _compute_top_input_impacts(metric_statuses, confidence_breakdown)
 
     view.report_card = _build_report_card(view)
-    view.decision = _build_decision_view(view)
+    view.decision = _build_decision_view(view, report)
+    view.recommendation_tier = view.decision.recommendation
+    view.recommendation_action = view.decision.primary_reason
 
     return view
 
@@ -2439,11 +2734,11 @@ def _category_display_label(category_key: str | None) -> str:
     return mapping.get(str(category_key or ""), "Overall underwriting")
 
 
-def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
-    recommendation = view.recommendation_tier or recommendation_label_from_score(float(view.final_score or 0.0))
+def _build_decision_view(view: PropertyAnalysisView, report: AnalysisReport) -> DecisionViewModel:
+    decision_output = build_decision(report)
+    recommendation = decision_output.recommendation
     final_score = float(view.final_score or 0.0)
     confidence_level = view.confidence_level or _confidence_level(view.overall_confidence)
-    confidence_score = max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100))
     best_fit = _strategy_fit_label(view.lens_scores)
     display_fit = "Value-Add / Renovation" if best_fit == "Redevelopment" else best_fit
 
@@ -2474,27 +2769,7 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
     total_assumptions = len(assumption_statuses)
     assumption_completeness = 1.0 if total_assumptions == 0 else confirmed_assumptions / total_assumptions
 
-    conviction_score = max(
-        0,
-        min(
-            int(
-                round(
-                    (final_score / 5.0) * 60.0
-                    + (view.overall_confidence or 0.0) * 30.0
-                    + assumption_completeness * 10.0
-                    + (
-                        min(
-                            8.0,
-                            ((_parse_confidence_text(dominant_value_driver.confidence_text) or 0.0) * 8.0),
-                        )
-                        if dominant_value_driver is not None
-                        else 0.0
-                    )
-                )
-            ),
-            100,
-        ),
-    )
+    conviction_score = max(0, min(int(round(decision_output.conviction * 100)), 100))
 
     positive_drivers = [
         DecisionDriverItem(metric="reason", direction="+", strength="moderate", summary=item)
@@ -2523,39 +2798,10 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
             dependency_lines.append(item)
     dependencies = dependency_lines[:3]
 
-    if missing_assumptions:
-        required_belief = " / ".join(
-            f"{item.label.lower()} needs to be confirmed"
-            for item in missing_assumptions[:2]
-        )
-    elif estimated_assumptions:
-        required_belief = " / ".join(
-            f"{item.label.lower()} needs to hold close to the current underwriting"
-            for item in estimated_assumptions[:2]
-        )
-    elif view.what_changes_call:
-        required_belief = " / ".join(view.what_changes_call[:2])
-    else:
-        required_belief = "Core underwriting assumptions need to hold close to the current base case."
-
-    if recommendation_rank(recommendation) >= recommendation_rank("Neutral"):
-        thesis = (
-            f"{recommendation} based on Briarwood's current score of {final_score:.2f}/5. "
-            f"Strongest support comes from {strongest_dimension.lower()}."
-        )
-    else:
-        thesis = (
-            f"{recommendation} because Briarwood's current score is {final_score:.2f}/5 "
-            f"and the thesis is constrained most by {weakest_dimension.lower()}."
-        )
-    if dominant_value_driver is not None:
-        thesis = f"{thesis} Dominant value driver: {dominant_value_driver.label.lower()} ({dominant_value_driver.impact_text})."
-
-    decisive_driver = (
-        dominant_value_driver.label
-        if dominant_value_driver is not None
-        else strongest_dimension if recommendation_rank(recommendation) >= recommendation_rank("Neutral") else weakest_dimension
-    )
+    required_beliefs = list(decision_output.required_beliefs)
+    required_belief = required_beliefs[0] if required_beliefs else "Core underwriting assumptions need to hold close to the current base case."
+    thesis = f"{decision_output.primary_reason} {decision_output.secondary_reason}".strip()
+    decisive_driver = decision_output.primary_reason
 
     fit_context = ""
     if display_fit == "Value-Add / Renovation" and view.bull_case is not None:
@@ -2563,13 +2809,11 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
 
     risk_statement = f"Risk stance: {view.risk_skew_label}. Main risk: {primary_risk}."
     summary_view = (
-        f"Recommendation: {recommendation}. "
-        f"Confidence: {confidence_level}. "
-        f"Strongest dimension: {strongest_dimension}."
+        f"{recommendation}. {decision_output.primary_reason} {decision_output.secondary_reason}".strip()
     )
 
     disqualifiers: list[str] = []
-    if recommendation == "Avoid":
+    if recommendation == "AVOID":
         disqualifiers.append(primary_risk)
     if confidence_level == "Low":
         disqualifiers.append("confidence is still too low for a high-conviction call")
@@ -2579,9 +2823,13 @@ def _build_decision_view(view: PropertyAnalysisView) -> DecisionViewModel:
     return DecisionViewModel(
         recommendation=recommendation,
         conviction_score=conviction_score,
+        conviction=decision_output.conviction,
         best_fit=display_fit,
         confidence_level=confidence_level,
         thesis=thesis,
+        primary_reason=decision_output.primary_reason,
+        secondary_reason=decision_output.secondary_reason,
+        required_beliefs=required_beliefs,
         decisive_driver=decisive_driver,
         decision_drivers={
             "positive": positive_drivers,

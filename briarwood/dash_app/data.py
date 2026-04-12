@@ -11,6 +11,7 @@ from typing import Callable
 
 logger = logging.getLogger(__name__)
 
+from briarwood.data_quality.normalizers import infer_county, normalize_state, normalize_town
 from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
 from briarwood.geocoder import geocode_address
@@ -563,13 +564,21 @@ def _manual_payload(*, property_id: str, subject: dict[str, object], comps: list
     condition_confirmed = True if condition_profile not in (None, "") else None
     capex_confirmed = True if capex_lane not in (None, "") else None
 
+    normalized_town = normalize_town(subject.get("town")) or str(subject.get("town") or "Unknown")
+    normalized_state = normalize_state(subject.get("state")) or str(subject.get("state") or "NJ")
+    normalized_county = subject.get("county") or infer_county(
+        town=normalized_town,
+        state=normalized_state,
+        zip_code=subject.get("address"),
+    )
+
     return {
         "property_id": property_id,
         "facts": {
             "address": str(subject.get("address") or "Unknown Address"),
-            "town": str(subject.get("town") or "Unknown"),
-            "state": str(subject.get("state") or "NJ"),
-            "county": subject.get("county") or "Monmouth",
+            "town": normalized_town,
+            "state": normalized_state,
+            "county": normalized_county,
             "latitude": _optional_float(subject.get("latitude")),
             "longitude": _optional_float(subject.get("longitude")),
             "beds": _optional_int(subject.get("beds")),
@@ -654,6 +663,20 @@ def _maybe_geocode_subject(subject: dict[str, object]) -> None:
         return
     if os.environ.get("BRIARWOOD_DISABLE_MANUAL_GEOCODING", "").strip().lower() in {"1", "true", "yes"}:
         return
+    normalized_town = normalize_town(subject.get("town")) or subject.get("town")
+    normalized_state = normalize_state(subject.get("state")) or subject.get("state")
+    if normalized_town:
+        subject["town"] = normalized_town
+    if normalized_state:
+        subject["state"] = normalized_state
+    if subject.get("county") in (None, ""):
+        inferred_county = infer_county(
+            town=subject.get("town"),
+            state=subject.get("state"),
+            zip_code=subject.get("address"),
+        )
+        if inferred_county:
+            subject["county"] = inferred_county
     parts = [subject.get("address"), subject.get("town"), subject.get("state")]
     full_address = ", ".join(str(part).strip() for part in parts if part)
     if not full_address:

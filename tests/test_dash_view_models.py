@@ -60,11 +60,12 @@ class DashViewModelTests(unittest.TestCase):
         )
         self.assertIsNotNone(view.decision)
         assert view.decision is not None
-        self.assertIn(view.decision.recommendation, {"Buy", "Neutral", "Avoid"})
+        self.assertIn(view.decision.recommendation, {"BUY", "LEAN BUY", "NEUTRAL", "LEAN PASS", "AVOID"})
         self.assertEqual(view.decision.recommendation, view.recommendation_tier)
         self.assertIn(view.decision.confidence_level, {"High", "Medium", "Low"})
         self.assertGreaterEqual(view.decision.conviction_score, 0)
         self.assertLessEqual(view.decision.conviction_score, 100)
+        self.assertEqual([item.name for item in view.risk_bar], ["Price", "Carry", "Liquidity", "Execution", "Confidence"])
         self.assertIs(view.valuation, view.value)
         self.assertTrue(view.value.market_anchors)
         self.assertTrue(view.value.value_drivers)
@@ -86,7 +87,7 @@ class DashViewModelTests(unittest.TestCase):
             self.assertTrue(view.risk_location.location_anchor_summary)
         self.assertIsNotNone(view.positioning_summary)
         self.assertTrue(view.decision.risk_statement.startswith("Risk stance:"))
-        self.assertTrue(view.decision.summary_view.startswith("Recommendation:"))
+        self.assertTrue(view.decision.summary_view)
         self.assertIsNotNone(view.report_card)
         assert view.report_card is not None
         self.assertEqual(
@@ -106,6 +107,9 @@ class DashViewModelTests(unittest.TestCase):
         assert view.market_view is not None
         self.assertEqual(view.market_view.selected_town, "Belmar")
         self.assertEqual(view.markets[0].score, view.market_view.markets[0].score)
+        self.assertIsNotNone(view.value_finder)
+        assert view.value_finder is not None
+        self.assertLessEqual(len(view.value_finder.bullets), 4)
 
     def test_market_view_model_exposes_ranked_market_cards(self) -> None:
         market_view = build_market_view_model("Belmar")
@@ -114,9 +118,14 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIsNotNone(market_view.selected_market)
         assert market_view.selected_market is not None
         self.assertEqual(market_view.selected_market.town, "Belmar")
+        self.assertIn("Inventory", market_view.markets[0].key_metrics)
+        self.assertIn("Median Price", market_view.markets[0].key_metrics)
         self.assertIn("DOM", market_view.markets[0].key_metrics)
-        self.assertIn("$/SF", market_view.markets[0].key_metrics)
-        scores = [item.score for item in market_view.markets]
+        self.assertIn("Price Trend", market_view.markets[0].key_metrics)
+        self.assertIn(market_view.markets[0].market_signal, {"Tight Market", "Balanced Market", "Soft Market"})
+        self.assertIn(market_view.markets[0].trend, {"Improving", "Stable", "Weakening"})
+        self.assertTrue(market_view.markets[0].signals)
+        scores = [item.score for item in market_view.markets if item.score is not None]
         self.assertEqual(scores, sorted(scores, reverse=True))
 
     def test_property_analysis_view_exposes_hybrid_value_summary(self) -> None:
@@ -157,7 +166,7 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIsNotNone(view.hybrid_value)
         assert view.hybrid_value is not None
         self.assertTrue(view.hybrid_value.is_hybrid)
-        self.assertIn("front-house", view.hybrid_value.narrative.lower())
+        self.assertIn("hybrid valuation framework", view.hybrid_value.narrative.lower())
         self.assertNotEqual(view.hybrid_value.total_hybrid_value, "Unavailable")
         self.assertIn("hybrid_indicated_value", view.compare_metrics)
 
@@ -246,7 +255,6 @@ class DashViewModelTests(unittest.TestCase):
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
         text = _flatten_text(body)
-        # Summary content remains visible in the unified Property Analysis view.
         self.assertIn("/ 5", text)
         self.assertIn("Score Report Card", text)
         self.assertIn("ASSUMPTION SUMMARY", text)
@@ -259,11 +267,11 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("Town Pulse", text)
         self.assertIn("Scenario View", text)
         self.assertIn("Risk & Constraints", text)
-        # Deep-dive content still present
         self.assertIn("Is the Price Right?", text)
         self.assertIn("What Does It Cost to Own?", text)
         self.assertIn("What Could Break the Thesis?", text)
         self.assertIn("Current Competition", text)
+        self.assertIn("Value Finder", text)
         self.assertIn("Confidence Drivers", text)
         self.assertIn("Metric Basis & Gaps", text)
 

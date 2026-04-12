@@ -2,6 +2,10 @@
 
 from pathlib import Path
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional local dependency
+    load_dotenv = None
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+if load_dotenv is not None:
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")

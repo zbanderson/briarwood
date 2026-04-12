@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Protocol
 
+from briarwood.data_quality.normalizers import infer_county, normalize_state, normalize_town
 from briarwood.listing_intake.schemas import NormalizedPropertyData
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.schemas import (
@@ -28,11 +29,13 @@ class CanonicalInputAdapter(Protocol):
 
 class PublicRecordAdapter:
     def build(self, payload: dict[str, object], *, property_id: str = "public-record") -> CanonicalPropertyData:
+        normalized_town = normalize_town(payload.get("town")) or str(payload.get("town") or "Unknown")
+        normalized_state = normalize_state(payload.get("state")) or str(payload.get("state") or "Unknown")
         facts = PropertyFacts(
             address=str(payload.get("address") or "Unknown Address"),
-            town=str(payload.get("town") or "Unknown"),
-            state=str(payload.get("state") or "Unknown"),
-            county=_optional_str(payload.get("county")),
+            town=normalized_town,
+            state=normalized_state,
+            county=_optional_str(payload.get("county")) or infer_county(town=normalized_town, state=normalized_state),
             latitude=_optional_float(payload.get("latitude")),
             longitude=_optional_float(payload.get("longitude")),
             beds=_optional_int(payload.get("beds")),

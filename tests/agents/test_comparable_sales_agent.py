@@ -6,6 +6,15 @@ from briarwood.agents.market_history.schemas import HistoricalValuePoint
 
 
 class ComparableSalesAgentTests(unittest.TestCase):
+    def test_provider_matches_town_alias_variants(self) -> None:
+        provider = FileBackedComparableSalesProvider(Path("data/comps/sales_comps.json"))
+
+        canonical_rows = provider.get_sales(town="Avon-by-the-Sea", state="NJ")
+        spaced_rows = provider.get_sales(town="Avon By The Sea", state="NJ")
+
+        self.assertTrue(canonical_rows)
+        self.assertEqual(len(canonical_rows), len(spaced_rows))
+
     def test_agent_returns_ranked_comps_with_fit_reasons(self) -> None:
         agent = ComparableSalesAgent(
             FileBackedComparableSalesProvider(

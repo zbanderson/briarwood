@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
+from briarwood.data_quality.normalizers import infer_county, normalize_state, normalize_town
 from briarwood.inputs.adapters import ListingTextAdapter, PublicRecordAdapter, normalized_listing_to_canonical
 from briarwood.data_quality.arbitration import apply_evidence_profile
 from briarwood.inputs.market_location_adapter import MarketLocationAdapter
@@ -259,12 +260,19 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
     market_payload = data.get("market_signals") or {}
     assumptions_payload = data.get("user_assumptions") or {}
     metadata_payload = data.get("source_metadata") or {}
+    normalized_town = normalize_town(facts_payload.get("town") or data.get("town")) or str(
+        facts_payload.get("town") or data.get("town") or "Unknown"
+    )
+    normalized_state = normalize_state(facts_payload.get("state") or data.get("state")) or str(
+        facts_payload.get("state") or data.get("state") or "Unknown"
+    )
 
     facts = PropertyFacts(
         address=str(facts_payload.get("address") or data.get("address") or "Unknown Address"),
-        town=str(facts_payload.get("town") or data.get("town") or "Unknown"),
-        state=str(facts_payload.get("state") or data.get("state") or "Unknown"),
-        county=_optional_str(facts_payload.get("county", data.get("county"))),
+        town=normalized_town,
+        state=normalized_state,
+        county=_optional_str(facts_payload.get("county", data.get("county")))
+        or infer_county(town=normalized_town, state=normalized_state, zip_code=facts_payload.get("zip_code")),
         zip_code=_optional_str(facts_payload.get("zip_code")),
         latitude=_optional_float(facts_payload.get("latitude", data.get("latitude"))),
         longitude=_optional_float(facts_payload.get("longitude", data.get("longitude"))),

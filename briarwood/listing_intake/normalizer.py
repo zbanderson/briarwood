@@ -2,21 +2,12 @@ from __future__ import annotations
 
 import re
 
+from briarwood.data_quality.normalizers import infer_county, normalize_state, normalize_town
 from briarwood.listing_intake.schemas import (
     ListingIntakeResult,
     ListingRawData,
     NormalizedPropertyData,
 )
-
-_COUNTY_BY_ZIP: dict[str, str] = {
-    "02445": "Norfolk",
-    "07719": "Monmouth",
-}
-
-_COUNTY_BY_TOWN_STATE: dict[tuple[str, str], str] = {
-    ("brookline", "MA"): "Norfolk",
-    ("belmar", "NJ"): "Monmouth",
-}
 
 
 def normalize_listing(raw_data: ListingRawData, warnings: list[str] | None = None) -> ListingIntakeResult:
@@ -97,12 +88,10 @@ def _parse_location(address: str | None) -> tuple[str | None, str | None, str | 
     match = re.search(r",\s*([^,]+),\s*([A-Z]{2})(?:\s+(\d{5}))?$", address)
     if not match:
         return None, None, None
-    return match.group(1).strip(), match.group(2).strip(), match.group(3)
+    town = normalize_town(match.group(1).strip())
+    state = normalize_state(match.group(2).strip())
+    return town, state, match.group(3)
 
 
 def _infer_county(*, town: str | None, state: str | None, zip_code: str | None) -> str | None:
-    if zip_code and zip_code in _COUNTY_BY_ZIP:
-        return _COUNTY_BY_ZIP[zip_code]
-    if town and state:
-        return _COUNTY_BY_TOWN_STATE.get((town.strip().lower(), state.strip().upper()))
-    return None
+    return infer_county(town=town, state=state, zip_code=zip_code)

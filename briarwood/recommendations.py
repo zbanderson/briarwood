@@ -26,7 +26,7 @@ def normalize_recommendation_label(label: str | None) -> str:
         return "Buy"
     if normalized in {"neutral", "hold", "hold / dig deeper", "dig deeper", "caution"}:
         return "Neutral"
-    if normalized in {"avoid", "lean avoid", "lean away", "pass"}:
+    if normalized in {"avoid", "lean avoid", "lean away", "pass", "lean pass"}:
         return "Avoid"
     return "Neutral"
 

@@ -53,6 +53,8 @@ class _TownAggregate:
     str_signal_count: int
     rent_estimate: float | None
     signals: list[TownSignal]
+    sold_dom_series: list[tuple[date, float]]
+    sold_price_series: list[tuple[date, float]]
 
 
 class MarketAnalyzer:
@@ -124,6 +126,8 @@ class MarketAnalyzer:
                     str_signal_count=0,
                     rent_estimate=rent_context.get((town, state)),
                     signals=signals,
+                    sold_dom_series=[],
+                    sold_price_series=[],
                 )
             return towns[town]
 
@@ -159,6 +163,9 @@ class MarketAnalyzer:
             item.total_listing_count += 1
             if getattr(row, "sale_price", None) is not None:
                 item.sold_prices.append(float(row.sale_price))
+                sale_price_value = float(row.sale_price)
+            else:
+                sale_price_value = None
             ppsf = _price_per_sqft(getattr(row, "sale_price", None), getattr(row, "sqft", None))
             if ppsf is not None:
                 item.ppsf_values.append(ppsf)
@@ -167,6 +174,10 @@ class MarketAnalyzer:
             sale_date = _parse_date(getattr(row, "sale_date", None))
             if sale_date is not None:
                 item.sold_dates.append(sale_date)
+                if sale_price_value is not None:
+                    item.sold_price_series.append((sale_date, sale_price_value))
+                if getattr(row, "days_on_market", None) is not None:
+                    item.sold_dom_series.append((sale_date, float(row.days_on_market)))
             if _is_multi_unit(getattr(row, "property_type", None)):
                 item.multi_unit_count += 1
             if _has_str_signal(getattr(row, "source_notes", None), getattr(row, "micro_location_notes", None), getattr(row, "location_tags", None)):
@@ -197,6 +208,8 @@ class MarketAnalyzer:
             if sold_per_month is not None and inventory_count > 0
             else None
         )
+        price_trend_pct = _series_trend_pct(aggregate.sold_price_series)
+        dom_trend_pct = _series_trend_pct(aggregate.sold_dom_series)
         months_of_supply = (
             inventory_count / sold_per_month
             if sold_per_month not in (None, 0)
@@ -255,6 +268,8 @@ class MarketAnalyzer:
             "price_cuts_pct": _round_or_none(price_cuts_pct, 3),
             "sell_through_rate": _round_or_none(sell_through_rate, 3),
             "months_of_supply": _round_or_none(months_of_supply, 2),
+            "price_trend_pct": _round_or_none(price_trend_pct, 3),
+            "dom_trend_pct": _round_or_none(dom_trend_pct, 3),
             "buyer_vs_seller_score": _round_or_none(buyer_vs_seller_score, 1),
             "price_to_rent_ratio": _round_or_none(price_to_rent_ratio, 1),
             "estimated_monthly_rent": _round_or_none(aggregate.rent_estimate, 0),
@@ -502,6 +517,22 @@ def _relative_discount(value: float | None, baseline: float | None) -> float | N
     if value is None or baseline in (None, 0):
         return None
     return 1.0 - (float(value) / float(baseline))
+
+
+def _series_trend_pct(series: list[tuple[date, float]]) -> float | None:
+    if len(series) < 4:
+        return None
+    ordered = sorted(series, key=lambda item: item[0])
+    midpoint = max(len(ordered) // 2, 1)
+    earlier = [value for _, value in ordered[:midpoint]]
+    later = [value for _, value in ordered[midpoint:]]
+    if not earlier or not later:
+        return None
+    earlier_median = _median_or_none(earlier)
+    later_median = _median_or_none(later)
+    if earlier_median in (None, 0) or later_median is None:
+        return None
+    return (float(later_median) - float(earlier_median)) / float(earlier_median)
 
 
 def _is_multi_unit(value: object) -> bool:

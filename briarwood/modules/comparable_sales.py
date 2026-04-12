@@ -5,12 +5,14 @@ from pathlib import Path
 from math import sqrt
 
 from briarwood.agents.comparable_sales import (
+    ComparableCompAnalysis,
     ComparableSalesAgent,
     ComparableValueRange,
     ComparableSalesOutput,
     ComparableSalesRequest,
     FileBackedComparableSalesProvider,
 )
+from briarwood.comp_intelligence import build_comp_analysis
 from briarwood.agents.rent_context.listing_parser import parse_units_from_listing
 from briarwood.agents.rent_context.unit_rent_estimator import (
     estimate_units_market_rent,
@@ -154,7 +156,7 @@ def _enrich_comp_intelligence(
         2,
     )
 
-    return output.model_copy(
+    enriched_output = output.model_copy(
         update={
             "comps_used": scored_comps,
             "direct_value_range": direct_value_range,
@@ -163,6 +165,13 @@ def _enrich_comp_intelligence(
             "lot_adjustment_range": lot_adjustment_range,
             "blended_value_range": blended_value_range,
             "comp_confidence_score": comp_confidence_score,
+        }
+    )
+    return enriched_output.model_copy(
+        update={
+            "comp_analysis": ComparableCompAnalysis.model_validate(
+                build_comp_analysis(output=enriched_output, property_input=property_input)
+            ),
         }
     )
 

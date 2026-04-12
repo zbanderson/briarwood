@@ -3,10 +3,11 @@
   "address": "1302 L Street",
   "label": "1302 L Street",
   "ask_price": 850000.0,
-  "bcv": 986415.59,
+  "bcv": 1002621.74,
   "pricing_view": "appears undervalued",
-  "confidence": 0.71,
-  "comp_trust": "Seed / Review Only",
+  "confidence": 0.69,
+  "comp_trust": "Public Record Matched",
   "missing_input_count": 5,
-  "timestamp": "2026-04-10T10:46:41"
+  "is_hybrid_valuation": true,
+  "timestamp": "2026-04-12T15:49:30"
 }
