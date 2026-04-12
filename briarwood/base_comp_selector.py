@@ -117,7 +117,7 @@ def build_base_comp_selection(
     selected_comps = [item["comp"] for item in selected]
     base_shell_value = _weighted_value(selected)
 
-    support_quality = _support_quality(selected, used_tier_names)
+    support_quality = _support_quality(selected, used_tier_names, request)
     median_distance = _median_distance(selected)
 
     selection = BaseCompSelection(
@@ -140,7 +140,7 @@ def build_base_comp_selection(
             same_town_count=_count_same_town(selected, request.town),
             median_distance=median_distance,
             support_quality=support_quality,
-            notes=_support_notes(selected, support_quality, used_tier_names),
+            notes=_support_notes(selected, support_quality, used_tier_names, request),
         ),
     )
 
@@ -227,6 +227,9 @@ def _evaluate_comp(*, request: ComparableSalesRequest, comp: AdjustedComparable)
         + _WEIGHTS["structure"] * structure_score
         + _WEIGHTS["data_quality"] * data_quality_score
     )
+    if request.subject_is_nonstandard:
+        score -= 0.05
+        mismatches.append("split-structure subject; clean single-structure comp may overstate shell demand")
     score = max(0.0, min(score, 1.0))
 
     return {
@@ -266,7 +269,7 @@ def _assign_tier(item: dict[str, object]) -> tuple[str, int]:
 # Support quality and notes
 # ---------------------------------------------------------------------------
 
-def _support_quality(selected: list[dict[str, object]], used_tier_names: list[str]) -> str:
+def _support_quality(selected: list[dict[str, object]], used_tier_names: list[str], request: ComparableSalesRequest) -> str:
     if not selected:
         return "thin"
     scores = [float(item["score"]) for item in selected]
@@ -274,17 +277,26 @@ def _support_quality(selected: list[dict[str, object]], used_tier_names: list[st
     med_distance = _median_distance(selected)
     has_extended = any(str(item["tier"]) == "extended_support" for item in selected)
 
+    quality = "thin"
     if len(selected) >= 4 and med_score >= 0.72 and not has_extended and (med_distance is None or med_distance <= 1.5):
-        return "strong"
-    if len(selected) >= 3 and med_score >= 0.58:
-        return "moderate"
-    return "thin"
+        quality = "strong"
+    elif len(selected) >= 3 and med_score >= 0.58:
+        quality = "moderate"
+
+    if request.subject_is_nonstandard:
+        tier_names = {str(item["tier"]) for item in selected}
+        if quality == "strong" and ("loose_local" in tier_names or "broad_local" in tier_names):
+            quality = "moderate"
+        elif quality == "moderate" and med_score < 0.68:
+            quality = "thin"
+    return quality
 
 
 def _support_notes(
     selected: list[dict[str, object]],
     support_quality: str,
     used_tier_names: list[str],
+    request: ComparableSalesRequest,
 ) -> list[str]:
     if not selected:
         return ["No direct local comps cleared the base-shell selector."]
@@ -304,6 +316,8 @@ def _support_notes(
         notes.append("Support extends beyond the tightest tier but still stays within close local tolerances.")
     if support_quality == "thin":
         notes.append("Direct shell support is thin; downstream layers should not overstate precision.")
+    if request.subject_is_nonstandard:
+        notes.append("Because the subject is a split-structure / accessory-unit property, clean same-town comps can overstate shell demand.")
     return notes
 
 

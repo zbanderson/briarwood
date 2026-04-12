@@ -93,12 +93,20 @@ class ComparableCompAnalysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     base_shell_value: float | None = None
+    cottage_adu_value: float | None = None
     feature_adjustments: dict[str, FeatureAdjustment] = Field(default_factory=dict)
     location_adjustments: dict[str, LocationAdjustment] = Field(default_factory=dict)
     town_transfer_adjustments: dict[str, TownTransferAdjustment] = Field(default_factory=dict)
+    town_context_adjustment: float | None = None
+    market_friction_discount: float | None = None
+    market_feedback_adjustment: float | None = None
+    adjusted_fair_value: float | None = None
     adjusted_value: float | None = None
     support_summary: SupportSummary = Field(default_factory=SupportSummary)
     confidence: float = Field(default=0.0, ge=0, le=1)
+    market_feedback: dict[str, object] | None = None
+    top_drivers: list[str] = Field(default_factory=list)
+    watch_items: list[str] = Field(default_factory=list)
     feature_engine: dict[str, object] | None = None
     location_engine: dict[str, object] | None = None
     town_transfer_engine: dict[str, object] | None = None
@@ -183,6 +191,11 @@ class ComparableSalesRequest(BaseModel):
     market_history_points: list[dict[str, object]] = Field(default_factory=list)
     manual_sales: list[dict[str, object]] = Field(default_factory=list)
     manual_comp_only: bool = False
+    has_accessory_unit: bool = False
+    adu_type: str | None = None
+    days_on_market: int | None = Field(default=None, ge=0)
+    listing_price: float | None = Field(default=None, gt=0)
+    subject_is_nonstandard: bool = False
 
     # Multi-unit decomposition fields — set by ComparableSalesModule when
     # the subject has additional rental units (ADU, back house, etc.) so

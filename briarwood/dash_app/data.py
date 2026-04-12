@@ -498,13 +498,19 @@ def _saved_property_directory_presets() -> list[PropertyPreset]:
 
 
 def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
-    """Load from cached pickle if available, otherwise re-run analysis."""
+    """Load from cached pickle if fresh, otherwise re-run analysis.
+
+    The pickle is considered stale when any Python source file under the
+    ``briarwood/`` package tree is newer than the cached pickle.  This
+    ensures that model changes (new scoring logic, updated modules, etc.)
+    automatically invalidate old results without a manual cache-clear step.
+    """
     import pickle
     property_dir = _saved_property_path(property_id)
     pkl_path = property_dir / "report.pkl"
 
-    # Fast path: load cached pickle
-    if pkl_path.exists():
+    # Fast path: load cached pickle only if it's fresher than the codebase
+    if pkl_path.exists() and not _pickle_is_stale(pkl_path):
         try:
             report = pickle.loads(pkl_path.read_bytes())
             if isinstance(report, AnalysisReport):
@@ -520,6 +526,19 @@ def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
     report = run_report(inputs_path)
     _write_saved_summary(property_dir, report)
     return report
+
+
+def _pickle_is_stale(pkl_path: Path) -> bool:
+    """Return True when any .py file under briarwood/ is newer than the pickle."""
+    pkl_mtime = pkl_path.stat().st_mtime
+    source_root = Path(__file__).resolve().parents[1]  # briarwood/
+    for py_file in source_root.rglob("*.py"):
+        try:
+            if py_file.stat().st_mtime > pkl_mtime:
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def _saved_property_label_from_inputs(path: Path, property_id: str) -> str:

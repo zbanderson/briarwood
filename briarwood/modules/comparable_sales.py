@@ -21,6 +21,7 @@ from briarwood.agents.rent_context.unit_rent_estimator import (
 from briarwood.evidence import build_section_evidence
 from briarwood.modules.market_value_history import MarketValueHistoryModule, get_market_value_history_payload
 from briarwood.schemas import ModuleResult, PropertyInput, UnitDetail
+from briarwood.valuation_constraints import is_nonstandard_product
 
 # Default cap rate for income-capitalizing additional rental units in
 # NJ coastal markets.  Conservative — reflects small-unit / ADU risk.
@@ -77,6 +78,11 @@ class ComparableSalesModule:
                 market_history_points=[point.model_dump() for point in history.points],
                 manual_sales=list(property_input.manual_comp_inputs),
                 manual_comp_only=False,
+                has_accessory_unit=bool(property_input.has_back_house) or bool(property_input.adu_type),
+                adu_type=property_input.adu_type,
+                days_on_market=property_input.days_on_market,
+                listing_price=property_input.purchase_price,
+                subject_is_nonstandard=is_nonstandard_product(property_input),
             )
 
         output = self.agent.run(request)
@@ -406,6 +412,7 @@ class _HybridContext:
     additional_unit_count: int
     additional_unit_annual_income: float
     cap_rate: float
+    accessory_type: str | None = None
     units: list[UnitDetail] = field(default_factory=list)
 
 
@@ -482,7 +489,10 @@ def _detect_hybrid_valuation(pi: PropertyInput) -> _HybridContext | None:
     # Primary dwelling decomposition.
     primary_sqft = pi.sqft
     if pi.adu_sqft and pi.sqft:
-        primary_sqft = max(pi.sqft, 400)
+        if pi.adu_sqft < pi.sqft:
+            primary_sqft = max(int(pi.sqft - pi.adu_sqft), 400)
+        else:
+            primary_sqft = max(int(pi.sqft), 400)
 
     # Use actual unit beds/baths when known; fall back to heuristic.
     known_unit_beds = sum(u.beds for u in units if u.beds is not None)
@@ -502,6 +512,7 @@ def _detect_hybrid_valuation(pi: PropertyInput) -> _HybridContext | None:
         additional_unit_count=additional_unit_count,
         additional_unit_annual_income=annual_income,
         cap_rate=_DEFAULT_ADU_CAP_RATE,
+        accessory_type=pi.adu_type or ("rear_house" if pi.has_back_house else None),
         units=units,
     )
 
@@ -533,6 +544,11 @@ def _build_hybrid_request(
         market_history_points=[point.model_dump() for point in history.points],
         manual_sales=list(pi.manual_comp_inputs),
         manual_comp_only=False,
+        has_accessory_unit=bool(pi.has_back_house) or bool(pi.adu_type),
+        adu_type=pi.adu_type,
+        days_on_market=pi.days_on_market,
+        listing_price=pi.purchase_price,
+        subject_is_nonstandard=is_nonstandard_product(pi),
         is_hybrid_valuation=True,
         primary_dwelling_beds=hybrid.primary_beds,
         primary_dwelling_baths=hybrid.primary_baths,
@@ -553,9 +569,16 @@ def _apply_hybrid_income_premium(
     if primary_value is None:
         return output
 
-    # NOI = gross rent × (1 - expense ratio)
-    noi = hybrid.additional_unit_annual_income * (1 - _ADU_EXPENSE_RATIO)
-    income_value = noi / hybrid.cap_rate
+    expense_ratio = _ADU_EXPENSE_RATIO + (
+        0.05 if hybrid.accessory_type in {"detached_cottage", "rear_house", "rear_cottage"} else 0.0
+    )
+    cap_rate = hybrid.cap_rate + (
+        0.01 if hybrid.accessory_type in {"detached_cottage", "rear_house", "rear_cottage"} else 0.0
+    )
+    noi = hybrid.additional_unit_annual_income * (1 - expense_ratio)
+    income_value = noi / cap_rate
+    if hybrid.accessory_type in {"detached_cottage", "rear_house", "rear_cottage"}:
+        income_value = min(income_value, primary_value * 0.20)
     hybrid_value = primary_value + income_value
 
     unit_label = "unit" if hybrid.additional_unit_count == 1 else "units"
@@ -583,7 +606,7 @@ def _apply_hybrid_income_premium(
         f"+ {hybrid.additional_unit_count} additional {unit_label} valued at "
         f"${income_value:,.0f} via income capitalization "
         f"(${hybrid.additional_unit_annual_income:,.0f}/yr gross rent × "
-        f"{1 - _ADU_EXPENSE_RATIO:.0%} net × {hybrid.cap_rate:.1%} cap rate). "
+        f"{1 - expense_ratio:.0%} net × {cap_rate:.1%} cap rate). "
         f"Unit breakdown: {unit_detail_str}."
     )
 
@@ -599,7 +622,7 @@ def _apply_hybrid_income_premium(
     assumptions = list(output.assumptions)
     assumptions.append(
         f"Additional rental units are valued via income capitalization at a "
-        f"{hybrid.cap_rate:.1%} cap rate with {_ADU_EXPENSE_RATIO:.0%} expense ratio, "
+        f"{cap_rate:.1%} cap rate with {expense_ratio:.0%} expense ratio, "
         f"reflecting NJ coastal ADU/cottage rental risk."
     )
     assumptions.append(
@@ -615,7 +638,7 @@ def _apply_hybrid_income_premium(
             "additional_unit_income_value": round(income_value, 2),
             "additional_unit_count": hybrid.additional_unit_count,
             "additional_unit_annual_income": round(hybrid.additional_unit_annual_income, 2),
-            "additional_unit_cap_rate": hybrid.cap_rate,
+            "additional_unit_cap_rate": cap_rate,
             "hybrid_valuation_note": note,
             "assumptions": assumptions,
             "summary": hybrid_summary,

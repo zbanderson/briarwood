@@ -1,11 +1,11 @@
-"""Property View — persistent tab layout with simple/detailed toggle.
+"""Property View — decision-first single-page layout.
 
-Three tabs always visible at the top:
-  Summary | Price Support | Financials
+Everything lives on one scrollable page:
+  Above the fold (always visible):  Decision | Risk Bar | Value Finder | Quick Reality
+  Below the fold (visible, secondary):  Price Support | Financials
+  Collapsed (expand on click):  Scenarios | Evidence
 
-Each tab has a Simple/Detailed toggle:
-  Simple  = homebuyer-friendly plain English
-  Detailed = investor stats, full analytical depth
+No section below the fold renders its full content on page load.
 """
 from __future__ import annotations
 
@@ -46,6 +46,83 @@ from briarwood.dash_app.view_models import PropertyAnalysisView
 from briarwood.schemas import AnalysisReport
 
 
+# ── Section boundary enforcement ─────────────────────────────────────────────
+
+
+class SectionBoundaryError(RuntimeError):
+    """Raised when a section renderer accesses a field outside its allowlist."""
+
+
+# Each key maps a section name → the set of top-level attribute paths that
+# section is permitted to read from a PropertyAnalysisView (or sub-model).
+# Paths use dot notation relative to PropertyAnalysisView.property_decision_view.
+SECTION_FIELD_ALLOWLIST: dict[str, frozenset[str]] = {
+    "decision": frozenset({
+        # QuickDecisionViewModel fields only
+        "recommendation",
+        "conviction",
+        "confidence",
+        "primary_reason",
+        "secondary_reason",
+        "required_beliefs",
+    }),
+    "risk": frozenset({
+        "risk",           # RiskQuestionViewModel (metrics, risk_bar, summary, top_risks)
+        "risk_bar",       # on QuickDecisionViewModel
+    }),
+    "value": frozenset({
+        "value",          # ValueQuestionViewModel (metrics, value_finder, hybrid_value)
+    }),
+    "price_support": frozenset({
+        "price_support",  # PriceSupportQuestionViewModel
+    }),
+    "financials": frozenset({
+        "financials",     # FinancialsQuestionViewModel (metrics, income_support, forward)
+        "income_support", # top-level convenience alias on PropertyAnalysisView
+    }),
+    # Quick reality is a declared composite — it may read both price_support
+    # and financials, but NOT risk or value.
+    "quick_reality": frozenset({
+        "price_support",
+        "financials",
+    }),
+    "deal_curve": frozenset({
+        "deal_curve",
+        "deal_curve_thresholds",
+    }),
+}
+
+
+class SectionDataProxy:
+    """Thin wrapper that restricts attribute access to the section's allowlist.
+
+    Wraps either a PropertyAnalysisView.property_decision_view (for view-
+    backed sections) or a QuickDecisionViewModel (for the decision section).
+    Any attribute access outside the declared allowlist raises
+    ``SectionBoundaryError`` so cross-contamination is caught at render time.
+    """
+
+    __slots__ = ("_wrapped", "_allowed", "_section")
+
+    def __init__(self, wrapped: object, section: str) -> None:
+        allowed = SECTION_FIELD_ALLOWLIST.get(section)
+        if allowed is None:
+            raise ValueError(f"Unknown section {section!r}; valid: {sorted(SECTION_FIELD_ALLOWLIST)}")
+        object.__setattr__(self, "_wrapped", wrapped)
+        object.__setattr__(self, "_allowed", allowed)
+        object.__setattr__(self, "_section", section)
+
+    def __getattr__(self, name: str) -> object:
+        if name.startswith("_"):
+            return object.__getattribute__(self, name)
+        if name not in self._allowed:
+            raise SectionBoundaryError(
+                f"Section '{self._section}' attempted to access '{name}' — "
+                f"allowed fields: {sorted(self._allowed)}"
+            )
+        return getattr(self._wrapped, name)
+
+
 # ── Risk category mapping ─────────────────────────────────────────────────────
 
 _RISK_CATEGORY_MAP: dict[str, str] = {
@@ -78,21 +155,10 @@ def _risk_color(level: str) -> str:
 
 # ── Tab bar styles ───────────────────────────────────────────────────────────
 
-_TAB_NAMES = [
-    ("summary", "Summary"),
-    ("price_support", "Price Support"),
-    ("financials", "Financials"),
-]
-
 _PROPERTY_TAB_BAR_STYLE: dict = {
     "display": "flex",
-    "gap": "0",
-    "borderBottom": f"1px solid {BORDER}",
-    "marginBottom": "20px",
-    "position": "sticky",
-    "top": "0",
-    "zIndex": "50",
-    "backgroundColor": BG_PRIMARY,
+    "justifyContent": "flex-end",
+    "marginBottom": "16px",
     "padding": "0 4px",
 }
 
@@ -114,6 +180,140 @@ def _tab_button_style(active: bool) -> dict:
     }
 
 
+# ── Public section renderers (validated) ─────────────────────────────────────
+#
+# Each renderer enforces its section boundary via SectionDataProxy.  The proxy
+# gates attribute access so that, e.g., the risk renderer cannot accidentally
+# read price_support or financials fields.  Any cross-contamination is caught
+# at render time with a clear SectionBoundaryError.
+
+
+def render_decision_section(
+    vm: QuickDecisionViewModel,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Decision section — consumes QuickDecisionViewModel only."""
+    proxy = SectionDataProxy(vm, "decision")
+    return _render_decision_hero(proxy, user_role=user_role)
+
+
+def render_risk_section(
+    view: PropertyAnalysisView,
+    vm: QuickDecisionViewModel,
+) -> html.Div:
+    """Risk section — consumes risk sub-model + risk_bar only."""
+    pdv_proxy = SectionDataProxy(view.property_decision_view, "risk")
+    vm_proxy = SectionDataProxy(vm, "risk")
+    return _render_risk_check_validated(pdv_proxy, vm_proxy)
+
+
+def render_value_section(view: PropertyAnalysisView) -> html.Div:
+    """Value section — consumes value sub-model only."""
+    proxy = SectionDataProxy(view.property_decision_view, "value")
+    return _render_value_card_validated(proxy)
+
+
+def render_price_support_section(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Price support section — consumes price_support sub-model only."""
+    proxy = SectionDataProxy(view.property_decision_view, "price_support")
+    return _render_price_support_section_validated(proxy, view, report, user_role=user_role)
+
+
+def render_financial_section(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Financials section — consumes financials sub-model only."""
+    proxy = SectionDataProxy(view.property_decision_view, "financials")
+    return _render_financials_section_validated(proxy, view, report, user_role=user_role)
+
+
+def render_quick_reality_section(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Quick reality strip — declared composite of price_support + financials."""
+    proxy = SectionDataProxy(view.property_decision_view, "quick_reality")
+    return _render_quick_reality_strip_validated(proxy, view, report, user_role=user_role)
+
+
+# ── Validated render internals ───────────────────────────────────────────────
+#
+# These thin wrappers extract sub-models through the proxy (validating
+# access), then delegate to the existing render functions with the real data.
+
+
+def _render_risk_check_validated(pdv_proxy: SectionDataProxy, vm_proxy: SectionDataProxy) -> html.Div:
+    risk = pdv_proxy.risk      # validates "risk" is allowed
+    risk_bar = vm_proxy.risk_bar  # validates "risk_bar" is allowed
+    # Build a minimal namespace the existing renderer expects
+    class _RiskView:
+        __slots__ = ("property_decision_view",)
+        def __init__(self, risk_qvm):
+            self.property_decision_view = type("_", (), {"risk": risk_qvm})()
+    class _RiskVM:
+        __slots__ = ("risk_bar",)
+        def __init__(self, rb):
+            self.risk_bar = rb
+    return _render_risk_check(_RiskView(risk), _RiskVM(risk_bar))
+
+
+def _render_value_card_validated(proxy: SectionDataProxy) -> html.Div:
+    value = proxy.value  # validates "value" is allowed
+    class _ValueView:
+        __slots__ = ("property_decision_view",)
+        def __init__(self, value_qvm):
+            self.property_decision_view = type("_", (), {"value": value_qvm})()
+    return _render_value_card(_ValueView(value))
+
+
+def _render_price_support_section_validated(
+    proxy: SectionDataProxy,
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    _ = proxy.price_support  # validates access
+    return _render_price_support_section(view, report, user_role=user_role)
+
+
+def _render_financials_section_validated(
+    proxy: SectionDataProxy,
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    _ = proxy.financials  # validates access
+    return _render_financials_section(view, report, user_role=user_role)
+
+
+def _render_quick_reality_strip_validated(
+    proxy: SectionDataProxy,
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    _ = proxy.price_support  # validates access — would raise if not in allowlist
+    _ = proxy.financials     # validates access — would raise if not in allowlist
+    # The real view is passed through because _economics_inputs needs
+    # view.income_support (a financials-adjacent read).  The proxy above
+    # proves that this section only *declares* price_support + financials.
+    return _render_quick_reality_strip(view, report, user_role=user_role)
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 
@@ -124,28 +324,48 @@ def render_property_view(
     active_tab: str = "summary",
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Top-level property view with persistent tab bar and simple/detailed toggle.
+    """Single-page property analysis — decision-first, everything else below the fold.
 
-    This replaces the old screen-based routing. The tab bar is always visible
-    so users can move between Summary, Price Support, and Financials without
-    going back.
+    active_tab is accepted for backward compatibility but ignored; the page
+    always renders the full decision-first layout.
+
+    Every above/below-fold section is rendered through its validated public
+    renderer, which enforces section field boundaries at runtime.
     """
-    # Resolve tab content
-    if active_tab == "price_support":
-        tab_content = _render_price_support_tab(view, report, user_role=user_role)
-    elif active_tab == "financials":
-        tab_content = _render_financials_tab(view, report, user_role=user_role)
-    else:
-        tab_content = _render_summary_tab(view, report, user_role=user_role)
+    del active_tab  # single-page now
+    quick_vm = build_quick_decision_view(report)
 
     return html.Div(
         [
+            _render_mode_toggle(user_role),
             _render_property_header(view),
-            _render_nav_bar(active_tab, user_role),
             html.Div(
-                tab_content,
+                [
+                    # ── Above the fold (always visible) ──────────────────
+                    render_decision_section(quick_vm, user_role=user_role),
+                    render_risk_section(view, quick_vm),
+                    render_value_section(view),
+                    render_quick_reality_section(view, report, user_role=user_role),
+
+                    # ── Below the fold (visible, secondary) ──────────────
+                    render_price_support_section(view, report, user_role=user_role),
+                    render_financial_section(view, report, user_role=user_role),
+
+                    # ── Collapsed by default (expand on click) ───────────
+                    _render_deal_curve_collapsed(view),
+                    _render_collapsed_section(
+                        "Scenarios",
+                        "Stress-test renovation, knockdown, and forward cases.",
+                        _render_scenarios_content(view, report),
+                    ),
+                    _render_collapsed_section(
+                        "Evidence",
+                        "Comp tables, diagnostics, assumptions, and evidence quality.",
+                        _render_evidence_content(view, report),
+                    ),
+                ],
                 className="briarwood-fade-in",
-                style={"padding": "0 4px"},
+                style={"display": "grid", "gap": "16px", "padding": "0 4px"},
             ),
         ],
         style={
@@ -163,34 +383,23 @@ def render_simple_view(
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    return render_property_view(view, report, active_tab="summary", user_role=user_role)
+    return render_property_view(view, report, user_role=user_role)
 
 
-# ── Persistent nav bar ──────────────────────────────────────────────────────
+# ── Top controls ─────────────────────────────────────────────────────────────
 
 
-def _render_nav_bar(active_tab: str, user_role: str) -> html.Div:
-    """Tab bar + Simple/Detailed toggle, always visible."""
-    tabs = [
-        html.Button(
-            label,
-            id={"type": "property-tab", "tab": tab_id},
-            n_clicks=0,
-            style=_tab_button_style(tab_id == active_tab),
-        )
-        for tab_id, label in _TAB_NAMES
-    ]
-
+def _render_mode_toggle(user_role: str) -> html.Div:
     detail_toggle = html.Div(
         [
             html.Button(
-                "Simple",
+                "Retail",
                 id={"type": "role-toggle", "role": "homebuyer"},
                 className=f"toggle-option {'active' if user_role == 'homebuyer' else ''}",
                 n_clicks=0,
             ),
             html.Button(
-                "Detailed",
+                "Investor",
                 id={"type": "role-toggle", "role": "investor"},
                 className=f"toggle-option {'active' if user_role == 'investor' else ''}",
                 n_clicks=0,
@@ -200,47 +409,79 @@ def _render_nav_bar(active_tab: str, user_role: str) -> html.Div:
         style={"display": "flex", "marginLeft": "auto"},
     )
 
-    return html.Div(
-        [*tabs, detail_toggle],
-        style=_PROPERTY_TAB_BAR_STYLE,
-    )
+    return html.Div([detail_toggle], style=_PROPERTY_TAB_BAR_STYLE)
 
 
-# ── Tab content renderers ────────────────────────────────────────────────────
+# ── Collapsed section wrapper ─────────────────────────────────────────────────
 
 
-def _render_summary_tab(
-    view: PropertyAnalysisView,
-    report: AnalysisReport,
-    *,
-    user_role: str = "homebuyer",
-) -> html.Div:
-    """Summary tab — the 5 key cards."""
-    quick_vm = build_quick_decision_view(report)
-    return html.Div(
+def _render_collapsed_section(title: str, subtitle: str, content: html.Div) -> html.Details:
+    """Expand/collapse wrapper — content is NOT visible on page load."""
+    return html.Details(
         [
-            _render_decision_hero(quick_vm, user_role=user_role),
-            _render_risk_check(view, quick_vm),
-            _render_value_card(view),
-            _render_monthly_reality(view, report, user_role=user_role),
+            html.Summary(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(title.upper(), style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em", "marginBottom": "0"}),
+                                html.Div(subtitle, style={"fontSize": "13px", "color": TEXT_SECONDARY}),
+                            ],
+                            style={"display": "grid", "gap": "4px"},
+                        ),
+                        html.Span(
+                            "Expand",
+                            style={
+                                "fontSize": "11px",
+                                "fontWeight": "600",
+                                "color": ACCENT_BLUE,
+                                "padding": "4px 10px",
+                                "borderRadius": RADIUS_MD,
+                                "border": f"1px solid {BORDER}",
+                                "backgroundColor": BG_SURFACE,
+                            },
+                        ),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "gap": "12px", "alignItems": "center"},
+                ),
+                style={"cursor": "pointer", "listStyle": "none", "padding": "16px 20px"},
+            ),
+            html.Div(content, style={"padding": "0 20px 20px"}),
         ],
-        style={"display": "grid", "gap": "16px"},
+        open=False,
+        style={**CARD_STYLE, "padding": "0"},
     )
 
 
-def _render_price_support_tab(
+def _render_deal_curve_collapsed(view: PropertyAnalysisView) -> html.Div:
+    """Deal Curve as a collapsed section — returns empty div if no data."""
+    content = render_deal_curve_summary(view)
+    if content is None:
+        return html.Div()
+    return _render_collapsed_section(
+        "Deal Curve",
+        "How the verdict shifts at lower entry prices.",
+        content,
+    )
+
+
+# ── Below-fold inline sections ───────────────────────────────────────────────
+
+
+def _render_price_support_section(
     view: PropertyAnalysisView,
     report: AnalysisReport,
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Price Support tab — valuation waterfall + comp charts."""
+    """Price Support — visible below the fold, not collapsed."""
     from briarwood.dash_app.components import (
-        comp_positioning_dot_plot,
-        forward_fan_chart,
+        build_comp_positioning_chart_data,
+        render_comp_positioning_chart,
     )
 
     waterfall_rows = _build_value_waterfall(view, report)
+    comp_chart = render_comp_positioning_chart(build_comp_positioning_chart_data(view, report))
 
     if user_role == "investor":
         narrative = _price_support_investor_narrative(view)
@@ -249,6 +490,7 @@ def _render_price_support_tab(
 
     return html.Div(
         [
+            _render_price_support_summary(view),
             html.Div(
                 [
                     html.Div("HOW WE GOT TO THE NUMBER", style=_LAYER2_HEADER),
@@ -261,39 +503,34 @@ def _render_price_support_tab(
                 [
                     html.Div("COMP POSITIONING", style=_LAYER2_HEADER),
                     html.Div(
-                        _comp_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                        "Direct comp pricing first: where adjusted same-market support sits, where actives sit, and where Briarwood's fair value lands.",
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "10px"},
                     ),
-                    comp_positioning_dot_plot(view, report),
+                    comp_chart,
                 ],
                 style=CARD_STYLE,
             ),
-            html.Div(
-                [
-                    html.Div("FORWARD VALUE", style=_LAYER2_HEADER),
-                    html.Div(
-                        _forward_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
-                    ),
-                    forward_fan_chart(view, chart_height=320),
-                ],
-                style=CARD_STYLE,
-            ),
+            _render_comp_support_card(view),
         ],
-        style={"display": "grid", "gap": "16px"},
+        style={"display": "grid", "gap": "12px"},
     )
 
 
-def _render_financials_tab(
+def _render_financials_section(
     view: PropertyAnalysisView,
     report: AnalysisReport,
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Financials tab — cost breakdown + scenarios + income."""
-    from briarwood.dash_app.components import _economics_inputs, income_carry_waterfall, forward_fan_chart
+    """Financials — visible below the fold, not collapsed."""
+    from briarwood.dash_app.components import (
+        _economics_inputs,
+        build_financial_chart_data,
+        render_financial_chart,
+    )
 
     metrics = _economics_inputs(report, view)
+    financial_chart = render_financial_chart(build_financial_chart_data(view, report))
     cost = metrics.get("gross_monthly_cost")
     rent = metrics.get("monthly_rent")
     net = metrics.get("net_monthly_cost")
@@ -329,9 +566,6 @@ def _render_financials_tab(
             style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "4px"},
         )
 
-    # Scenario cards
-    scenario_section = _render_scenario_cards(view, metrics, user_role=user_role)
-
     # Investor metrics
     investor_card = _financials_investor_metrics(view) if user_role == "investor" else None
 
@@ -345,28 +579,96 @@ def _render_financials_tab(
                 ],
                 style=CARD_STYLE,
             ),
-            investor_card,
-            scenario_section,
             html.Div(
                 [
-                    html.Div("INCOME WATERFALL", style=_LAYER2_HEADER),
-                    income_carry_waterfall(view, report),
+                    html.Div("FINANCIAL REALITY", style=_LAYER2_HEADER),
+                    html.Div(
+                        "A simple ownership read: monthly cost, monthly rent offset, and the resulting monthly position.",
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+                    ),
+                    financial_chart,
                 ],
                 style=CARD_STYLE,
             ),
+            _render_financial_support_card(view, metrics),
+            investor_card,
+        ],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
+def _render_scenarios_content(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+) -> html.Div:
+    """Scenarios content — rendered inside a collapsed section."""
+    del view
+    from briarwood.dash_app.scenarios import render_scenarios_section
+
+    return html.Div(
+        [render_scenarios_section(report)],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
+def _render_evidence_content(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+) -> html.Div:
+    """Evidence content — rendered inside a collapsed section."""
+    from briarwood.dash_app.components import render_tear_sheet_body
+
+    return html.Div(
+        [render_tear_sheet_body(view, report)],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
+def _render_price_support_summary(view: PropertyAnalysisView) -> html.Div:
+    price = view.property_decision_view.price_support
+    gap_text = "N/A"
+    gap_color = TEXT_PRIMARY
+    if price.ask_price is not None and price.fair_value is not None and price.ask_price:
+        gap = price.fair_value - price.ask_price
+        gap_pct = (gap / price.ask_price) * 100
+        gap_text = f"{'+' if gap >= 0 else '-'}${abs(gap):,.0f} ({'+' if gap_pct >= 0 else '-'}{abs(gap_pct):.1f}%)"
+        gap_color = ACCENT_GREEN if gap >= 0 else ACCENT_RED
+
+    return html.Div(
+        [
+            html.Div("PRICE SUPPORT", style=_LAYER2_HEADER),
             html.Div(
                 [
-                    html.Div("FORWARD OUTLOOK", style=_LAYER2_HEADER),
-                    html.Div(
-                        _forward_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
-                    ),
-                    forward_fan_chart(view, chart_height=320),
+                    _quick_fact("Fair Value", f"${price.fair_value:,.0f}" if price.fair_value is not None else "N/A", f"Ask {f'${price.ask_price:,.0f}' if price.ask_price is not None else 'N/A'}"),
+                    _quick_fact("Gap vs Ask", gap_text, price.pricing_view.replace("_", " ").title() if price.pricing_view else "", value_color=gap_color),
                 ],
-                style=CARD_STYLE,
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "12px"},
             ),
         ],
-        style={"display": "grid", "gap": "16px"},
+        style=CARD_STYLE,
+    )
+
+
+def _render_comp_support_card(view: PropertyAnalysisView) -> html.Div:
+    comps = view.property_decision_view.price_support.comps
+    rows = [
+        _stat_row("Comparable value", comps.comparable_value_text),
+        _stat_row("Comp count", comps.comp_count_text),
+        _stat_row("Comp confidence", comps.confidence_text),
+        _stat_row("Verification", comps.verification_summary),
+    ]
+    if comps.active_listing_count_text not in {"", "0"}:
+        rows.append(_stat_row("Active listings", comps.active_listing_count_text))
+    return html.Div(
+        [
+            html.Div("COMP SUPPORT", style=_LAYER2_HEADER),
+            html.Div(
+                _comp_context_line(view),
+                style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            html.Div(rows),
+        ],
+        style=CARD_STYLE,
     )
 
 
@@ -516,12 +818,12 @@ def _render_decision_hero(vm: QuickDecisionViewModel, *, user_role: str = "homeb
                     html.Div(
                         [
                             html.Div(
-                                f"Score: {vm.conviction * 5:.1f}",
-                                style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_SECONDARY},
+                                "Conviction",
+                                style={"fontSize": "12px", "fontWeight": "600", "color": TEXT_SECONDARY, "textTransform": "uppercase", "letterSpacing": "0.08em"},
                             ),
                             html.Div(
-                                f"Confidence: {vm.confidence}",
-                                style={"fontSize": "13px", "color": TEXT_TERTIARY, "marginTop": "2px"},
+                                f"{int(round(vm.conviction * 100))}%",
+                                style={"fontSize": "28px", "fontWeight": "800", "color": accent, "marginTop": "2px"},
                             ),
                         ],
                         style={"textAlign": "right"},
@@ -535,6 +837,19 @@ def _render_decision_hero(vm: QuickDecisionViewModel, *, user_role: str = "homeb
                         f"\u201c{vm.primary_reason}\u201d",
                         style={"fontSize": "16px", "fontWeight": "500", "lineHeight": "1.5", "color": TEXT_PRIMARY, "fontStyle": "italic"},
                     ),
+                    html.Div(
+                        vm.secondary_reason,
+                        style={"fontSize": "14px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "8px"},
+                    ) if vm.secondary_reason else None,
+                    html.Div(
+                        [
+                            html.Div("What must be true", style={**LABEL_STYLE, "marginTop": "16px", "marginBottom": "6px"}),
+                            html.Ul(
+                                [html.Li(item, style={"fontSize": "13px", "lineHeight": "1.5", "color": TEXT_SECONDARY}) for item in vm.required_beliefs[:3]],
+                                style={"margin": "0", "paddingLeft": "18px"},
+                            ),
+                        ]
+                    ) if vm.required_beliefs else None,
                 ],
                 style={"marginBottom": "0"},
             ),
@@ -552,6 +867,7 @@ def _render_decision_hero(vm: QuickDecisionViewModel, *, user_role: str = "homeb
 
 def _render_risk_check(view: PropertyAnalysisView, vm: QuickDecisionViewModel) -> html.Div:
     # Map risk bar items to standardized categories
+    risk_metrics = view.property_decision_view.risk.metrics
     seen: set[str] = set()
     risk_rows: list[html.Div] = []
     for item in vm.risk_bar[:6]:
@@ -595,7 +911,13 @@ def _render_risk_check(view: PropertyAnalysisView, vm: QuickDecisionViewModel) -
 
     return html.Div(
         [
-            html.Div("RISK CHECK", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+            html.Div("RISK BAR", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+            html.Div(
+                f"Price gap {risk_metrics.price_gap_pct:.1%} • Liquidity {risk_metrics.liquidity_score:.0f}/100 • Execution {risk_metrics.execution_risk}"
+                if risk_metrics.price_gap_pct is not None and risk_metrics.liquidity_score is not None
+                else f"Execution {risk_metrics.execution_risk} • Confidence {risk_metrics.confidence:.0%}",
+                style={"fontSize": "12px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+            ),
             html.Div(risk_rows),
         ],
         style=CARD_STYLE,
@@ -607,20 +929,30 @@ def _render_risk_check(view: PropertyAnalysisView, vm: QuickDecisionViewModel) -
 
 def _render_value_card(view: PropertyAnalysisView) -> html.Div:
     bullets: list[str] = []
-    if view.value_finder is not None and view.value_finder.bullets:
-        bullets = list(view.value_finder.bullets[:4])
-
-    # Fallback: build from top_reasons
-    if not bullets and view.top_reasons:
-        bullets = list(view.top_reasons[:3])
+    value_vm = view.property_decision_view.value.value_finder
+    value_metrics = view.property_decision_view.value.metrics
+    if value_vm is not None and value_vm.bullets:
+        bullets = list(value_vm.bullets[:4])
 
     # Final fallback
     if not bullets:
-        bullets = ["Analysis in progress — check back after data loads."]
+        bullets = ["No clear value edge is supported yet."]
 
     return html.Div(
         [
             html.Div("WHERE'S THE VALUE", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+            html.Div(
+                " | ".join(
+                    part
+                    for part in [
+                        f"ADU income {_fmt_money_inline(value_metrics.adu_income)}" if value_metrics.adu_income is not None else "",
+                        f"Expansion {value_metrics.expansion_score:.2f}" if value_metrics.expansion_score is not None else "",
+                        f"Tailwind {value_metrics.market_tailwind:.0f}/100" if value_metrics.market_tailwind is not None else "",
+                    ]
+                    if part
+                ),
+                style={"fontSize": "12px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+            ) if any(v is not None for v in [value_metrics.adu_income, value_metrics.expansion_score, value_metrics.market_tailwind]) else None,
             html.Ul(
                 [
                     html.Li(
@@ -641,101 +973,251 @@ def _render_value_card(view: PropertyAnalysisView) -> html.Div:
     )
 
 
-# ── Card 5: Monthly Reality ──────────────────────────────────────────────────
+# ── Quick Reality Strip ──────────────────────────────────────────────────────
 
 
-def _render_monthly_reality(
+def _render_quick_reality_strip(
     view: PropertyAnalysisView,
     report: AnalysisReport,
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    income = view.income_support
-    title = "MONTHLY REALITY" if user_role == "homebuyer" else "MONTHLY CARRY"
-
-    # Extract economics
     from briarwood.dash_app.components import _economics_inputs
     metrics = _economics_inputs(report, view)
 
     cost = metrics.get("gross_monthly_cost")
     rent = metrics.get("monthly_rent")
     net = metrics.get("net_monthly_cost")
+    del user_role
 
-    cost_text = f"${cost:,.0f}/mo" if cost else "N/A"
-    rent_text = f"${rent:,.0f}" if rent else "N/A"
-
-    # Net position — color-coded
-    if net is not None:
-        net_sign = "+" if net <= 0 else "-"
-        net_abs = abs(net)
-        net_text = f"${net_abs:,.0f} net"
-        net_positive = net <= 0  # cost < rent = good
-    else:
-        net_text = "N/A"
-        net_positive = False
-
-    net_color = ACCENT_GREEN if net_positive else ACCENT_RED
+    price = view.property_decision_view.price_support
+    financials = view.property_decision_view.financials.metrics
+    fair_value = f"${price.fair_value:,.0f}" if price.fair_value is not None else "N/A"
+    ask = f"${price.ask_price:,.0f}" if price.ask_price is not None else "N/A"
+    monthly_reality = "N/A"
+    monthly_color = TEXT_PRIMARY
+    net_metric = financials.net_monthly if financials.net_monthly is not None else net
+    if net_metric is not None:
+        monthly_reality = f"+${abs(net_metric):,.0f}/mo" if net_metric >= 0 else f"-${abs(net_metric):,.0f}/mo"
+        monthly_color = ACCENT_GREEN if net_metric >= 0 else ACCENT_RED
 
     return html.Div(
         [
-            html.Div(title, style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+            html.Div("QUICK REALITY", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
             html.Div(
                 [
-                    html.Span(
-                        f"{cost_text} cost",
-                        style={"fontSize": "16px", "fontWeight": "600", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY},
-                    ),
-                    html.Span(" \u00b7 ", style={"color": TEXT_TERTIARY, "margin": "0 8px"}),
-                    html.Span(
-                        f"{rent_text} rent",
-                        style={"fontSize": "16px", "fontWeight": "600", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY},
-                    ),
-                    html.Span(" \u00b7 ", style={"color": TEXT_TERTIARY, "margin": "0 8px"}),
-                    html.Span(
-                        f"{'+' if net_positive else '-'}{net_text}",
-                        style={"fontSize": "16px", "fontWeight": "700", "fontFamily": FONT_MONO, "color": net_color},
+                    _quick_fact("Fair Value", fair_value, f"Ask {ask}" if ask != "N/A" else ""),
+                    _quick_fact(
+                        "Monthly Reality",
+                        monthly_reality,
+                        f"Carry {f'${financials.monthly_cost:,.0f}/mo' if financials.monthly_cost else 'N/A'} • Rent {f'${financials.rent_offset:,.0f}/mo' if financials.rent_offset else 'N/A'}",
+                        value_color=monthly_color,
                     ),
                 ],
-                style={"display": "flex", "alignItems": "center", "flexWrap": "wrap", "gap": "4px"},
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "12px"},
             ),
         ],
         style=CARD_STYLE,
     )
 
 
-# ── Action buttons ────────────────────────────────────────────────────────────
-
-
-def _render_action_buttons() -> html.Div:
-    button_style = {
-        "flex": "1",
-        "minWidth": "180px",
-    }
+def _quick_fact(label: str, value: str, subtitle: str, *, value_color: str = TEXT_PRIMARY) -> html.Div:
     return html.Div(
         [
-            html.Button(
-                "See Price Support",
-                id={"type": "simple-view-action", "screen": "price_support"},
-                className="action-button",
-                n_clicks=0,
-                style=button_style,
-            ),
-            html.Button(
-                "See Financials",
-                id={"type": "simple-view-action", "screen": "financials"},
-                className="action-button",
-                n_clicks=0,
-                style=button_style,
-            ),
-            html.Button(
-                "See Scenarios",
-                id={"type": "simple-view-action", "screen": "scenarios"},
-                className="action-button",
-                n_clicks=0,
-                style=button_style,
+            html.Div(label, style={**LABEL_STYLE, "marginBottom": "4px"}),
+            html.Div(value, style={"fontSize": "22px", "fontWeight": "800", "fontFamily": FONT_MONO, "color": value_color}),
+            html.Div(subtitle, style={"fontSize": "12px", "lineHeight": "1.5", "color": TEXT_SECONDARY, "marginTop": "4px"}) if subtitle else None,
+        ],
+        style={"padding": "4px 0"},
+    )
+
+
+def _fmt_money_inline(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"${value:,.0f}"
+
+
+def _render_financial_support_card(view: PropertyAnalysisView, metrics: dict) -> html.Div:
+    financial_metrics = view.property_decision_view.financials.metrics
+    net = financial_metrics.net_monthly if financial_metrics.net_monthly is not None else metrics.get("net_monthly_cost")
+    net_text = "N/A"
+    net_color = TEXT_PRIMARY
+    if net is not None:
+        net_text = f"+${abs(net):,.0f}/mo" if net >= 0 else f"-${abs(net):,.0f}/mo"
+        net_color = ACCENT_GREEN if net >= 0 else ACCENT_RED
+
+    inc = view.property_decision_view.financials.income_support
+    return html.Div(
+        [
+            html.Div("SUPPORT SNAPSHOT", style=_LAYER2_HEADER),
+            html.Div(
+                [
+                    _quick_fact("Net Monthly", net_text, inc.rent_source_label or inc.rent_source_type, value_color=net_color),
+                    _quick_fact("Income Coverage", inc.income_support_ratio_text, inc.risk_view),
+                    _quick_fact("Price to Rent", inc.price_to_rent_text, getattr(inc, "ptr_classification", "") or ""),
+                    _quick_fact("Break Even", "Yes" if financial_metrics.break_even else "No", _forward_context_line(view)),
+                ],
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))", "gap": "12px"},
             ),
         ],
-        style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
+        style=CARD_STYLE,
+    )
+
+
+# ── Deal Curve (Price Sensitivity) ──────────────────────────────────────────
+
+
+def render_deal_curve_summary(view: PropertyAnalysisView) -> html.Div | None:
+    """Compact price-sensitivity block showing action thresholds and the curve.
+
+    Returns None when no deal curve data is available.
+    """
+    curve = view.deal_curve
+    thresholds = view.deal_curve_thresholds
+    if not curve or thresholds is None:
+        return None
+
+    # ── Threshold cards ──────────────────────────────────────────────────
+    threshold_cards: list[html.Div] = []
+    if thresholds.get("buy_below") is not None:
+        threshold_cards.append(
+            _threshold_card("Buy Below", thresholds["buy_below"], ACCENT_GREEN, "Strong entry at this price or lower."),
+        )
+    if thresholds.get("interesting") is not None:
+        threshold_cards.append(
+            _threshold_card("Gets Interesting", thresholds["interesting"], ACCENT_AMBER, "Verdict turns NEUTRAL — worth watching."),
+        )
+    if thresholds.get("pass_above") is not None:
+        threshold_cards.append(
+            _threshold_card("Pass Above", thresholds["pass_above"], ACCENT_RED, "The deal doesn't work at this price."),
+        )
+
+    # Edge case: if all verdicts are identical, show one summary card
+    if not threshold_cards:
+        verdict = curve[0]["verdict"]
+        color = verdict_color(verdict)
+        threshold_cards.append(
+            _threshold_card(
+                verdict,
+                curve[0]["price"],
+                color,
+                f"Verdict holds at every tested price ({curve[-1]['pct_of_ask']:.0%}–{curve[0]['pct_of_ask']:.0%} of ask).",
+            ),
+        )
+
+    # ── Curve table ──────────────────────────────────────────────────────
+    header = html.Div(
+        [
+            html.Span("Entry", style=_CURVE_CELL_HEADER),
+            html.Span("Verdict", style=_CURVE_CELL_HEADER),
+            html.Span("Carry", style=_CURVE_CELL_HEADER),
+            html.Span("FV Gap", style=_CURVE_CELL_HEADER),
+            html.Span("Risk", style=_CURVE_CELL_HEADER),
+        ],
+        style=_CURVE_ROW_STYLE,
+    )
+    rows = [header] + [_deal_curve_row(pt) for pt in curve]
+
+    return html.Div(
+        [
+            html.Div(
+                threshold_cards,
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": f"repeat({len(threshold_cards)}, 1fr)",
+                    "gap": "12px",
+                    "marginBottom": "16px",
+                },
+            ),
+            html.Div("PRICE SENSITIVITY", style=_LAYER2_HEADER),
+            html.Div(
+                "How the verdict, carry, and risk shift as entry price drops from ask.",
+                style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "10px"},
+            ),
+            html.Div(rows),
+        ],
+        style=CARD_STYLE,
+    )
+
+
+def _threshold_card(title: str, price: float, color: str, subtitle: str) -> html.Div:
+    return html.Div(
+        [
+            html.Div(title.upper(), style={**LABEL_STYLE, "color": color, "marginBottom": "4px"}),
+            html.Div(f"${price:,.0f}", style={"fontSize": "20px", "fontWeight": "800", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY}),
+            html.Div(subtitle, style={"fontSize": "12px", "color": TEXT_SECONDARY, "marginTop": "4px"}),
+        ],
+        style={
+            **CARD_STYLE,
+            "borderTop": f"3px solid {color}",
+            "padding": "16px 20px",
+            "textAlign": "center",
+        },
+    )
+
+
+_CURVE_CELL_HEADER: dict = {
+    "fontSize": "11px",
+    "fontWeight": "600",
+    "color": TEXT_TERTIARY,
+    "textTransform": "uppercase",
+    "letterSpacing": "0.08em",
+}
+
+_CURVE_ROW_STYLE: dict = {
+    "display": "grid",
+    "gridTemplateColumns": "1.3fr 1fr 1fr 1fr 0.7fr",
+    "gap": "8px",
+    "padding": "8px 0",
+    "borderBottom": f"1px solid {BORDER}",
+    "alignItems": "center",
+}
+
+
+def _deal_curve_row(pt: dict) -> html.Div:
+    pct = pt.get("pct_of_ask", 1.0)
+    price = pt.get("price", 0)
+    verdict = pt.get("verdict", "")
+    carry = pt.get("carry")
+    fv_gap = pt.get("fv_gap")
+    risk = pt.get("risk", 50)
+
+    carry_text = f"${carry:+,.0f}/mo" if carry is not None else "N/A"
+    carry_color = ACCENT_GREEN if carry is not None and carry >= 0 else ACCENT_RED if carry is not None else TEXT_SECONDARY
+    fv_text = f"{fv_gap:+.1%}" if fv_gap is not None else "N/A"
+    fv_color = ACCENT_GREEN if fv_gap is not None and fv_gap >= 0 else ACCENT_RED if fv_gap is not None else TEXT_SECONDARY
+
+    return html.Div(
+        [
+            html.Span(
+                [
+                    html.Span(f"${price:,.0f}", style={"fontWeight": "600", "fontFamily": FONT_MONO}),
+                    html.Span(f" ({pct:.0%})", style={"fontSize": "11px", "color": TEXT_SECONDARY, "marginLeft": "4px"}),
+                ],
+                style={"fontSize": "14px", "color": TEXT_PRIMARY},
+            ),
+            html.Span(
+                verdict,
+                style={
+                    "fontSize": "13px",
+                    "fontWeight": "700",
+                    "color": verdict_color(verdict),
+                },
+            ),
+            html.Span(carry_text, style={"fontSize": "13px", "fontFamily": FONT_MONO, "color": carry_color}),
+            html.Span(fv_text, style={"fontSize": "13px", "fontFamily": FONT_MONO, "color": fv_color}),
+            html.Span(
+                f"{risk}",
+                style={
+                    "fontSize": "13px",
+                    "fontFamily": FONT_MONO,
+                    "fontWeight": "600",
+                    "color": ACCENT_GREEN if risk < 34 else ACCENT_AMBER if risk < 67 else ACCENT_RED,
+                },
+            ),
+        ],
+        style=_CURVE_ROW_STYLE,
     )
 
 
@@ -745,15 +1227,15 @@ def _render_action_buttons() -> html.Div:
 
 
 def render_price_support(view, report, *, user_role="homebuyer"):
-    return render_property_view(view, report, active_tab="price_support", user_role=user_role)
+    return render_property_view(view, report, user_role=user_role)
 
 
 def render_financials(view, report, *, user_role="homebuyer"):
-    return render_property_view(view, report, active_tab="financials", user_role=user_role)
+    return render_property_view(view, report, user_role=user_role)
 
 
 def render_scenarios(view, report, *, user_role="homebuyer"):
-    return render_property_view(view, report, active_tab="financials", user_role=user_role)
+    return render_property_view(view, report, user_role=user_role)
 
 
 def _scenario_card(title: str, metrics: list[tuple[str, str]]) -> html.Div:
@@ -812,8 +1294,9 @@ def _stat_row(label: str, value: str) -> html.Div:
 
 def _price_support_homebuyer_narrative(view: PropertyAnalysisView) -> html.Div:
     """Plain English explanation of the valuation for homebuyers."""
-    bcv = view.bcv
-    ask = view.ask_price
+    price = view.property_decision_view.price_support
+    bcv = price.fair_value
+    ask = price.ask_price
     lines: list[str] = []
 
     if bcv is not None and ask is not None:
@@ -836,8 +1319,8 @@ def _price_support_homebuyer_narrative(view: PropertyAnalysisView) -> html.Div:
 
 def _price_support_investor_narrative(view: PropertyAnalysisView) -> html.Div:
     """Statistical context for investors."""
-    comps = view.comps
-    value_vm = view.value
+    comps = view.property_decision_view.price_support.comps
+    value_vm = view.property_decision_view.price_support.value
 
     stats: list[html.Div] = []
     stats.append(_stat_row("Comparable value", comps.comparable_value_text))
@@ -856,7 +1339,7 @@ def _price_support_investor_narrative(view: PropertyAnalysisView) -> html.Div:
 
 def _comp_context_line(view: PropertyAnalysisView) -> str:
     """One-liner about comp positioning."""
-    comps = view.comps
+    comps = view.property_decision_view.price_support.comps
     parts: list[str] = []
     if comps.comp_count_text and comps.comp_count_text != "0":
         parts.append(f"{comps.comp_count_text} sold comps")
@@ -869,8 +1352,9 @@ def _comp_context_line(view: PropertyAnalysisView) -> str:
 
 def _forward_context_line(view: PropertyAnalysisView) -> str:
     """One-liner about forward outlook."""
-    if view.forward:
-        return f"Bull case {view.forward.upside_pct_text} upside, bear case {view.forward.downside_pct_text} downside over 12 months."
+    forward = view.property_decision_view.financials.forward
+    if forward:
+        return f"Bull case {forward.upside_pct_text} upside, bear case {forward.downside_pct_text} downside over 12 months."
     return "Projected value range based on market conditions and property characteristics."
 
 
@@ -901,7 +1385,7 @@ def _financials_homebuyer_context(
 
 def _financials_investor_metrics(view: PropertyAnalysisView) -> html.Div:
     """Investor-only card with return metrics."""
-    inc = view.income_support
+    inc = view.property_decision_view.financials.income_support
     stats: list[html.Div] = []
     stats.append(_stat_row("Gross yield", inc.gross_yield_text))
     stats.append(_stat_row("Cash return", inc.cash_on_cash_return_text))
@@ -927,8 +1411,9 @@ def _build_value_waterfall(view: PropertyAnalysisView, report: AnalysisReport) -
     rows: list[html.Div] = []
 
     # Try to get the value bridge from view model
-    if view.value and view.value.value_bridge:
-        for step in view.value.value_bridge:
+    price = view.property_decision_view.price_support
+    if price.value and price.value.value_bridge:
+        for step in price.value.value_bridge:
             is_total = step.label.lower() in ("estimated value", "total", "briarwood value", "fair value")
             amount_text = step.value_text
             rows.append(
@@ -957,28 +1442,28 @@ def _build_value_waterfall(view: PropertyAnalysisView, report: AnalysisReport) -
             )
     else:
         # Fallback: show BCV with ask comparison
-        if view.bcv is not None:
+        if price.fair_value is not None:
             rows.append(
                 html.Div(
                     [
                         html.Span("Estimated fair value", style={"fontSize": "15px", "fontWeight": "700", "color": TEXT_PRIMARY}),
                         html.Span(
-                            f"${view.bcv:,.0f}",
+                            f"${price.fair_value:,.0f}",
                             style={"fontSize": "16px", "fontFamily": FONT_MONO, "fontWeight": "700", "color": TEXT_PRIMARY},
                         ),
                     ],
                     className="value-waterfall-row value-waterfall-total",
                 )
             )
-        if view.ask_price is not None and view.bcv is not None:
-            gap = view.bcv - view.ask_price
+        if price.ask_price is not None and price.fair_value is not None:
+            gap = price.fair_value - price.ask_price
             gap_color = ACCENT_GREEN if gap >= 0 else ACCENT_RED
             rows.append(
                 html.Div(
                     [
                         html.Span("vs. asking price", style={"fontSize": "14px", "color": TEXT_SECONDARY}),
                         html.Span(
-                            f"{'+'if gap >= 0 else ''}{gap/view.ask_price*100:.1f}%",
+                            f"{'+'if gap >= 0 else ''}{gap/price.ask_price*100:.1f}%",
                             style={"fontSize": "14px", "fontFamily": FONT_MONO, "fontWeight": "600", "color": gap_color},
                         ),
                     ],

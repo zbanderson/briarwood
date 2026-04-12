@@ -37,7 +37,6 @@ from briarwood.dash_app.components import (
     render_compare_decision_mode,
     render_property_decision_summary,
     render_portfolio_dashboard,
-    render_tear_sheet_body,
     render_what_if_metrics,
     renovation_value_trajectory_chart,
 )
@@ -46,7 +45,6 @@ from briarwood.dash_app.simple_view import (
     render_simple_view,
     render_price_support,
     render_financials,
-    render_scenarios,
 )
 from briarwood.dash_app.data import (
     DEFAULT_PRESET_IDS,
@@ -120,8 +118,6 @@ MAIN_TABS = [
     ("opportunities", "Markets"),
     ("tear_sheet", "Property Analysis"),
     ("compare", "Compare"),
-    ("scenarios", "Scenarios"),
-    ("data_quality", "Diagnostics"),
     ("settings", "Settings"),
 ]
 
@@ -1083,13 +1079,11 @@ def _shell_nav_groups() -> list[tuple[str, list[dict[str, str]]]]:
             "Tools",
             [
                 {"tab": "compare", "label": "Compare", "description": "Line up multiple properties side by side."},
-                {"tab": "scenarios", "label": "Scenarios", "description": "Pressure-test renovate, knockdown, and hold paths."},
             ],
         ),
         (
             "Admin",
             [
-                {"tab": "data_quality", "label": "Diagnostics", "description": "Evidence, assumptions, and data quality."},
                 {"tab": "settings", "label": "Settings", "description": "Workspace preferences and system configuration."},
             ],
         ),
@@ -1221,27 +1215,10 @@ def _shell_context_for_tab(
             "Compare a short list once you know which opportunities deserve side-by-side attention.",
             [
                 _context_metric("Selected", str(compare_count), "properties confirmed for compare"),
-                _context_metric("Mode", "Heatmap-first", "switch into detail when needed"),
+                _context_metric("Mode", "Summary-first", "open detail only when needed"),
             ],
         )
-    if tab == "scenarios":
-        return (
-            "Execution Paths",
-            "Scenarios",
-            "Stress-test renovation, knockdown, and forward cases without losing the core underwriting view.",
-            [
-                _context_metric("Focus", "Scenario testing"),
-            ],
-        )
-    if tab == "data_quality":
-        return (
-            "Model Transparency",
-            "Diagnostics",
-            "Inspect evidence quality, assumptions, and missing-input risk behind the current recommendation.",
-            [
-                _context_metric("Focus", "Assumptions"),
-            ],
-        )
+    # scenarios and data_quality now redirect to tear_sheet
     return (
         "Workspace Configuration",
         "Settings",
@@ -1537,6 +1514,7 @@ def _strategy_tags(view) -> list[str]:
     best_fit = (view.decision.best_fit if view.decision is not None else "").lower()
     town_score = view.town_context.get("town_relative_opportunity_score")
     price_to_rent = view.compare_metrics.get("price_to_rent")
+    value_bullets = list(getattr(getattr(view, "value_finder", None), "bullets", []) or [])
 
     if "renovation" in best_fit or "value-add" in best_fit or "value-add" in view.optionality_label.lower():
         tags.append("Renovation Upside")
@@ -1547,7 +1525,7 @@ def _strategy_tags(view) -> list[str]:
         tags.append("Income Potential")
     if isinstance(town_score, (int, float)) and town_score >= 3.5:
         tags.append("Town Premium")
-    if view.entry_basis_label in {"Discounted Entry", "Supported Entry"}:
+    if any("below fair value" in bullet.lower() or "price sits" in bullet.lower() for bullet in value_bullets):
         tags.append("Value Gap")
     if view.liquidity_profile_label in {"High Liquidity", "Functional Liquidity"}:
         tags.append("Liquid Exit")
@@ -2490,12 +2468,10 @@ def _compare_controls() -> html.Div:
                     dcc.RadioItems(
                         id="compare-mode-toggle",
                         options=[
-                            {"label": "Heatmap", "value": "heatmap"},
-                            {"label": "Radar", "value": "radar"},
-                            {"label": "Table", "value": "table"},
+                            {"label": "Summary", "value": "summary"},
                             {"label": "Detail", "value": "detail"},
                         ],
-                        value="heatmap",
+                        value="summary",
                         inline=True,
                         labelStyle={"marginRight": "12px", "fontSize": "13px", "color": TEXT_SECONDARY},
                         inputStyle={"marginRight": "4px"},
@@ -2539,8 +2515,9 @@ def _build_layout():
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
-            # Property view screen state: "simple", "price_support", "financials", "scenarios", "full"
-            dcc.Store(id="property-view-screen", data="simple"),
+            # Property Analysis screen state: "summary", "price_support",
+            # "financials", or "evidence".
+            dcc.Store(id="property-view-screen", data="summary"),
             # User role for framing toggle: "homebuyer" or "investor"
             dcc.Store(id="user-role", storage_type="local", data="homebuyer"),
             # User preferences (persists in browser localStorage)
@@ -2747,6 +2724,8 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
     prevent_initial_call=True,
 )
 def select_shell_destination(_clicks: list[int] | None):
+    if not any(isinstance(click, (int, float)) and click > 0 for click in (_clicks or [])):
+        raise dash.exceptions.PreventUpdate
     trigger = ctx.triggered_id
     if not isinstance(trigger, dict):
         raise dash.exceptions.PreventUpdate
@@ -3521,7 +3500,7 @@ def render_main_tab(
     view_screen: str | None,
     user_role: str | None,
 ):
-    if tab == "quick_decision":
+    if tab in {"quick_decision", "scenarios", "data_quality"}:
         tab = "tear_sheet"
 
     if tab in {"opportunities", "portfolio"}:
@@ -3570,27 +3549,12 @@ def render_main_tab(
             getattr(report.property_input, "state", None),
         )
 
-        # Reset to summary tab when switching properties
-        triggered = ctx.triggered_id
-        if triggered == "property-selector-dropdown":
-            screen = "summary"
-        else:
-            screen = view_screen or "summary"
         role = user_role or "homebuyer"
-
-        if screen == "full":
-            content = render_tear_sheet_body(
-                view,
-                report,
-                town_pulse_filter=town_pulse_filter or "all",
-            )
-        else:
-            content = render_property_view(
-                view,
-                report,
-                active_tab=screen,
-                user_role=role,
-            )
+        content = render_property_view(
+            view,
+            report,
+            user_role=role,
+        )
 
         return _build_page_container(
             eyebrow=identity["locality"],
@@ -3601,27 +3565,11 @@ def render_main_tab(
             show_header=False,
         )
 
-    if tab == "scenarios":
-        report = _focused_report(loaded_ids, focus_id)
-        if report is None:
-            return _empty_state(
-                "The selected property could not be loaded, so scenarios are unavailable right now."
-                if focus_id
-                else "Select a property to view investment scenarios."
-            )
-        from briarwood.dash_app.scenarios import render_scenarios_section
-        return _build_page_container(
-            eyebrow="Decision Paths",
-            title="Scenarios",
-            subtitle="Evaluate alternate execution paths without leaving the current workspace or losing the base underwriting read.",
-            content=render_scenarios_section(report),
-        )
-
     if tab == "compare":
         return _build_page_container(
             eyebrow="Shortlist Review",
             title="Compare",
-            subtitle="Bring two to four properties into one decision frame, then move between heatmap, radar, table, and detail views as needed.",
+            subtitle="Bring two to four properties into one decision frame, start with the summary read, then open detail only when needed.",
             content=html.Div(
                 [
                     html.Div(_compare_controls(), style={**CARD_STYLE, "padding": "16px 18px", "marginBottom": "16px"}),
@@ -3631,22 +3579,6 @@ def render_main_tab(
                     ),
                 ]
             ),
-        )
-
-    if tab == "data_quality":
-        report = _focused_report(loaded_ids, focus_id)
-        if report is None:
-            return _empty_state(
-                "The selected property could not be loaded, so diagnostics are unavailable right now."
-                if focus_id
-                else "Select a property to view diagnostics."
-            )
-        from briarwood.dash_app.data_quality import render_data_quality_section
-        return _build_page_container(
-            eyebrow="Transparency",
-            title="Diagnostics",
-            subtitle="Inspect confidence, assumptions, and evidence quality without cluttering the main decision flow.",
-            content=render_data_quality_section(report),
         )
 
     if tab == "settings":
@@ -4256,7 +4188,7 @@ def render_compare(_go_token: int | None, property_ids: list[str] | None, mode: 
         return html.Div("Some selected properties are unavailable.", style={"color": TEXT_MUTED})
     views = [_build_property_view_for_property(r.property_id) for r in report_list]
     summary = build_compare_summary(views)
-    return render_compare_decision_mode(mode or "heatmap", views, report_list, summary, section or "overview")
+    return render_compare_decision_mode(mode or "summary", views, report_list, summary, section or "overview")
 
 
 @app.callback(

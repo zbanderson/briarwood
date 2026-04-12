@@ -281,7 +281,7 @@ class CurrentValueModule:
             "Hybrid value is used when a front-house comp anchor plus accessory-income decomposition fits the subject better than a pure single-family or pure multi-unit comp set."
         )
         warnings.append(
-            "Hybrid current value remains conservative: accessory-unit credit is capped and legality or rent uncertainty can still limit the indicated range."
+            "Hybrid current value remains conservative: accessory-unit credit is capped, split-structure friction is recognized, and stale-listing feedback can constrain the final range."
         )
         low_value = getattr(hybrid_value, "low_case_hybrid_value", None) or output.value_low
         high_value = getattr(hybrid_value, "high_case_hybrid_value", None) or output.value_high

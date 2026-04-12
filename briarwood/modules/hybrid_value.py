@@ -8,6 +8,7 @@ from briarwood.evidence import build_section_evidence
 from briarwood.modules.comparable_sales import ComparableSalesModule, get_comparable_sales_payload
 from briarwood.modules.income_support import IncomeSupportModule, get_income_support_payload
 from briarwood.schemas import ModuleResult, PropertyInput
+from briarwood.valuation_constraints import evaluate_market_feedback, is_nonstandard_product, market_friction_discount
 
 
 @dataclass(slots=True)
@@ -40,6 +41,8 @@ class HybridValueOutput:
     base_case_hybrid_value: float | None = None
     high_case_hybrid_value: float | None = None
     confidence: float = 0.0
+    market_friction_discount: float | None = None
+    market_feedback_adjustment: float | None = None
     notes: list[str] = field(default_factory=list)
     narrative: str = ""
 
@@ -161,12 +164,32 @@ class HybridValueModule:
             primary_house_value=primary_house_value,
             rear_income_value=rear_income_value,
         )
+        pre_constraint_value = (primary_house_value or 0.0) + (rear_income_value or 0.0) + (optionality_premium_value or 0.0)
+        market_friction_value, market_friction_notes = market_friction_discount(
+            property_input=property_input,
+            anchor_value=pre_constraint_value if pre_constraint_value > 0 else None,
+        )
+        constrained_value = pre_constraint_value + market_friction_value
+        support_quality = (
+            comparable_payload.base_comp_selection.support_summary.support_quality
+            if comparable_payload.base_comp_selection is not None
+            else "thin"
+        )
+        market_feedback = evaluate_market_feedback(
+            property_input=property_input,
+            indicated_value=constrained_value if constrained_value > 0 else None,
+            support_quality=support_quality,
+            confidence=primary_house_comp_confidence,
+            subject_is_nonstandard=is_nonstandard_product(property_input),
+        )
         low_case, base_case, high_case = _value_range(
             primary_house_value=primary_house_value,
             rear_income_value=rear_income_value,
             optionality_premium_value=optionality_premium_value,
             rear_income_confidence=rear_income_confidence,
             optionality_confidence=optionality_confidence,
+            market_friction_discount=market_friction_value,
+            market_feedback_adjustment=market_feedback.value_adjustment,
         )
         confidence = _overall_confidence(
             primary_house_comp_confidence=primary_house_comp_confidence,
@@ -174,8 +197,11 @@ class HybridValueModule:
             optionality_confidence=optionality_confidence,
             has_primary_value=primary_house_value is not None,
             has_rear_value=rear_income_value is not None,
+            market_feedback_impact=market_feedback.confidence_impact,
         )
         notes = list(rear_notes)
+        notes.extend(market_friction_notes)
+        notes.extend(market_feedback.notes)
         if primary_house_value is not None and rear_income_value is not None:
             notes.append("Rear-unit value is treated as an incremental attachment to the front-house anchor rather than as a fully separate apartment asset.")
         if optionality_premium_value:
@@ -199,6 +225,8 @@ class HybridValueModule:
             base_case_hybrid_value=base_case,
             high_case_hybrid_value=high_case,
             confidence=confidence,
+            market_friction_discount=market_friction_value,
+            market_feedback_adjustment=market_feedback.value_adjustment,
             notes=notes,
             narrative=_narrative(
                 reason=str(detection["reason"]),
@@ -207,6 +235,8 @@ class HybridValueModule:
                 rear_income_method_used=rear_income_method_used,
                 optionality_premium_value=optionality_premium_value,
                 optionality_reason=optionality_reason,
+                market_friction_discount=market_friction_value,
+                market_feedback_adjustment=market_feedback.value_adjustment,
             ),
         )
         return ModuleResult(
@@ -224,6 +254,8 @@ class HybridValueModule:
                 "high_case_hybrid_value": high_case,
                 "confidence": confidence,
                 "rear_income_method_used": rear_income_method_used,
+                "market_friction_discount": market_friction_value,
+                "market_feedback_adjustment": market_feedback.value_adjustment,
             },
             payload=payload,
             section_evidence=build_section_evidence(
@@ -460,23 +492,25 @@ def _optionality_premium(
     pre_premium_value = (primary_house_value or 0.0) + (rear_income_value or 0.0)
     if pre_premium_value <= 0:
         return None, "", 0.0
+    if property_input.days_on_market and property_input.days_on_market >= 60:
+        return 0.0, "No separate rarity premium was applied because stale-listing feedback already constrains optionality.", 0.0
 
     description = (property_input.listing_description or "").lower()
     signals: list[tuple[str, float]] = []
-    if property_input.adu_type:
+    if property_input.adu_type and not rear_income_value:
         signals.append((f"{property_input.adu_type.replace('_', ' ')} utility", 0.02))
-    if property_input.has_back_house:
+    if property_input.has_back_house and not rear_income_value:
         signals.append(("detached rear structure utility", 0.015))
     if "beach" in description or "coastal" in description:
-        signals.append(("near-beach detached-cottage appeal", 0.015))
+        signals.append(("near-beach detached-cottage appeal", 0.0075))
     if "multigenerational" in description or "in-law" in description:
-        signals.append(("multigenerational flexibility", 0.0125))
+        signals.append(("multigenerational flexibility", 0.01))
     if "garage apartment" in description or "conversion" in description:
         signals.append(("future conversion optionality", 0.01))
     if not signals:
         return 0.0, "No separate rarity premium was applied.", 0.0
 
-    premium_pct = min(sum(weight for _, weight in signals), 0.06)
+    premium_pct = min(sum(weight for _, weight in signals), 0.02)
     premium_value = round(pre_premium_value * premium_pct, 2)
     reason = ", ".join(label for label, _ in signals[:3])
     confidence = round(min(0.72, 0.46 + (0.08 * len(signals))), 2)
@@ -490,10 +524,18 @@ def _value_range(
     optionality_premium_value: float | None,
     rear_income_confidence: float,
     optionality_confidence: float,
+    market_friction_discount: float = 0.0,
+    market_feedback_adjustment: float = 0.0,
 ) -> tuple[float | None, float | None, float | None]:
     if primary_house_value is None:
         return None, None, None
-    base_case = primary_house_value + (rear_income_value or 0.0) + (optionality_premium_value or 0.0)
+    base_case = (
+        primary_house_value
+        + (rear_income_value or 0.0)
+        + (optionality_premium_value or 0.0)
+        + market_friction_discount
+        + market_feedback_adjustment
+    )
     rear_downside = (rear_income_value or 0.0) * (0.20 if rear_income_confidence >= 0.65 else 0.32)
     rear_upside = (rear_income_value or 0.0) * (0.12 if rear_income_confidence >= 0.65 else 0.18)
     premium_downside = (optionality_premium_value or 0.0) * (0.65 if optionality_confidence < 0.55 else 0.45)
@@ -510,13 +552,14 @@ def _overall_confidence(
     optionality_confidence: float,
     has_primary_value: bool,
     has_rear_value: bool,
+    market_feedback_impact: float = 0.0,
 ) -> float:
     if not has_primary_value:
         return 0.0
     base = (primary_house_comp_confidence * 0.62) + (rear_income_confidence * 0.28) + (optionality_confidence * 0.10)
     if not has_rear_value:
         base *= 0.75
-    return round(max(0.35, min(base, 0.88)), 2)
+    return round(max(0.25, min(base + market_feedback_impact, 0.88)), 2)
 
 
 def _narrative(
@@ -527,6 +570,8 @@ def _narrative(
     rear_income_method_used: str | None,
     optionality_premium_value: float | None,
     optionality_reason: str,
+    market_friction_discount: float,
+    market_feedback_adjustment: float,
 ) -> str:
     front_line = (
         "The subject appears to derive value from both its core residential use and accessory income-producing improvements."
@@ -543,4 +588,14 @@ def _narrative(
         if optionality_premium_value
         else "No separate rarity premium is added beyond the supported income increment."
     )
-    return " ".join([front_line, reason_line, income_line, premium_line])
+    friction_line = (
+        f"Market friction subtracts about ${abs(market_friction_discount):,.0f} for split-structure buyer-pool risk."
+        if market_friction_discount < 0
+        else ""
+    )
+    feedback_line = (
+        f"Stale-listing feedback subtracts about ${abs(market_feedback_adjustment):,.0f} from the hybrid read."
+        if market_feedback_adjustment < 0
+        else ""
+    )
+    return " ".join([line for line in [front_line, reason_line, income_line, premium_line, friction_line, feedback_line] if line])

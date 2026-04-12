@@ -72,12 +72,10 @@ class DashViewModelTests(unittest.TestCase):
         self.assertTrue(view.value.value_bridge)
         self.assertIn("positive", view.decision.decision_drivers)
         self.assertIn("negative", view.decision.decision_drivers)
-        self.assertTrue(view.entry_basis_label)
         self.assertTrue(view.income_support_label)
         self.assertTrue(view.capex_load_label)
         self.assertTrue(view.liquidity_profile_label)
         self.assertTrue(view.optionality_label)
-        self.assertTrue(view.risk_skew_label)
         self.assertIn(
             view.risk_location.location_support_label,
             {"Geo-Benchmarked", "Geocoded, Landmark Data Missing", "Geocoded, Proxy-Based", "Address-Linked Only"},
@@ -86,7 +84,7 @@ class DashViewModelTests(unittest.TestCase):
         if view.risk_location.location_support_label == "Geo-Benchmarked":
             self.assertTrue(view.risk_location.location_anchor_summary)
         self.assertIsNotNone(view.positioning_summary)
-        self.assertTrue(view.decision.risk_statement.startswith("Risk stance:"))
+        self.assertTrue(view.decision.risk_statement.startswith("Primary risk:"))
         self.assertTrue(view.decision.summary_view)
         self.assertIsNotNone(view.report_card)
         assert view.report_card is not None
@@ -255,24 +253,21 @@ class DashViewModelTests(unittest.TestCase):
         view = build_property_analysis_view(report)
         body = render_tear_sheet_body(view, report)
         text = _flatten_text(body)
-        self.assertIn("/ 5", text)
-        self.assertIn("Score Report Card", text)
-        self.assertIn("ASSUMPTION SUMMARY", text)
-        self.assertTrue("Current Value Snapshot" in text or "Section A - Value Snapshot" in text)
-        self.assertIn("Market Anchors", text)
-        self.assertIn("What's Driving Value?", text)
-        self.assertIn("Value Bridge", text)
-        self.assertIn("Buy As-Is", text)
-        self.assertIn("Buy + Renovate", text)
-        self.assertIn("Town Pulse", text)
-        self.assertIn("Scenario View", text)
-        self.assertIn("Risk & Constraints", text)
+        # Core visible elements
+        self.assertIn("Value Finder", text)
+        self.assertIn("Key Risk", text)
+        self.assertIn("Required Belief", text)
+        self.assertIn("Dependencies", text)
+        # Drill-down detail sections
+        self.assertIn("See More", text)
         self.assertIn("Is the Price Right?", text)
         self.assertIn("What Does It Cost to Own?", text)
         self.assertIn("What Could Break the Thesis?", text)
-        self.assertIn("Current Competition", text)
-        self.assertIn("Value Finder", text)
-        self.assertIn("Confidence Drivers", text)
+        self.assertIn("Score Report Card", text)
+        self.assertIn("ASSUMPTION SUMMARY", text)
+        self.assertTrue("Current Value Snapshot" in text or "Section A - Value Snapshot" in text)
+        self.assertIn("Scenario View", text)
+        self.assertIn("Town Pulse", text)
         self.assertIn("Metric Basis & Gaps", text)
 
     def test_tear_sheet_body_can_filter_town_pulse_rows(self) -> None:
@@ -283,12 +278,12 @@ class DashViewModelTests(unittest.TestCase):
         self.assertIn("500 River Road residential project with 12 units was denied", text)
         self.assertNotIn("1201 Main Street mixed-use redevelopment with 24 residential units was approved", text)
 
-    def test_compare_decision_mode_renders_heatmap_view(self) -> None:
+    def test_compare_decision_mode_renders_summary_view(self) -> None:
         reports = list(self.reports.values())
         views = [build_property_analysis_view(report) for report in reports]
         summary = build_compare_summary(views)
-        section = render_compare_decision_mode("heatmap", views, reports, summary, "overview")
-        self.assertIn("Score Heatmap", _flatten_text(section))
+        section = render_compare_decision_mode("summary", views, reports, summary, "overview")
+        self.assertIn("Score Summary", _flatten_text(section))
         self.assertIn("Compare Decision Read", _flatten_text(section))
         self.assertIn("Why One Property Wins", _flatten_text(section))
 

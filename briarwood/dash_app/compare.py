@@ -201,7 +201,7 @@ def _largest_numeric_difference(anchor: PropertyAnalysisView, other: PropertyAna
 
 def _comparison_explanation(factor_name: str, winner: PropertyAnalysisView, loser: PropertyAnalysisView) -> str:
     if factor_name == "entry_basis":
-        return f"{winner.label} has the better pricing setup: {winner.entry_basis_label} versus {loser.entry_basis_label}."
+        return f"{winner.label} has the better pricing setup: {_pricing_setup_label(winner)} versus {_pricing_setup_label(loser)}."
     if factor_name == "income_support":
         return f"{winner.label} has the stronger rent-support profile: {winner.income_support_label} versus {loser.income_support_label}."
     if factor_name == "capex_load":
@@ -210,7 +210,7 @@ def _comparison_explanation(factor_name: str, winner: PropertyAnalysisView, lose
         return f"{winner.label} has the cleaner exit profile: {winner.liquidity_profile_label} versus {loser.liquidity_profile_label}."
     if factor_name == "optionality":
         return f"{winner.label} offers the better upside structure: {winner.optionality_label} versus {loser.optionality_label}."
-    return f"{winner.label} has the more favorable downside profile: {winner.risk_skew_label} versus {loser.risk_skew_label}."
+    return f"{winner.label} has the more favorable downside profile: {_downside_profile_label(winner)} versus {_downside_profile_label(loser)}."
 
 
 def _flip_condition_from_factor(factor_name: str, winner: PropertyAnalysisView, loser: PropertyAnalysisView) -> str:
@@ -221,6 +221,30 @@ def _flip_condition_from_factor(factor_name: str, winner: PropertyAnalysisView, 
     if factor_name in {"liquidity_profile", "risk_skew"}:
         return f"Liquidity would need to tighten for {winner.label}, or improve for {loser.label}, to flip the ranking."
     return f"Pricing would need to move enough to erase {winner.label}'s current entry-basis edge over {loser.label}."
+
+
+def _pricing_setup_label(view: PropertyAnalysisView) -> str:
+    gap = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+    if not isinstance(gap, (int, float)):
+        return "unclear value support"
+    if gap >= 0.10:
+        return "discounted entry"
+    if gap >= 0.03:
+        return "supported entry"
+    if gap <= -0.10:
+        return "premium entry"
+    if gap <= -0.03:
+        return "slight premium"
+    return "in-line entry"
+
+
+def _downside_profile_label(view: PropertyAnalysisView) -> str:
+    score = float(view.risk_location.risk_score or 0.0)
+    if score >= 75:
+        return "elevated downside risk"
+    if score >= 55:
+        return "moderate downside risk"
+    return "contained downside risk"
 
 
 def _build_comparison_summary(views: list[PropertyAnalysisView]) -> ComparisonSummaryViewModel | None:

@@ -1,4 +1,6 @@
 import unittest
+import json
+from pathlib import Path
 
 from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.comparable_sales import ComparableSalesModule
@@ -253,6 +255,26 @@ class ModuleTests(unittest.TestCase):
             self.assertIn("beach", payload.comp_analysis.location_adjustments)
             self.assertIn("cross_town_shell_transfer", payload.comp_analysis.town_transfer_adjustments)
             self.assertGreaterEqual(payload.comp_analysis.confidence, 0.0)
+
+    def test_526_w_end_market_feedback_constrains_hybrid_value(self) -> None:
+        payload = json.loads(Path("data/saved_properties/526-west-end-ave/inputs.json").read_text())
+        property_input = PropertyInput(property_id=payload["property_id"], **payload["facts"])
+
+        comp_result = ComparableSalesModule().run(property_input)
+        comp_payload = comp_result.payload
+        self.assertIsNotNone(comp_payload.base_comp_selection)
+        assert comp_payload.base_comp_selection is not None
+        self.assertIn(comp_payload.base_comp_selection.support_summary.support_quality, {"moderate", "thin"})
+        self.assertIsNotNone(comp_payload.comp_analysis)
+        assert comp_payload.comp_analysis is not None
+        self.assertIsNotNone(comp_payload.comp_analysis.market_feedback)
+        self.assertLess(float(comp_payload.comp_analysis.market_feedback_adjustment or 0.0), 0.0)
+
+        hybrid_result = HybridValueModule().run(property_input)
+        self.assertLess(float(hybrid_result.metrics["base_case_hybrid_value"] or 0.0), 1_500_000.0)
+
+        current_value_result = CurrentValueModule().run(property_input)
+        self.assertLess(float(current_value_result.metrics["briarwood_current_value"] or 0.0), 1_500_000.0)
 
     def test_value_drivers_module_builds_bridge_from_base_to_adjusted_value(self) -> None:
         property_input = sample_property()

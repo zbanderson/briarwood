@@ -39,6 +39,7 @@ from briarwood.micro_location_engine import (
 )
 from briarwood.schemas import PropertyInput
 from briarwood.town_transfer_engine import TransferResult, evaluate_town_transfer
+from briarwood.valuation_constraints import evaluate_market_feedback, is_nonstandard_product, market_friction_discount
 
 
 def run_comp_analysis(
@@ -115,6 +116,31 @@ def run_comp_analysis(
         location_result=location_result,
         transfer_result=transfer_result,
     )
+    cottage_adu_value = _round_money(getattr(output, "additional_unit_income_value", None))
+    if adjusted_value is not None and cottage_adu_value is not None:
+        adjusted_value += cottage_adu_value
+
+    market_friction_value, friction_notes = market_friction_discount(
+        property_input=property_input,
+        anchor_value=adjusted_value,
+    )
+    if adjusted_value is not None:
+        adjusted_value += market_friction_value
+
+    support_quality = (
+        output.base_comp_selection.support_summary.support_quality
+        if output.base_comp_selection is not None
+        else "thin"
+    )
+    market_feedback = evaluate_market_feedback(
+        property_input=property_input,
+        indicated_value=adjusted_value,
+        support_quality=support_quality,
+        confidence=confidence_result.composite_score,
+        subject_is_nonstandard=is_nonstandard_product(property_input),
+    )
+    if adjusted_value is not None:
+        adjusted_value += market_feedback.value_adjustment
 
     # ------------------------------------------------------------------
     # 7. Overlap resolution
@@ -131,16 +157,46 @@ def run_comp_analysis(
     )
     support_summary = _build_support_summary(output, feature_result, location_result)
 
-    confidence = round(confidence_result.composite_score, 2)
+    confidence = round(max(0.2, min(confidence_result.composite_score + market_feedback.confidence_impact, 0.95)), 2)
+    town_context_adjustment = None
+    if transfer_result.used and transfer_result.blended_value is not None and transfer_result.local_base_value is not None:
+        town_context_adjustment = _round_money(transfer_result.blended_value - transfer_result.local_base_value)
+    top_drivers = _top_drivers(
+        base_shell_value=base_shell_value,
+        cottage_adu_value=cottage_adu_value,
+        market_friction_discount=market_friction_value,
+        market_feedback_adjustment=market_feedback.value_adjustment,
+        town_context_adjustment=town_context_adjustment,
+    )
+    watch_items = _watch_items(
+        support_quality=support_quality,
+        friction_notes=friction_notes,
+        market_feedback=market_feedback,
+    )
 
     return {
         "base_shell_value": _round_money(base_shell_value),
+        "cottage_adu_value": cottage_adu_value,
         "feature_adjustments": {item.key: item.model_dump() for item in feature_adjustments},
         "location_adjustments": {item.key: item.model_dump() for item in location_adjustments},
         "town_transfer_adjustments": {item.key: item.model_dump() for item in town_transfer_adjustments},
+        "town_context_adjustment": town_context_adjustment,
+        "market_friction_discount": _round_money(market_friction_value),
+        "market_feedback_adjustment": _round_money(market_feedback.value_adjustment),
+        "adjusted_fair_value": _round_money(adjusted_value),
         "adjusted_value": _round_money(adjusted_value),
         "support_summary": support_summary.model_dump(),
         "confidence": confidence,
+        "market_feedback": {
+            "dom_signal": market_feedback.dom_signal,
+            "stale_listing": market_feedback.stale_listing,
+            "liquidity_penalty": market_feedback.liquidity_penalty,
+            "confidence_impact": market_feedback.confidence_impact,
+            "max_supported_value": market_feedback.max_supported_value,
+            "notes": market_feedback.notes,
+        },
+        "top_drivers": top_drivers,
+        "watch_items": watch_items,
         "feature_engine": asdict(feature_result),
         "location_engine": asdict(location_result),
         "town_transfer_engine": asdict(transfer_result),
@@ -306,6 +362,43 @@ def _build_support_summary(
         primary_mode="direct_same_town" if same_town_count > 0 else "translated_cross_town",
         notes=notes[:4],
     )
+
+
+def _top_drivers(
+    *,
+    base_shell_value: float | None,
+    cottage_adu_value: float | None,
+    market_friction_discount: float,
+    market_feedback_adjustment: float,
+    town_context_adjustment: float | None,
+) -> list[str]:
+    drivers: list[tuple[float, str]] = []
+    if base_shell_value:
+        drivers.append((abs(base_shell_value), f"Base shell support around ${base_shell_value:,.0f}."))
+    if cottage_adu_value:
+        drivers.append((abs(cottage_adu_value), f"Detached cottage / ADU support adds about ${cottage_adu_value:,.0f}."))
+    if market_friction_discount:
+        drivers.append((abs(market_friction_discount), f"Non-standard product friction subtracts about ${abs(market_friction_discount):,.0f}."))
+    if market_feedback_adjustment:
+        drivers.append((abs(market_feedback_adjustment), f"Stale-listing market feedback subtracts about ${abs(market_feedback_adjustment):,.0f}."))
+    if town_context_adjustment:
+        drivers.append((abs(town_context_adjustment), f"Town context contributes about ${town_context_adjustment:,.0f}."))
+    drivers.sort(key=lambda item: item[0], reverse=True)
+    return [label for _, label in drivers[:4]]
+
+
+def _watch_items(
+    *,
+    support_quality: str,
+    friction_notes: list[str],
+    market_feedback: object,
+) -> list[str]:
+    items: list[str] = []
+    if support_quality != "strong":
+        items.append(f"Direct shell support is {support_quality}, so same-town comps should not be treated as a clean clearing read.")
+    items.extend(friction_notes[:2])
+    items.extend(list(getattr(market_feedback, "notes", []) or [])[:2])
+    return items[:4]
 
 
 # ---------------------------------------------------------------------------

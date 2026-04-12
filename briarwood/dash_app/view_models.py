@@ -225,6 +225,72 @@ def _rent_source_label(source_type: str) -> str:
     return mapping.get(source_type, "")
 
 
+def _monthly_cost(report: AnalysisReport) -> float | None:
+    metric = _cost_val_metric(report, "monthly_total_cost")
+    if metric is not None:
+        return metric
+    income = report.module_results.get("income_support")
+    if income is None:
+        return None
+    raw = income.metrics.get("gross_monthly_cost") or income.metrics.get("total_monthly_cost")
+    return float(raw) if isinstance(raw, (int, float)) else None
+
+
+def _rent_offset(report: AnalysisReport) -> float | None:
+    income = report.module_results.get("income_support")
+    if income is None:
+        return None
+    raw = income.metrics.get("effective_monthly_rent") or income.metrics.get("monthly_rent_estimate")
+    return float(raw) if isinstance(raw, (int, float)) else None
+
+
+def _net_monthly(report: AnalysisReport) -> float | None:
+    monthly_cost = _monthly_cost(report)
+    rent_offset = _rent_offset(report)
+    if monthly_cost is not None and rent_offset is not None:
+        return round(rent_offset - monthly_cost, 2)
+    income = report.module_results.get("income_support")
+    if income is None:
+        return None
+    raw = income.metrics.get("monthly_cash_flow")
+    return float(raw) if isinstance(raw, (int, float)) else None
+
+
+def _support_quality(report: AnalysisReport) -> str:
+    comps = report.module_results.get("comparable_sales")
+    payload = getattr(comps, "payload", None) if comps is not None else None
+    selection = getattr(payload, "base_comp_selection", None)
+    summary = getattr(selection, "support_summary", None)
+    quality = getattr(summary, "support_quality", None)
+    return str(quality or "")
+
+
+def _adu_income_value(report: AnalysisReport) -> float | None:
+    hybrid = report.module_results.get("hybrid_value")
+    if hybrid is not None:
+        raw = hybrid.metrics.get("rear_income_value")
+        if isinstance(raw, (int, float)):
+            return float(raw)
+    comps = report.module_results.get("comparable_sales")
+    payload = getattr(comps, "payload", None) if comps is not None else None
+    analysis = getattr(payload, "comp_analysis", None)
+    raw = getattr(analysis, "cottage_adu_value", None)
+    return float(raw) if isinstance(raw, (int, float)) else None
+
+
+def _expansion_score(report: AnalysisReport) -> float | None:
+    comps = report.module_results.get("comparable_sales")
+    payload = getattr(comps, "payload", None) if comps is not None else None
+    analysis = getattr(payload, "comp_analysis", None)
+    feature_engine = getattr(analysis, "feature_engine", None) or {}
+    features = feature_engine.get("features", {}) if isinstance(feature_engine, dict) else {}
+    expansion = features.get("expansion", {}) if isinstance(features, dict) else {}
+    confidence_map = {"high": 1.0, "moderate": 0.7, "low": 0.35, "none": 0.0, "n/a": 0.0}
+    confidence = confidence_map.get(str(expansion.get("confidence", "")).lower(), 0.0)
+    present = bool(expansion.get("present"))
+    return round(confidence if present else 0.0, 2)
+
+
 def _as_float(value: object) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
@@ -929,6 +995,102 @@ class ValueFinderViewModel:
 
 
 @dataclass(slots=True)
+class DecisionMetrics:
+    fv_vs_ask_pct: float | None = None
+    monthly_carry: float | None = None
+    confidence: float = 0.0
+
+
+@dataclass(slots=True)
+class RiskMetrics:
+    price_gap_pct: float | None = None
+    monthly_loss: float | None = None
+    liquidity_score: float | None = None
+    execution_risk: str = ""
+    confidence: float = 0.0
+
+
+@dataclass(slots=True)
+class ValueMetrics:
+    adu_income: float | None = None
+    expansion_score: float | None = None
+    mispricing_pct: float | None = None
+    market_tailwind: float | None = None
+
+
+@dataclass(slots=True)
+class PriceSupportMetrics:
+    fair_value: float | None = None
+    value_range_low: float | None = None
+    value_range_high: float | None = None
+    comp_count: int = 0
+    support_quality: str = ""
+
+
+@dataclass(slots=True)
+class FinancialMetrics:
+    monthly_cost: float | None = None
+    rent_offset: float | None = None
+    net_monthly: float | None = None
+    break_even: bool = False
+
+
+@dataclass(slots=True)
+class RiskQuestionViewModel:
+    metrics: RiskMetrics
+    risk_bar: list[RiskBarItem] = field(default_factory=list)
+    summary: str = ""
+    top_risks: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ValueQuestionViewModel:
+    metrics: ValueMetrics
+    value_finder: ValueFinderViewModel | None = None
+    hybrid_value: HybridValueViewModel | None = None
+
+
+@dataclass(slots=True)
+class PriceSupportQuestionViewModel:
+    metrics: PriceSupportMetrics
+    ask_price: float | None
+    fair_value: float | None
+    value_low: float | None
+    value_high: float | None
+    mispricing_amount: float | None
+    mispricing_pct: float | None
+    pricing_view: str
+    all_in_basis: float | None
+    capex_basis_used: float | None
+    capex_basis_source: str
+    net_opportunity_delta_value: float | None
+    net_opportunity_delta_pct: float | None
+    value: ValueViewModel
+    comps: CompsViewModel
+
+
+@dataclass(slots=True)
+class FinancialsQuestionViewModel:
+    metrics: FinancialMetrics
+    income_support: IncomeSupportViewModel
+    forward: ForwardViewModel
+    base_case: float | None
+    bull_case: float | None
+    bear_case: float | None
+    stress_case: float | None
+
+
+@dataclass(slots=True)
+class PropertyDecisionViewModel:
+    decision: DecisionViewModel | None
+    decision_metrics: DecisionMetrics
+    risk: RiskQuestionViewModel
+    value: ValueQuestionViewModel
+    price_support: PriceSupportQuestionViewModel
+    financials: FinancialsQuestionViewModel
+
+
+@dataclass(slots=True)
 class ValueFinderCandidateViewModel:
     property_id: str
     address: str
@@ -970,47 +1132,13 @@ class PropertyAnalysisView:
     condition_profile: str
     capex_lane: str
     overall_confidence: float
-    ask_price: float | None
-    bcv: float | None
-    value_low: float | None
-    value_high: float | None
-    base_case: float | None
-    bull_case: float | None
-    bear_case: float | None
-    stress_case: float | None
-    mispricing_amount: float | None
-    mispricing_pct: float | None
-    all_in_basis: float | None
-    capex_basis_used: float | None
-    capex_basis_source: str
-    net_opportunity_delta_value: float | None
-    net_opportunity_delta_pct: float | None
-    pricing_view: str
-    memo_verdict: str
-    biggest_risk: str
-    buyer_fit: list[str]
-    top_reasons: list[str]
-    what_changes_call: list[str]
-    memo_summary: str
-    entry_basis_label: str
-    income_support_label: str
-    capex_load_label: str
-    liquidity_profile_label: str
-    optionality_label: str
-    risk_skew_label: str
-    positioning_summary: PositioningSummaryViewModel
-    report_card: ReportCardViewModel
-    risk_bar: list[RiskBarItem]
-    top_positives: list[str]
-    top_risks: list[str]
-    metric_chips: list[MetricChip]
-    value: ValueViewModel
-    comps: CompsViewModel
-    forward: ForwardViewModel
-    income_support: IncomeSupportViewModel
-    risk_location: RiskLocationViewModel
+    property_decision_view: PropertyDecisionViewModel
     evidence: EvidenceViewModel
-    decision: DecisionViewModel | None = None
+    positioning_summary: PositioningSummaryViewModel | None = None
+    report_card: ReportCardViewModel = field(default_factory=ReportCardViewModel)
+    metric_chips: list[MetricChip] = field(default_factory=list)
+    top_positives: list[str] = field(default_factory=list)
+    risk_location: RiskLocationViewModel | None = None
     town_context: dict[str, Any] = field(default_factory=dict)
     compare_metrics: dict[str, Any] = field(default_factory=dict)
     # Defaults transparency
@@ -1030,12 +1158,147 @@ class PropertyAnalysisView:
     markets: list[MarketViewModel] = field(default_factory=list)
     market_view: MarketsPageViewModel | None = None
     property_evidence_summary: PropertyEvidenceSummaryViewModel | None = None
-    hybrid_value: HybridValueViewModel | None = None
-    value_finder: ValueFinderViewModel | None = None
+    # Price sensitivity
+    deal_curve: list[dict] = field(default_factory=list)
+    deal_curve_thresholds: dict | None = None
 
     @property
     def valuation(self) -> ValueViewModel:
-        return self.value
+        return self.property_decision_view.price_support.value
+
+    @property
+    def decision(self) -> DecisionViewModel | None:
+        return self.property_decision_view.decision
+
+    @property
+    def risk_bar(self) -> list[RiskBarItem]:
+        return self.property_decision_view.risk.risk_bar
+
+    @property
+    def top_risks(self) -> list[str]:
+        return self.property_decision_view.risk.top_risks
+
+    @property
+    def value_finder(self) -> ValueFinderViewModel | None:
+        return self.property_decision_view.value.value_finder
+
+    @property
+    def hybrid_value(self) -> HybridValueViewModel | None:
+        return self.property_decision_view.value.hybrid_value
+
+    @property
+    def ask_price(self) -> float | None:
+        return self.property_decision_view.price_support.ask_price
+
+    @property
+    def bcv(self) -> float | None:
+        return self.property_decision_view.price_support.fair_value
+
+    @property
+    def value_low(self) -> float | None:
+        return self.property_decision_view.price_support.value_low
+
+    @property
+    def value_high(self) -> float | None:
+        return self.property_decision_view.price_support.value_high
+
+    @property
+    def mispricing_amount(self) -> float | None:
+        return self.property_decision_view.price_support.mispricing_amount
+
+    @property
+    def mispricing_pct(self) -> float | None:
+        return self.property_decision_view.price_support.mispricing_pct
+
+    @property
+    def pricing_view(self) -> str:
+        return self.property_decision_view.price_support.pricing_view
+
+    @property
+    def all_in_basis(self) -> float | None:
+        return self.property_decision_view.price_support.all_in_basis
+
+    @property
+    def capex_basis_used(self) -> float | None:
+        return self.property_decision_view.price_support.capex_basis_used
+
+    @property
+    def capex_basis_source(self) -> str:
+        return self.property_decision_view.price_support.capex_basis_source
+
+    @property
+    def net_opportunity_delta_value(self) -> float | None:
+        return self.property_decision_view.price_support.net_opportunity_delta_value
+
+    @property
+    def net_opportunity_delta_pct(self) -> float | None:
+        return self.property_decision_view.price_support.net_opportunity_delta_pct
+
+    @property
+    def value(self) -> ValueViewModel:
+        return self.property_decision_view.price_support.value
+
+    @property
+    def comps(self) -> CompsViewModel:
+        return self.property_decision_view.price_support.comps
+
+    @property
+    def income_support(self) -> IncomeSupportViewModel:
+        return self.property_decision_view.financials.income_support
+
+    @property
+    def forward(self) -> ForwardViewModel:
+        return self.property_decision_view.financials.forward
+
+    @property
+    def base_case(self) -> float | None:
+        return self.property_decision_view.financials.base_case
+
+    @property
+    def bull_case(self) -> float | None:
+        return self.property_decision_view.financials.bull_case
+
+    @property
+    def bear_case(self) -> float | None:
+        return self.property_decision_view.financials.bear_case
+
+    @property
+    def stress_case(self) -> float | None:
+        return self.property_decision_view.financials.stress_case
+
+    @property
+    def income_support_label(self) -> str:
+        return _income_support_label(_parse_currency_text(self.income_support.monthly_cash_flow_text), None)
+
+    @property
+    def capex_load_label(self) -> str:
+        return _capex_load_label(self.capex_lane.lower() if self.capex_lane else "", None)
+
+    @property
+    def liquidity_profile_label(self) -> str:
+        for item in self.risk_bar:
+            if item.name.lower() == "liquidity":
+                return item.label
+        return "Mixed Liquidity"
+
+    @property
+    def optionality_label(self) -> str:
+        if self.value_finder and self.value_finder.bullets:
+            return "Supported Edge"
+        return "Limited Edge"
+
+    @property
+    def buyer_fit(self) -> list[str]:
+        if self.decision is None:
+            return []
+        values = [self.decision.best_fit, self.decision.fit_context]
+        return [item for item in values if item]
+
+    @property
+    def memo_summary(self) -> str:
+        if self.decision is None:
+            return ""
+        return self.decision.summary_view or self.decision.primary_reason
 
 
 def _coverage_lists(property_input: PropertyInput | None) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -1934,58 +2197,55 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         ),
     }
     risk_bar = build_risk_bar(report)
-
-    view = PropertyAnalysisView(
-        property_id=report.property_id,
-        label=(property_input.address if property_input else report.address).split(",")[0],
-        address=property_input.address if property_input else report.address,
-        evidence_mode=(property_input.source_metadata.evidence_mode.value.replace("_", " ").title() if property_input and property_input.source_metadata else "Unknown"),
-        condition_profile=((property_input.condition_profile or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
-        capex_lane=((property_input.capex_lane or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
-        overall_confidence=overall_confidence,
+    monthly_cost = _monthly_cost(report)
+    rent_offset = _rent_offset(report)
+    net_monthly = _net_monthly(report)
+    support_quality = _support_quality(report)
+    decision_metrics = DecisionMetrics(
+        fv_vs_ask_pct=current_value.mispricing_pct,
+        monthly_carry=net_monthly,
+        confidence=overall_confidence,
+    )
+    risk_metrics = RiskMetrics(
+        price_gap_pct=current_value.mispricing_pct,
+        monthly_loss=(abs(net_monthly) if isinstance(net_monthly, (int, float)) and net_monthly < 0 else 0.0 if net_monthly is not None else None),
+        liquidity_score=float(liquidity_metrics.get("liquidity_score")) if isinstance(liquidity_metrics.get("liquidity_score"), (int, float)) else None,
+        execution_risk=((property_input.capex_lane or "unknown").replace("_", " ").title() if property_input else "Unknown"),
+        confidence=overall_confidence,
+    )
+    value_metrics = ValueMetrics(
+        adu_income=_adu_income_value(report),
+        expansion_score=_expansion_score(report),
+        mispricing_pct=current_value.mispricing_pct,
+        market_tailwind=float(market_momentum_metrics.get("market_momentum_score")) if isinstance(market_momentum_metrics.get("market_momentum_score"), (int, float)) else None,
+    )
+    price_support_metrics = PriceSupportMetrics(
+        fair_value=current_value.briarwood_current_value,
+        value_range_low=current_value.value_low,
+        value_range_high=current_value.value_high,
+        comp_count=int(comparable_sales.comp_count or 0),
+        support_quality=support_quality,
+    )
+    financial_metrics = FinancialMetrics(
+        monthly_cost=monthly_cost,
+        rent_offset=rent_offset,
+        net_monthly=net_monthly,
+        break_even=bool(isinstance(net_monthly, (int, float)) and net_monthly >= 0),
+    )
+    price_support_view = PriceSupportQuestionViewModel(
+        metrics=price_support_metrics,
         ask_price=ask_price_val,
-        bcv=current_value.briarwood_current_value,
+        fair_value=current_value.briarwood_current_value,
         value_low=current_value.value_low,
         value_high=current_value.value_high,
-        base_case=scenario.base_case_value,
-        bull_case=scenario.bull_case_value,
-        bear_case=scenario.bear_case_value,
-        stress_case=_scenario_stress_value(scenario),
         mispricing_amount=current_value.mispricing_amount,
         mispricing_pct=current_value.mispricing_pct,
+        pricing_view=current_value.pricing_view,
         all_in_basis=getattr(current_value, "all_in_basis", None),
         capex_basis_used=getattr(current_value, "capex_basis_used", None),
         capex_basis_source=getattr(current_value, "capex_basis_source", None) or "unknown",
         net_opportunity_delta_value=getattr(current_value, "net_opportunity_delta_value", None),
         net_opportunity_delta_pct=getattr(current_value, "net_opportunity_delta_pct", None),
-        pricing_view=current_value.pricing_view,
-        memo_verdict=conclusion.verdict,
-        biggest_risk=conclusion.top_risk,
-        buyer_fit=list(conclusion.decision_fit),
-        top_reasons=list(conclusion.why_it_matters),
-        what_changes_call=list(conclusion.what_changes_call),
-        memo_summary=thesis.assessment.summary,
-        entry_basis_label=entry_basis_label,
-        income_support_label=income_support_label,
-        capex_load_label=capex_load_label,
-        liquidity_profile_label=liquidity_profile_label,
-        optionality_label=optionality_label,
-        risk_skew_label=risk_skew_label,
-        positioning_summary=positioning_summary,
-        report_card=initial_report_card,
-        risk_bar=risk_bar,
-        top_positives=positives,
-        top_risks=risks,
-        metric_chips=_metric_chips(
-            ask_price=ask_price_val,
-            bcv=current_value.briarwood_current_value,
-            value_low=current_value.value_low,
-            value_high=current_value.value_high,
-            mispricing_amount=current_value.mispricing_amount,
-            mispricing_pct=current_value.mispricing_pct,
-            base_case=scenario.base_case_value,
-            confidence=overall_confidence,
-        ),
         value=ValueViewModel(
             component_rows=_component_rows(report),
             market_anchors=_market_anchor_rows(report),
@@ -2019,20 +2279,9 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             additional_unit_cap_rate_text=f"{getattr(comparable_sales, 'additional_unit_cap_rate', 0) or 0:.1%}",
             hybrid_valuation_note=str(getattr(comparable_sales, "hybrid_valuation_note", "") or ""),
         ),
-        forward=ForwardViewModel(
-            summary=forward_module.summary,
-            confidence=float(forward_module.confidence),
-            bull_value_text=_fmt_currency(scenario.bull_case_value),
-            base_value_text=_fmt_currency(scenario.base_case_value),
-            bear_value_text=_fmt_currency(scenario.bear_case_value),
-            stress_case_value_text=_fmt_currency(_scenario_stress_value(scenario)),
-            upside_pct_text=_fmt_pct((scenario.bull_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
-            downside_pct_text=_fmt_pct((scenario.bear_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
-            market_drift_text=_fmt_currency(forward_module.metrics.get("market_drift")),
-            location_premium_text=_fmt_currency(forward_module.metrics.get("location_premium")),
-            risk_discount_text=_fmt_currency(forward_module.metrics.get("risk_discount")),
-            optionality_premium_text=_fmt_currency(forward_module.metrics.get("optionality_premium")),
-        ),
+    )
+    financials_view = FinancialsQuestionViewModel(
+        metrics=financial_metrics,
         income_support=IncomeSupportViewModel(
             summary=_income_attr(income, "summary", "Income support unavailable."),
             confidence=float(_income_attr(income, "confidence", 0.0)),
@@ -2055,49 +2304,62 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             warnings=list(_income_attr(income, "warnings", [])),
             assumptions=list(_income_attr(income, "assumptions", [])),
             unsupported_claims=list(_income_attr(income, "unsupported_claims", [])),
-            # Surfaced investor metrics from cost_valuation module
             dscr=_cost_val_metric(report, "dscr"),
             dscr_text=_fmt_ratio(_cost_val_metric(report, "dscr")),
             cash_on_cash_return=_cost_val_metric(report, "cash_on_cash_return"),
             cash_on_cash_return_text=_fmt_pct(_cost_val_metric(report, "cash_on_cash_return")),
             gross_yield=_cost_val_metric(report, "gross_yield"),
             gross_yield_text=_fmt_pct(_cost_val_metric(report, "gross_yield")),
-            # Rent source trust label
             rent_source_label=_rent_source_label(str(_income_attr(income, "rent_source_type", "missing"))),
         ),
-        risk_location=RiskLocationViewModel(
-            risk_summary=risk.summary,
-            risk_score=float(risk.score),
-            town_score=float(town_county.score.town_county_score),
-            town_label=town_county.score.location_thesis_label,
-            scarcity_score=float(scarcity.scarcity_support_score),
-            liquidity_score=float(liquidity_metrics.get("liquidity_score") or 0.0),
-            liquidity_label=str(liquidity_metrics.get("liquidity_label") or "Unknown"),
-            market_momentum_score=float(market_momentum_metrics.get("market_momentum_score") or 0.0),
-            market_momentum_label=str(market_momentum_metrics.get("market_momentum_label") or "Unknown"),
-            flood_risk=property_input.flood_risk if property_input and property_input.flood_risk else "Unavailable",
-            liquidity_view=town_county.score.liquidity_view,
-            drivers=list(market_momentum_drivers[:2]) + list(liquidity_supporting[:1]) + list(town_county.score.demand_drivers[:1]) + list(scarcity.demand_drivers[:1]),
-            risks=list(market_momentum_unsupported[:1]) + list(liquidity_unsupported[:1]) + list(town_county.score.demand_risks[:2]) + list(scarcity.scarcity_notes[:1]),
-            warnings=list(risk.metrics.get("warnings", [])) if isinstance(risk.metrics.get("warnings"), list) else [],
-            unsupported_claims=list(town_county.score.unsupported_claims) + list(scarcity.unsupported_claims),
-            # Surfaced stress scenario and momentum direction
-            stress_case_value=_scenario_stress_value(scenario),
-            stress_case_text=_fmt_currency(_scenario_stress_value(scenario)),
-            stress_drawdown_pct=_as_float(forward_module.metrics.get("stress_macro_shock_pct")),
-            momentum_direction=str(market_momentum_metrics.get("market_momentum_direction", "") or ""),
-            # Location context: school signal and coastal profile
-            school_signal=property_input.school_rating if property_input else None,
-            school_signal_text=f"{property_input.school_rating:.1f}/10" if property_input and property_input.school_rating is not None else "",
-            coastal_profile_label=_coastal_profile_label(town_county),
-            location_support_label=location_support_label,
-            location_support_detail=location_support_detail,
-            location_anchor_summary=location_anchor_summary,
-            # Scarcity component breakdown
-            land_scarcity_score=getattr(scarcity, "land_scarcity_score", None),
-            location_scarcity_score=getattr(scarcity, "location_scarcity_score", None),
-            town_pulse=town_pulse,
+        forward=ForwardViewModel(
+            summary=forward_module.summary,
+            confidence=float(forward_module.confidence),
+            bull_value_text=_fmt_currency(scenario.bull_case_value),
+            base_value_text=_fmt_currency(scenario.base_case_value),
+            bear_value_text=_fmt_currency(scenario.bear_case_value),
+            stress_case_value_text=_fmt_currency(_scenario_stress_value(scenario)),
+            upside_pct_text=_fmt_pct((scenario.bull_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
+            downside_pct_text=_fmt_pct((scenario.bear_case_value - ask_price_val) / ask_price_val) if ask_price_val else "Unavailable",
+            market_drift_text=_fmt_currency(forward_module.metrics.get("market_drift")),
+            location_premium_text=_fmt_currency(forward_module.metrics.get("location_premium")),
+            risk_discount_text=_fmt_currency(forward_module.metrics.get("risk_discount")),
+            optionality_premium_text=_fmt_currency(forward_module.metrics.get("optionality_premium")),
         ),
+        base_case=scenario.base_case_value,
+        bull_case=scenario.bull_case_value,
+        bear_case=scenario.bear_case_value,
+        stress_case=_scenario_stress_value(scenario),
+    )
+    risk_question_view = RiskQuestionViewModel(
+        metrics=risk_metrics,
+        risk_bar=risk_bar,
+        summary=risk.summary,
+        top_risks=risks,
+    )
+    value_question_view = ValueQuestionViewModel(
+        metrics=value_metrics,
+        value_finder=value_finder_view,
+        hybrid_value=hybrid_value_view,
+    )
+    property_decision_view = PropertyDecisionViewModel(
+        decision=None,
+        decision_metrics=decision_metrics,
+        risk=risk_question_view,
+        value=value_question_view,
+        price_support=price_support_view,
+        financials=financials_view,
+    )
+
+    view = PropertyAnalysisView(
+        property_id=report.property_id,
+        label=(property_input.address if property_input else report.address).split(",")[0],
+        address=property_input.address if property_input else report.address,
+        evidence_mode=(property_input.source_metadata.evidence_mode.value.replace("_", " ").title() if property_input and property_input.source_metadata else "Unknown"),
+        condition_profile=((property_input.condition_profile or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
+        capex_lane=((property_input.capex_lane or "Unavailable").replace("_", " ").title() if property_input else "Unavailable"),
+        overall_confidence=overall_confidence,
+        property_decision_view=property_decision_view,
         evidence=EvidenceViewModel(
             evidence_mode=(property_input.source_metadata.evidence_mode.value.replace("_", " ").title() if property_input and property_input.source_metadata else "Unknown"),
             sourced_inputs=sourced,
@@ -2142,13 +2404,57 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
             ),
             section_confidences=_section_confidences(report),
         ),
+        positioning_summary=positioning_summary,
+        report_card=initial_report_card,
+        top_positives=positives,
+        metric_chips=_metric_chips(
+            ask_price=ask_price_val,
+            bcv=current_value.briarwood_current_value,
+            value_low=current_value.value_low,
+            value_high=current_value.value_high,
+            mispricing_amount=current_value.mispricing_amount,
+                mispricing_pct=current_value.mispricing_pct,
+            base_case=scenario.base_case_value,
+            confidence=overall_confidence,
+        ),
+        risk_location=RiskLocationViewModel(
+            risk_summary=risk.summary,
+            risk_score=float(risk.score),
+            town_score=float(town_county.score.town_county_score),
+            town_label=town_county.score.location_thesis_label,
+            scarcity_score=float(scarcity.scarcity_support_score),
+            liquidity_score=float(liquidity_metrics.get("liquidity_score") or 0.0),
+            liquidity_label=str(liquidity_metrics.get("liquidity_label") or "Unknown"),
+            market_momentum_score=float(market_momentum_metrics.get("market_momentum_score") or 0.0),
+            market_momentum_label=str(market_momentum_metrics.get("market_momentum_label") or "Unknown"),
+            flood_risk=property_input.flood_risk if property_input and property_input.flood_risk else "Unavailable",
+            liquidity_view=town_county.score.liquidity_view,
+            drivers=list(market_momentum_drivers[:2]) + list(liquidity_supporting[:1]) + list(town_county.score.demand_drivers[:1]) + list(scarcity.demand_drivers[:1]),
+            risks=list(market_momentum_unsupported[:1]) + list(liquidity_unsupported[:1]) + list(town_county.score.demand_risks[:2]) + list(scarcity.scarcity_notes[:1]),
+            warnings=list(risk.metrics.get("warnings", [])) if isinstance(risk.metrics.get("warnings"), list) else [],
+            unsupported_claims=list(town_county.score.unsupported_claims) + list(scarcity.unsupported_claims),
+            # Surfaced stress scenario and momentum direction
+            stress_case_value=_scenario_stress_value(scenario),
+            stress_case_text=_fmt_currency(_scenario_stress_value(scenario)),
+            stress_drawdown_pct=_as_float(forward_module.metrics.get("stress_macro_shock_pct")),
+            momentum_direction=str(market_momentum_metrics.get("market_momentum_direction", "") or ""),
+            # Location context: school signal and coastal profile
+            school_signal=property_input.school_rating if property_input else None,
+            school_signal_text=f"{property_input.school_rating:.1f}/10" if property_input and property_input.school_rating is not None else "",
+            coastal_profile_label=_coastal_profile_label(town_county),
+            location_support_label=location_support_label,
+            location_support_detail=location_support_detail,
+            location_anchor_summary=location_anchor_summary,
+            # Scarcity component breakdown
+            land_scarcity_score=getattr(scarcity, "land_scarcity_score", None),
+            location_scarcity_score=getattr(scarcity, "location_scarcity_score", None),
+            town_pulse=town_pulse,
+        ),
         town_context=town_context,
         compare_metrics=compare_metrics,
         markets=market_view_model.markets,
         market_view=market_view_model,
         property_evidence_summary=property_evidence_summary,
-        hybrid_value=hybrid_value_view,
-        value_finder=value_finder_view,
     )
     view.evidence.transparency_items = _assumption_transparency_items(
         property_input,
@@ -2205,14 +2511,19 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
         )
 
     strategy_fit_label = _strategy_fit_label(view.lens_scores)
-    view.optionality_label = _optionality_label(strategy_fit_label, None, scenario.bull_case_value)
+    optionality_label = _optionality_label(strategy_fit_label, None, scenario.bull_case_value)
     view.positioning_summary = _positioning_summary(
-        entry_basis_label=view.entry_basis_label,
+        entry_basis_label=_entry_basis_label(
+            view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+        ),
         income_support_label=view.income_support_label,
         capex_load_label=view.capex_load_label,
         liquidity_profile_label=view.liquidity_profile_label,
-        optionality_label=view.optionality_label,
-        risk_skew_label=view.risk_skew_label,
+        optionality_label=optionality_label,
+        risk_skew_label=_risk_skew_label(
+            float(view.risk_location.risk_score),
+            max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100)),
+        ),
     )
 
     # Confidence layer — global level, factors, and input impacts
@@ -2222,9 +2533,18 @@ def build_property_analysis_view(report: AnalysisReport) -> PropertyAnalysisView
     view.top_input_impacts = _compute_top_input_impacts(metric_statuses, confidence_breakdown)
 
     view.report_card = _build_report_card(view)
-    view.decision = _build_decision_view(view, report)
-    view.recommendation_tier = view.decision.recommendation
-    view.recommendation_action = view.decision.primary_reason
+    view.property_decision_view.decision = _build_decision_view(view, report)
+    view.recommendation_tier = view.property_decision_view.decision.recommendation
+    view.recommendation_action = view.property_decision_view.decision.primary_reason
+
+    # Price sensitivity curve
+    try:
+        from briarwood.deal_curve import build_deal_curve, extract_thresholds as _extract_thresholds
+        curve = build_deal_curve(report)
+        view.deal_curve = curve
+        view.deal_curve_thresholds = _extract_thresholds(curve)
+    except Exception as exc:
+        logger.warning("build_deal_curve failed for %s: %s", report.property_id, exc)
 
     return view
 
@@ -2622,9 +2942,10 @@ def _risk_skew_factor_score(risk_score: float, confidence_score: int) -> float:
 def _report_card_explanation(factor_name: str, view: PropertyAnalysisView) -> str:
     if factor_name == "entry_basis":
         valuation_pct = view.net_opportunity_delta_pct if view.net_opportunity_delta_pct is not None else view.mispricing_pct
+        entry_basis_label = _entry_basis_label(valuation_pct)
         if isinstance(valuation_pct, (int, float)):
-            return f"{view.entry_basis_label} based on about {abs(valuation_pct) * 100:.0f}% versus basis."
-        return f"{view.entry_basis_label} because value support is incomplete."
+            return f"{entry_basis_label} based on about {abs(valuation_pct) * 100:.0f}% versus basis."
+        return f"{entry_basis_label} because value support is incomplete."
     if factor_name == "income_support":
         ratio = view.compare_metrics.get("income_support_ratio")
         cash_flow = view.compare_metrics.get("monthly_cash_flow")
@@ -2639,7 +2960,11 @@ def _report_card_explanation(factor_name: str, view: PropertyAnalysisView) -> st
         return f"{view.liquidity_profile_label} with liquidity near {view.risk_location.liquidity_score:.0f}/100."
     if factor_name == "optionality":
         return f"{view.optionality_label} based on the current strategy fit and upside structure."
-    return f"{view.risk_skew_label} with risk near {view.risk_location.risk_score:.0f}/100 and confidence around {view.overall_confidence:.0%}."
+    risk_skew_label = _risk_skew_label(
+        float(view.risk_location.risk_score),
+        max(0, min(int(round((view.overall_confidence or 0.0) * 100)), 100)),
+    )
+    return f"{risk_skew_label} with risk near {view.risk_location.risk_score:.0f}/100 and confidence around {view.overall_confidence:.0%}."
 
 
 def _build_report_card(view: PropertyAnalysisView) -> ReportCardViewModel:
@@ -2771,16 +3096,31 @@ def _build_decision_view(view: PropertyAnalysisView, report: AnalysisReport) -> 
 
     conviction_score = max(0, min(int(round(decision_output.conviction * 100)), 100))
 
+    supporting_factors: list[str] = []
+    for item in [
+        decision_output.primary_reason,
+        decision_output.secondary_reason,
+        *((view.value_finder.bullets if view.value_finder is not None else [])[:2]),
+    ]:
+        if item and item not in supporting_factors:
+            supporting_factors.append(item)
+
+    risk_labels = [item.label for item in view.risk_bar if item.level == "High"]
+    risks = list(view.top_risks)
+    for item in risk_labels:
+        if item and item not in risks:
+            risks.append(item)
+
     positive_drivers = [
         DecisionDriverItem(metric="reason", direction="+", strength="moderate", summary=item)
-        for item in (view.top_reasons or [])[:3]
+        for item in supporting_factors[:3]
     ]
     negative_drivers = [
         DecisionDriverItem(metric="risk", direction="-", strength="moderate", summary=item)
-        for item in (view.top_risks or [])[:3]
+        for item in risks[:3]
     ]
 
-    primary_risk = view.biggest_risk or (view.top_risks[0] if view.top_risks else "No single risk dominates yet.")
+    primary_risk = risks[0] if risks else "No single risk dominates yet."
     if weakest_category_key:
         break_condition = f"{weakest_dimension} is the weakest scored dimension. Main risk: {primary_risk}"
     else:
@@ -2793,7 +3133,7 @@ def _build_decision_view(view: PropertyAnalysisView, report: AnalysisReport) -> 
         line = f"{item.label.lower()} is still estimated"
         if line not in dependency_lines:
             dependency_lines.append(line)
-    for item in (view.what_changes_call or [])[:2]:
+    for item in list(decision_output.required_beliefs)[:2]:
         if item and item not in dependency_lines:
             dependency_lines.append(item)
     dependencies = dependency_lines[:3]
@@ -2807,7 +3147,7 @@ def _build_decision_view(view: PropertyAnalysisView, report: AnalysisReport) -> 
     if display_fit == "Value-Add / Renovation" and view.bull_case is not None:
         fit_context = f"This reads more like a value-add case than a plain hold. The current upside anchor is about {_fmt_currency(view.bull_case)}."
 
-    risk_statement = f"Risk stance: {view.risk_skew_label}. Main risk: {primary_risk}."
+    risk_statement = f"Primary risk: {primary_risk}."
     summary_view = (
         f"{recommendation}. {decision_output.primary_reason} {decision_output.secondary_reason}".strip()
     )
@@ -2843,8 +3183,8 @@ def _build_decision_view(view: PropertyAnalysisView, report: AnalysisReport) -> 
         what_changes_view=required_belief,
         primary_driver=decisive_driver,
         fit_context=fit_context,
-        supporting_factors=(view.top_reasons or [])[:4],
-        risks=(view.top_risks or [])[:3],
+        supporting_factors=supporting_factors[:4],
+        risks=risks[:3],
         dependencies=dependencies,
         disqualifiers=disqualifiers[:3],
     )
