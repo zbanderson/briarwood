@@ -1,11 +1,14 @@
-"""Property View — decision-first single-page layout.
+"""Property View — visual-first, decision-first single-page layout.
 
-Everything lives on one scrollable page:
-  Above the fold (always visible):  Decision | Risk Bar | Value Finder | Quick Reality
-  Below the fold (visible, secondary):  Price Support | Financials
-  Collapsed (expand on click):  Scenarios | Evidence
+Five questions, in order.  Each gets its own visual section:
+  1. "Should I buy this?"     — Verdict gauge (above the fold)
+  2. "What could go wrong?"   — Risk heat strip (above the fold)
+  3. "Where is the value?"    — Value opportunity chart (below the fold)
+  4. "What does this become?" — Scenario fan chart (below the fold)
+  5. "Does this fit?"         — Strategy radar (collapsed by default)
 
-No section below the fold renders its full content on page load.
+Evidence, tables, and detailed breakdowns live behind expand/collapse.
+Every metric is a visual element — no raw tables in the default view.
 """
 from __future__ import annotations
 
@@ -43,6 +46,15 @@ from briarwood.dash_app.theme import (
     verdict_color,
 )
 from briarwood.dash_app.view_models import PropertyAnalysisView
+from briarwood.dash_app.viz import (
+    metric_spark,
+    quick_metric_gauge,
+    risk_heat_strip,
+    scenario_fan_chart,
+    strategy_radar_chart,
+    value_opportunity_chart,
+    verdict_gauge,
+)
 from briarwood.schemas import AnalysisReport
 
 
@@ -56,23 +68,47 @@ class SectionBoundaryError(RuntimeError):
 # Each key maps a section name → the set of top-level attribute paths that
 # section is permitted to read from a PropertyAnalysisView (or sub-model).
 # Paths use dot notation relative to PropertyAnalysisView.property_decision_view.
+#
+# The five question-based sections:
+#   verdict     — "Should I buy this?"
+#   risk        — "What could go wrong?"
+#   value       — "Where is the value?"
+#   projection  — "What does this become?"
+#   fit         — "Does this fit my strategy?"
 SECTION_FIELD_ALLOWLIST: dict[str, frozenset[str]] = {
-    "decision": frozenset({
-        # QuickDecisionViewModel fields only
-        "recommendation",
-        "conviction",
-        "confidence",
-        "primary_reason",
-        "secondary_reason",
-        "required_beliefs",
+    # Section 1: Verdict — synthesises decision + price gap + carry + confidence
+    "verdict": frozenset({
+        "recommendation", "conviction", "confidence",
+        "primary_reason", "secondary_reason", "required_beliefs",
+        "risk_bar",       # for confidence score extraction
     }),
+    # Legacy alias
+    "decision": frozenset({
+        "recommendation", "conviction", "confidence",
+        "primary_reason", "secondary_reason", "required_beliefs",
+    }),
+    # Section 2: Risk — risk bar items only
     "risk": frozenset({
         "risk",           # RiskQuestionViewModel (metrics, risk_bar, summary, top_risks)
         "risk_bar",       # on QuickDecisionViewModel
     }),
+    # Section 3: Value — value drivers and opportunity signals
     "value": frozenset({
         "value",          # ValueQuestionViewModel (metrics, value_finder, hybrid_value)
     }),
+    # Section 4: Projection — forward scenarios + deal curve
+    "projection": frozenset({
+        "financials",     # FinancialsQuestionViewModel (forward, scenarios)
+        "deal_curve",
+        "deal_curve_thresholds",
+    }),
+    # Section 5: Fit — positioning, report card, buyer fit
+    "fit": frozenset({
+        "positioning_summary",
+        "report_card",
+        "category_scores",
+    }),
+    # ── Legacy section boundaries (kept for backward compat) ────────────
     "price_support": frozenset({
         "price_support",  # PriceSupportQuestionViewModel
     }),
@@ -80,8 +116,6 @@ SECTION_FIELD_ALLOWLIST: dict[str, frozenset[str]] = {
         "financials",     # FinancialsQuestionViewModel (metrics, income_support, forward)
         "income_support", # top-level convenience alias on PropertyAnalysisView
     }),
-    # Quick reality is a declared composite — it may read both price_support
-    # and financials, but NOT risk or value.
     "quick_reality": frozenset({
         "price_support",
         "financials",
@@ -188,30 +222,262 @@ def _tab_button_style(active: bool) -> dict:
 # at render time with a clear SectionBoundaryError.
 
 
-def render_decision_section(
+def render_verdict_section(
+    view: PropertyAnalysisView,
     vm: QuickDecisionViewModel,
+    report: AnalysisReport,
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Decision section — consumes QuickDecisionViewModel only."""
-    proxy = SectionDataProxy(vm, "decision")
-    return _render_decision_hero(proxy, user_role=user_role)
+    """Section 1: 'Should I buy this?' — visual verdict gauge with 4 metric sparks."""
+    proxy = SectionDataProxy(vm, "verdict")
+
+    # Extract the four supporting metrics from view model
+    price_support = view.property_decision_view.price_support
+    financials = view.property_decision_view.financials
+
+    fv_gap_pct = view.mispricing_pct
+    monthly_carry = financials.metrics.net_monthly
+    # Stabilized CF: use operating cash flow if available, else net monthly
+    stabilized_cf = None
+    if financials.income_support and financials.income_support.operating_cash_flow_text:
+        try:
+            stabilized_cf = float(financials.income_support.operating_cash_flow_text.replace("$", "").replace(",", "").replace("/mo", "").strip())
+        except (ValueError, AttributeError):
+            pass
+    if stabilized_cf is None:
+        stabilized_cf = monthly_carry
+
+    question = "Should I buy this?" if user_role == "homebuyer" else "Does this pencil?"
+
+    return verdict_gauge(
+        proxy.recommendation,
+        proxy.conviction,
+        fv_gap_pct=fv_gap_pct,
+        monthly_carry=monthly_carry,
+        stabilized_cf=stabilized_cf,
+        confidence=view.overall_confidence,
+        question=question,
+        primary_reason=proxy.primary_reason,
+        secondary_reason=proxy.secondary_reason,
+        required_beliefs=list(proxy.required_beliefs) if proxy.required_beliefs else None,
+    )
 
 
 def render_risk_section(
     view: PropertyAnalysisView,
     vm: QuickDecisionViewModel,
 ) -> html.Div:
-    """Risk section — consumes risk sub-model + risk_bar only."""
+    """Section 2: 'What could go wrong?' — risk heat strip."""
     pdv_proxy = SectionDataProxy(view.property_decision_view, "risk")
     vm_proxy = SectionDataProxy(vm, "risk")
-    return _render_risk_check_validated(pdv_proxy, vm_proxy)
+    risk_qvm = pdv_proxy.risk
+    risk_bar = vm_proxy.risk_bar
+    return risk_heat_strip(risk_bar, top_risks=list(risk_qvm.top_risks) if risk_qvm.top_risks else None)
 
 
 def render_value_section(view: PropertyAnalysisView) -> html.Div:
-    """Value section — consumes value sub-model only."""
+    """Section 3: 'Where is the value?' — value opportunity chart."""
     proxy = SectionDataProxy(view.property_decision_view, "value")
-    return _render_value_card_validated(proxy)
+    value_qvm = proxy.value
+    value_metrics = value_qvm.metrics
+    value_finder = value_qvm.value_finder
+
+    # Build driver list from value_drivers and metrics
+    drivers: list[dict] = []
+    if value_metrics.adu_income is not None and value_metrics.adu_income > 0:
+        drivers.append({"label": "ADU / Rental Income", "impact": value_metrics.adu_income * 12})
+    if value_metrics.mispricing_pct is not None and abs(value_metrics.mispricing_pct) > 0.01:
+        # Express mispricing as dollar amount using ask price
+        ask = view.ask_price or 0
+        drivers.append({"label": "Price Dislocation", "impact": value_metrics.mispricing_pct * ask})
+    if value_metrics.expansion_score is not None and value_metrics.expansion_score > 0:
+        drivers.append({"label": "Expansion Upside", "impact": value_metrics.expansion_score * 100_000})
+    if value_metrics.market_tailwind is not None and value_metrics.market_tailwind > 50:
+        drivers.append({"label": "Market Tailwind", "impact": value_metrics.market_tailwind * 500})
+
+    bullets = list(value_finder.bullets[:4]) if value_finder and value_finder.bullets else []
+    signal = value_finder.supporting_signal if value_finder else ""
+
+    return value_opportunity_chart(drivers, bullets=bullets, supporting_signal=signal)
+
+
+def render_projection_section(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+) -> html.Div:
+    """Section 4: 'What does this become?' — scenario fan chart."""
+    financials = view.property_decision_view.financials
+    forward = financials.forward
+    ask = view.ask_price or 0
+
+    return scenario_fan_chart(
+        ask,
+        base_value=financials.base_case,
+        bull_value=financials.bull_case,
+        bear_value=financials.bear_case,
+        stress_value=financials.stress_case,
+        upside_pct=forward.upside_pct_text if forward else "",
+        downside_pct=forward.downside_pct_text if forward else "",
+    )
+
+
+def render_fit_section(view: PropertyAnalysisView) -> html.Div:
+    """Section 5: 'Does this fit my strategy?' — radar chart."""
+    rc = view.report_card
+    factor_scores = rc.factor_scores if rc else {}
+
+    # Capital required = down payment
+    capital = None
+    if view.ask_price and view.compare_metrics.get("down_payment_percent"):
+        capital = view.ask_price * view.compare_metrics["down_payment_percent"]
+    elif view.ask_price:
+        capital = view.ask_price * 0.20  # default 20%
+
+    # Complexity from capex lane
+    complexity = "Low"
+    if view.capex_lane and "heavy" in view.capex_lane.lower():
+        complexity = "High"
+    elif view.capex_lane and ("moderate" in view.capex_lane.lower() or "medium" in view.capex_lane.lower()):
+        complexity = "Medium"
+
+    return strategy_radar_chart(
+        factor_scores,
+        capital_required=capital,
+        complexity=complexity,
+        positive_factors=list(rc.positive[:3]) if rc else None,
+        negative_factors=list(rc.negative[:3]) if rc else None,
+    )
+
+
+def render_town_pulse_compact(view: PropertyAnalysisView) -> html.Div | None:
+    """Compact Town Pulse block — surfaces market signals between Risk and Value.
+
+    Returns None when no town pulse data is available.
+    """
+    rl = view.risk_location
+    if rl is None:
+        return None
+    pulse = rl.town_pulse
+    if pulse is None or not pulse.key_signals:
+        return None
+
+    # Build compact signal pills grouped by tone
+    signal_pills: list[html.Div] = []
+    _TONE_COLORS = {"bullish": ACCENT_GREEN, "bearish": ACCENT_RED, "watch": ACCENT_AMBER}
+    _TONE_BG = {
+        "bullish": "rgba(34, 197, 94, 0.10)",
+        "bearish": "rgba(239, 68, 68, 0.10)",
+        "watch": "rgba(245, 158, 11, 0.10)",
+    }
+
+    for signal in pulse.key_signals[:4]:
+        tone = getattr(signal, "tone", "watch")
+        color = _TONE_COLORS.get(tone, ACCENT_AMBER)
+        bg = _TONE_BG.get(tone, "rgba(245, 158, 11, 0.10)")
+        title = getattr(signal, "title", "")
+        confidence_tag = getattr(signal, "confidence_tag", "")
+
+        signal_pills.append(html.Div(
+            [
+                html.Div(
+                    [
+                        html.Span(
+                            tone.upper(),
+                            style={
+                                "fontSize": "9px", "fontWeight": "700", "color": color,
+                                "letterSpacing": "0.08em",
+                            },
+                        ),
+                        html.Span(
+                            confidence_tag,
+                            style={"fontSize": "9px", "color": TEXT_TERTIARY, "marginLeft": "6px"},
+                        ) if confidence_tag else None,
+                    ],
+                    style={"display": "flex", "alignItems": "center", "marginBottom": "3px"},
+                ),
+                html.Div(title, style={
+                    "fontSize": "12px", "fontWeight": "500", "color": TEXT_PRIMARY,
+                    "lineHeight": "1.4",
+                }),
+            ],
+            style={
+                "padding": "8px 12px", "borderRadius": RADIUS_MD,
+                "backgroundColor": bg, "border": f"1px solid {color}20",
+            },
+        ))
+
+    # Location context sparks
+    sparks: list[html.Div] = []
+    sparks.append(metric_spark(
+        "Town Score", f"{rl.town_score:.0f}/100",
+        rl.town_score / 100,
+        subtitle=rl.town_label.replace("_", " ").title() if rl.town_label else "",
+    ))
+    sparks.append(metric_spark(
+        "Momentum", f"{rl.market_momentum_score:.0f}/100",
+        rl.market_momentum_score / 100,
+        subtitle=rl.momentum_direction or rl.market_momentum_label,
+    ))
+    sparks.append(metric_spark(
+        "Scarcity", f"{rl.scarcity_score:.0f}/100",
+        rl.scarcity_score / 100,
+    ))
+    sparks.append(metric_spark(
+        "Liquidity", f"{rl.liquidity_score:.0f}/100",
+        rl.liquidity_score / 100,
+        subtitle=rl.liquidity_label,
+    ))
+
+    return html.Div(
+        [
+            html.Div(
+                [html.Span("TOWN PULSE", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
+                 html.Span("What's changing in this market?", style={"fontSize": "12px", "color": TEXT_TERTIARY, "marginLeft": "12px"})],
+                style={"marginBottom": "12px"},
+            ),
+            # Narrative summary
+            html.Div(pulse.narrative_summary, style={
+                "fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY,
+                "marginBottom": "14px",
+            }) if pulse.narrative_summary else None,
+            # Signal pills grid
+            html.Div(
+                signal_pills,
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "repeat(auto-fit, minmax(200px, 1fr))",
+                    "gap": "8px",
+                    "marginBottom": "16px",
+                },
+            ),
+            # Location metrics sparks
+            html.Div(
+                sparks,
+                style={
+                    "display": "grid",
+                    "gridTemplateColumns": "repeat(auto-fit, minmax(110px, 1fr))",
+                    "gap": "20px",
+                    "borderTop": f"1px solid {BORDER}",
+                    "paddingTop": "14px",
+                },
+            ),
+        ],
+        style=CARD_STYLE,
+    )
+
+
+# ── Legacy public section renderers (delegate to new visual sections) ───────
+
+
+def render_decision_section(
+    vm: QuickDecisionViewModel,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Legacy decision section — kept for backward compat."""
+    proxy = SectionDataProxy(vm, "decision")
+    return _render_decision_hero(proxy, user_role=user_role)
 
 
 def render_price_support_section(
@@ -324,16 +590,71 @@ def render_property_view(
     active_tab: str = "summary",
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Single-page property analysis — decision-first, everything else below the fold.
+    """Visual-first property analysis — five questions, five visual sections.
 
-    active_tab is accepted for backward compatibility but ignored; the page
-    always renders the full decision-first layout.
+    Visual hierarchy:
+      Above the fold:  1. Verdict gauge  |  2. Risk heat strip
+      Below the fold:  3. Value opportunity  |  4. Scenario fan chart
+      Collapsed:       5. Strategy fit  |  Deal Curve  |  Evidence
 
-    Every above/below-fold section is rendered through its validated public
-    renderer, which enforces section field boundaries at runtime.
+    Every metric is a visual element.  No raw tables in the default view.
+    Tables are evidence — they live behind expand/collapse.
     """
     del active_tab  # single-page now
     quick_vm = build_quick_decision_view(report)
+
+    # ── Build optional sections ───────────────────────────────────────
+    town_pulse_block = render_town_pulse_compact(view)
+
+    # ── Above the fold ──────────────────────────────────────────────
+    above_fold = [
+        render_verdict_section(view, quick_vm, report, user_role=user_role),
+        render_risk_section(view, quick_vm),
+    ]
+
+    # ── Below the fold (visible, secondary) ─────────────────────────
+    below_fold: list[html.Div] = []
+    if town_pulse_block is not None:
+        below_fold.append(town_pulse_block)
+    below_fold.extend([
+        render_value_section(view),
+        render_projection_section(view, report),
+    ])
+
+    # ── Collapsed by default ────────────────────────────────────────
+    collapsed = [
+        _render_collapsed_section(
+            "Strategy Fit",
+            "Does this fit my strategy?",
+            render_fit_section(view),
+        ),
+        _render_deal_curve_collapsed(view),
+        _render_collapsed_section(
+            "Price & Financials Detail",
+            "Comp positioning, cost breakdown, and investor metrics.",
+            html.Div([
+                render_price_support_section(view, report, user_role=user_role),
+                render_financial_section(view, report, user_role=user_role),
+            ], style={"display": "grid", "gap": "12px"}),
+        ),
+        _render_collapsed_section(
+            "Scenarios",
+            "Stress-test renovation, knockdown, and forward cases.",
+            _render_scenarios_content(view, report),
+        ),
+        _render_collapsed_section(
+            "Evidence",
+            "Comp tables, diagnostics, assumptions, and evidence quality.",
+            _render_evidence_content(view, report),
+        ),
+    ]
+
+    # ── Fold separator ──────────────────────────────────────────────
+    fold_divider = html.Div(style={
+        "height": "1px",
+        "backgroundColor": BORDER,
+        "margin": "8px 0",
+    })
 
     return html.Div(
         [
@@ -341,31 +662,17 @@ def render_property_view(
             _render_property_header(view),
             html.Div(
                 [
-                    # ── Above the fold (always visible) ──────────────────
-                    render_decision_section(quick_vm, user_role=user_role),
-                    render_risk_section(view, quick_vm),
-                    render_value_section(view),
-                    render_quick_reality_section(view, report, user_role=user_role),
-
-                    # ── Below the fold (visible, secondary) ──────────────
-                    render_price_support_section(view, report, user_role=user_role),
-                    render_financial_section(view, report, user_role=user_role),
-
-                    # ── Collapsed by default (expand on click) ───────────
-                    _render_deal_curve_collapsed(view),
-                    _render_collapsed_section(
-                        "Scenarios",
-                        "Stress-test renovation, knockdown, and forward cases.",
-                        _render_scenarios_content(view, report),
-                    ),
-                    _render_collapsed_section(
-                        "Evidence",
-                        "Comp tables, diagnostics, assumptions, and evidence quality.",
-                        _render_evidence_content(view, report),
-                    ),
+                    # Above the fold
+                    html.Div(above_fold, style={"display": "grid", "gap": "16px"}),
+                    fold_divider,
+                    # Below the fold
+                    html.Div(below_fold, style={"display": "grid", "gap": "16px"}),
+                    fold_divider,
+                    # Collapsed
+                    html.Div(collapsed, style={"display": "grid", "gap": "12px"}),
                 ],
                 className="briarwood-fade-in",
-                style={"display": "grid", "gap": "16px", "padding": "0 4px"},
+                style={"display": "grid", "gap": "12px", "padding": "0 4px"},
             ),
         ],
         style={
