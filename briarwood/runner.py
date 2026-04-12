@@ -235,51 +235,6 @@ def write_report_html(report: AnalysisReport, output_path: str | Path) -> Path:
     return write_tear_sheet_html(tear_sheet, output_path)
 
 
-def format_tear_sheet_summary(report: AnalysisReport) -> str:
-    tear_sheet = build_tear_sheet(report)
-    lines = [
-        "Briarwood Tear Sheet",
-        f"property: {tear_sheet.header.address}",
-        "",
-        "[header]",
-        f"stance: {tear_sheet.header.investment_stance}",
-        f"subtitle: {tear_sheet.header.subtitle}",
-        "",
-        "[conclusion]",
-        f"ask_price: {tear_sheet.conclusion.ask_price:,.0f}",
-        f"briarwood_current_value: {tear_sheet.conclusion.briarwood_current_value:,.0f}",
-        f"bull_value: {tear_sheet.conclusion.bull_value:,.0f}",
-        f"bear_value: {tear_sheet.conclusion.bear_value:,.0f}",
-        f"summary: {tear_sheet.conclusion.assessment.summary}",
-        "",
-        "[thesis]",
-        f"title: {tear_sheet.thesis.title}",
-        f"summary: {tear_sheet.thesis.assessment.summary}",
-        "bullets:",
-    ]
-    lines.extend(f"- {bullet}" for bullet in tear_sheet.thesis.bullets)
-    lines.extend(
-        [
-            "",
-            "[scenario_chart]",
-            f"title: {tear_sheet.scenario_chart.chart_title}",
-        ]
-    )
-    lines.extend(
-        f"- {point.label}: {point.value:,.0f}" for point in tear_sheet.scenario_chart.points
-    )
-    lines.extend(
-        [
-            "",
-            "[bull_base_bear]",
-            f"- Bull Case: {tear_sheet.bull_base_bear.bull_case.assessment.summary}",
-            f"- Base Case: {tear_sheet.bull_base_bear.base_case.assessment.summary}",
-            f"- Bear Case: {tear_sheet.bull_base_bear.bear_case.assessment.summary}",
-        ]
-    )
-    return "\n".join(lines)
-
-
 def format_intake_preview(
     intake_result: ListingIntakeResult,
     *,
