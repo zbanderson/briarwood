@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import traceback
 from datetime import datetime
 from functools import lru_cache
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,12 @@ except ImportError:  # pragma: no cover - lightweight fallback for local v1 usag
 
 from briarwood.dash_app.compare import build_compare_summary
 from briarwood.evidence import has_known_optionality_detail
+from briarwood.listing_intake.parsers import ZillowUrlParser
 from briarwood.dash_app.components import (
-    _TOUR_STEPS,
     render_compare_decision_mode,
+    render_property_decision_summary,
     render_portfolio_dashboard,
     render_tear_sheet_body,
-    render_tour_overlay,
-    render_tour_trigger_button,
     render_what_if_metrics,
     renovation_value_trajectory_chart,
 )
@@ -69,8 +69,13 @@ from briarwood.dash_app.theme import (
     TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE,
     tone_badge_style, score_color, verdict_color,
 )
-from briarwood.dash_app.view_models import build_property_analysis_view
-from briarwood.dash_app.view_models import build_market_view_model
+from briarwood.dash_app.view_models import (
+    ACTIVE_LISTINGS_PATH,
+    build_market_view_model,
+    build_property_analysis_view,
+    build_value_finder_candidate_view_model,
+)
+from briarwood.agents.comparable_sales.store import JsonActiveListingStore
 
 
 app = Dash(
@@ -216,6 +221,17 @@ _TAB_BAR_STYLE = {
 
     # Section-level sub-tabs removed — tear sheet is now one scrollable page.
 
+
+def _display_recommendation_label(label: str | None) -> str:
+    mapping = {
+        "Buy": "Buy",
+        "Neutral": "Watch",
+        "Avoid": "Pass",
+        "Watch": "Watch",
+        "Pass": "Pass",
+    }
+    return mapping.get((label or "").strip(), label or "—")
+
 _DROPDOWN_STYLE = {
     "backgroundColor": BG_SURFACE,
     "color": TEXT_PRIMARY,
@@ -306,6 +322,59 @@ def _property_options() -> list[dict[str, str]]:
     return options
 
 
+@lru_cache(maxsize=16)
+def _saved_properties_snapshot(snapshot_key: int | None) -> tuple:
+    del snapshot_key
+    return tuple(list_saved_properties())
+
+
+def _saved_properties_mtime_ns() -> int:
+    try:
+        return SAVED_PROPERTY_DIR.stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
+def _current_saved_properties_snapshot() -> tuple:
+    return _saved_properties_snapshot(_saved_properties_mtime_ns())
+
+
+@lru_cache(maxsize=16)
+def _property_options_cached(_catalog_version: int | None) -> tuple[dict[str, str], ...]:
+    saved_by_id = {item.property_id: item for item in _current_saved_properties_snapshot()}
+    options: list[dict[str, str]] = []
+    for preset in list_presets():
+        if preset.preset_id.startswith("compdb-"):
+            continue
+        saved = saved_by_id.get(preset.preset_id)
+        if saved is not None:
+            label = _property_selector_label(saved.address, None, None, price=saved.ask_price, suffix="saved")
+        else:
+            label = preset.label
+        options.append({"label": label, "value": preset.preset_id})
+    return tuple(options)
+
+
+@lru_cache(maxsize=8)
+def _load_active_listings_dataset(active_mtime_ns: int) -> tuple:
+    del active_mtime_ns
+    if not ACTIVE_LISTINGS_PATH.exists():
+        return tuple()
+    try:
+        dataset = JsonActiveListingStore(ACTIVE_LISTINGS_PATH).load()
+    except (OSError, ValueError, KeyError) as exc:
+        logger.warning("Unable to load active listings dataset: %s", exc)
+        return tuple()
+    return tuple(dataset.listings)
+
+
+def _active_listings_mtime_ns() -> int:
+    try:
+        return ACTIVE_LISTINGS_PATH.stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
 def _saved_property_rows() -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     for item in list_saved_properties():
@@ -334,6 +403,33 @@ def _clean_text(value: object) -> str:
     return str(value or "").strip()
 
 
+def _address_identity_key(value: object) -> str:
+    text = _clean_text(value).lower().replace(",", " ")
+    return " ".join(text.split())
+
+
+def _should_create_new_manual_record(
+    *,
+    target_property_id: str | None,
+    property_id: str | None,
+    original_subject: dict[str, object],
+    current_address: str | None,
+    comp_ref: str | None,
+) -> bool:
+    if comp_ref:
+        return True
+    if not target_property_id:
+        return True
+    requested_id = _clean_text(property_id)
+    if requested_id and requested_id != target_property_id:
+        return True
+    original_address = _address_identity_key(original_subject.get("address"))
+    requested_address = _address_identity_key(current_address)
+    if original_address and requested_address and original_address != requested_address:
+        return True
+    return False
+
+
 def _property_identity(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
     raw_address = _clean_text(address)
     parts = [part.strip() for part in raw_address.split(",") if part.strip()]
@@ -360,6 +456,357 @@ def _property_selector_label(address: str | None, town: str | None, state: str |
     if suffix:
         parts.append(suffix)
     return " • ".join(part for part in parts if part)
+
+
+def _normalized_address(value: str | None) -> str:
+    return " ".join(_clean_text(value).lower().replace(",", " ").split())
+
+
+_STREET_SUFFIX_ALIASES = {
+    "av": "avenue",
+    "ave": "avenue",
+    "avenue": "avenue",
+    "st": "street",
+    "street": "street",
+    "rd": "road",
+    "road": "road",
+    "dr": "drive",
+    "drive": "drive",
+    "ln": "lane",
+    "lane": "lane",
+    "blvd": "boulevard",
+    "boulevard": "boulevard",
+    "pl": "place",
+    "place": "place",
+    "ct": "court",
+    "court": "court",
+    "cir": "circle",
+    "circle": "circle",
+    "pkwy": "parkway",
+    "parkway": "parkway",
+    "ter": "terrace",
+    "terrace": "terrace",
+}
+
+
+def _normalize_property_address(value: str | None) -> str:
+    text = _clean_text(value).lower()
+    if not text:
+        return ""
+    text = re.sub(r"[#,]", " ", text)
+    text = re.sub(r"\bapt\b|\bunit\b|\bfl\b|\bfloor\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    tokens = []
+    for token in text.split():
+        token = re.sub(r"[^\w]", "", token)
+        if not token:
+            continue
+        tokens.append(_STREET_SUFFIX_ALIASES.get(token, token))
+    return " ".join(tokens)
+
+
+def _town_lookup_key(value: str | None) -> str:
+    cleaned = _clean_text(value).lower().replace(",", " ").replace("-", " ")
+    return " ".join(cleaned.split())
+
+
+def _canonical_town_name(value: str | None) -> str:
+    key = _town_lookup_key(value)
+    canonical_map = {
+        "avon by the sea": "Avon-by-the-Sea",
+        "avon": "Avon-by-the-Sea",
+        "spring lake": "Spring Lake",
+        "spring lake heights": "Spring Lake Heights",
+        "sea girt": "Sea Girt",
+        "belmar": "Belmar",
+        "manasquan": "Manasquan",
+        "brielle": "Brielle",
+        "wall township": "Wall Township",
+        "wall": "Wall Township",
+    }
+    if key in canonical_map:
+        return canonical_map[key]
+    if not key:
+        return ""
+    return " ".join(part.capitalize() for part in key.split())
+
+
+@lru_cache(maxsize=16)
+def _search_index(saved_properties_mtime_ns: int, active_listings_mtime_ns: int) -> dict[str, object]:
+    del saved_properties_mtime_ns, active_listings_mtime_ns
+    property_exact: dict[str, str] = {}
+    property_partial: list[tuple[str, str]] = []
+    town_exact: dict[str, str] = {}
+    town_aliases: dict[str, str] = {}
+
+    for item in _current_saved_properties_snapshot():
+        address_key = _normalize_property_address(item.address)
+        if address_key:
+            property_exact.setdefault(address_key, item.property_id)
+            property_partial.append((address_key, item.property_id))
+        identity = _property_identity(item.address)
+        town = _canonical_town_name(identity["town"])
+        if town:
+            town_exact.setdefault(_town_lookup_key(town), town)
+
+    for listing in _load_active_listings_dataset(_active_listings_mtime_ns()):
+        town = _canonical_town_name(getattr(listing, "town", None))
+        if town:
+            town_exact.setdefault(_town_lookup_key(town), town)
+
+    alias_map = {
+        "avon": "Avon-by-the-Sea",
+        "avon by the sea": "Avon-by-the-Sea",
+        "avon by sea": "Avon-by-the-Sea",
+        "avonbythesea": "Avon-by-the-Sea",
+        "spring lake hts": "Spring Lake Heights",
+        "spring lake heights": "Spring Lake Heights",
+        "spring lake": "Spring Lake",
+        "sea girt": "Sea Girt",
+        "belmar": "Belmar",
+        "manasquan": "Manasquan",
+        "brielle": "Brielle",
+        "wall": "Wall Township",
+        "wall twp": "Wall Township",
+        "wall township": "Wall Township",
+    }
+    for alias, canonical in alias_map.items():
+        town_aliases[_town_lookup_key(alias)] = canonical
+        town_exact.setdefault(_town_lookup_key(canonical), canonical)
+
+    property_partial.sort(key=lambda item: len(item[0]), reverse=True)
+    return {
+        "property_exact": property_exact,
+        "property_partial": tuple(property_partial),
+        "town_exact": town_exact,
+        "town_aliases": town_aliases,
+    }
+
+
+def _find_matching_property_id(address: str | None) -> str | None:
+    query = _normalize_property_address(address)
+    if not query:
+        return None
+    index = _search_index(_saved_properties_mtime_ns(), _active_listings_mtime_ns())
+    property_exact = index["property_exact"]
+    if query in property_exact:
+        return str(property_exact[query])
+    for normalized, property_id in index["property_partial"]:
+        if query == normalized:
+            return str(property_id)
+        if len(query) >= 8 and (query in normalized or normalized in query):
+            return str(property_id)
+    return None
+
+
+@lru_cache(maxsize=16)
+def _available_town_cards_cached(saved_properties_mtime_ns: int, active_listings_mtime_ns: int) -> tuple[dict[str, object], ...]:
+    del saved_properties_mtime_ns, active_listings_mtime_ns
+    town_cards: dict[str, dict[str, object]] = {}
+
+    for item in _current_saved_properties_snapshot():
+        identity = _property_identity(item.address)
+        town = _canonical_town_name(identity["town"])
+        if not town:
+            continue
+        key = _town_lookup_key(town)
+        if key not in town_cards:
+            town_cards[key] = {
+                "town": town,
+                "signal": "Saved Analyses",
+                "trend": "",
+                "count": 0,
+                "listing_count": 0,
+            }
+        town_cards[key]["count"] = int(town_cards[key].get("count", 0)) + 1
+
+    for listing in _load_active_listings_dataset(_active_listings_mtime_ns()):
+        town = _canonical_town_name(getattr(listing, "town", None))
+        if not town:
+            continue
+        key = _town_lookup_key(town)
+        if key not in town_cards:
+            town_cards[key] = {
+                "town": town,
+                "signal": "Active Listings",
+                "trend": "",
+                "count": 0,
+                "listing_count": 0,
+            }
+        town_cards[key]["listing_count"] = int(town_cards[key].get("listing_count", 0)) + 1
+
+    cards = [item for item in town_cards.values() if int(item.get("count", 0)) > 0 or int(item.get("listing_count", 0)) > 0]
+    if not cards:
+        cards = list(town_cards.values())
+    cards.sort(key=lambda item: (str(item["town"]).lower(), -(int(item.get("count", 0)) + int(item.get("listing_count", 0)))))
+    return tuple(cards)
+
+
+def _available_town_cards() -> list[dict[str, object]]:
+    return list(_available_town_cards_cached(_saved_properties_mtime_ns(), _active_listings_mtime_ns()))
+
+
+def _find_matching_town(query: str | None) -> str | None:
+    normalized_query = _town_lookup_key(query)
+    if not normalized_query:
+        return None
+    index = _search_index(_saved_properties_mtime_ns(), _active_listings_mtime_ns())
+    town_exact = index["town_exact"]
+    town_aliases = index["town_aliases"]
+    if normalized_query in town_aliases:
+        return str(town_aliases[normalized_query])
+    if normalized_query in town_exact:
+        return str(town_exact[normalized_query])
+    compact_query = normalized_query.replace(" ", "")
+    partial_match: str | None = None
+    for normalized_town, town in town_exact.items():
+        compact_town = normalized_town.replace(" ", "")
+        if normalized_town.startswith(normalized_query) or compact_query == compact_town:
+            partial_match = partial_match or str(town)
+    return partial_match
+
+
+def _looks_like_property_address(query: str | None) -> bool:
+    text = _clean_text(query)
+    if not text:
+        return False
+    if re.match(r"^\d+\s+\w+", text):
+        return True
+    if re.search(r"\b(avenue|ave|street|st|road|rd|drive|dr|lane|ln|boulevard|blvd|court|ct|place|pl|terrace|ter|parkway|pkwy)\b", text.lower()):
+        return True
+    return False
+
+
+def _resolve_startup_search(address_or_town: str | None, listing_url: str | None) -> dict[str, object]:
+    raw_address = _clean_text(address_or_town)
+    raw_url = _clean_text(listing_url)
+    combined = raw_url or raw_address
+    inferred_url = combined if combined.lower().startswith(("http://", "https://")) or "zillow." in combined.lower() else ""
+    if inferred_url and not raw_url:
+        raw_url = inferred_url
+        raw_address = ""
+
+    if not raw_address and not raw_url:
+        return {"route": "empty"}
+
+    parsed_address = raw_address
+    notes = ""
+    source_label = ""
+    source_status = "missing"
+    if raw_url:
+        prefill = _safe_url_intake_prefill(raw_url)
+        parsed_address = parsed_address or _clean_text(prefill.get("address"))
+        notes = _clean_text(prefill.get("notes"))
+        source_label = _clean_text(prefill.get("source_label"))
+        source_status = _clean_text(prefill.get("status")) or "inferred"
+
+    town_match = _find_matching_town(parsed_address or raw_address)
+    property_match = _find_matching_property_id(parsed_address or raw_address)
+
+    if property_match:
+        return {"route": "saved_property", "property_id": property_match}
+    if town_match and not _looks_like_property_address(parsed_address or raw_address):
+        return {"route": "town", "town": town_match}
+    if town_match and not property_match and _town_lookup_key(parsed_address or raw_address) == _town_lookup_key(town_match):
+        return {"route": "town", "town": town_match}
+    return {
+        "route": "new_property",
+        "address": parsed_address or raw_address,
+        "source_url": raw_url or None,
+        "source_label": source_label or (_source_label_from_url(raw_url) if raw_url else ""),
+        "source_status": source_status,
+        "notes": notes or (f"Pasted listing URL: {raw_url}" if raw_url else ""),
+    }
+
+
+def _maybe_external_url(value: str | None) -> str | None:
+    normalized = _clean_text(value)
+    if normalized.lower().startswith(("http://", "https://")):
+        return normalized
+    return None
+
+
+def _source_label_from_url(value: str | None) -> str:
+    url = _clean_text(value)
+    if not url:
+        return ""
+    host = urlparse(url).netloc.lower()
+    if "zillow" in host:
+        return "Zillow"
+    if "redfin" in host:
+        return "Redfin"
+    if "realtor" in host:
+        return "Realtor.com"
+    if "homes.com" in host:
+        return "Homes.com"
+    if "trulia" in host:
+        return "Trulia"
+    if host.startswith("www."):
+        host = host[4:]
+    return host or "Listing URL"
+
+
+def _safe_url_intake_prefill(url: str | None) -> dict[str, object]:
+    source_url = _clean_text(url)
+    if not source_url:
+        return {"source_url": None, "source_label": "", "address": "", "notes": "", "status": "missing"}
+
+    source_label = _source_label_from_url(source_url)
+    inferred_address = ""
+    notes = "URL provided by user. No remote page fetch was performed."
+    try:
+        if "zillow" in source_url.lower():
+            raw_data, warnings = ZillowUrlParser().parse(source_url)
+            inferred_address = _clean_text(getattr(raw_data, "address", None))
+            if warnings:
+                notes = " ".join(warnings[:2])
+    except Exception as exc:
+        logger.warning("Safe URL prefill failed for %s: %s", source_url, exc)
+    return {
+        "source_url": source_url,
+        "source_label": source_label,
+        "address": inferred_address,
+        "notes": notes,
+        "status": "inferred",
+    }
+
+
+def _town_listing_candidates(selected_town: str | None) -> list[dict[str, object]]:
+    if not selected_town or not ACTIVE_LISTINGS_PATH.exists():
+        return []
+    try:
+        dataset = JsonActiveListingStore(ACTIVE_LISTINGS_PATH).load()
+    except (OSError, ValueError, KeyError) as exc:
+        logger.warning("Unable to load active listing candidates for %s: %s", selected_town, exc)
+        return []
+
+    normalized_town = _town_lookup_key(selected_town)
+    candidates: list[dict[str, object]] = []
+    for listing in dataset.listings:
+        if _town_lookup_key(getattr(listing, "town", None)) != normalized_town:
+            continue
+        identity = _property_identity(getattr(listing, "address", None), getattr(listing, "town", None), getattr(listing, "state", None))
+        maps = _maps_links(identity["full_address"], identity["town"], identity["state"])
+        candidates.append(
+            {
+                "address": identity["full_address"],
+                "street": identity["street"],
+                "locality": identity["locality"],
+                "list_price_value": float(getattr(listing, "list_price", 0.0) or 0.0),
+                "list_price": _fmt_currency(getattr(listing, "list_price", None)),
+                "status": _clean_text(getattr(listing, "listing_status", None)).replace("_", " ").title() or "For Sale",
+                "dom": f"{int(getattr(listing, 'days_on_market', 0) or 0)} days",
+                "condition": _clean_text(getattr(listing, "condition_profile", None)).replace("_", " ").title() or "Unavailable",
+                "property_type": _clean_text(getattr(listing, "property_type", None)).title() or "Property",
+                "source_ref": _clean_text(getattr(listing, "source_ref", None)) or "Unavailable",
+                "source_url": _maybe_external_url(getattr(listing, "source_ref", None)),
+                "maps": maps,
+                "beds": getattr(listing, "beds", None),
+                "baths": getattr(listing, "baths", None),
+            }
+        )
+    candidates.sort(key=lambda item: (item["street"].lower(), float(item["list_price_value"])))
+    return candidates
 
 
 def _maps_links(address: str | None, town: str | None = None, state: str | None = None) -> dict[str, str]:
@@ -623,7 +1070,7 @@ def _shell_nav_groups() -> list[tuple[str, list[dict[str, str]]]]:
             "Markets",
             [
                 {"tab": "opportunities", "label": "Markets", "description": "Best opportunities, shortlist discovery, and cross-property market context."},
-                {"tab": "tear_sheet", "label": "Property Analysis", "description": "Decision-first underwriting for the active property."},
+                {"tab": "tear_sheet", "label": "Property Analysis", "description": "Layered decision read: start simple, then go deeper when needed."},
             ],
         ),
         (
@@ -736,7 +1183,7 @@ def _shell_context_for_tab(
     tab = tab or "opportunities"
     loaded_count = len(loaded_ids or [])
     compare_count = len(compare_ids or [])
-    report_view = build_property_analysis_view(report) if report is not None else None
+    report_view = None
 
     if tab in {"opportunities", "portfolio"}:
         return (
@@ -749,6 +1196,17 @@ def _shell_context_for_tab(
             ],
         )
     if tab == "tear_sheet":
+        if report is None:
+            return (
+                "Search First",
+                "Find a Property",
+                "Start with one address or listing link. Briarwood gives you the fast decision read first, then lets you dig deeper only if the property earns it.",
+                [
+                    _context_metric("Recent", str(len(list(_current_saved_properties_snapshot())[:4])), "saved properties ready to reopen"),
+                    _context_metric("Markets", "Secondary", "explore towns after you have a property in mind"),
+                ],
+            )
+        report_view = _build_property_view_for_property(report.property_id) if report is not None else None
         identity = _property_identity(
             getattr(report, "address", None),
             getattr(getattr(report, "property_input", None), "town", None),
@@ -757,10 +1215,10 @@ def _shell_context_for_tab(
         return (
             identity["locality"],
             "Property Analysis",
-            "Stay focused on one property at a time, with the selected asset carrying through the workspace.",
+            "Start with a simple decision read, then move naturally into scenarios, value questions, and full underwriting.",
             [
                 _context_metric("Property", identity["street"]),
-                _context_metric("Recommendation", getattr(report_view, "recommendation_tier", "—") or "—", getattr(report_view, "pricing_view", None) if report_view is not None else None),
+                _context_metric("Recommendation", _display_recommendation_label(getattr(report_view, "recommendation_tier", "—") or "—"), getattr(report_view, "pricing_view", None) if report_view is not None else None),
                 _context_metric("Score", f"{getattr(report_view, 'final_score', 0):.1f}/5" if getattr(report_view, "final_score", None) is not None else "—"),
             ],
         )
@@ -840,6 +1298,7 @@ def _build_page_container(
     content,
     eyebrow: str | None = None,
     max_width: str = "1180px",
+    show_header: bool = True,
 ) -> html.Div:
     header_children = []
     if eyebrow:
@@ -849,18 +1308,175 @@ def _build_page_container(
     return html.Div(
         html.Div(
             [
-                html.Div(header_children, style=_PAGE_HEADER_STACK_STYLE),
+                html.Div(header_children, style=_PAGE_HEADER_STACK_STYLE) if show_header else None,
                 content,
             ],
-            style={"width": "100%", "maxWidth": max_width},
+            style={
+                "width": "100%",
+                "maxWidth": max_width,
+                "minHeight": "calc(100vh - 64px)" if not show_header else "auto",
+                "display": "grid",
+                "alignContent": "center" if not show_header else "start",
+            },
         ),
-        style=_PAGE_CONTAINER_STYLE,
+        style={
+            **_PAGE_CONTAINER_STYLE,
+            "padding": "16px 28px 36px" if not show_header else _PAGE_CONTAINER_STYLE["padding"],
+        },
+    )
+
+
+def _property_search_landing(catalog_version: int | None = 0) -> html.Div:
+    del catalog_version
+    recent = list(_current_saved_properties_snapshot())[:4]
+    town_cards = _available_town_cards()
+    example_id = recent[0].property_id if recent else (DEFAULT_PRESET_IDS[0] if DEFAULT_PRESET_IDS else None)
+    recent_buttons = [
+        html.Button(
+            [
+                html.Div(item.address, style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                html.Div(
+                    f"{_fmt_currency(item.ask_price)} ask" + (f" • {item.pricing_view.replace('_', ' ').title()}" if item.pricing_view else ""),
+                    style={"fontSize": "12px", "color": TEXT_MUTED, "marginTop": "4px"},
+                ),
+            ],
+            id={"type": "landing-recent-button", "property_id": item.property_id},
+            n_clicks=0,
+            style={
+                **CARD_STYLE,
+                "padding": "14px 16px",
+                "textAlign": "left",
+                "cursor": "pointer",
+                "boxShadow": "none",
+                "width": "100%",
+            },
+        )
+        for item in recent
+    ]
+    town_buttons = [
+        html.Button(
+            [
+                html.Div(str(item["town"]), style={"fontSize": "16px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                html.Div(
+                    " • ".join(
+                        part for part in [
+                            str(item.get("signal") or "").strip(),
+                            str(item.get("trend") or "").strip(),
+                            (f"{int(item.get('count', 0))} saved" if int(item.get("count", 0)) > 0 else ""),
+                            (f"{int(item.get('listing_count', 0))} listings" if int(item.get("listing_count", 0)) > 0 else ""),
+                        ] if part
+                    ) or "Browse town properties",
+                    style={"fontSize": "12px", "color": TEXT_MUTED, "marginTop": "4px"},
+                ),
+            ],
+            id={"type": "landing-town-button", "town": str(item["town"])},
+            n_clicks=0,
+            style={
+                **CARD_STYLE,
+                "padding": "16px 18px",
+                "textAlign": "left",
+                "cursor": "pointer",
+                "boxShadow": "none",
+                "width": "100%",
+                "borderRadius": "14px",
+            },
+        )
+        for item in town_cards
+    ]
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Briarwood", style=_PAGE_KICKER_STYLE),
+                    html.H1(
+                        "Briarwood",
+                        style={**HEADING_XL_STYLE, "maxWidth": "14ch"},
+                    ),
+                    html.Div(
+                        "Understand a property before you buy it.",
+                        style={**_PAGE_SUBTITLE_STYLE, "fontSize": "16px", "maxWidth": "760px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "8px", "justifyItems": "center", "textAlign": "center"},
+            ),
+            html.Div(
+                [
+                    dcc.Input(
+                        id="landing-address-input",
+                        type="text",
+                        placeholder="Enter a property address or town",
+                        style={
+                            "width": "100%",
+                            "padding": "16px 18px",
+                            "borderRadius": "14px",
+                            "border": f"1px solid {BORDER}",
+                            "fontSize": "16px",
+                            "backgroundColor": BG_SURFACE,
+                            "color": TEXT_PRIMARY,
+                        },
+                    ),
+                    dcc.Input(
+                        id="landing-url-input",
+                        type="text",
+                        placeholder="Or paste a Zillow/listing URL",
+                        style={
+                            "width": "100%",
+                            "padding": "16px 18px",
+                            "borderRadius": "14px",
+                            "border": f"1px solid {BORDER}",
+                            "fontSize": "15px",
+                            "backgroundColor": BG_SURFACE,
+                            "color": TEXT_PRIMARY,
+                        },
+                    ),
+                    html.Div(
+                        [
+                            html.Button("Analyze Property", id="landing-analyze-button", n_clicks=0, style={**BTN_PRIMARY, "padding": "14px 22px", "fontSize": "15px"}),
+                            html.Button("Explore Markets", id="landing-explore-markets-button", n_clicks=0, style={**BTN_SECONDARY, "padding": "14px 22px", "fontSize": "15px"}),
+                            html.Button("Try Example", id="landing-try-example-button", n_clicks=0, disabled=example_id is None, style={**BTN_GHOST, "padding": "14px 20px", "opacity": 1 if example_id else 0.5}),
+                        ],
+                        style={"display": "flex", "gap": "10px", "flexWrap": "wrap", "justifyContent": "center"},
+                    ),
+                    html.Div(id="landing-search-feedback", style={"fontSize": "13px", "color": TEXT_MUTED, "textAlign": "center"}),
+                ],
+                style={**CARD_STYLE_ELEVATED, "padding": "26px", "display": "grid", "gap": "12px", "width": "100%", "maxWidth": "860px"},
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Div("Recent Properties", style=SECTION_HEADER_STYLE),
+                            html.Div("Jump back into a recent Briarwood analysis.", style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
+                            html.Div(recent_buttons if recent_buttons else [html.Div("No recent saved properties yet.", style={"fontSize": "13px", "color": TEXT_MUTED})], style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "10px", "marginTop": "10px"}),
+                        ],
+                        style={**CARD_STYLE, "padding": "18px 20px", "boxShadow": "none"},
+                    ),
+                    html.Div(
+                        [
+                            html.Div("Available Towns", style=SECTION_HEADER_STYLE),
+                            html.Div("Start with a town when you want to browse analyzed properties before committing to one address.", style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
+                            html.Div(
+                                town_buttons if town_buttons else [html.Div("No towns are available yet.", style={"fontSize": "13px", "color": TEXT_MUTED})],
+                                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))", "gap": "10px", "marginTop": "10px"},
+                            ),
+                        ],
+                        style={**CARD_STYLE, "padding": "18px 20px", "boxShadow": "none"},
+                    ),
+                ],
+                style={"width": "100%", "maxWidth": "860px", "display": "grid", "gap": "12px"},
+            ),
+        ],
+        style={
+            "display": "grid",
+            "gap": "18px",
+            "justifyItems": "center",
+            "padding": "42px 0 24px",
+        },
     )
 
 
 def _topbar() -> html.Div:
-    options = _property_options()
-    initial_value = DEFAULT_PRESET_IDS[0] if DEFAULT_PRESET_IDS else (options[0]["value"] if options else None)
+    options = list(_property_options_cached(0))
     return html.Div(
         [
             html.Div(
@@ -877,11 +1493,10 @@ def _topbar() -> html.Div:
                     dcc.Dropdown(
                         id="property-selector-dropdown",
                         options=options,
-                        value=initial_value,
-                        clearable=False,
+                        value=None,
+                        clearable=True,
                         searchable=True,
-                        persistence=True,
-                        placeholder="Search address or jump to a property…",
+                        placeholder="Search saved properties or jump to an analysis…",
                         style={"minWidth": "280px", "fontSize": "13px"},
                     ),
                 ],
@@ -901,6 +1516,7 @@ def _topbar() -> html.Div:
             # Active property status
             html.Div(id="active-property-status", style={"fontSize": "13px", "color": "rgba(255,255,255,0.78)", "flexShrink": "0"}),
         ],
+        id="app-topbar",
         style=TOPBAR_STYLE,
     )
 
@@ -974,9 +1590,8 @@ def _strategy_tags(view) -> list[str]:
 def _build_opportunity_record_cached(
     property_id: str, inputs_mtime_ns: int
 ) -> dict[str, object] | None:
-    del inputs_mtime_ns  # only used as a cache key — the mtime change busts the entry
     try:
-        report = load_report_for_preset(property_id)
+        report = _load_report_cached(property_id, inputs_mtime_ns)
     except (KeyError, OSError, ValueError) as exc:
         logger.warning(
             "Opportunity discovery: skipping %s (load failed: %s)",
@@ -985,7 +1600,7 @@ def _build_opportunity_record_cached(
         )
         return None
     try:
-        view = build_property_analysis_view(report)
+        view = _build_property_view_cached(property_id, inputs_mtime_ns)
     except (AttributeError, KeyError, ValueError, ZeroDivisionError) as exc:
         logger.warning(
             "Opportunity discovery: skipping %s (view build failed: %s)",
@@ -1026,6 +1641,26 @@ def _inputs_mtime_ns(property_id: str) -> int:
         return (SAVED_PROPERTY_DIR / property_id / "inputs.json").stat().st_mtime_ns
     except OSError:
         return 0
+
+
+@lru_cache(maxsize=128)
+def _load_report_cached(property_id: str, inputs_mtime_ns: int):
+    del inputs_mtime_ns
+    return load_report_for_preset(property_id)
+
+
+def _load_report_for_property(property_id: str):
+    return _load_report_cached(property_id, _inputs_mtime_ns(property_id))
+
+
+@lru_cache(maxsize=128)
+def _build_property_view_cached(property_id: str, inputs_mtime_ns: int):
+    report = _load_report_cached(property_id, inputs_mtime_ns)
+    return build_property_analysis_view(report)
+
+
+def _build_property_view_for_property(property_id: str):
+    return _build_property_view_cached(property_id, _inputs_mtime_ns(property_id))
 
 
 def _opportunity_records(loaded_ids: list[str] | None) -> list[dict[str, object]]:
@@ -1096,6 +1731,7 @@ def _opportunity_badge(label: str, value: str, *, tone: str = "neutral") -> html
 
 def _opportunity_button(item: dict[str, object], *, scope: str, selected: bool = False) -> html.Div:
     recommendation = str(item["recommendation"])
+    recommendation_label = _display_recommendation_label(recommendation)
     score = float(item["score"])
     tags = [str(tag) for tag in item["tags"]]
     identity = item["identity"]
@@ -1119,7 +1755,7 @@ def _opportunity_button(item: dict[str, object], *, scope: str, selected: bool =
                     ),
                     html.Div(
                         [
-                            _opportunity_badge("Recommendation", recommendation, tone=recommendation_tone),
+                            _opportunity_badge("Recommendation", recommendation_label, tone=recommendation_tone),
                             _opportunity_badge("Score", f"{score:.2f}/5", tone="neutral"),
                         ],
                         style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "marginTop": "10px"},
@@ -1355,7 +1991,7 @@ def _main_tab_bar() -> html.Nav:
     return html.Nav(
         children=dcc.Tabs(
             id="main-tabs",
-            value="opportunities",
+            value="tear_sheet",
             children=[
                 dcc.Tab(
                     label=label,
@@ -1520,6 +2156,56 @@ def _add_property_drawer() -> html.Div:
     )
 
 
+def _market_property_preview_drawer() -> html.Div:
+    return html.Div(
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div("Property Preview", style={"fontWeight": "700", "fontSize": "15px", "color": TEXT_PRIMARY, "letterSpacing": "-0.01em"}),
+                                html.Div(
+                                    "Start with the fast decision read, then open the full property analysis only if this listing earns more attention.",
+                                    style={"fontSize": "13px", "color": TEXT_MUTED},
+                                ),
+                            ]
+                        ),
+                        html.Button(
+                            "✕",
+                            id="market-preview-close-button",
+                            n_clicks=0,
+                            style={**BTN_GHOST, "fontSize": "16px", "padding": "4px 8px"},
+                            **{"aria-label": "Close property preview drawer"},
+                        ),
+                    ],
+                    style={"display": "flex", "justifyContent": "space-between", "alignItems": "start", "marginBottom": "14px", "gap": "12px"},
+                ),
+                html.Div(id="market-preview-drawer-content", style={"display": "grid", "gap": "12px"}),
+                html.Div(
+                    [
+                        html.Button("Open Full Analysis", id="market-preview-open-analysis-button", n_clicks=0, style=BTN_PRIMARY),
+                        html.Button("Close", id="market-preview-close-footer-button", n_clicks=0, style=BTN_SECONDARY),
+                    ],
+                    style={"display": "flex", "gap": "10px", "justifyContent": "flex-end", "flexWrap": "wrap", "marginTop": "4px"},
+                ),
+            ],
+            style={
+                "backgroundColor": BG_BASE,
+                "borderLeft": f"1px solid {BORDER}",
+                "padding": "20px 20px 24px",
+                "width": "min(520px, 100vw)",
+                "height": "100%",
+                "overflowY": "auto",
+                "boxShadow": "-24px 0 64px rgba(0,0,0,0.28)",
+                "marginLeft": "auto",
+            },
+        ),
+        id="market-property-preview-drawer",
+        style={"display": "none"},
+    )
+
+
 def _form_tier_label(text: str, tier: str) -> html.Div:
     """Section header with tier badge: REQUIRED / RECOMMENDED / OPTIONAL."""
     tier_colors = {
@@ -1572,6 +2258,25 @@ def _add_property_form_body() -> list:
                 html.Div(
                     id="form-validation-hint",
                     style={"fontSize": "13px", "color": TEXT_MUTED, "marginTop": "2px"},
+                ),
+            ],
+            style=_DRAWER_CARD,
+        ),
+        html.Div(
+            [
+                _form_tier_label("Source Intake", "recommended"),
+                html.Div(
+                    [
+                        _text_input("manual-source-url", "Listing URL"),
+                        _text_input("manual-source-site", "Source site"),
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "1.6fr 0.8fr", "gap": "6px"},
+                ),
+                html.Div(id="manual-intake-status", style={"fontSize": "13px", "color": TEXT_MUTED}),
+                dcc.Textarea(
+                    id="manual-listing-text",
+                    placeholder="Paste listing text or remarks here if you have them (optional)",
+                    style={**INPUT_STYLE, "height": "72px", "resize": "vertical"},
                 ),
             ],
             style=_DRAWER_CARD,
@@ -1842,7 +2547,7 @@ def _build_layout():
     return html.Div(
         [
             # Stores
-            dcc.Store(id="loaded-preset-ids", data=DEFAULT_PRESET_IDS),
+            dcc.Store(id="loaded-preset-ids", data=[]),
             dcc.Store(id="manual-comps-store", data=[]),
             dcc.Store(id="property-catalog-version", data=0),
             dcc.Store(id="add-property-open", data=False),
@@ -1851,11 +2556,13 @@ def _build_layout():
             dcc.Store(id="compare-go-token", data=0),
             dcc.Store(id="town-pulse-filter", data="all"),
             dcc.Store(id="selected-market-town", data=None),
+            dcc.Store(id="market-sort-mode", data="strongest"),
+            dcc.Store(id="market-preview-property-id", data=None),
+            dcc.Store(id="market-preview-open", data=False),
+            dcc.Store(id="landing-intake-prefill", data=None),
             dcc.Store(id="manual-form-target-property-id", data=None),
             dcc.Store(id="manual-form-comp-ref", data=None),
             dcc.Store(id="analysis-form-snapshot", data=None),
-            # Tour state (persists in browser localStorage)
-            dcc.Store(id="tour-state", storage_type="local", data={"completed": False, "step": 0}),
             # User preferences (persists in browser localStorage)
             dcc.Store(id="user-preferences", storage_type="local", data={
                 "role": None,  # "investor", "owner", "developer", or None (show all)
@@ -1868,7 +2575,7 @@ def _build_layout():
                 [
                     html.Aside(
                         id="app-shell-sidebar",
-                        children=_build_shell_sidebar("opportunities"),
+                        children=_build_shell_sidebar("tear_sheet"),
                         style={"flexShrink": "0"},
                     ),
                     html.Div(
@@ -1897,9 +2604,7 @@ def _build_layout():
             ),
 
             _add_property_drawer(),
-            dcc.Store(id="tour-step", data=-1),
-            html.Div(id="tour-overlay-container", style={"pointerEvents": "none"}),
-            render_tour_trigger_button(),
+            _market_property_preview_drawer(),
         ],
         style=PAGE_STYLE,
     )
@@ -1925,16 +2630,13 @@ def refresh_property_controls(
     loaded_ids: list[str] | None,
     current_property_id: str | None,
 ):
-    options = _property_options()
+    options = list(_property_options_cached(_catalog_version))
     allowed = {option["value"] for option in options}
     loaded_ids = [pid for pid in (loaded_ids or []) if pid in allowed]
-    default_value = loaded_ids[0] if loaded_ids else (options[0]["value"] if options else None)
-    if len(loaded_ids) == 1:
-        property_value = loaded_ids[0]
-    elif current_property_id in allowed:
+    if current_property_id in allowed:
         property_value = current_property_id
     else:
-        property_value = default_value
+        property_value = None
     return options, property_value, _saved_property_rows(), list_comp_database_rows()
 
 
@@ -1948,18 +2650,16 @@ def refresh_property_controls(
 )
 def render_active_property_status(_catalog_version: int | None, property_id: str | None, loaded_ids: list[str] | None):
     hidden = {"display": "none"}
-    if not property_id and loaded_ids:
-        property_id = loaded_ids[0]
     if not property_id:
         return "No property selected", None, hidden
     try:
-        report = load_report_for_preset(property_id)
+        report = _load_report_for_property(property_id)
     except KeyError:
         return "Unavailable", None, hidden
     except Exception as exc:
         logger.warning("Active property %s failed to load: %s", property_id, exc)
         return "Selected property failed to load", None, hidden
-    view = build_property_analysis_view(report)
+    view = _build_property_view_for_property(property_id)
     pi = report.property_input
     identity = _property_identity(
         view.address,
@@ -2040,7 +2740,7 @@ def render_active_property_status(_catalog_version: int | None, property_id: str
                     html.Span(style={"width": "1px", "height": "14px", "backgroundColor": BORDER, "flexShrink": "0"}),
                     _header_metric("Score", score_text or "—", color=sc),
                     html.Span(
-                        view.recommendation_tier,
+                        _display_recommendation_label(view.recommendation_tier),
                         style=tone_badge_style("positive" if (view.final_score or 0) >= 3.30 else "warning" if (view.final_score or 0) >= 2.50 else "negative"),
                     ) if view.recommendation_tier else None,
                     # Confidence dot
@@ -2073,14 +2773,28 @@ def select_shell_destination(_clicks: list[int] | None):
     tab = trigger.get("tab")
     if not tab:
         raise dash.exceptions.PreventUpdate
+    if tab == "quick_decision":
+        return "tear_sheet"
     return tab
 
 
 @app.callback(
     Output("app-shell-sidebar", "children"),
     Input("main-tabs", "value"),
+    Input("loaded-preset-ids", "data"),
+    Input("property-selector-dropdown", "value"),
+    Input("selected-market-town", "data"),
 )
-def render_shell_sidebar(tab: str | None):
+def render_shell_sidebar(
+    tab: str | None,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+    selected_market_town: str | None,
+):
+    if (tab or "tear_sheet") == "tear_sheet" and _focused_report(loaded_ids, focus_id) is None:
+        return html.Div()
+    if (tab or "tear_sheet") == "tear_sheet" and selected_market_town and _focused_report(loaded_ids, focus_id) is None:
+        return html.Div()
     return _build_shell_sidebar(tab)
 
 
@@ -2090,16 +2804,24 @@ def render_shell_sidebar(tab: str | None):
     Input("loaded-preset-ids", "data"),
     Input("property-selector-dropdown", "value"),
     Input("compare-confirmed-ids", "data"),
+    Input("selected-market-town", "data"),
 )
 def render_shell_context_bar(
     tab: str | None,
     loaded_ids: list[str] | None,
     focus_id: str | None,
     compare_ids: list[str] | None,
+    selected_market_town: str | None,
 ):
+    if (tab or "tear_sheet") == "tear_sheet" and _focused_report(loaded_ids, focus_id) is None:
+        return html.Div()
+    if (tab or "tear_sheet") == "tear_sheet" and selected_market_town and _focused_report(loaded_ids, focus_id) is None:
+        return html.Div()
     report = None
-    if tab in {"tear_sheet", "scenarios", "data_quality"}:
+    if tab in {"quick_decision", "tear_sheet", "scenarios", "data_quality"}:
         report = _focused_report(loaded_ids, focus_id)
+    if tab == "quick_decision":
+        tab = "tear_sheet"
     return _build_shell_context_bar(
         tab,
         report=report,
@@ -2107,6 +2829,29 @@ def render_shell_context_bar(
         loaded_ids=loaded_ids,
         compare_ids=compare_ids,
     )
+
+
+@app.callback(
+    Output("app-shell-sidebar", "style"),
+    Output("app-shell-context-bar", "style"),
+    Output("app-topbar", "style"),
+    Input("main-tabs", "value"),
+    Input("loaded-preset-ids", "data"),
+    Input("property-selector-dropdown", "value"),
+)
+def render_shell_chrome_styles(
+    tab: str | None,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+):
+    landing_mode = (tab or "tear_sheet") in {"tear_sheet", "quick_decision"} and _focused_report(loaded_ids, focus_id) is None
+    if landing_mode:
+        return (
+            {"display": "none"},
+            {"display": "none"},
+            {"display": "none"},
+        )
+    return _SHELL_SIDEBAR_STYLE, _SHELL_CONTEXT_BAR_STYLE, TOPBAR_STYLE
 
 
 def _header_metric(label: str, value: str, *, color: str = TEXT_PRIMARY) -> html.Span:
@@ -2223,6 +2968,7 @@ def render_analysis_feedback(
     Output("add-property-open", "data", allow_duplicate=True),
     Output("manual-form-target-property-id", "data"),
     Output("manual-form-comp-ref", "data"),
+    Output("landing-intake-prefill", "data", allow_duplicate=True),
     Input("add-property-button", "n_clicks"),
     Input("add-property-close-button", "n_clicks"),
     Input("fix-missing-values-button", "n_clicks"),
@@ -2241,15 +2987,15 @@ def route_property_drawer(
 ):
     triggered = ctx.triggered_id
     if triggered == "add-property-close-button":
-        return "", False, None, None
+        return "", False, None, None, None
     if triggered == "fix-missing-values-button":
         if not _fix_clicks:
-            return no_update, no_update, no_update, no_update
+            return no_update, no_update, no_update, no_update, no_update
         target_property_id = property_id or ((loaded_ids or [None])[0])
-        return "", True, target_property_id, None
+        return "", True, target_property_id, None, None
     if triggered == "add-property-button" and not _open_clicks:
-        return no_update, no_update, no_update, no_update
-    return "", True, None, None
+        return no_update, no_update, no_update, no_update, no_update
+    return "", True, None, None, None
 
 
 @app.callback(
@@ -2342,7 +3088,7 @@ def _core_missing_fields(report) -> list[str]:
         ("ADU / back house", "known" if optionality_known else None),
     ]
     missing = [label for label, value in fields if value in (None, "", [])]
-    status_map = {item.key: item for item in build_property_analysis_view(report).evidence.metric_statuses}
+    status_map = {item.key: item for item in _build_property_view_for_property(report.property_id).evidence.metric_statuses}
     for key, label in [
         ("price_to_rent", "Rent support"),
         ("net_monthly_cost", "Carry inputs"),
@@ -2377,18 +3123,19 @@ def _core_missing_field_flags(report) -> dict[str, bool]:
 )
 def select_property(property_id: str | None):
     if not property_id:
-        return no_update
+        return []
     load_reports([property_id])
     return [property_id]
 
 
 @app.callback(
-    Output("property-selector-dropdown", "value", allow_duplicate=True),
-    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("market-preview-property-id", "data"),
+    Output("market-preview-open", "data"),
     Input({"type": "opportunity-open-button", "property_id": ALL, "scope": ALL}, "n_clicks"),
+    Input({"type": "market-preview-open-button", "property_id": ALL, "source": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
-def open_property_from_discovery(_clicks: list[int] | None):
+def open_property_from_discovery(_opportunity_clicks: list[int] | None, _preview_clicks: list[int] | None):
     trigger = ctx.triggered_id
     if not isinstance(trigger, dict):
         raise dash.exceptions.PreventUpdate
@@ -2396,7 +3143,232 @@ def open_property_from_discovery(_clicks: list[int] | None):
     if not property_id:
         raise dash.exceptions.PreventUpdate
     load_reports([property_id])
-    return property_id, [property_id]
+    return property_id, True
+
+
+@app.callback(
+    Output("market-property-preview-drawer", "style"),
+    Input("market-preview-open", "data"),
+)
+def set_market_preview_visibility(is_open: bool | None):
+    if is_open:
+        return {
+            "display": "block",
+            "position": "fixed",
+            "top": TOPBAR_HEIGHT,
+            "right": "0",
+            "bottom": "0",
+            "width": "min(520px, 100vw)",
+            "zIndex": "180",
+            "backgroundColor": "rgba(10, 14, 24, 0.18)",
+        }
+    return {"display": "none"}
+
+
+@app.callback(
+    Output("market-preview-drawer-content", "children"),
+    Input("market-preview-property-id", "data"),
+)
+def render_market_preview_content(property_id: str | None):
+    if not property_id:
+        return html.Div(
+            "Select a property from the market view to preview it here.",
+            style={"fontSize": "13px", "color": TEXT_MUTED},
+        )
+    report = _load_report_for_property(property_id)
+    view = _build_property_view_for_property(property_id)
+    identity = _property_identity(
+        report.address,
+        getattr(report.property_input, "town", None),
+        getattr(report.property_input, "state", None),
+    )
+    maps = _maps_links(
+        report.address,
+        getattr(report.property_input, "town", None),
+        getattr(report.property_input, "state", None),
+    )
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div(identity["locality"], style={**SECTION_HEADER_STYLE, "fontSize": "12px", "color": ACCENT_BLUE}),
+                    html.Div(identity["street"], style={"fontSize": "26px", "fontWeight": "800", "letterSpacing": "-0.03em", "lineHeight": "1.05", "color": TEXT_PRIMARY}),
+                    html.Div(
+                        "This is the first-layer de-risking view from Markets. Use it to decide whether this listing deserves a full underwriting read.",
+                        style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "6px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "4px"},
+            ),
+            html.Div(
+                [
+                    html.A("Google Maps", href=maps["google"], target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": ACCENT_BLUE, "textDecoration": "none"}),
+                    html.A("Apple Maps", href=maps["apple"], target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": TEXT_SECONDARY, "textDecoration": "none"}),
+                ],
+                style={"display": "flex", "gap": "12px", "flexWrap": "wrap"},
+            ),
+            render_property_decision_summary(view, report, show_jump_links=False),
+        ],
+        style={"display": "grid", "gap": "12px"},
+    )
+
+
+@app.callback(
+    Output("market-preview-open", "data", allow_duplicate=True),
+    Input("market-preview-close-button", "n_clicks"),
+    Input("market-preview-close-footer-button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def close_market_preview(_close_header: int, _close_footer: int):
+    return False
+
+
+@app.callback(
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("main-tabs", "value", allow_duplicate=True),
+    Output("market-preview-open", "data", allow_duplicate=True),
+    Input("market-preview-open-analysis-button", "n_clicks"),
+    State("market-preview-property-id", "data"),
+    prevent_initial_call=True,
+)
+def open_full_analysis_from_market_preview(_n_clicks: int, property_id: str | None):
+    if not property_id:
+        raise dash.exceptions.PreventUpdate
+    load_reports([property_id])
+    return property_id, [property_id], "tear_sheet", False
+
+
+@app.callback(
+    Output("main-tabs", "value", allow_duplicate=True),
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("add-property-open", "data", allow_duplicate=True),
+    Output("landing-intake-prefill", "data", allow_duplicate=True),
+    Output("manual-form-target-property-id", "data", allow_duplicate=True),
+    Output("landing-search-feedback", "children"),
+    Output("selected-market-town", "data", allow_duplicate=True),
+    Output("market-preview-open", "data", allow_duplicate=True),
+    Input("landing-analyze-button", "n_clicks"),
+    Input("landing-explore-markets-button", "n_clicks"),
+    Input("landing-try-example-button", "n_clicks"),
+    Input({"type": "landing-recent-button", "property_id": ALL}, "n_clicks"),
+    Input({"type": "landing-town-button", "town": ALL}, "n_clicks"),
+    State("landing-address-input", "value"),
+    State("landing-url-input", "value"),
+    prevent_initial_call=True,
+)
+def handle_landing_actions(
+    _analyze_clicks: int,
+    _markets_clicks: int,
+    _example_clicks: int,
+    _recent_clicks: list[int] | None,
+    _town_clicks: list[int] | None,
+    address_value: str | None,
+    listing_url_value: str | None,
+):
+    trigger = ctx.triggered_id
+    if trigger == "landing-explore-markets-button":
+        return "opportunities", None, [], False, None, None, "", None, False
+
+    if isinstance(trigger, dict) and trigger.get("type") == "landing-town-button":
+        town = _canonical_town_name(trigger.get("town"))
+        if not town:
+            raise dash.exceptions.PreventUpdate
+        return "tear_sheet", None, [], False, None, None, "", town, False
+
+    if isinstance(trigger, dict) and trigger.get("type") == "landing-recent-button":
+        property_id = str(trigger.get("property_id") or "")
+        if not property_id:
+            raise dash.exceptions.PreventUpdate
+        load_reports([property_id])
+        return "tear_sheet", property_id, [property_id], False, None, None, "", None, False
+
+    if trigger == "landing-try-example-button":
+        saved_properties = list(_current_saved_properties_snapshot())
+        example_id = (saved_properties[0].property_id if saved_properties else (DEFAULT_PRESET_IDS[0] if DEFAULT_PRESET_IDS else None))
+        if not example_id:
+            return no_update, no_update, no_update, no_update, no_update, no_update, "No example property is available yet.", no_update, no_update
+        load_reports([example_id])
+        return "tear_sheet", example_id, [example_id], False, None, None, "", None, False
+
+    if trigger != "landing-analyze-button":
+        raise dash.exceptions.PreventUpdate
+
+    resolution = _resolve_startup_search(address_value, listing_url_value)
+    route = str(resolution.get("route") or "")
+
+    if route == "empty":
+        return no_update, no_update, no_update, no_update, no_update, no_update, "Enter a property address, town, or listing URL to begin.", no_update, no_update
+
+    if route == "saved_property":
+        property_id = str(resolution.get("property_id") or "")
+        if not property_id:
+            return no_update, no_update, no_update, no_update, no_update, no_update, "That saved property could not be opened.", no_update, no_update
+        load_reports([property_id])
+        return "tear_sheet", property_id, [property_id], False, None, None, "", None, False
+
+    if route == "town":
+        town = _canonical_town_name(resolution.get("town"))
+        if not town:
+            return no_update, no_update, no_update, no_update, no_update, no_update, "That town could not be matched.", no_update, no_update
+        return "tear_sheet", None, [], False, None, None, "", town, False
+
+    prefill = {
+        "address": resolution.get("address"),
+        "source_url": resolution.get("source_url"),
+        "source_label": resolution.get("source_label"),
+        "source_status": resolution.get("source_status"),
+        "listing_text": "",
+        "notes": resolution.get("notes"),
+    }
+    feedback = "Opening a new analysis form with your property details prefilled."
+    return "tear_sheet", None, [], True, prefill, None, feedback, None, False
+
+
+@app.callback(
+    Output("main-tabs", "value", allow_duplicate=True),
+    Output("add-property-open", "data", allow_duplicate=True),
+    Output("landing-intake-prefill", "data", allow_duplicate=True),
+    Output("manual-form-target-property-id", "data", allow_duplicate=True),
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("landing-search-feedback", "children", allow_duplicate=True),
+    Input({"type": "town-listing-open-button", "address": ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def open_town_listing_for_analysis(_clicks: list[int] | None):
+    trigger = ctx.triggered_id
+    if not isinstance(trigger, dict):
+        raise dash.exceptions.PreventUpdate
+    address = _clean_text(trigger.get("address"))
+    if not address:
+        raise dash.exceptions.PreventUpdate
+    prefill = {
+        "address": address,
+        "source_url": None,
+        "notes": "Started from town results.",
+    }
+    return "tear_sheet", True, prefill, None, None, [], f"Opening a new analysis for {address}."
+
+
+@app.callback(
+    Output("main-tabs", "value", allow_duplicate=True),
+    Output("property-selector-dropdown", "value", allow_duplicate=True),
+    Output("loaded-preset-ids", "data", allow_duplicate=True),
+    Output("selected-market-town", "data", allow_duplicate=True),
+    Output("market-preview-open", "data", allow_duplicate=True),
+    Input("town-results-back-button", "n_clicks"),
+    Input("town-results-markets-button", "n_clicks"),
+    prevent_initial_call=True,
+)
+def handle_town_results_actions(_back_clicks: int | None, _markets_clicks: int | None):
+    trigger = ctx.triggered_id
+    if trigger == "town-results-back-button":
+        return "tear_sheet", None, [], None, False
+    if trigger == "town-results-markets-button":
+        return "opportunities", None, [], None, False
+    raise dash.exceptions.PreventUpdate
 
 
 @app.callback(
@@ -2490,8 +3462,57 @@ def sync_town_pulse_filter(
 def sync_selected_market_town(_clicks: list[int], current_town: str | None) -> str | None:
     trigger = ctx.triggered_id
     if isinstance(trigger, dict):
-        return str(trigger.get("town") or current_town)
+        return _canonical_town_name(trigger.get("town") or current_town)
     raise dash.exceptions.PreventUpdate
+
+
+@app.callback(
+    Output("market-sort-mode", "data"),
+    Input("market-sort-dropdown", "value"),
+    State("market-sort-mode", "data"),
+    prevent_initial_call=True,
+)
+def sync_market_sort_mode(value: str | None, current_value: str | None) -> str:
+    return str(value or current_value or "strongest")
+
+
+@app.callback(
+    Output("forward-chart-pane", "style"),
+    Output("forward-table-pane", "style"),
+    Input("forward-view-toggle", "value"),
+    prevent_initial_call=True,
+)
+def toggle_forward_view(mode: str | None):
+    if mode == "table":
+        return {"display": "none"}, {"display": "block"}
+    return {"display": "block"}, {"display": "none"}
+
+
+@app.callback(
+    Output("economics-chart-pane", "style"),
+    Output("economics-table-pane", "style"),
+    Input("economics-view-toggle", "value"),
+    prevent_initial_call=True,
+)
+def toggle_economics_view(mode: str | None):
+    if mode == "table":
+        return {"display": "none"}, {"display": "block"}
+    return {"display": "block"}, {"display": "none"}
+
+
+@app.callback(
+    Output("main-tabs", "value", allow_duplicate=True),
+    Output("selected-market-town", "data", allow_duplicate=True),
+    Input("compare-to-market-button", "n_clicks"),
+    State("property-selector-dropdown", "value"),
+    prevent_initial_call=True,
+)
+def compare_current_property_to_market(_n_clicks: int, property_id: str | None):
+    if not property_id:
+        raise dash.exceptions.PreventUpdate
+    report = _load_report_for_property(property_id)
+    town = _canonical_town_name(getattr(report.property_input, "town", None))
+    return "opportunities", town
 
 
 # ── Main tab content ───────────────────────────────────────────────────────────
@@ -2505,6 +3526,7 @@ def sync_selected_market_town(_clicks: list[int], current_town: str | None) -> s
     Input("property-selector-dropdown", "value"),
     Input("town-pulse-filter", "data"),
     Input("selected-market-town", "data"),
+    Input("market-sort-mode", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -2513,13 +3535,22 @@ def render_main_tab(
     focus_id: str | None,
     town_pulse_filter: str | None,
     selected_market_town: str | None,
+    market_sort_mode: str | None,
 ):
+    if tab == "quick_decision":
+        tab = "tear_sheet"
+
     if tab in {"opportunities", "portfolio"}:
-        market_workspace = _build_market_view_block(selected_market_town)
+        market_workspace = _build_market_view_block(
+            selected_market_town,
+            market_sort_mode or "strongest",
+            loaded_ids,
+            focus_id,
+        )
         return _build_page_container(
             eyebrow="Markets",
             title="Markets",
-            subtitle="Rank towns by investability, valuation, and local catalysts so the next search starts with where the market is actually setting up.",
+            subtitle="Use a quick, directional market read to decide where the next property search should start.",
             content=market_workspace,
             max_width="1140px",
         )
@@ -2527,12 +3558,28 @@ def render_main_tab(
     if tab == "tear_sheet":
         report = _focused_report(loaded_ids, focus_id)
         if report is None:
-            return _empty_state(
-                "The selected property could not be loaded. Re-select it from the property picker or check the saved inputs/report logs."
-                if focus_id
-                else "Add or select a property to begin."
+            if selected_market_town:
+                return _build_page_container(
+                    eyebrow="Town Results",
+                    title=selected_market_town,
+                    subtitle=f"Browse Briarwood's analyzed properties in {selected_market_town} before opening one specific property.",
+                    content=_build_town_results_view(
+                        selected_town=selected_market_town,
+                        loaded_ids=loaded_ids,
+                        focus_id=focus_id,
+                    ),
+                    max_width="980px",
+                    show_header=False,
+                )
+            return _build_page_container(
+                eyebrow="Property Search",
+                title="Analyze A Property",
+                subtitle="Search by address or paste a listing URL. Briarwood starts with a lightweight decision read and only gets deeper when you need it.",
+                content=_property_search_landing(_catalog_version),
+                max_width="980px",
+                show_header=False,
             )
-        view = build_property_analysis_view(report)
+        view = _build_property_view_for_property(report.property_id)
         identity = _property_identity(
             report.address,
             getattr(report.property_input, "town", None),
@@ -2541,7 +3588,7 @@ def render_main_tab(
         return _build_page_container(
             eyebrow=identity["locality"],
             title="Property Analysis",
-            subtitle=f"Working read on {identity['street']}. The page stays decision-first, while deeper diagnostics remain available further down.",
+            subtitle=f"Start with the fast decision read on {identity['street']}, then open deeper pricing, scenario, and evidence layers only when you need them.",
             content=render_tear_sheet_body(
                 view,
                 report,
@@ -2623,8 +3670,202 @@ def render_main_tab(
     return _empty_state("Select a tab.")
 
 
-def _build_market_view_block(selected_town: str | None) -> html.Div:
-    market_view = build_market_view_model(selected_town)
+def _build_market_property_candidates(
+    *,
+    selected_town: str | None,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+) -> html.Div | None:
+    if not selected_town:
+        return None
+    selected_town = _canonical_town_name(selected_town)
+    records = [
+        item for item in _opportunity_records(loaded_ids)
+        if _town_lookup_key(str(item["town"])) == _town_lookup_key(selected_town)
+    ]
+    if not records:
+        return html.Div(
+            [
+                html.Div("Town Property Setups", style=SECTION_HEADER_STYLE),
+                html.Div(
+                    f"No saved property analyses are currently loaded for {selected_town}. Add or save properties in this town to preview them here.",
+                    style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_MUTED},
+                ),
+            ],
+            style={**CARD_STYLE, "padding": "16px 18px", "display": "grid", "gap": "8px"},
+        )
+    cards = [_opportunity_button(item, scope="market", selected=str(item["property_id"]) == focus_id) for item in records[:6]]
+    return html.Div(
+        [
+            html.Div("Town Property Setups", style=SECTION_HEADER_STYLE),
+            html.Div(
+                f"These are the property-level setups Briarwood has already analyzed inside {selected_town}. Open one for a lightweight decision read before committing to the full underwriting page.",
+                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY},
+            ),
+            html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "12px"}),
+        ],
+        style={"display": "grid", "gap": "10px"},
+    )
+
+
+def _build_town_results_view(
+    *,
+    selected_town: str,
+    loaded_ids: list[str] | None,
+    focus_id: str | None,
+) -> html.Div:
+    selected_town = _canonical_town_name(selected_town)
+    saved_records = [
+        item for item in _opportunity_records(loaded_ids)
+        if _town_lookup_key(str(item["town"])) == _town_lookup_key(selected_town)
+    ]
+    listing_candidates = _town_listing_candidates(selected_town)
+    town_cards = {str(item["town"]): item for item in _available_town_cards()}
+    town_meta = next((item for item in town_cards.values() if _town_lookup_key(str(item["town"])) == _town_lookup_key(selected_town)), None)
+
+    if not saved_records and not listing_candidates:
+        return html.Div(
+            [
+                html.Div(
+                    [
+                        html.Div("Town Results", style=_PAGE_KICKER_STYLE),
+                        html.H1(selected_town, style={**HEADING_XL_STYLE, "margin": "0"}),
+                        html.Div(
+                            f"Briarwood does not have saved property analyses for {selected_town} yet. Choose another town or add a property in this town to start the decision flow.",
+                            style={**_PAGE_SUBTITLE_STYLE, "maxWidth": "720px"},
+                        ),
+                    ],
+                    style={"display": "grid", "gap": "8px"},
+                ),
+                html.Div(
+                    [
+                        html.Button("Back To Search", id="town-results-back-button", n_clicks=0, style=BTN_GHOST),
+                        html.Button("Explore Markets", id="town-results-markets-button", n_clicks=0, style=BTN_SECONDARY),
+                    ],
+                    style={"display": "flex", "gap": "10px", "flexWrap": "wrap"},
+                ),
+            ],
+            style={"display": "grid", "gap": "18px", "padding": "18px 0 24px"},
+        )
+
+    saved_cards = [_opportunity_button(item, scope="town_results", selected=str(item["property_id"]) == focus_id) for item in saved_records]
+    listing_cards = [
+        html.Div(
+            [
+                html.Button(
+                    [
+                        html.Div(
+                            [
+                                html.Div(candidate["locality"], style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": ACCENT_BLUE}),
+                                html.Div(candidate["street"], style={"fontSize": "17px", "fontWeight": "700", "color": TEXT_PRIMARY, "letterSpacing": "-0.02em", "marginTop": "2px"}),
+                            ]
+                        ),
+                        html.Div(
+                            [
+                                _opportunity_badge("Price", str(candidate["list_price"]), tone="neutral"),
+                                _opportunity_badge("Status", str(candidate["status"]), tone="neutral"),
+                                _opportunity_badge("DOM", str(candidate["dom"]), tone="neutral"),
+                            ],
+                            style={"display": "flex", "gap": "6px", "flexWrap": "wrap", "marginTop": "10px"},
+                        ),
+                        html.Div(
+                            f"{candidate['property_type']} • {candidate['condition']}",
+                            style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_PRIMARY, "marginTop": "12px"},
+                        ),
+                        html.Div(
+                            "Start a Briarwood analysis for this listing.",
+                            style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY, "marginTop": "6px"},
+                        ),
+                    ],
+                    id={"type": "town-listing-open-button", "address": str(candidate["address"])},
+                    n_clicks=0,
+                    style={
+                        "width": "100%",
+                        "textAlign": "left",
+                        "backgroundColor": BG_SURFACE,
+                        "border": f"1px solid {BORDER}",
+                        "borderLeft": f"4px solid {ACCENT_BLUE}",
+                        "borderRadius": "6px",
+                        "padding": "14px 16px",
+                        "cursor": "pointer",
+                        "display": "grid",
+                        "gap": "0",
+                        "fontFamily": FONT_FAMILY,
+                    },
+                ),
+                html.Div(
+                    [
+                        html.A("Google Maps", href=str(candidate["maps"]["google"]), target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": ACCENT_BLUE, "textDecoration": "none"}),
+                        html.A("Apple Maps", href=str(candidate["maps"]["apple"]), target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": TEXT_SECONDARY, "textDecoration": "none"}),
+                        html.A("Source", href=str(candidate["source_url"]), target="_blank", rel="noreferrer", style={"fontSize": "12px", "color": TEXT_SECONDARY, "textDecoration": "none"}) if candidate["source_url"] else html.Span(f"Source: {candidate['source_ref']}", style={"fontSize": "12px", "color": TEXT_MUTED}),
+                    ],
+                    style={"display": "flex", "gap": "12px", "padding": "8px 4px 0 4px", "flexWrap": "wrap"},
+                ),
+            ]
+        )
+        for candidate in listing_candidates
+    ]
+    town_summary_bits = [
+        str((town_meta or {}).get("signal") or "").strip(),
+        str((town_meta or {}).get("trend") or "").strip(),
+        f"{len(saved_records)} analyzed" if saved_records else "",
+        f"{len(listing_candidates)} active listing{'s' if len(listing_candidates) != 1 else ''}" if listing_candidates else "",
+    ]
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("Town Results", style=_PAGE_KICKER_STYLE),
+                    html.H1(selected_town, style={**HEADING_XL_STYLE, "margin": "0"}),
+                    html.Div(
+                        " • ".join(part for part in town_summary_bits if part),
+                        style={"fontSize": "14px", "fontWeight": "600", "color": TEXT_SECONDARY},
+                    ),
+                    html.Div(
+                        f"Browse Briarwood's analyzed properties and live listings in {selected_town}. Pick one intentionally to preview it or start a new analysis.",
+                        style={**_PAGE_SUBTITLE_STYLE, "maxWidth": "760px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "8px"},
+            ),
+            html.Div(
+                [
+                    html.Button("Back To Search", id="town-results-back-button", n_clicks=0, style=BTN_GHOST),
+                    html.Button("Explore Markets", id="town-results-markets-button", n_clicks=0, style=BTN_SECONDARY),
+                ],
+                style={"display": "flex", "gap": "10px", "flexWrap": "wrap"},
+            ),
+            html.Div(
+                [
+                    html.Div("Saved Briarwood Analyses", style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        saved_cards if saved_cards else [html.Div("No saved Briarwood analyses are available for this town yet.", style={"fontSize": "13px", "color": TEXT_MUTED})],
+                        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "12px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "10px"},
+            ),
+            html.Div(
+                [
+                    html.Div("Live Town Listings", style=SECTION_HEADER_STYLE),
+                    html.Div(
+                        "These are active listings in town that Briarwood can route into a new analysis if you want to evaluate them.",
+                        style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY},
+                    ),
+                    html.Div(
+                        listing_cards if listing_cards else [html.Div("No additional active listings were found for this town.", style={"fontSize": "13px", "color": TEXT_MUTED})],
+                        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "12px"},
+                    ),
+                ],
+                style={"display": "grid", "gap": "10px"},
+            ),
+        ],
+        style={"display": "grid", "gap": "18px", "padding": "18px 0 24px"},
+    )
+
+
+def _build_market_view_block(selected_town: str | None, sort_mode: str, loaded_ids: list[str] | None, focus_id: str | None) -> html.Div:
+    market_view = build_market_view_model(selected_town, sort_mode=sort_mode)
     if not market_view.markets:
         return _empty_state("Market scanner data is unavailable right now.")
     selected_market = market_view.selected_market
@@ -2635,21 +3876,21 @@ def _build_market_view_block(selected_town: str | None) -> html.Div:
             [
                 html.Div(
                     [
-                        html.Div(card.town, style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                        html.Div(card.town_name, style={"fontSize": "20px", "fontWeight": "700", "color": TEXT_PRIMARY}),
                         html.Div(
-                            f"{card.score:.1f}/10",
+                            card.trend,
                             style={
-                                "fontSize": "24px",
-                                "fontWeight": "800",
+                                "fontSize": "13px",
+                                "fontWeight": "700",
                                 "color": ACCENT_BLUE,
-                                "letterSpacing": "-0.03em",
+                                "letterSpacing": "0.02em",
+                                "textTransform": "uppercase",
                             },
                         ),
                     ],
                     style={"display": "flex", "justifyContent": "space-between", "alignItems": "start", "gap": "12px"},
                 ),
-                html.Div(card.market_condition, style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": TEXT_MUTED}),
-                html.Div(card.short_narrative, style={"fontSize": "14px", "lineHeight": "1.55", "color": TEXT_SECONDARY}),
+                html.Div(card.market_signal, style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.08em", "textTransform": "uppercase", "color": TEXT_MUTED}),
                 html.Div(
                     [
                         html.Div(
@@ -2663,12 +3904,16 @@ def _build_market_view_block(selected_town: str | None) -> html.Div:
                     ],
                     style={"display": "grid", "gridTemplateColumns": "repeat(2, minmax(0, 1fr))", "gap": "8px"},
                 ),
+                html.Ul(
+                    [html.Li(signal, style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_SECONDARY}) for signal in card.signals],
+                    style={"margin": "0", "paddingLeft": "18px", "display": "grid", "gap": "4px"},
+                ),
                 html.Div(
-                    "Open Town Tear Sheet",
+                    "Open Market Read",
                     style={"fontSize": "12px", "fontWeight": "700", "color": ACCENT_BLUE},
                 ),
             ],
-            id={"type": "market-card-button", "town": card.town},
+            id={"type": "market-card-button", "town": card.town_name},
             n_clicks=0,
             style={
                 **CARD_STYLE_ELEVATED,
@@ -2677,8 +3922,8 @@ def _build_market_view_block(selected_town: str | None) -> html.Div:
                 "gap": "12px",
                 "textAlign": "left",
                 "width": "100%",
-                "border": f"1px solid {ACCENT_BLUE}" if card.town == selected_town else f"1px solid {BORDER}",
-                "background": "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(238,246,251,0.9) 100%)" if card.town == selected_town else BG_SURFACE,
+                "border": f"1px solid {ACCENT_BLUE}" if card.town_name == selected_town else f"1px solid {BORDER}",
+                "background": "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(238,246,251,0.9) 100%)" if card.town_name == selected_town else BG_SURFACE,
                 "cursor": "pointer",
             },
         )
@@ -2686,20 +3931,45 @@ def _build_market_view_block(selected_town: str | None) -> html.Div:
     ]
 
     detail = _render_market_detail_placeholder(selected_market)
+    town_property_candidates = _build_market_property_candidates(
+        selected_town=selected_town,
+        loaded_ids=loaded_ids,
+        focus_id=focus_id,
+    )
+    value_finder_section = _build_value_finder_market_section(selected_town=selected_town)
     return html.Div(
         [
             html.Div(
                 [
-                    html.Div("Top Value Markets", style={"fontSize": "28px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
+                    html.Div("Where To Look Right Now", style={"fontSize": "28px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
                     html.Div(
-                        "This list is intentionally judgmental: each card combines market structure, relative valuation, catalysts, and investability into a single research-first read on where to look next.",
+                        "Each town gets one clean read: how tight the market feels, whether it is improving or softening, and the few numbers that matter most right now.",
                         style=_PAGE_SUBTITLE_STYLE,
                     ),
                 ],
                 style={"display": "grid", "gap": "4px"},
             ),
+            html.Div(
+                [
+                    html.Div("Sort", style=LABEL_STYLE),
+                    dcc.Dropdown(
+                        id="market-sort-dropdown",
+                        options=[
+                            {"label": "Strongest Markets", "value": "strongest"},
+                            {"label": "Weakest Markets", "value": "weakest"},
+                            {"label": "Most Improving", "value": "improving"},
+                        ],
+                        value=market_view.sort_mode,
+                        clearable=False,
+                        style={"minWidth": "220px"},
+                    ),
+                ],
+                style={"display": "flex", "gap": "10px", "alignItems": "end", "justifyContent": "space-between", "flexWrap": "wrap"},
+            ),
             html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "14px"}),
+            value_finder_section,
             detail,
+            town_property_candidates,
         ],
         style={"display": "grid", "gap": "14px"},
     )
@@ -2707,31 +3977,33 @@ def _build_market_view_block(selected_town: str | None) -> html.Div:
 
 def _render_market_detail_placeholder(selected_market) -> html.Div:
     if selected_market is None:
-        return _empty_state("Select a market to open the Town Tear Sheet placeholder.")
+        return _empty_state("Select a town to open its market read.")
 
     metrics = selected_market.metrics
-    pillar_rows = [
-        ("Market Structure", f"{selected_market.structure_score:.1f}/10"),
-        ("Valuation", f"{selected_market.valuation_score:.1f}/10"),
-        ("Catalysts", f"{selected_market.catalyst_score:.1f}/10"),
-        ("Investability", f"{selected_market.investability_score:.1f}/10"),
-    ]
+    market_signal = (
+        "Tight Market" if metrics.get("buyer_vs_seller_score") is not None and metrics["buyer_vs_seller_score"] >= 6.6
+        else "Soft Market" if metrics.get("buyer_vs_seller_score") is not None and metrics["buyer_vs_seller_score"] <= 4.0
+        else "Balanced Market"
+    )
+    trend = (
+        "Improving" if (metrics.get("price_trend_pct") or 0) >= 0.03 or (metrics.get("dom_trend_pct") or 0) <= -0.08
+        else "Weakening" if (metrics.get("price_trend_pct") or 0) <= -0.03 or (metrics.get("dom_trend_pct") or 0) >= 0.08
+        else "Stable"
+    )
     metric_rows = [
-        ("Avg DOM", f"{metrics['avg_dom']:.1f} days" if metrics.get("avg_dom") is not None else "Unavailable"),
-        ("Avg $/SF", f"${metrics['avg_price_per_sqft']:,.0f}" if metrics.get("avg_price_per_sqft") is not None else "Unavailable"),
+        ("Inventory", f"{int(metrics['inventory_count'])} active" if metrics.get("inventory_count") is not None else "Unavailable"),
         ("Median Price", f"${metrics['median_price']:,.0f}" if metrics.get("median_price") is not None else "Unavailable"),
-        ("Sold / Month", f"{metrics['sold_per_month']:.2f}" if metrics.get("sold_per_month") is not None else "Unavailable"),
-        ("Sell-Through", f"{metrics['sell_through_rate']:.2f}x" if metrics.get("sell_through_rate") is not None else "Unavailable"),
-        ("Price-to-Rent", f"{metrics['price_to_rent_ratio']:.1f}x" if metrics.get("price_to_rent_ratio") is not None else "Unavailable"),
+        ("DOM", f"{metrics['avg_dom']:.1f} days" if metrics.get("avg_dom") is not None else "Unavailable"),
+        ("Price Trend", f"{(metrics['price_trend_pct'] or 0) * 100:+.0f}%" if metrics.get("price_trend_pct") is not None else "Unavailable"),
     ]
     return html.Div(
         [
             html.Div(
                 [
-                    html.Div("Town Tear Sheet", style=SECTION_HEADER_STYLE),
+                    html.Div("Market Read", style=SECTION_HEADER_STYLE),
                     html.Div(selected_market.town, style={"fontSize": "24px", "fontWeight": "800", "letterSpacing": "-0.03em", "color": TEXT_PRIMARY}),
                     html.Div(
-                        "Placeholder v1: this panel establishes the destination state for a fuller town tear sheet while already surfacing the ranking logic behind the selected market.",
+                        "A quick read on whether this town looks worth searching harder right now.",
                         style=_PAGE_SUBTITLE_STYLE,
                     ),
                 ],
@@ -2746,9 +4018,9 @@ def _render_market_detail_placeholder(selected_market) -> html.Div:
                         ],
                         style={**CARD_STYLE, "padding": "12px 14px"}
                     )
-                    for label, value in pillar_rows
+                    for label, value in [("Market Signal", market_signal), ("Direction", trend)]
                 ],
-                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(160px, 1fr))", "gap": "10px"},
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "10px"},
             ),
             html.Div(selected_market.narrative, style={"fontSize": "14px", "lineHeight": "1.7", "color": TEXT_SECONDARY}),
             html.Div(
@@ -2766,6 +4038,115 @@ def _render_market_detail_placeholder(selected_market) -> html.Div:
             ),
         ],
         style={**CARD_STYLE_ELEVATED, "padding": "18px 20px", "display": "grid", "gap": "14px"},
+    )
+
+
+def _value_finder_signal_rank(signal: str) -> int:
+    order = {
+        "Possible Value": 0,
+        "Emerging Opportunity": 1,
+        "Watch for Cut": 2,
+        "Needs Price Reset": 3,
+        "Rich / Market Resisting": 4,
+        "Fairly Priced": 5,
+    }
+    return order.get(signal, 9)
+
+
+def _value_finder_gap_sort_value(value: str) -> float:
+    try:
+        return abs(float(value.replace("%", "").replace("Unavailable", "0").strip() or 0.0))
+    except ValueError:
+        return 0.0
+
+
+def _build_value_finder_market_section(selected_town: str | None) -> html.Div | None:
+    saved_ids = [item.property_id for item in list_saved_properties()]
+    if not saved_ids:
+        return None
+    reports = load_reports(saved_ids)
+    candidates = []
+    for property_id in saved_ids:
+        report = reports.get(property_id)
+        if report is None:
+            continue
+        candidate = build_value_finder_candidate_view_model(report)
+        if selected_town and candidate.town.strip().lower() != selected_town.strip().lower():
+            continue
+        if candidate.opportunity_signal == "Fairly Priced":
+            continue
+        candidates.append(candidate)
+    if not candidates:
+        return None
+    candidates.sort(
+        key=lambda item: (
+            _value_finder_signal_rank(item.opportunity_signal),
+            -_value_finder_gap_sort_value(item.value_gap_text),
+            item.address,
+        )
+    )
+    cards = [
+        html.Button(
+            [
+                html.Div(
+                    [
+                        html.Div(candidate.address, style={"fontSize": "17px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                        html.Div(candidate.town, style={"fontSize": "12px", "fontWeight": "700", "color": TEXT_MUTED, "textTransform": "uppercase", "letterSpacing": "0.06em"}),
+                    ],
+                    style={"display": "grid", "gap": "2px"},
+                ),
+                html.Div(candidate.opportunity_signal, style={"fontSize": "12px", "fontWeight": "700", "color": ACCENT_BLUE}),
+                html.Div(candidate.short_summary, style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY}),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div(label, style=LABEL_STYLE),
+                                html.Div(value, style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+                            ],
+                            style={**CARD_STYLE, "padding": "10px 12px", "boxShadow": "none"},
+                        )
+                        for label, value in [
+                            ("Ask", candidate.ask_price_text),
+                            ("Briarwood Value", candidate.briarwood_value_text),
+                            ("DOM", candidate.dom_text),
+                            ("Value Gap", candidate.value_gap_text),
+                        ]
+                    ],
+                    style={"display": "grid", "gridTemplateColumns": "repeat(2, minmax(0, 1fr))", "gap": "8px"},
+                ),
+            ],
+            id={"type": "market-preview-open-button", "property_id": candidate.property_id, "source": "value_finder"},
+            n_clicks=0,
+            style={
+                **CARD_STYLE_ELEVATED,
+                "padding": "16px 16px 14px",
+                "display": "grid",
+                "gap": "10px",
+                "textAlign": "left",
+                "width": "100%",
+                "cursor": "pointer",
+                "fontFamily": FONT_FAMILY,
+            },
+        )
+        for candidate in candidates[:6]
+    ]
+    label = f"{selected_town} Value Finder" if selected_town else "Value Finder"
+    description = (
+        f"This layer looks for listings in {selected_town} where price support and market behavior are diverging."
+        if selected_town else
+        "This layer looks for listings where price support and market behavior are diverging."
+    )
+    return html.Div(
+        [
+            html.Div(label, style=SECTION_HEADER_STYLE),
+            html.Div(
+                f"{description} It is a setup detector, not a buy recommendation.",
+                style={"fontSize": "13px", "lineHeight": "1.6", "color": TEXT_SECONDARY},
+            ),
+            html.Div(cards, style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(260px, 1fr))", "gap": "14px"}),
+        ],
+        style={"display": "grid", "gap": "10px"},
     )
 
 
@@ -2789,7 +4170,7 @@ def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> Analy
         return None
     if focus_id:
         try:
-            return load_report_for_preset(focus_id)
+            return _load_report_for_property(focus_id)
         except KeyError:
             logger.warning("Focused property %s is not in the preset catalog.", focus_id)
             return None
@@ -2799,7 +4180,7 @@ def _focused_report(loaded_ids: list[str] | None, focus_id: str | None) -> Analy
 
     for property_id in property_ids:
         try:
-            return load_report_for_preset(property_id)
+            return _load_report_for_property(property_id)
         except KeyError:
             continue
         except Exception as exc:
@@ -2822,11 +4203,15 @@ def render_compare(_go_token: int | None, property_ids: list[str] | None, mode: 
             "Select 2 or more properties, click OK to confirm them, then click Go.",
             style={"color": TEXT_MUTED, "fontSize": "14px"},
         )
-    reports_dict = load_reports(property_ids)
-    report_list = [reports_dict[pid] for pid in property_ids if pid in reports_dict]
+    report_list = []
+    for pid in property_ids:
+        try:
+            report_list.append(_load_report_for_property(pid))
+        except Exception:
+            continue
     if len(report_list) < 2:
         return html.Div("Some selected properties are unavailable.", style={"color": TEXT_MUTED})
-    views = [build_property_analysis_view(r) for r in report_list]
+    views = [_build_property_view_for_property(r.property_id) for r in report_list]
     summary = build_compare_summary(views)
     return render_compare_decision_mode(mode or "heatmap", views, report_list, summary, section or "overview")
 
@@ -3001,17 +4386,22 @@ def set_drawer_visibility(is_open: bool | None):
     Output("manual-maintenance-reserve", "value"),
     Output("manual-condition-profile", "value"),
     Output("manual-capex-lane", "value"),
+    Output("manual-source-url", "value"),
+    Output("manual-source-site", "value"),
+    Output("manual-intake-status", "children"),
+    Output("manual-listing-text", "value"),
     Output("manual-notes", "value"),
     Output("manual-comps-store", "data", allow_duplicate=True),
     Output("manual-editing-status", "children"),
     Input("add-property-open", "data"),
     Input("manual-form-target-property-id", "data"),
     Input("manual-form-comp-ref", "data"),
+    State("landing-intake-prefill", "data"),
     prevent_initial_call=True,
 )
-def populate_manual_form(is_open: bool | None, target_property_id: str | None, comp_ref: str | None):
+def populate_manual_form(is_open: bool | None, target_property_id: str | None, comp_ref: str | None, landing_prefill: dict[str, object] | None):
     if not is_open:
-        return (no_update,) * 42
+        return (no_update,) * 46
 
     if comp_ref:
         subject, comps = load_comp_form_defaults(comp_ref)
@@ -3056,17 +4446,36 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
             subject.get("monthly_maintenance_reserve_override"),
             subject.get("condition_profile") or "",
             subject.get("capex_lane") or "",
+            "",
+            "",
+            "Source status: missing",
+            "",
             subject.get("notes") or "",
             comps,
             f"Creating a new analysis seeded from comp database row {comp_ref}",
         )
 
     if not target_property_id:
+        prefill = landing_prefill or {}
+        prefill_address = _clean_text(prefill.get("address"))
+        prefill_identity = _property_identity(prefill_address) if prefill_address else {"town": "Belmar", "state": "NJ"}
+        prefill_notes = _clean_text(prefill.get("notes"))
+        prefill_url = _clean_text(prefill.get("source_url"))
+        prefill_source_label = _clean_text(prefill.get("source_label"))
+        prefill_source_status = _clean_text(prefill.get("source_status")) or ("confirmed" if prefill_url else "missing")
+        prefill_listing_text = _clean_text(prefill.get("listing_text"))
+        if prefill_url:
+            prefill_notes = f"{prefill_notes}\nSource URL: {prefill_url}".strip()
+        address_status = "confirmed" if prefill_address else "missing"
+        town_status = "inferred" if prefill_identity.get("town") else "missing"
+        status_text = (
+            f"Address: {address_status} • Town: {town_status} • Source: {prefill_source_status}"
+        )
         return (
             "",
-            None,
-            "Belmar",
-            "NJ",
+            prefill_address or None,
+            prefill_identity.get("town") or "Belmar",
+            prefill_identity.get("state") or "NJ",
             "Monmouth",
             None,
             None,
@@ -3102,9 +4511,13 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
             None,
             "",
             "",
-            "",
+            prefill_url or "",
+            prefill_source_label or "",
+            status_text,
+            prefill_listing_text or "",
+            prefill_notes,
             [],
-            "Creating a new property analysis record",
+            "Creating a new property analysis record" if not prefill_address else f"Creating a new analysis for {prefill_address}",
         )
 
     subject, comps = load_property_form_defaults(target_property_id)
@@ -3149,6 +4562,10 @@ def populate_manual_form(is_open: bool | None, target_property_id: str | None, c
         subject.get("monthly_maintenance_reserve_override"),
         subject.get("condition_profile") or "",
         subject.get("capex_lane") or "",
+        "",
+        "",
+        "Source status: missing",
+        "",
         subject.get("notes") or "",
         comps,
         f"Editing saved record: {target_property_id} · {subject.get('address') or target_property_id}",
@@ -3495,6 +4912,10 @@ def manage_manual_comps(
     State("manual-maintenance-reserve", "value"),
     State("manual-condition-profile", "value"),
     State("manual-capex-lane", "value"),
+    State("manual-source-url", "value"),
+    State("manual-source-site", "value"),
+    State("manual-intake-status", "children"),
+    State("manual-listing-text", "value"),
     State("manual-notes", "value"),
     prevent_initial_call=True,
 )
@@ -3542,6 +4963,10 @@ def run_manual_analysis(
     maintenance_reserve: float | None,
     condition_profile: str | None,
     capex_lane: str | None,
+    source_url: str | None,
+    source_site: str | None,
+    intake_status: str | None,
+    listing_text: str | None,
     notes: str | None,
 ):
     if not _n_clicks:
@@ -3552,13 +4977,20 @@ def run_manual_analysis(
     )
     catalog_version = 0  # will be bumped
     options = _property_options()
-    is_edit_mode = bool(target_property_id and not comp_ref)
     original_subject: dict[str, object] = {}
-    if is_edit_mode and target_property_id:
+    if target_property_id and not comp_ref:
         try:
             original_subject, _existing_comps = load_property_form_defaults(target_property_id)
         except Exception:
             original_subject = {}
+    create_new_record = _should_create_new_manual_record(
+        target_property_id=target_property_id,
+        property_id=property_id,
+        original_subject=original_subject,
+        current_address=address,
+        comp_ref=comp_ref,
+    )
+    is_edit_mode = bool(target_property_id and not comp_ref and not create_new_record)
     unit_count = _unit_count_for_property_type(property_type)
     unit_rents = [rent for rent in (rent_1, rent_2, rent_3, rent_4) if rent not in (None, "", 0)]
     if not address:
@@ -3589,8 +5021,17 @@ def run_manual_analysis(
             return False
         return None
 
+    note_parts = [_clean_text(notes)]
+    if _clean_text(source_url):
+        note_parts.append(f"Source URL ({_clean_text(source_site) or 'listing'}): {_clean_text(source_url)}")
+    if _clean_text(intake_status):
+        note_parts.append(f"Intake status: {_clean_text(intake_status)}")
+    if _clean_text(listing_text):
+        note_parts.append("Pasted listing text:\n" + _clean_text(listing_text))
+    combined_notes = "\n\n".join(part for part in note_parts if part)
+
     subject = {
-        "property_id": target_property_id or property_id,
+        "property_id": target_property_id if is_edit_mode else property_id,
         "address": address,
         "town": town or "Unknown",
         "state": state or "NJ",
@@ -3627,7 +5068,7 @@ def run_manual_analysis(
         "monthly_maintenance_reserve_override": maintenance_reserve,
         "condition_profile": condition_profile or None,
         "capex_lane": capex_lane or None,
-        "notes": notes or None,
+        "notes": combined_notes or None,
     }
     changed_fields = _changed_property_fields(original_subject, subject) if is_edit_mode and original_subject else []
 
@@ -3637,6 +5078,10 @@ def run_manual_analysis(
         print(f"[ANALYSIS] SUCCESS: new_id={new_id}, path={tear_sheet_path}", flush=True)
         options = _property_options()
         inline_notes: list[str] = []
+        if create_new_record and target_property_id and not comp_ref:
+            inline_notes.append(
+                "A new saved record was created because the address no longer matched the original property being edited."
+            )
         if unit_count > 1 and not unit_rents:
             inline_notes.append("Multi-unit selected without unit rents; income support fell back to the single rent field or market prior.")
         if unit_count > 1 and unit_rents:
@@ -3707,74 +5152,6 @@ def run_manual_analysis(
 
 
 
-# ── Tour callbacks ────────────────────────────────────────────────────────────
-
-# Callback 1: ANY button press updates the step store.
-# tour-trigger-btn is always in the DOM.
-# tour-next-btn / tour-prev-btn are inside the overlay (dynamic), so
-# suppress_callback_exceptions=True handles them.
-
-
-@app.callback(
-    Output("tour-step", "data"),
-    Output("tour-state", "data"),
-    Input("tour-trigger-btn", "n_clicks"),
-    Input("tour-next-btn", "n_clicks"),
-    Input("tour-prev-btn", "n_clicks"),
-    State("tour-step", "data"),
-    State("tour-state", "data"),
-    prevent_initial_call=True,
-)
-def tour_navigate(_trig: int, _nxt: int, _prv: int, step: int, tour_state: dict | None):
-    triggered = ctx.triggered_id
-    tour_state = tour_state or {"completed": False, "step": 0}
-    step = step if isinstance(step, int) else -1
-
-    if triggered == "tour-trigger-btn":
-        return 0, {"completed": False, "step": 0}
-
-    if triggered == "tour-next-btn":
-        if step >= len(_TOUR_STEPS) - 1:
-            return -1, {"completed": True, "step": 0}
-        return step + 1, {"completed": False, "step": step + 1}
-
-    if triggered == "tour-prev-btn":
-        if step <= 0:
-            return -1, {"completed": True, "step": 0}
-        return step - 1, {"completed": False, "step": step - 1}
-
-    return no_update, no_update
-
-
-# Callback 2: Render the overlay whenever tour-step changes.
-# step == -1 means hidden.  step >= 0 means show that step.
-
-
-@app.callback(
-    Output("tour-overlay-container", "children"),
-    Input("tour-step", "data"),
-)
-def tour_render(step: int):
-    if not isinstance(step, int) or step < 0:
-        return None
-    return render_tour_overlay(step)
-
-
-# Callback 3: On initial page load, check localStorage and auto-show tour.
-
-
-@app.callback(
-    Output("tour-step", "data", allow_duplicate=True),
-    Input("tour-state", "data"),
-    prevent_initial_call="initial_duplicate",
-)
-def tour_auto_show(tour_state: dict | None):
-    tour_state = tour_state or {"completed": False, "step": 0}
-    if not tour_state.get("completed", False):
-        return tour_state.get("step", 0)
-    return -1
-
-
 # ── What-if slider callback ───────────────────────────────────────────────────
 
 
@@ -3793,7 +5170,7 @@ def update_what_if(adjusted_ask: float | None, rate: float | None, vacancy: floa
     report = _focused_report(loaded_ids, focus_id)
     if report is None:
         return no_update
-    view = build_property_analysis_view(report)
+    view = _build_property_view_for_property(report.property_id)
     vacancy = vacancy if vacancy is not None else 0.05
     return render_what_if_metrics(view, adjusted_ask, rate, vacancy)
 
@@ -3812,7 +5189,7 @@ def export_analysis_report(_n: int, focus_id: str | None, loaded_ids: list[str] 
     report = _focused_report(loaded_ids, focus_id)
     if report is None:
         return no_update
-    view = build_property_analysis_view(report)
+    view = _build_property_view_for_property(report.property_id)
     from briarwood.dash_app.theme import score_label as _sl
     from briarwood.dash_app.components import _extract_diverse_items
     lines = [
