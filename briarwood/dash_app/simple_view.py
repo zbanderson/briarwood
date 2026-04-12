@@ -470,7 +470,7 @@ def render_price_support(view: PropertyAnalysisView, report: AnalysisReport) -> 
             html.Div(
                 [
                     html.Div("FORWARD VALUE", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    forward_fan_chart(report),
+                    forward_fan_chart(view),
                 ],
                 style=CARD_STYLE,
             ),
@@ -579,7 +579,7 @@ def render_financials(view: PropertyAnalysisView, report: AnalysisReport) -> htm
             html.Div(
                 [
                     html.Div("INCOME WATERFALL", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    income_carry_waterfall(report),
+                    income_carry_waterfall(view, report),
                 ],
                 style=CARD_STYLE,
             ),
@@ -641,7 +641,7 @@ def render_scenarios(view: PropertyAnalysisView, report: AnalysisReport) -> html
             html.Div(
                 [
                     html.Div("FORWARD OUTLOOK", style={**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}),
-                    forward_fan_chart(report),
+                    forward_fan_chart(view),
                 ],
                 style=CARD_STYLE,
             ),
@@ -698,7 +698,7 @@ def _build_value_waterfall(view: PropertyAnalysisView, report: AnalysisReport) -
     if view.value and view.value.value_bridge:
         for step in view.value.value_bridge:
             is_total = step.label.lower() in ("estimated value", "total", "briarwood value", "fair value")
-            amount_text = step.value
+            amount_text = step.value_text
             rows.append(
                 html.Div(
                     [
