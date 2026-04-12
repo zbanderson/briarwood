@@ -5,6 +5,7 @@ from .adapters import (
     OpenAILocalIntelligenceExtractor,
     RuleBasedLocalIntelligenceExtractor,
 )
+from .collector import MunicipalDocumentCollector, MunicipalSourceSeed
 from .classification import (
     TOWN_PULSE_BUCKET_DEFINITIONS,
     TOWN_PULSE_BUCKET_LABELS,
@@ -30,7 +31,6 @@ from .models import (
 )
 from .service import LocalIntelligenceService
 from .storage import JsonLocalSignalStore, LocalSignalStore
-from .ui import build_town_pulse_view
 
 __all__ = [
     "ImpactDirection",
@@ -40,6 +40,8 @@ __all__ = [
     "OpenAILocalIntelligenceConfig",
     "OpenAILocalIntelligenceExtractor",
     "RuleBasedLocalIntelligenceExtractor",
+    "MunicipalDocumentCollector",
+    "MunicipalSourceSeed",
     "TOWN_PULSE_BUCKET_DEFINITIONS",
     "TOWN_PULSE_BUCKET_LABELS",
     "ReconciliationStatus",
@@ -56,7 +58,6 @@ __all__ = [
     "TownSignal",
     "TownSummary",
     "bucket_town_signals",
-    "build_town_pulse_view",
     "classify_town_signal",
     "rank_town_signals",
 ]

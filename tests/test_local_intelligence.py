@@ -4,8 +4,9 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
 
-from briarwood.local_intelligence import LocalIntelligenceService, build_town_pulse_view
+from briarwood.local_intelligence import LocalIntelligenceService
 from briarwood.local_intelligence.adapters import OpenAILocalIntelligenceExtractor
+from briarwood.local_intelligence.collector import MunicipalDocumentCollector, MunicipalSourceSeed
 from briarwood.local_intelligence.classification import classify_town_signal
 from briarwood.local_intelligence.models import (
     ImpactDirection,
@@ -219,6 +220,76 @@ class LocalIntelligenceTests(unittest.TestCase):
             self.assertEqual(second_run.signals[0].reconciliation_status, ReconciliationStatus.UNCHANGED)
             persisted = store.load_town_signals(town="Belmar", state="NJ")
             self.assertTrue(persisted)
+
+    def test_service_auto_collects_municipal_documents_when_none_are_supplied(self) -> None:
+        registry = {
+            ("avon by the sea", "NJ"): [
+                MunicipalSourceSeed(
+                    title="Planning Board Minutes",
+                    url="https://example.com/avon/planning-minutes.html",
+                    source_type=SourceType.PLANNING_BOARD_MINUTES,
+                )
+            ]
+        }
+
+        def fake_fetcher(_url: str) -> tuple[bytes, str | None]:
+            html = (
+                "<html><body>"
+                "Application for 123 Main Street mixed-use redevelopment with 18 residential units was approved. "
+                "Board members found the proposal consistent with the master plan."
+                "</body></html>"
+            )
+            return html.encode("utf-8"), "text/html"
+
+        with TemporaryDirectory() as temp_dir:
+            collector = MunicipalDocumentCollector(
+                registry=registry,
+                fetcher=fake_fetcher,
+                cache_root=Path(temp_dir),
+            )
+            service = LocalIntelligenceService(
+                store=JsonLocalSignalStore(Path(temp_dir) / "signals"),
+                collector=collector,
+            )
+            run = service.analyze(
+                town="Avon by the Sea",
+                state="NJ",
+                raw_documents=[],
+            )
+
+        self.assertTrue(run.documents)
+        self.assertTrue(run.signals)
+        self.assertTrue(any("Auto-collected" in warning for warning in run.warnings))
+        self.assertNotIn("local_documents", run.missing_inputs)
+
+    def test_municipal_document_collector_uses_cache_after_first_fetch(self) -> None:
+        registry = {
+            ("avon by the sea", "NJ"): [
+                MunicipalSourceSeed(
+                    title="Town Hall Minutes",
+                    url="https://example.com/avon/town-hall.html",
+                    source_type=SourceType.ORDINANCE,
+                )
+            ]
+        }
+        fetch_count = {"count": 0}
+
+        def fake_fetcher(_url: str) -> tuple[bytes, str | None]:
+            fetch_count["count"] += 1
+            return b"<html><body>Regular meeting minutes and ordinance discussion.</body></html>", "text/html"
+
+        with TemporaryDirectory() as temp_dir:
+            collector = MunicipalDocumentCollector(
+                registry=registry,
+                fetcher=fake_fetcher,
+                cache_root=Path(temp_dir),
+            )
+            first = collector.collect(town="Avon by the Sea", state="NJ")
+            second = collector.collect(town="Avon by the Sea", state="NJ")
+
+        self.assertEqual(fetch_count["count"], 1)
+        self.assertEqual(len(first), 1)
+        self.assertEqual(second, first)
 
     def test_summary_aggregation_prioritizes_recent_confirmed_signals(self) -> None:
         now = datetime.now(timezone.utc)
@@ -483,16 +554,6 @@ class LocalIntelligenceTests(unittest.TestCase):
         self.assertTrue(result.payload.projects)
         self.assertTrue(any(project.status == "approved" for project in result.payload.projects))
         self.assertTrue(result.payload.narrative)
-
-        pulse = build_town_pulse_view(
-            LocalIntelligenceService().analyze(
-                town="Belmar",
-                state="NJ",
-                raw_documents=sample_property().local_documents,
-            ).summary
-        )
-        self.assertEqual(pulse.heading, "Town Pulse: Belmar, NJ")
-        self.assertEqual(pulse.confidence_label, "Medium")
 
     def test_town_pulse_view_model_renders_from_current_payload_flow(self) -> None:
         result = LocalIntelligenceModule().run(sample_property())
