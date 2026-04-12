@@ -42,6 +42,7 @@ from briarwood.dash_app.components import (
     renovation_value_trajectory_chart,
 )
 from briarwood.dash_app.simple_view import (
+    render_property_view,
     render_simple_view,
     render_price_support,
     render_financials,
@@ -3569,24 +3570,27 @@ def render_main_tab(
             getattr(report.property_input, "state", None),
         )
 
-        # Screen-based routing: simple view is default, Layer 2 on action
-        screen = view_screen or "simple"
+        # Reset to summary tab when switching properties
+        triggered = ctx.triggered_id
+        if triggered == "property-selector-dropdown":
+            screen = "summary"
+        else:
+            screen = view_screen or "summary"
         role = user_role or "homebuyer"
 
-        if screen == "price_support":
-            content = render_price_support(view, report, user_role=role)
-        elif screen == "financials":
-            content = render_financials(view, report, user_role=role)
-        elif screen == "scenarios":
-            content = render_scenarios(view, report, user_role=role)
-        elif screen == "full":
+        if screen == "full":
             content = render_tear_sheet_body(
                 view,
                 report,
                 town_pulse_filter=town_pulse_filter or "all",
             )
         else:
-            content = render_simple_view(view, report, user_role=role)
+            content = render_property_view(
+                view,
+                report,
+                active_tab=screen,
+                user_role=role,
+            )
 
         return _build_page_container(
             eyebrow=identity["locality"],
@@ -3674,15 +3678,25 @@ def render_main_tab(
 
 @app.callback(
     Output("property-view-screen", "data"),
+    Input({"type": "property-tab", "tab": ALL}, "n_clicks"),
     Input({"type": "simple-view-action", "screen": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
-def handle_simple_view_action(n_clicks_list):
-    """Route action button clicks to the correct Layer 2 screen."""
-    if not ctx.triggered_id or not any(n_clicks_list):
+def handle_property_navigation(tab_clicks, action_clicks):
+    """Route property tab and action button clicks."""
+    if not ctx.triggered_id:
         return no_update
-    screen = ctx.triggered_id.get("screen", "simple")
-    return screen
+    # Property tab click
+    if ctx.triggered_id.get("type") == "property-tab":
+        if not any(c for c in tab_clicks if c):
+            return no_update
+        return ctx.triggered_id.get("tab", "summary")
+    # Legacy action button click
+    if ctx.triggered_id.get("type") == "simple-view-action":
+        if not any(c for c in action_clicks if c):
+            return no_update
+        return ctx.triggered_id.get("screen", "summary")
+    return no_update
 
 
 # ── Role toggle callback ─────────────────────────────────────────────────────

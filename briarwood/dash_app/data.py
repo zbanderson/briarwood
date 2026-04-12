@@ -498,13 +498,26 @@ def _saved_property_directory_presets() -> list[PropertyPreset]:
 
 
 def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
-    """Re-run analysis from saved inputs.json (authoritative rehydration path)."""
+    """Load from cached pickle if available, otherwise re-run analysis."""
+    import pickle
+    property_dir = _saved_property_path(property_id)
+    pkl_path = property_dir / "report.pkl"
+
+    # Fast path: load cached pickle
+    if pkl_path.exists():
+        try:
+            report = pickle.loads(pkl_path.read_bytes())
+            if isinstance(report, AnalysisReport):
+                return report
+        except Exception:
+            pass  # Fall through to re-analysis
+
+    # Slow path: re-run full analysis
     from briarwood.runner import run_report
-    inputs_path = _saved_property_path(property_id) / "inputs.json"
+    inputs_path = property_dir / "inputs.json"
     if not inputs_path.exists():
         raise KeyError(f"No inputs.json for saved property: {property_id}")
     report = run_report(inputs_path)
-    property_dir = _saved_property_path(property_id)
     _write_saved_summary(property_dir, report)
     return report
 
@@ -737,6 +750,14 @@ def _write_saved_summary(property_dir: Path, report: AnalysisReport) -> None:
         except OSError:
             pass
         raise
+
+    # Cache report pickle for fast reload
+    import pickle
+    pkl_path = property_dir / "report.pkl"
+    try:
+        pkl_path.write_bytes(pickle.dumps(report))
+    except Exception:
+        pass  # Non-critical — next load will re-analyze
 
 
 def _comp_trust_value(view: object) -> str:

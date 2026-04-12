@@ -1,11 +1,11 @@
-"""Simple View — the product.
+"""Property View — persistent tab layout with simple/detailed toggle.
 
-Answers three questions in under 10 seconds:
-1. Should I do this? → Decision hero
-2. What could go wrong? → Risk Check
-3. Why might this still be interesting? → Value Finder
+Three tabs always visible at the top:
+  Summary | Price Support | Financials
 
-Then 3 action buttons for Layer 2 progressive disclosure.
+Each tab has a Simple/Detailed toggle:
+  Simple  = homebuyer-friendly plain English
+  Detailed = investor stats, full analytical depth
 """
 from __future__ import annotations
 
@@ -76,63 +76,342 @@ def _risk_color(level: str) -> str:
     return ACCENT_RED
 
 
+# ── Tab bar styles ───────────────────────────────────────────────────────────
+
+_TAB_NAMES = [
+    ("summary", "Summary"),
+    ("price_support", "Price Support"),
+    ("financials", "Financials"),
+]
+
+_PROPERTY_TAB_BAR_STYLE: dict = {
+    "display": "flex",
+    "gap": "0",
+    "borderBottom": f"1px solid {BORDER}",
+    "marginBottom": "20px",
+    "position": "sticky",
+    "top": "0",
+    "zIndex": "50",
+    "backgroundColor": BG_PRIMARY,
+    "padding": "0 4px",
+}
+
+
+def _tab_button_style(active: bool) -> dict:
+    return {
+        "padding": "12px 20px",
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "color": TEXT_PRIMARY if active else TEXT_SECONDARY,
+        "borderBottom": f"2px solid {ACCENT_BLUE}" if active else "2px solid transparent",
+        "backgroundColor": "transparent",
+        "border-top": "none",
+        "border-left": "none",
+        "border-right": "none",
+        "cursor": "pointer",
+        "transition": "color 0.15s, border-color 0.15s",
+        "whiteSpace": "nowrap",
+    }
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 
+def render_property_view(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    active_tab: str = "summary",
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Top-level property view with persistent tab bar and simple/detailed toggle.
+
+    This replaces the old screen-based routing. The tab bar is always visible
+    so users can move between Summary, Price Support, and Financials without
+    going back.
+    """
+    # Resolve tab content
+    if active_tab == "price_support":
+        tab_content = _render_price_support_tab(view, report, user_role=user_role)
+    elif active_tab == "financials":
+        tab_content = _render_financials_tab(view, report, user_role=user_role)
+    else:
+        tab_content = _render_summary_tab(view, report, user_role=user_role)
+
+    return html.Div(
+        [
+            _render_property_header(view),
+            _render_nav_bar(active_tab, user_role),
+            html.Div(
+                tab_content,
+                className="briarwood-fade-in",
+                style={"padding": "0 4px"},
+            ),
+        ],
+        style={
+            "maxWidth": "900px",
+            "margin": "0 auto",
+            "padding": "20px 24px 48px",
+        },
+    )
+
+
+# Keep backward compat alias
 def render_simple_view(
     view: PropertyAnalysisView,
     report: AnalysisReport,
     *,
     user_role: str = "homebuyer",
 ) -> html.Div:
-    """Render the default property view — 5 cards + 3 action buttons.
-
-    This IS the product. 90% of users never go deeper.
-    """
-    quick_vm = build_quick_decision_view(report)
-
-    return html.Div(
-        [
-            _render_toggle(user_role),
-            _render_property_header(view),
-            _render_decision_hero(quick_vm, user_role=user_role),
-            _render_risk_check(view, quick_vm),
-            _render_value_card(view),
-            _render_monthly_reality(view, report, user_role=user_role),
-            _render_action_buttons(),
-        ],
-        className="briarwood-fade-in",
-        style={
-            "display": "grid",
-            "gap": "16px",
-            "maxWidth": "860px",
-            "margin": "0 auto",
-            "padding": "24px 24px 48px",
-        },
-    )
+    return render_property_view(view, report, active_tab="summary", user_role=user_role)
 
 
-# ── Retail / Investor toggle ─────────────────────────────────────────────────
+# ── Persistent nav bar ──────────────────────────────────────────────────────
 
 
-def _render_toggle(user_role: str) -> html.Div:
-    return html.Div(
+def _render_nav_bar(active_tab: str, user_role: str) -> html.Div:
+    """Tab bar + Simple/Detailed toggle, always visible."""
+    tabs = [
+        html.Button(
+            label,
+            id={"type": "property-tab", "tab": tab_id},
+            n_clicks=0,
+            style=_tab_button_style(tab_id == active_tab),
+        )
+        for tab_id, label in _TAB_NAMES
+    ]
+
+    detail_toggle = html.Div(
         [
             html.Button(
-                "Homebuyer",
+                "Simple",
                 id={"type": "role-toggle", "role": "homebuyer"},
                 className=f"toggle-option {'active' if user_role == 'homebuyer' else ''}",
                 n_clicks=0,
             ),
             html.Button(
-                "Investor",
+                "Detailed",
                 id={"type": "role-toggle", "role": "investor"},
                 className=f"toggle-option {'active' if user_role == 'investor' else ''}",
                 n_clicks=0,
             ),
         ],
         className="toggle-group",
-        style={"display": "flex", "justifyContent": "center"},
+        style={"display": "flex", "marginLeft": "auto"},
+    )
+
+    return html.Div(
+        [*tabs, detail_toggle],
+        style=_PROPERTY_TAB_BAR_STYLE,
+    )
+
+
+# ── Tab content renderers ────────────────────────────────────────────────────
+
+
+def _render_summary_tab(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Summary tab — the 5 key cards."""
+    quick_vm = build_quick_decision_view(report)
+    return html.Div(
+        [
+            _render_decision_hero(quick_vm, user_role=user_role),
+            _render_risk_check(view, quick_vm),
+            _render_value_card(view),
+            _render_monthly_reality(view, report, user_role=user_role),
+        ],
+        style={"display": "grid", "gap": "16px"},
+    )
+
+
+def _render_price_support_tab(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Price Support tab — valuation waterfall + comp charts."""
+    from briarwood.dash_app.components import (
+        comp_positioning_dot_plot,
+        forward_fan_chart,
+    )
+
+    waterfall_rows = _build_value_waterfall(view, report)
+
+    if user_role == "investor":
+        narrative = _price_support_investor_narrative(view)
+    else:
+        narrative = _price_support_homebuyer_narrative(view)
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("HOW WE GOT TO THE NUMBER", style=_LAYER2_HEADER),
+                    narrative,
+                    html.Div(waterfall_rows, style={"marginTop": "16px"}),
+                ],
+                style=CARD_STYLE,
+            ),
+            html.Div(
+                [
+                    html.Div("COMP POSITIONING", style=_LAYER2_HEADER),
+                    html.Div(
+                        _comp_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
+                    comp_positioning_dot_plot(view, report),
+                ],
+                style=CARD_STYLE,
+            ),
+            html.Div(
+                [
+                    html.Div("FORWARD VALUE", style=_LAYER2_HEADER),
+                    html.Div(
+                        _forward_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
+                    forward_fan_chart(view, chart_height=320),
+                ],
+                style=CARD_STYLE,
+            ),
+        ],
+        style={"display": "grid", "gap": "16px"},
+    )
+
+
+def _render_financials_tab(
+    view: PropertyAnalysisView,
+    report: AnalysisReport,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Financials tab — cost breakdown + scenarios + income."""
+    from briarwood.dash_app.components import _economics_inputs, income_carry_waterfall, forward_fan_chart
+
+    metrics = _economics_inputs(report, view)
+    cost = metrics.get("gross_monthly_cost")
+    rent = metrics.get("monthly_rent")
+    net = metrics.get("net_monthly_cost")
+
+    # Cost breakdown rows
+    line_items = [
+        ("Mortgage", metrics.get("principal_interest")),
+        ("Taxes", metrics.get("taxes")),
+        ("Insurance", metrics.get("insurance")),
+        ("Maintenance", metrics.get("maintenance")),
+        ("HOA", metrics.get("hoa")),
+    ]
+    rows: list[html.Div] = []
+    for label, amount in line_items:
+        if amount is None or amount == 0:
+            continue
+        rows.append(_kv_row(label, f"${amount:,.0f}/mo"))
+    if cost is not None:
+        rows.append(_kv_row("Total carry", f"${cost:,.0f}/mo", bold=True))
+    if rent is not None:
+        rows.append(_kv_row("Rental income", f"${rent:,.0f}/mo", color=ACCENT_GREEN))
+    if net is not None:
+        net_color = ACCENT_GREEN if net <= 0 else ACCENT_RED
+        sign = "+" if net <= 0 else "-"
+        rows.append(_kv_row("Net position", f"{sign}${abs(net):,.0f}/mo", bold=True, color=net_color))
+
+    # Context line
+    if user_role == "homebuyer":
+        context = _financials_homebuyer_context(cost, rent, net)
+    else:
+        context = html.Div(
+            view.income_support.summary if view.income_support.summary else "Income and carry analysis based on current market rents.",
+            style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "4px"},
+        )
+
+    # Scenario cards
+    scenario_section = _render_scenario_cards(view, metrics, user_role=user_role)
+
+    # Investor metrics
+    investor_card = _financials_investor_metrics(view) if user_role == "investor" else None
+
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Div("WHAT IT COSTS TO OWN", style=_LAYER2_HEADER),
+                    context,
+                    html.Div(rows, style={"marginTop": "12px"}),
+                ],
+                style=CARD_STYLE,
+            ),
+            investor_card,
+            scenario_section,
+            html.Div(
+                [
+                    html.Div("INCOME WATERFALL", style=_LAYER2_HEADER),
+                    income_carry_waterfall(view, report),
+                ],
+                style=CARD_STYLE,
+            ),
+            html.Div(
+                [
+                    html.Div("FORWARD OUTLOOK", style=_LAYER2_HEADER),
+                    html.Div(
+                        _forward_context_line(view),
+                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
+                    ),
+                    forward_fan_chart(view, chart_height=320),
+                ],
+                style=CARD_STYLE,
+            ),
+        ],
+        style={"display": "grid", "gap": "16px"},
+    )
+
+
+def _render_scenario_cards(
+    view: PropertyAnalysisView,
+    metrics: dict,
+    *,
+    user_role: str = "homebuyer",
+) -> html.Div:
+    """Three scenario cards for the Financials tab."""
+    cost = metrics.get("gross_monthly_cost")
+    net = metrics.get("net_monthly_cost")
+
+    live_metrics = [
+        ("Monthly cost", f"${cost:,.0f}" if cost else "N/A"),
+        ("5yr equity", f"${view.base_case:,.0f}" if view.base_case else "N/A"),
+        ("Upside", view.forward.upside_pct_text if view.forward else "N/A"),
+    ]
+    rent_metrics = [
+        ("Net monthly", f"${abs(net):,.0f}" if net else "N/A"),
+        ("Rental yield", view.income_support.gross_yield_text if view.income_support.gross_yield else "N/A"),
+        ("Rental ease", view.income_support.rental_ease_label),
+    ]
+    reno_metrics = [
+        ("Capital lane", dejargon(view.capex_lane) if view.capex_lane else "N/A"),
+        ("Condition", view.condition_profile or "N/A"),
+        ("Upside potential", view.optionality_label or "N/A"),
+    ]
+
+    if user_role == "investor":
+        rent_metrics.extend([
+            ("Debt coverage", view.income_support.dscr_text),
+            ("Cash return", view.income_support.cash_on_cash_return_text),
+            ("Price to rent", view.income_support.price_to_rent_text),
+        ])
+        if view.forward:
+            live_metrics.append(("Downside", view.forward.downside_pct_text))
+
+    return html.Div(
+        [
+            _scenario_card("LIVE IN IT", live_metrics),
+            _scenario_card("RENT IT OUT", rent_metrics),
+            _scenario_card("RENOVATE", reno_metrics),
+        ],
+        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(240px, 1fr))", "gap": "12px"},
     )
 
 
@@ -160,22 +439,48 @@ def _render_property_header(view: PropertyAnalysisView) -> html.Div:
     spec_line = " \u00b7 ".join(specs) if specs else ""
     ask_text = f"Asking: ${view.ask_price:,.0f}" if view.ask_price else ""
 
+    # Town from the address for market link
+    town = view.town_context.get("town_name") or (view.address.split(",")[1].strip() if "," in view.address else "")
+
     return html.Div(
         [
-            html.Div(
-                view.address,
-                style={"fontSize": "22px", "fontWeight": "700", "color": TEXT_PRIMARY, "lineHeight": "1.3"},
+            html.Button(
+                f"\u2190 Markets{(' \u00b7 ' + town) if town else ''}",
+                id={"type": "shell-nav-button", "tab": "opportunities"},
+                n_clicks=0,
+                style={
+                    "fontSize": "12px",
+                    "color": ACCENT_BLUE,
+                    "backgroundColor": "transparent",
+                    "border": "none",
+                    "cursor": "pointer",
+                    "padding": "0",
+                    "marginBottom": "8px",
+                },
             ),
             html.Div(
-                spec_line,
-                style={"fontSize": "14px", "color": TEXT_SECONDARY, "marginTop": "4px"},
-            ) if spec_line else None,
-            html.Div(
-                ask_text,
-                style={"fontSize": "16px", "fontWeight": "600", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY, "marginTop": "6px"},
-            ) if ask_text else None,
+                [
+                    html.Div(
+                        [
+                            html.Div(
+                                view.address,
+                                style={"fontSize": "22px", "fontWeight": "700", "color": TEXT_PRIMARY, "lineHeight": "1.3"},
+                            ),
+                            html.Div(
+                                spec_line,
+                                style={"fontSize": "14px", "color": TEXT_SECONDARY, "marginTop": "4px"},
+                            ) if spec_line else None,
+                        ],
+                    ),
+                    html.Div(
+                        ask_text,
+                        style={"fontSize": "18px", "fontWeight": "700", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY},
+                    ) if ask_text else None,
+                ],
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "flex-start", "gap": "16px"},
+            ),
         ],
-        style={**CARD_STYLE, "padding": "24px 28px"},
+        style={**CARD_STYLE, "padding": "20px 28px"},
     )
 
 
@@ -435,215 +740,20 @@ def _render_action_buttons() -> html.Div:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# LAYER 2 SCREENS (progressive disclosure — user clicked deeper)
+# Backward compat wrappers — old standalone screen functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def render_price_support(
-    view: PropertyAnalysisView,
-    report: AnalysisReport,
-    *,
-    user_role: str = "homebuyer",
-) -> html.Div:
-    """Layer 2: How we got to the number + comp charts."""
-    from briarwood.dash_app.components import (
-        comp_positioning_dot_plot,
-        forward_fan_chart,
-    )
-
-    waterfall_rows = _build_value_waterfall(view, report)
-
-    # Narrative block — differs by role
-    if user_role == "investor":
-        narrative = _price_support_investor_narrative(view)
-    else:
-        narrative = _price_support_homebuyer_narrative(view)
-
-    return html.Div(
-        [
-            _back_button(),
-            html.Div(
-                [
-                    html.Div("HOW WE GOT TO THE NUMBER", style=_LAYER2_HEADER),
-                    narrative,
-                    html.Div(waterfall_rows, style={"marginTop": "16px"}),
-                ],
-                style=CARD_STYLE,
-            ),
-            html.Div(
-                [
-                    html.Div("COMP POSITIONING", style=_LAYER2_HEADER),
-                    html.Div(
-                        _comp_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
-                    ),
-                    comp_positioning_dot_plot(view, report),
-                ],
-                style=CARD_STYLE,
-            ),
-            html.Div(
-                [
-                    html.Div("FORWARD VALUE", style=_LAYER2_HEADER),
-                    html.Div(
-                        _forward_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
-                    ),
-                    forward_fan_chart(view, chart_height=320),
-                ],
-                style=CARD_STYLE,
-            ),
-        ],
-        className="briarwood-fade-in",
-        style=_LAYER2_GRID,
-    )
+def render_price_support(view, report, *, user_role="homebuyer"):
+    return render_property_view(view, report, active_tab="price_support", user_role=user_role)
 
 
-def render_financials(
-    view: PropertyAnalysisView,
-    report: AnalysisReport,
-    *,
-    user_role: str = "homebuyer",
-) -> html.Div:
-    """Layer 2: What it costs to own + income waterfall."""
-    from briarwood.dash_app.components import _economics_inputs, income_carry_waterfall
-
-    metrics = _economics_inputs(report, view)
-
-    line_items = [
-        ("Mortgage", metrics.get("principal_interest")),
-        ("Taxes", metrics.get("taxes")),
-        ("Insurance", metrics.get("insurance")),
-        ("Maintenance", metrics.get("maintenance")),
-        ("HOA", metrics.get("hoa")),
-    ]
-    total_cost = metrics.get("gross_monthly_cost")
-    rent = metrics.get("monthly_rent")
-    net = metrics.get("net_monthly_cost")
-
-    rows: list[html.Div] = []
-    for label, amount in line_items:
-        if amount is None or amount == 0:
-            continue
-        rows.append(_kv_row(label, f"${amount:,.0f}/mo"))
-
-    if total_cost is not None:
-        rows.append(_kv_row("Total carry", f"${total_cost:,.0f}/mo", bold=True))
-
-    if rent is not None:
-        rows.append(_kv_row("Rental income", f"${rent:,.0f}/mo", color=ACCENT_GREEN))
-
-    if net is not None:
-        net_color = ACCENT_GREEN if net <= 0 else ACCENT_RED
-        sign = "+" if net <= 0 else "-"
-        rows.append(_kv_row("Net position", f"{sign}${abs(net):,.0f}/mo", bold=True, color=net_color))
-
-    # Investor metrics card
-    investor_card = None
-    if user_role == "investor":
-        investor_card = _financials_investor_metrics(view)
-
-    # Homebuyer context line
-    if user_role == "homebuyer":
-        context = _financials_homebuyer_context(total_cost, rent, net)
-    else:
-        context = html.Div(
-            view.income_support.summary if view.income_support.summary else "Income and carry analysis based on current market rents.",
-            style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "4px"},
-        )
-
-    return html.Div(
-        [
-            _back_button(),
-            html.Div(
-                [
-                    html.Div("WHAT IT COSTS TO OWN", style=_LAYER2_HEADER),
-                    context,
-                    html.Div(rows, style={"marginTop": "12px"}),
-                ],
-                style=CARD_STYLE,
-            ),
-            investor_card,
-            html.Div(
-                [
-                    html.Div("INCOME WATERFALL", style=_LAYER2_HEADER),
-                    income_carry_waterfall(view, report),
-                ],
-                style=CARD_STYLE,
-            ),
-        ],
-        className="briarwood-fade-in",
-        style=_LAYER2_GRID,
-    )
+def render_financials(view, report, *, user_role="homebuyer"):
+    return render_property_view(view, report, active_tab="financials", user_role=user_role)
 
 
-def render_scenarios(
-    view: PropertyAnalysisView,
-    report: AnalysisReport,
-    *,
-    user_role: str = "homebuyer",
-) -> html.Div:
-    """Layer 2: Three scenario cards + forward chart."""
-    from briarwood.dash_app.components import forward_fan_chart, _economics_inputs
-
-    metrics = _economics_inputs(report, view)
-    rent = metrics.get("monthly_rent")
-    cost = metrics.get("gross_monthly_cost")
-    net = metrics.get("net_monthly_cost")
-
-    # Scenario cards — investor gets extra stats
-    live_metrics = [
-        ("Monthly cost", f"${cost:,.0f}" if cost else "N/A"),
-        ("5yr equity", f"${view.base_case:,.0f}" if view.base_case else "N/A"),
-        ("Upside", view.forward.upside_pct_text if view.forward else "N/A"),
-    ]
-    rent_metrics = [
-        ("Net monthly", f"${abs(net):,.0f}" if net else "N/A"),
-        ("Rental yield", view.income_support.gross_yield_text if view.income_support.gross_yield else "N/A"),
-        ("Rental ease", view.income_support.rental_ease_label),
-    ]
-    reno_metrics = [
-        ("Capital lane", dejargon(view.capex_lane) if view.capex_lane else "N/A"),
-        ("Condition", view.condition_profile or "N/A"),
-        ("Upside potential", view.optionality_label or "N/A"),
-    ]
-
-    if user_role == "investor":
-        rent_metrics.extend([
-            ("Debt coverage", view.income_support.dscr_text),
-            ("Cash return", view.income_support.cash_on_cash_return_text),
-            ("Price to rent", view.income_support.price_to_rent_text),
-        ])
-        if view.forward:
-            live_metrics.append(("Downside", view.forward.downside_pct_text))
-
-    scenario_cards = html.Div(
-        [
-            _scenario_card("LIVE IN IT", live_metrics),
-            _scenario_card("RENT IT OUT", rent_metrics),
-            _scenario_card("RENOVATE", reno_metrics),
-        ],
-        style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))", "gap": "12px"},
-    )
-
-    return html.Div(
-        [
-            _back_button(),
-            scenario_cards,
-            html.Div(
-                [
-                    html.Div("FORWARD OUTLOOK", style=_LAYER2_HEADER),
-                    html.Div(
-                        _forward_context_line(view),
-                        style={"fontSize": "13px", "color": TEXT_SECONDARY, "marginBottom": "8px"},
-                    ),
-                    forward_fan_chart(view, chart_height=320),
-                ],
-                style=CARD_STYLE,
-            ),
-        ],
-        className="briarwood-fade-in",
-        style=_LAYER2_GRID,
-    )
+def render_scenarios(view, report, *, user_role="homebuyer"):
+    return render_property_view(view, report, active_tab="financials", user_role=user_role)
 
 
 def _scenario_card(title: str, metrics: list[tuple[str, str]]) -> html.Div:
@@ -664,33 +774,9 @@ def _scenario_card(title: str, metrics: list[tuple[str, str]]) -> html.Div:
     )
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-
-def _back_button() -> html.Div:
-    return html.Div(
-        html.Button(
-            "\u2190 Back to Summary",
-            id={"type": "simple-view-action", "screen": "simple"},
-            className="action-button",
-            n_clicks=0,
-            style={"padding": "8px 16px", "fontSize": "13px"},
-        ),
-    )
-
-
-# ── Shared Layer 2 styles and helpers ────────────────────────────────────────
+# ── Shared styles and helpers ────────────────────────────────────────────────
 
 _LAYER2_HEADER: dict = {**SECTION_HEADER_STYLE, "fontSize": "11px", "letterSpacing": "0.14em"}
-
-_LAYER2_GRID: dict = {
-    "display": "grid",
-    "gap": "16px",
-    "maxWidth": "860px",
-    "margin": "0 auto",
-    "padding": "24px 24px 48px",
-}
-
 
 def _kv_row(label: str, value: str, *, bold: bool = False, color: str | None = None) -> html.Div:
     c = color or TEXT_PRIMARY

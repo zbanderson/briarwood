@@ -409,7 +409,7 @@ class PropertyInput:
             return None
         if isinstance(self.source_metadata, dict):
             return self.source_metadata.get("property_evidence_profile")
-        return self.source_metadata.property_evidence_profile
+        return getattr(self.source_metadata, "property_evidence_profile", None)
 
 
 @dataclass(slots=True)
