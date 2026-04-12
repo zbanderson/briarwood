@@ -374,7 +374,7 @@ def forward_range_chart(view: PropertyAnalysisView, *, compact: bool = False) ->
         x_labels = ["Stress", "Downside", "Base", "Upside"]
         y_values = [view.stress_case, view.bear_case or 0, view.base_case or 0, view.bull_case or 0]
         texts = [view.forward.stress_case_value_text, view.forward.bear_value_text, view.forward.base_value_text, view.forward.bull_value_text]
-        colors = ["#7c1f1f", ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN]
+        colors = [ACCENT_RED, ACCENT_RED, ACCENT_BLUE, ACCENT_GREEN]
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -490,7 +490,7 @@ def forward_fan_chart(
                 y=[anchor_value, stress_terminal],
                 mode="lines",
                 name="Stress",
-                line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
+                line={"color": ACCENT_RED, "width": 1.5, "dash": "dot"},
                 hovertemplate="%{x}<br>Stress: %{y:$,.0f}<extra></extra>",
             )
         )
@@ -667,7 +667,7 @@ def forward_fan_chart_from_ask(
                 y=[ask, view.stress_case],
                 mode="lines",
                 name="Stress",
-                line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
+                line={"color": ACCENT_RED, "width": 1.5, "dash": "dot"},
                 hovertemplate="%{x}<br>Stress: %{y:$,.0f}<extra></extra>",
             )
         )
@@ -1311,7 +1311,7 @@ def _header_pricing_snapshot(view: PropertyAnalysisView) -> list[tuple[str, str,
     metrics = [("Ask", _fmt_compact(view.ask_price), None)]
     if view.bcv is not None:
         delta_hint = gap_pct_text(view) if view.mispricing_pct is not None else None
-        metrics.append(("BCV", _fmt_compact(view.bcv), delta_hint))
+        metrics.append(("Fair Value", _fmt_compact(view.bcv), delta_hint))
     if view.base_case is not None:
         metrics.append(("Base", _fmt_compact(view.base_case), None))
     return metrics
@@ -1589,12 +1589,12 @@ def _render_v2_category_bars(view: PropertyAnalysisView) -> html.Div:
 def _sub_factor_icon(score: float) -> tuple[str, str]:
     """Return icon and color for a sub-factor score."""
     if score >= 4.0:
-        return "✓", ACCENT_GREEN
+        return "●", ACCENT_GREEN
     if score >= 3.0:
         return "●", ACCENT_BLUE
     if score >= 2.5:
         return "○", ACCENT_YELLOW
-    return "⚠", ACCENT_ORANGE
+    return "○", ACCENT_ORANGE
 
 
 def render_sub_factor_row_v2(sf: object) -> html.Div:
@@ -2403,8 +2403,8 @@ def _decision_engine_block(view: PropertyAnalysisView) -> html.Div:
         return html.Div()
 
     tone = (
-        "positive" if decision.recommendation in {"Buy"} else
-        "warning" if decision.recommendation in {"Neutral"} else
+        "positive" if decision.recommendation in {"BUY", "LEAN BUY"} else
+        "warning" if decision.recommendation in {"NEUTRAL", "LEAN PASS"} else
         "negative"
     )
     tone_color_map = {
@@ -3098,9 +3098,11 @@ def _list_block(title: str, items: list[str], *, tone: str = "neutral") -> html.
 
 def _soft_recommendation_label(recommendation: str) -> str:
     mapping = {
-        "Buy": "Well Positioned",
-        "Neutral": "Needs More Signal",
-        "Avoid": "Does Not Meet Criteria",
+        "BUY": "Well Positioned",
+        "LEAN BUY": "Constructive, Price Sensitive",
+        "NEUTRAL": "Needs More Signal",
+        "LEAN PASS": "Needs Better Basis",
+        "AVOID": "Does Not Meet Criteria",
     }
     return mapping.get(recommendation, recommendation)
 
@@ -5235,9 +5237,9 @@ def render_tear_sheet_body(
     )
     _investor_metrics = [
         m for m in [
-            ("DSCR", view.income_support.dscr_text, _dscr_tone_label(view.income_support.dscr)) if view.income_support.dscr is not None else None,
-            ("Cash-on-Cash", view.income_support.cash_on_cash_return_text, None) if view.income_support.cash_on_cash_return is not None else None,
-            ("Gross Yield", view.income_support.gross_yield_text, None) if view.income_support.gross_yield is not None else None,
+            ("Debt Coverage", view.income_support.dscr_text, _dscr_tone_label(view.income_support.dscr)) if view.income_support.dscr is not None else None,
+            ("Cash Return", view.income_support.cash_on_cash_return_text, None) if view.income_support.cash_on_cash_return is not None else None,
+            ("Rental Yield", view.income_support.gross_yield_text, None) if view.income_support.gross_yield is not None else None,
         ] if m is not None
     ]
     _investor_strip = inline_metric_strip(_investor_metrics) if _investor_metrics else None
@@ -5262,7 +5264,7 @@ def render_tear_sheet_body(
         summary=economics_summary,
         metrics_strip=inline_metric_strip([
             ("Rent", view.income_support.total_rent_text, _rent_sublabel),
-            ("PTR", view.income_support.price_to_rent_text, _ptr_benchmark_label(view)),
+            ("Price to Rent", view.income_support.price_to_rent_text, _ptr_benchmark_label(view)),
             ("Cash Flow", view.income_support.monthly_cash_flow_text, _cash_flow_benchmark_label(view)),
             ("Rental Ease", view.income_support.rental_ease_label, None),
         ]),
@@ -5563,7 +5565,7 @@ def _render_forward_scenarios(view: PropertyAnalysisView) -> html.Div:
         {"Metric": "Upside", "Value": view.forward.bull_value_text, "vs Ask": view.forward.upside_pct_text},
     ]
     if view.stress_case is not None:
-        metric_rows.insert(0, {"Metric": "Stress ⚠", "Value": view.forward.stress_case_value_text, "vs Ask": "Tail risk"})
+        metric_rows.insert(0, {"Metric": "Stress", "Value": view.forward.stress_case_value_text, "vs Ask": "Tail risk"})
 
     return html.Div(
         [
@@ -5802,7 +5804,7 @@ def render_what_if_metrics(view: PropertyAnalysisView, adjusted_ask: float, rate
             html.Div(
                 [
                     _card("BCV Gap", f"{gap_adj:+.1f}%", tone=gap_tone, sublabel=f"was {gap_orig:+.1f}%" if abs(gap_adj - gap_orig) > 0.1 else ""),
-                    _card("PTR", f"{ptr_adj:.1f}x", tone=ptr_tone, sublabel=f"was {ptr_orig:.1f}x" if abs(ptr_adj - ptr_orig) > 0.1 else ""),
+                    _card("Price to Rent", f"{ptr_adj:.1f}x", tone=ptr_tone, sublabel=f"was {ptr_orig:.1f}x" if abs(ptr_adj - ptr_orig) > 0.1 else ""),
                     _card("Est. Mortgage", f"${pmt_adj:,.0f}/mo", tone=pmt_tone, sublabel=f"was ${pmt_orig:,.0f}/mo" if abs(pmt_adj - pmt_orig) > 10 else ""),
                     _card("Est. Cash Flow", f"${cf_adj:,.0f}/mo", tone=cf_tone, sublabel=f"was ${cf_orig:,.0f}/mo" if abs(cf_adj - cf_orig) > 10 else ""),
                 ],
@@ -5844,7 +5846,7 @@ def render_portfolio_dashboard(views: list[PropertyAnalysisView]) -> html.Div:
             _stat("📊", str(total), "Properties"),
             _stat("⭐", f"{avg_score:.2f}/5", "Avg Score"),
             _stat("💰", f"${total_value / 1_000_000:.1f}M", "Total Value"),
-            _stat("🎯", str(buys), "Buys"),
+            _stat("●", str(buys), "Buys"),
         ],
         style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "12px", "marginBottom": "24px"},
     )
@@ -6132,7 +6134,7 @@ def render_income_support_section(view: PropertyAnalysisView, *, compact: bool =
         [
             inline_metric_strip([
                 ("Total Rent", view.income_support.total_rent_text, view.income_support.rent_source_type),
-                ("PTR", view.income_support.price_to_rent_text, view.income_support.ptr_classification),
+                ("Price to Rent", view.income_support.price_to_rent_text, view.income_support.ptr_classification),
                 ("Rental Ease", view.income_support.rental_ease_label, None),
                 ("Rent Coverage", view.income_support.income_support_ratio_text, None),
                 ("Cash Flow", view.income_support.monthly_cash_flow_text, None),
@@ -6205,24 +6207,29 @@ def _value_finder_block(view: PropertyAnalysisView) -> html.Div | None:
     if view.value_finder is None:
         return None
     finder = view.value_finder
+    if not finder.bullets:
+        return None
     return html.Div(
         [
             html.Div("Value Finder", style=SECTION_HEADER_STYLE),
-            inline_metric_strip(
-                [
-                    ("Posture", finder.pricing_posture, None),
-                    ("DOM Signal", finder.dom_signal, None),
-                    ("Opportunity", finder.opportunity_signal, None),
-                    ("Friction", finder.friction_score_text, None),
-                    ("Cut Pressure", finder.cut_pressure_text, None),
-                ]
-            ),
-            html.Div(finder.short_summary, style={"fontSize": "12px", "lineHeight": "1.6", "color": TEXT_SECONDARY}),
             html.Div(
-                f"Value gap: {finder.value_gap_text} • Comp gap: {finder.comp_gap_text}",
-                style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "4px"},
+                finder.supporting_signal,
+                style={"fontSize": "11px", "fontWeight": "700", "letterSpacing": "0.06em", "textTransform": "uppercase", "color": TEXT_MUTED, "marginBottom": "8px"},
+            ) if finder.supporting_signal else None,
+            html.Ul(
+                [
+                    html.Li(
+                        bullet,
+                        style={"fontSize": "13px", "lineHeight": "1.55", "color": TEXT_PRIMARY, "marginBottom": "6px"},
+                    )
+                    for bullet in finder.bullets[:4]
+                ],
+                style={"margin": "0", "paddingLeft": "18px"},
             ),
-            html.Div(finder.confidence_note, style={"fontSize": "11px", "lineHeight": "1.5", "color": TONE_WARNING_TEXT, "marginTop": "4px"}),
+            html.Div(
+                finder.confidence_note,
+                style={"fontSize": "11px", "lineHeight": "1.5", "color": TEXT_MUTED, "marginTop": "8px"},
+            ) if finder.confidence_note else None,
         ],
         style={**CARD_STYLE, "marginTop": "8px"},
     )
@@ -6276,7 +6283,7 @@ def _comp_card(row: object, *, listing: bool = False) -> html.Div:
             ("List", getattr(row, "list_price", None) or "—", None),
             ("Status", getattr(row, "status", "—"), None),
             ("Condition", getattr(row, "condition", "—"), None),
-            ("DOM", getattr(row, "dom", "—"), None),
+            ("Days Listed", getattr(row, "dom", "—"), None),
             ("Layout", " / ".join(part for part in [getattr(row, "beds", ""), getattr(row, "baths", ""), getattr(row, "sqft", "")] if part and part != "Unavailable") or "—", None),
         ]
     else:
@@ -6579,7 +6586,7 @@ def _render_compare_table(rows: list) -> html.Div:
 
             cell_style = {**TABLE_STYLE_CELL, "textAlign": "right", "verticalAlign": "top", "padding": "6px 10px"}
             if is_winner and len(property_labels) >= 2:
-                cell_style["backgroundColor"] = "#1a3a1f"  # subtle green tint
+                cell_style["backgroundColor"] = "rgba(34, 197, 94, 0.15)"  # subtle green tint
                 cell_style["borderLeft"] = f"2px solid {ACCENT_GREEN}40"
 
             cells.append(html.Td(cell_children, style=cell_style))
@@ -6623,12 +6630,12 @@ def score_comparison_heatmap(views: list[PropertyAnalysisView]) -> dcc.Graph | h
             zmin=1,
             zmax=5,
             colorscale=[
-                [0.00, "#b42318"],
-                [0.20, "#f97316"],
-                [0.40, "#facc15"],
-                [0.55, "#6e7681"],
-                [0.75, "#3b82f6"],
-                [1.00, "#16a34a"],
+                [0.00, "#EF4444"],
+                [0.20, "#F97316"],
+                [0.40, "#F59E0B"],
+                [0.55, "#64748B"],
+                [0.75, "#3B82F6"],
+                [1.00, "#22C55E"],
             ],
             text=text_values,
             texttemplate="%{text}",

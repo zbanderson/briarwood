@@ -271,7 +271,7 @@ def _build_historic_forward_chart(report: AnalysisReport) -> dict[str, object]:
                     y=[anchor_value, _stress_value(scenario)],
                     mode="lines",
                     name="Stress",
-                    line={"color": "#7c1f1f", "width": 1.5, "dash": "dot"},
+                    line={"color": "#EF4444", "width": 1.5, "dash": "dot"},
                     hovertemplate="%{x|%b %Y}<br>Stress: %{y:$,.0f}<extra></extra>",
                 )
             )
