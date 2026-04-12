@@ -63,14 +63,15 @@ from briarwood.dash_app.data import (
 )
 from briarwood.dash_app.theme import (
     ACCENT_BLUE, ACCENT_CYAN, ACCENT_GREEN, ACCENT_NAVY, ACCENT_ORANGE, ACCENT_RED, ACCENT_YELLOW,
-    BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
+    BG_BASE, BG_PRIMARY, BG_SECONDARY, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BORDER, BORDER_SUBTLE, BTN_GHOST, BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, FONT_FAMILY, FONT_MONO,
     HEADING_L_STYLE, HEADING_XL_STYLE, BODY_TEXT_STYLE,
     INPUT_STYLE, LABEL_STYLE, PAGE_STYLE, SECTION_HEADER_STYLE,
     TABLE_STYLE_CELL, TABLE_STYLE_DATA_EVEN, TABLE_STYLE_DATA_ODD,
     TABLE_STYLE_HEADER, TABLE_STYLE_TABLE,
-    TEXT_INVERSE, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY,
+    RADIUS_MD,
+    TEXT_INVERSE, TEXT_MUTED, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY,
     TONE_NEGATIVE_TEXT, TONE_POSITIVE_TEXT, TONE_WARNING_TEXT,
     TOPBAR_HEIGHT, TOPBAR_STYLE, PROPERTY_HEADER_STYLE,
     tone_badge_style, score_color, verdict_color,
@@ -248,20 +249,19 @@ _DROPDOWN_STYLE = {
 }
 
 _SHELL_SIDEBAR_STYLE = {
-    "width": "264px",
-    "minWidth": "264px",
-    "backgroundColor": ACCENT_NAVY,
-    "borderRight": "none",
-    "padding": "20px 16px 22px",
+    "width": "240px",
+    "minWidth": "240px",
+    "backgroundColor": "#141F2E",
+    "borderRight": f"1px solid {BORDER}",
+    "padding": "18px 14px 22px",
     "display": "flex",
     "flexDirection": "column",
-    "gap": "18px",
+    "gap": "16px",
     "position": "sticky",
     "top": "0",
     "height": "100vh",
     "alignSelf": "start",
-    "backdropFilter": "blur(14px)",
-    "boxShadow": "24px 0 48px rgba(2, 62, 138, 0.18)",
+    "overflowY": "auto",
 }
 
 _SHELL_MAIN_COLUMN_STYLE = {
@@ -275,8 +275,7 @@ _SHELL_MAIN_COLUMN_STYLE = {
 _SHELL_CONTEXT_BAR_STYLE = {
     "padding": "20px 26px 18px",
     "borderBottom": f"1px solid {BORDER}",
-    "backgroundColor": "rgba(255,255,255,0.88)",
-    "backdropFilter": "blur(10px)",
+    "backgroundColor": BG_SECONDARY,
     "display": "flex",
     "justifyContent": "space-between",
     "alignItems": "start",
@@ -1100,11 +1099,10 @@ def _nav_button_style(active: bool) -> dict:
     return {
         "width": "100%",
         "textAlign": "left",
-        "padding": "10px 12px",
-        "borderRadius": "12px",
-        "border": f"1px solid {ACCENT_CYAN if active else 'rgba(255,255,255,0.12)'}",
-        "backgroundColor": ACCENT_BLUE if active else "rgba(255,255,255,0.04)",
-        "boxShadow": "0 10px 22px rgba(0, 119, 182, 0.24)" if active else "none",
+        "padding": "8px 10px",
+        "borderRadius": RADIUS_MD,
+        "border": "none",
+        "backgroundColor": "rgba(59, 130, 246, 0.15)" if active else "transparent",
         "cursor": "pointer",
     }
 
@@ -1116,13 +1114,16 @@ def _build_shell_sidebar(active_tab: str | None) -> html.Div:
         sections.append(
             html.Div(
                 [
-                    html.Div(group_label, style={**SECTION_HEADER_STYLE, "color": "rgba(255,255,255,0.62)"}),
+                    html.Div(group_label, style={**SECTION_HEADER_STYLE, "color": TEXT_TERTIARY, "fontSize": "10px"}),
                     html.Div(
                         [
                             html.Button(
                                 [
-                                    html.Div(item["label"], style={"fontSize": "13px", "fontWeight": "700", "color": TEXT_INVERSE}),
-                                    html.Div(item["description"], style={"fontSize": "11px", "lineHeight": "1.45", "color": "rgba(255,255,255,0.72)", "marginTop": "3px"}),
+                                    html.Div(item["label"], style={
+                                        "fontSize": "13px",
+                                        "fontWeight": "600",
+                                        "color": ACCENT_BLUE if item["tab"] == active_tab else TEXT_PRIMARY,
+                                    }),
                                 ],
                                 id={"type": "shell-nav-button", "tab": item["tab"]},
                                 n_clicks=0,
@@ -1130,10 +1131,10 @@ def _build_shell_sidebar(active_tab: str | None) -> html.Div:
                             )
                             for item in items
                         ],
-                        style={"display": "grid", "gap": "8px"},
+                        style={"display": "grid", "gap": "2px"},
                     ),
                 ],
-                style={"display": "grid", "gap": "8px"},
+                style={"display": "grid", "gap": "6px"},
             )
         )
 
@@ -1141,27 +1142,11 @@ def _build_shell_sidebar(active_tab: str | None) -> html.Div:
         [
             html.Div(
                 [
-                    html.Div("Briarwood", style={"fontSize": "22px", "fontWeight": "700", "letterSpacing": "-0.03em", "color": TEXT_INVERSE}),
-                    html.Div("Real estate decision workspace", style={"fontSize": "12px", "color": "rgba(255,255,255,0.72)", "marginTop": "4px"}),
-                ]
-            ),
-            html.Div(
-                [
-                    html.Div("Workspace", style={**SECTION_HEADER_STYLE, "color": "rgba(255,255,255,0.62)"}),
-                    html.Div(
-                        "Move between market discovery, property analysis, tools, and admin surfaces without losing your active property.",
-                        style={"fontSize": "12px", "lineHeight": "1.55", "color": "rgba(255,255,255,0.76)"},
-                    ),
+                    html.Div("Briarwood", style={"fontSize": "20px", "fontWeight": "800", "letterSpacing": "-0.04em", "color": TEXT_PRIMARY}),
                 ],
-                style={
-                    **CARD_STYLE,
-                    "padding": "14px 14px",
-                    "backgroundColor": "rgba(255,255,255,0.08)",
-                    "border": "1px solid rgba(255,255,255,0.12)",
-                    "boxShadow": "none",
-                },
+                style={"padding": "4px 0 8px"},
             ),
-        *sections,
+            *sections,
         ],
         style=_SHELL_SIDEBAR_STYLE,
     )
@@ -1170,11 +1155,11 @@ def _build_shell_sidebar(active_tab: str | None) -> html.Div:
 def _context_metric(label: str, value: str, detail: str | None = None) -> html.Div:
     return html.Div(
         [
-            html.Div(label, style={**LABEL_STYLE, "marginBottom": "4px"}),
-            html.Div(value, style={"fontSize": "14px", "fontWeight": "700", "color": TEXT_PRIMARY}),
+            html.Div(label, style={**LABEL_STYLE, "marginBottom": "2px"}),
+            html.Div(value, style={"fontSize": "14px", "fontWeight": "700", "fontFamily": FONT_MONO, "color": TEXT_PRIMARY}),
             html.Div(detail, style={"fontSize": "11px", "color": TEXT_MUTED, "marginTop": "2px"}) if detail else None,
         ],
-        style={**CARD_STYLE, "padding": "10px 12px", "minWidth": "148px"},
+        style={"padding": "8px 12px", "backgroundColor": BG_SURFACE, "borderRadius": RADIUS_MD, "minWidth": "120px"},
     )
 
 
@@ -1286,10 +1271,9 @@ def _build_shell_context_bar(
             html.Div(
                 [
                     html.Div(eyebrow, style=_PAGE_KICKER_STYLE),
-                    html.H1(title, style=HEADING_XL_STYLE),
-                    html.Div(subtitle, style=_PAGE_SUBTITLE_STYLE),
+                    html.H1(title, style={**HEADING_XL_STYLE, "fontSize": "20px", "margin": "0"}),
                 ],
-                style={"display": "grid", "gap": "6px", "minWidth": "280px"},
+                style={"display": "flex", "alignItems": "baseline", "gap": "12px", "minWidth": "200px"},
             ),
             html.Div(metrics, style={"display": "flex", "gap": "10px", "flexWrap": "wrap", "justifyContent": "flex-end"}),
         ],
@@ -1485,42 +1469,27 @@ def _topbar() -> html.Div:
     options = list(_property_options_cached(0))
     return html.Div(
         [
-            html.Div(
-                [
-                    html.Span("Active Workspace", style={"fontWeight": "700", "fontSize": "13px", "color": TEXT_INVERSE, "letterSpacing": "-0.02em"}),
-                    html.Span("Property and export controls", style={"fontSize": "12px", "color": "rgba(255,255,255,0.72)", "marginLeft": "8px"}),
-                ],
-                style={"display": "flex", "alignItems": "baseline", "gap": "0", "flexShrink": "0"},
+            dcc.Dropdown(
+                id="property-selector-dropdown",
+                options=options,
+                value=None,
+                clearable=True,
+                searchable=True,
+                placeholder="Search properties…",
+                style={"minWidth": "300px", "maxWidth": "400px", "fontSize": "13px"},
             ),
-            html.Div(style={"width": "1px", "height": "24px", "backgroundColor": "rgba(255,255,255,0.18)", "flexShrink": "0"}),
-            html.Div(
-                [
-                    html.Div("Active Property", style={**LABEL_STYLE, "marginBottom": "2px", "color": "rgba(255,255,255,0.72)"}),
-                    dcc.Dropdown(
-                        id="property-selector-dropdown",
-                        options=options,
-                        value=None,
-                        clearable=True,
-                        searchable=True,
-                        placeholder="Search saved properties or jump to an analysis…",
-                        style={"minWidth": "280px", "fontSize": "13px"},
-                    ),
-                ],
-                style={"flex": "1", "maxWidth": "340px"},
-            ),
-            html.Button("+ Add Property", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
-            html.Div(
-                [
-                    html.Button("Export PDF", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
-                    html.Button("Export TXT", id="export-txt-button", n_clicks=0, style={**BTN_GHOST, "opacity": "0.7"}),
-                    html.Div(id="export-status", style={"fontSize": "13px", "color": "rgba(255,255,255,0.72)"}),
-                ],
-                style={"display": "flex", "alignItems": "center", "gap": "8px"},
-            ),
+            html.Button("+ Add", id="add-property-button", n_clicks=0, style=BTN_SECONDARY),
             # Spacer
             html.Div(style={"flex": "1"}),
-            # Active property status
-            html.Div(id="active-property-status", style={"fontSize": "13px", "color": "rgba(255,255,255,0.78)", "flexShrink": "0"}),
+            html.Div(
+                [
+                    html.Button("PDF", id="export-tear-sheet-button", n_clicks=0, style=BTN_GHOST),
+                    html.Button("TXT", id="export-txt-button", n_clicks=0, style={**BTN_GHOST, "opacity": "0.7"}),
+                    html.Div(id="export-status", style={"fontSize": "12px", "color": TEXT_SECONDARY}),
+                ],
+                style={"display": "flex", "alignItems": "center", "gap": "6px"},
+            ),
+            html.Div(id="active-property-status", style={"fontSize": "12px", "color": TEXT_SECONDARY, "flexShrink": "0"}),
         ],
         id="app-topbar",
         style=TOPBAR_STYLE,
@@ -3538,7 +3507,7 @@ def compare_current_property_to_market(_n_clicks: int, property_id: str | None):
     Input("selected-market-town", "data"),
     Input("market-sort-mode", "data"),
     Input("property-view-screen", "data"),
-    State("user-role", "data"),
+    Input("user-role", "data"),
 )
 def render_main_tab(
     tab: str,
@@ -3983,7 +3952,7 @@ def _build_market_view_block(selected_town: str | None, sort_mode: str, loaded_i
                 "textAlign": "left",
                 "width": "100%",
                 "border": f"1px solid {ACCENT_BLUE}" if card.town_name == selected_town else f"1px solid {BORDER}",
-                "background": "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(238,246,251,0.9) 100%)" if card.town_name == selected_town else BG_SURFACE,
+                "background": f"linear-gradient(180deg, rgba(59,130,246,0.12) 0%, {BG_SURFACE} 100%)" if card.town_name == selected_town else BG_SURFACE,
                 "cursor": "pointer",
             },
         )

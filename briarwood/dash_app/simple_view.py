@@ -105,9 +105,9 @@ def render_simple_view(
         style={
             "display": "grid",
             "gap": "16px",
-            "maxWidth": "720px",
+            "maxWidth": "860px",
             "margin": "0 auto",
-            "padding": "24px 16px 48px",
+            "padding": "24px 24px 48px",
         },
     )
 
@@ -479,9 +479,9 @@ def render_price_support(view: PropertyAnalysisView, report: AnalysisReport) -> 
         style={
             "display": "grid",
             "gap": "16px",
-            "maxWidth": "720px",
+            "maxWidth": "860px",
             "margin": "0 auto",
-            "padding": "24px 16px 48px",
+            "padding": "24px 24px 48px",
         },
     )
 
@@ -588,9 +588,9 @@ def render_financials(view: PropertyAnalysisView, report: AnalysisReport) -> htm
         style={
             "display": "grid",
             "gap": "16px",
-            "maxWidth": "720px",
+            "maxWidth": "860px",
             "margin": "0 auto",
-            "padding": "24px 16px 48px",
+            "padding": "24px 24px 48px",
         },
     )
 
@@ -650,9 +650,9 @@ def render_scenarios(view: PropertyAnalysisView, report: AnalysisReport) -> html
         style={
             "display": "grid",
             "gap": "16px",
-            "maxWidth": "720px",
+            "maxWidth": "860px",
             "margin": "0 auto",
-            "padding": "24px 16px 48px",
+            "padding": "24px 24px 48px",
         },
     )
 

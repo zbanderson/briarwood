@@ -16,7 +16,7 @@ from briarwood.dash_app.components_quick_decision import render_recommendation_h
 from briarwood.dash_app.quick_decision import build_quick_decision_view
 from briarwood.dash_app.theme import (
     ACCENT_BLUE, ACCENT_CYAN, ACCENT_GREEN, ACCENT_NAVY, ACCENT_ORANGE, ACCENT_RED, ACCENT_TEAL, ACCENT_YELLOW,
-    BG_BASE, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
+    BG_BASE, BG_SECONDARY, BG_SURFACE, BG_SURFACE_2, BG_SURFACE_3, BG_SURFACE_4,
     BODY_TEXT_STYLE, BORDER, BORDER_SUBTLE,
     BTN_PRIMARY, BTN_SECONDARY,
     CARD_STYLE, CARD_STYLE_ELEVATED, CHART_HEIGHT_COMPACT, CHART_HEIGHT_STANDARD,
@@ -2740,7 +2740,7 @@ def _premium_property_header(view: PropertyAnalysisView, report: AnalysisReport)
             "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))",
             "gap": "18px",
             "alignItems": "start",
-            "background": "linear-gradient(180deg, rgba(202,240,248,0.32) 0%, rgba(255,255,255,1) 42%)",
+            "background": f"linear-gradient(180deg, rgba(59,130,246,0.08) 0%, {BG_SECONDARY} 42%)",
             "border": f"1px solid {BG_SURFACE_4}",
         },
     )
@@ -2760,7 +2760,7 @@ def _premium_decision_strip(view: PropertyAnalysisView) -> html.Div:
     lead_card = html.Div(
         [
             html.Div("Decision Read", style={**LABEL_STYLE, "color": "rgba(255,255,255,0.78)"}),
-            html.Div(recommendation, style={"fontSize": "34px", "fontWeight": "800", "lineHeight": "1.0", "color": TEXT_INVERSE}),
+            html.Div(recommendation, style={"fontSize": "34px", "fontWeight": "800", "lineHeight": "1.0", "color": TEXT_PRIMARY}),
             html.Div(summary_line, style={"fontSize": "14px", "lineHeight": "1.55", "color": "rgba(255,255,255,0.82)", "marginTop": "10px", "maxWidth": "58ch"}),
         ],
         style={
@@ -2994,7 +2994,7 @@ def _premium_town_pulse_section(view: PropertyAnalysisView, report: AnalysisRepo
             "padding": "20px 22px",
             "display": "grid",
             "gap": "12px",
-            "background": "linear-gradient(180deg, rgba(202,240,248,0.26) 0%, rgba(255,255,255,1) 40%)",
+            "background": f"linear-gradient(180deg, rgba(59,130,246,0.08) 0%, {BG_SECONDARY} 40%)",
             "border": f"1px solid {BG_SURFACE_4}",
         },
     )
@@ -3896,7 +3896,7 @@ def renovation_value_trajectory_chart(
                     showarrow=False,
                     yshift=16,
                     font={"color": TEXT_SECONDARY, "size": 11},
-                    bgcolor="rgba(255,255,255,0.92)",
+                    bgcolor=BG_SURFACE,
                     bordercolor=BORDER,
                     borderwidth=1,
                 )
