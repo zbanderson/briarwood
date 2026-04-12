@@ -14,9 +14,12 @@ logger = logging.getLogger(__name__)
 from briarwood.dash_app.view_models import build_property_analysis_view
 from briarwood.agents.comparable_sales.store import JsonComparableSalesStore
 from briarwood.geocoder import geocode_address
-from briarwood.runner import run_report, run_report_from_listing_text, write_report_html
-from briarwood.reports.pdf_renderer import write_tear_sheet_pdf
 from briarwood.schemas import AnalysisReport
+
+
+def _lazy_run_report(path):
+    from briarwood.runner import run_report
+    return run_report(path)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,10 +54,12 @@ class SavedPropertySummary:
 
 
 def _load_json_report(path: str) -> AnalysisReport:
+    from briarwood.runner import run_report
     return run_report(DATA_DIR / path)
 
 
 def _load_listing_report(path: str, *, property_id: str, source_url: str) -> AnalysisReport:
+    from briarwood.runner import run_report_from_listing_text
     listing_text = (DATA_DIR / path).read_text()
     return run_report_from_listing_text(
         listing_text,
@@ -200,6 +205,7 @@ def load_reports(preset_ids: list[str]) -> dict[str, AnalysisReport]:
 
 
 def export_preset_tear_sheet(preset_id: str) -> Path:
+    from briarwood.runner import write_report_html
     saved_path = _saved_property_path(preset_id) / "tear_sheet.html"
     if saved_path.exists():
         return saved_path
@@ -210,6 +216,7 @@ def export_preset_tear_sheet(preset_id: str) -> Path:
 
 def export_preset_tear_sheet_pdf(preset_id: str) -> Path:
     """Export a PDF tear sheet for a saved/loaded property."""
+    from briarwood.reports.pdf_renderer import write_tear_sheet_pdf
     report = load_report_for_preset(preset_id)
     filename = f"{preset_id}_tear_sheet.pdf"
     return write_tear_sheet_pdf(report, OUTPUT_DIR / filename)
@@ -343,6 +350,7 @@ def load_comp_form_defaults(source_ref: str) -> tuple[dict[str, object], list[di
 
 
 def _load_comp_database_report(source_ref: str) -> AnalysisReport:
+    from briarwood.runner import run_report
     subject, comps = load_comp_form_defaults(source_ref)
     property_id = _slugify(str(subject.get("address") or source_ref))
     payload = _manual_payload(property_id=property_id, subject=subject, comps=comps)
@@ -359,6 +367,7 @@ def _load_comp_database_report(source_ref: str) -> AnalysisReport:
 
 
 def register_manual_analysis(subject: dict[str, object], comps: list[dict[str, object]]) -> tuple[str, Path]:
+    from briarwood.runner import run_report, write_report_html
     property_id = _slugify(str(subject.get("property_id") or subject.get("address") or "manual-property"))
     property_dir = _saved_property_path(property_id)
     property_dir.mkdir(parents=True, exist_ok=True)
@@ -489,6 +498,7 @@ def _saved_property_directory_presets() -> list[PropertyPreset]:
 
 def _reanalyze_saved_property(property_id: str) -> AnalysisReport:
     """Re-run analysis from saved inputs.json (authoritative rehydration path)."""
+    from briarwood.runner import run_report
     inputs_path = _saved_property_path(property_id) / "inputs.json"
     if not inputs_path.exists():
         raise KeyError(f"No inputs.json for saved property: {property_id}")
@@ -538,7 +548,7 @@ def _legacy_manual_presets() -> list[PropertyPreset]:
                 preset_id=property_id,
                 label=f"Legacy: {address.split(',')[0]}",
                 description="Legacy manual entry JSON.",
-                loader=lambda path=path: run_report(path),
+                loader=lambda path=path: _lazy_run_report(path),
             )
         )
     return presets
