@@ -1,0 +1,30 @@
+{
+  "recommendation": "Pass unless the basis improves.",
+  "decision": "pass",
+  "best_path": "Pass unless the core value and carry signals improve.",
+  "key_value_drivers": [
+    "Briarwood Current Value is about $887,641, which appears overpriced versus the ask by 47.8%. Confidence is 62%."
+  ],
+  "key_risks": [],
+  "confidence": 0.56,
+  "analysis_depth_used": "snapshot",
+  "next_questions": [
+    "What is the true all-in basis after negotiation and closing costs?"
+  ],
+  "recommended_next_run": "decision",
+  "supporting_facts": {
+    "property_id": "119-4th-ave-avon-by-the-sea-nj-07717",
+    "selected_modules": [
+      "carry_cost",
+      "confidence",
+      "risk_model",
+      "valuation"
+    ],
+    "mispricing_pct": -0.4776,
+    "monthly_cash_flow": null,
+    "execution_mode": "scoped",
+    "context_type": "property",
+    "missing_context": false,
+    "was_conditional_answer": false
+  }
+}

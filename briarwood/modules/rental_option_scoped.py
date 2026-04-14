@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from briarwood.execution.context import ExecutionContext
+from briarwood.modules.income_support import IncomeSupportModule
+from briarwood.modules.rental_ease import RentalEaseModule
+from briarwood.modules.scoped_common import (
+    build_property_input_from_context,
+    module_payload_from_legacy_result,
+)
+
+
+def run_rental_option(context: ExecutionContext) -> dict[str, object]:
+    """Run Briarwood's rental-option path through a scoped wrapper.
+
+    Composes ``IncomeSupportModule`` (income underwriting) with
+    ``RentalEaseModule`` (rental absorption ease) to produce a combined
+    rental-option payload for synthesis.
+    """
+
+    property_input = build_property_input_from_context(context)
+    income_result = IncomeSupportModule().run(property_input)
+    rental_ease_result = RentalEaseModule().run(property_input)
+    assumptions_used = {
+        "legacy_module": "IncomeSupportModule",
+        "supporting_module": "RentalEaseModule",
+        "property_id": property_input.property_id,
+        "uses_full_engine_report": False,
+    }
+    extra_data = {
+        "income_support": {
+            "score": income_result.score,
+            "confidence": income_result.confidence,
+            "summary": income_result.summary,
+            "metrics": dict(income_result.metrics or {}),
+        },
+    }
+    return module_payload_from_legacy_result(
+        result=rental_ease_result,
+        assumptions_used=assumptions_used,
+        extra_data=extra_data,
+    ).model_dump()
+
+
+__all__ = ["run_rental_option"]

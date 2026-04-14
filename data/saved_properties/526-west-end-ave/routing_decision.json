@@ -1,0 +1,37 @@
+{
+  "intent_type": "house_hack_multi_unit",
+  "analysis_depth": "snapshot",
+  "core_questions": [
+    "should_i_buy",
+    "future_income",
+    "best_path"
+  ],
+  "selected_modules": [
+    "valuation",
+    "confidence",
+    "carry_cost",
+    "risk_model",
+    "rental_option",
+    "rent_stabilization",
+    "unit_income_offset"
+  ],
+  "parser_output": {
+    "intent_type": "house_hack_multi_unit",
+    "analysis_depth": "snapshot",
+    "question_focus": [
+      "should_i_buy",
+      "future_income"
+    ],
+    "hold_period_years": null,
+    "occupancy_type": "owner_occupant",
+    "renovation_plan": null,
+    "exit_options": [
+      "rent"
+    ],
+    "has_additional_units": true,
+    "confidence": 0.63,
+    "missing_inputs": [
+      "purchase_price"
+    ]
+  }
+}

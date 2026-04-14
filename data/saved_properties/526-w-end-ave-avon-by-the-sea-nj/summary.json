@@ -1,0 +1,16 @@
+{
+  "property_id": "526-w-end-ave-avon-by-the-sea-nj",
+  "address": "526 W End Ave",
+  "label": "526 W End Ave",
+  "ask_price": 1490000.0,
+  "bcv": 916510.27,
+  "pricing_view": "appears overpriced",
+  "confidence": 0.55,
+  "comp_trust": "No Active Comps",
+  "missing_input_count": 10,
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-14T10:42:10",
+  "routing_decision": "pass",
+  "routing_recommendation": "The rent path needs more proof before it can carry the decision.",
+  "analysis_depth_used": "snapshot"
+}

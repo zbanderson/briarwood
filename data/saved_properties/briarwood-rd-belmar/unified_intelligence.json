@@ -1,0 +1,32 @@
+{
+  "recommendation": "The rent path needs more proof before it can carry the decision.",
+  "decision": "buy",
+  "best_path": "Treat the rent path as the gating question and verify real income durability before leaning on it.",
+  "key_value_drivers": [
+    "1223 Briarwood Rd screens at a 2.6% cap rate, but rental carry is only partially underwritten because rent or financing inputs are incomplete; valuation score is 32/100."
+  ],
+  "key_risks": [
+    "1223 Briarwood Rd screens at a 2.6% cap rate, but rental carry is only partially underwritten because rent or financing inputs are incomplete; valuation score is 32/100."
+  ],
+  "confidence": 0.61,
+  "analysis_depth_used": "snapshot",
+  "next_questions": [
+    "What is the true all-in basis after negotiation and closing costs?"
+  ],
+  "recommended_next_run": "decision",
+  "supporting_facts": {
+    "property_id": "briarwood-rd-belmar",
+    "selected_modules": [
+      "carry_cost",
+      "confidence",
+      "risk_model",
+      "valuation"
+    ],
+    "mispricing_pct": 0.1589,
+    "monthly_cash_flow": null,
+    "execution_mode": "scoped",
+    "context_type": "property",
+    "missing_context": false,
+    "was_conditional_answer": false
+  }
+}

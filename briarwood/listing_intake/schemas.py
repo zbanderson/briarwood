@@ -8,6 +8,7 @@ from briarwood.schemas import (
     CanonicalFieldProvenance,
     CanonicalPropertyData,
     EvidenceMode,
+    InferenceMethod,
     InputCoverageStatus,
     MarketLocationSignals,
     PropertyFacts,
@@ -17,6 +18,7 @@ from briarwood.schemas import (
     SourceTier,
     UserAssumptions,
     VerifiedStatus,
+    baseline_confidence_for,
 )
 
 
@@ -231,23 +233,63 @@ def _listing_field_provenance(
     normalized: NormalizedPropertyData,
     facts: PropertyFacts,
 ) -> dict[str, CanonicalFieldProvenance]:
+    """Build per-field provenance with extraction-method-aware confidence.
+
+    Phase 3 replaces a single hardcoded 0.88 with per-field classification:
+    most listing-intake fields are EXTRACTED verbatim, ``lot_size`` is DERIVED
+    (unit conversion from ``lot_sqft``), and ``listing_date`` is INFERRED when
+    the normalizer fell back to ``today - days_on_market`` rather than a real
+    list event in the price history.
+    """
+
     source_name = normalized.source or "listing_text"
-    provenance: dict[str, CanonicalFieldProvenance] = {}
-    for field_name in [
+    all_fields = [
         "address", "town", "state", "county", "zip_code", "beds", "baths", "sqft", "lot_size",
         "property_type", "architectural_style", "condition_profile", "capex_lane", "year_built", "stories",
         "garage_spaces", "purchase_price", "taxes", "monthly_hoa", "days_on_market", "listing_date",
         "listing_description", "source_url",
-    ]:
+    ]
+    derived_fields = {"lot_size"}  # computed from lot_sqft via unit conversion
+    listing_date_method = _classify_listing_date_method(normalized)
+
+    provenance: dict[str, CanonicalFieldProvenance] = {}
+    for field_name in all_fields:
         value = getattr(facts, field_name, None)
         if value is None:
             continue
+
+        if field_name == "listing_date":
+            method = listing_date_method
+        elif field_name in derived_fields:
+            method = InferenceMethod.DERIVED
+        else:
+            method = InferenceMethod.EXTRACTED
+
+        verified = {
+            InferenceMethod.EXTRACTED: VerifiedStatus.VERIFIED,
+            InferenceMethod.DERIVED: VerifiedStatus.VERIFIED,
+            InferenceMethod.USER_PROVIDED: VerifiedStatus.USER_CONFIRMED,
+            InferenceMethod.INFERRED: VerifiedStatus.ESTIMATED,
+            InferenceMethod.DEFAULTED: VerifiedStatus.UNVERIFIED,
+        }[method]
+
         provenance[field_name] = CanonicalFieldProvenance(
             value=value,
             source=source_name,
             source_tier=SourceTier.TIER_1,
-            verified_status=VerifiedStatus.VERIFIED,
-            confidence=0.88,
+            verified_status=verified,
+            confidence=baseline_confidence_for(method),
             mapper_version="listing_intake/v1",
+            inference_method=method,
         )
     return provenance
+
+
+def _classify_listing_date_method(normalized: NormalizedPropertyData) -> InferenceMethod:
+    """EXTRACTED if listing_date came from a real list event, else INFERRED."""
+
+    for entry in normalized.price_history or []:
+        event = (entry.event or "").lower()
+        if "list" in event and _parse_date(entry.date) is not None:
+            return InferenceMethod.EXTRACTED
+    return InferenceMethod.INFERRED

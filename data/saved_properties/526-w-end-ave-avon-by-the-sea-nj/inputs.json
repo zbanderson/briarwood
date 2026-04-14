@@ -1,0 +1,137 @@
+{
+  "property_id": "526-w-end-ave-avon-by-the-sea-nj",
+  "facts": {
+    "address": "526 W End Ave, Avon By The Sea NJ",
+    "town": "Avon By The Sea Nj",
+    "state": "NJ",
+    "county": "Monmouth",
+    "latitude": 40.1949884,
+    "longitude": -74.0198027,
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1400,
+    "lot_size": 0.13,
+    "property_type": "Single Family Residence",
+    "condition_profile": "maintained",
+    "capex_lane": "moderate",
+    "year_built": 1935,
+    "garage_spaces": 1,
+    "garage_type": "detached",
+    "has_detached_garage": true,
+    "has_back_house": true,
+    "adu_type": "detached_cottage",
+    "adu_sqft": 300,
+    "has_basement": true,
+    "basement_finished": false,
+    "has_pool": false,
+    "parking_spaces": 2,
+    "corner_lot": false,
+    "driveway_off_street": true,
+    "purchase_price": 1490000.0,
+    "taxes": 7900.0,
+    "monthly_hoa": null,
+    "days_on_market": 82,
+    "listing_description": "Intelligence question: I want to know if there is upside in buying this below ask and renovating. Is Avon a good town?\n\nSource URL (listing): https://www.zillow.com/homedetails/526-W-End-Ave-Avon-By-The-Sea-NJ-07717/39222335_zpid/\n\nIntake status: Address: confirmed \u2022 Town: inferred \u2022 Source: missing"
+  },
+  "market_signals": {},
+  "user_assumptions": {
+    "occupancy_strategy": "owner_occupy_partial",
+    "owner_occupied_unit_count": 1,
+    "estimated_monthly_rent": 4000.0,
+    "back_house_monthly_rent": 2200.0,
+    "seasonal_monthly_rent": null,
+    "unit_rents": [],
+    "rent_confidence_override": null,
+    "insurance": 2500.0,
+    "monthly_maintenance_reserve_override": null,
+    "condition_profile_override": "maintained",
+    "condition_confirmed": true,
+    "capex_lane_override": "moderate",
+    "capex_confirmed": true,
+    "repair_capex_budget": null,
+    "strategy_intent": null,
+    "hold_period_years": null,
+    "risk_tolerance": null,
+    "manual_comp_inputs": []
+  },
+  "source_metadata": {
+    "evidence_mode": "public_record",
+    "provenance": [
+      "manual_subject_entry"
+    ],
+    "source_coverage": {
+      "address": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "price_ask": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "beds_baths": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "sqft": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "lot_size": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "taxes": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "hoa": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "listing_history": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "rent_estimate": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "occupancy_strategy": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "rent_confidence": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "insurance_estimate": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "comp_support": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "condition_assumption": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "capex_assumption": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "capex_budget": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "strategy_intent": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "scarcity_inputs": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      }
+    }
+  }
+}

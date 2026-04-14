@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from briarwood.agents.income.schemas import IncomeAgentOutput
 from briarwood.agents.rental_ease import RentalEaseAgent, RentalEaseInput, RentalEaseOutput
 from briarwood.agents.rental_ease.context import FileBackedZillowRentContextProvider
 from briarwood.evidence import build_section_evidence
@@ -37,6 +38,26 @@ class RentalEaseModule:
         income_result = self.income_support_module.run(property_input)
         town_result = self.town_county_outlook_module.run(property_input)
         scarcity_result = self.scarcity_support_module.run(property_input)
+
+        # Graceful degradation: when upstream income_support produced a
+        # fallback (no IncomeAgentOutput payload) — e.g., thin inputs with no
+        # purchase_price — return a low-confidence "unavailable" result
+        # instead of raising. Phase 3 fix for the rent_stabilization crash.
+        if not isinstance(income_result.payload, IncomeAgentOutput):
+            return ModuleResult(
+                module_name=self.name,
+                metrics={"rental_ease_label": "unavailable"},
+                score=0.0,
+                confidence=0.0,
+                summary="Rental ease unavailable: upstream income support could not run on the provided inputs.",
+                payload=None,
+                section_evidence=build_section_evidence(
+                    property_input,
+                    categories=["rent_estimate"],
+                    extra_estimated_inputs=[],
+                    notes=["Income support upstream produced no usable payload; rental ease cannot be computed."],
+                ),
+            )
 
         income = get_income_support_payload(income_result)
         town = get_town_county_outlook_payload(town_result).score

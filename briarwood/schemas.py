@@ -48,6 +48,37 @@ class VerifiedStatus(str, Enum):
     CONFLICTED = "conflicted"
 
 
+class InferenceMethod(str, Enum):
+    """How a field's value was produced.
+
+    Drives the baseline confidence Briarwood assigns to per-field provenance.
+    Phase 3 replaces a single hardcoded listing-intake confidence (0.88) with
+    method-aware scoring so downstream modules can distinguish verbatim
+    extracted facts from derived / inferred / defaulted values.
+    """
+
+    EXTRACTED = "extracted"          # taken verbatim from a source
+    USER_PROVIDED = "user_provided"  # entered/confirmed by the user
+    DERIVED = "derived"              # computed deterministically (unit conversion, sum)
+    INFERRED = "inferred"            # heuristic / model-guessed
+    DEFAULTED = "defaulted"          # filler when no signal was present
+
+
+_INFERENCE_METHOD_CONFIDENCE: dict[InferenceMethod, float] = {
+    InferenceMethod.EXTRACTED: 0.90,
+    InferenceMethod.USER_PROVIDED: 0.95,
+    InferenceMethod.DERIVED: 0.80,
+    InferenceMethod.INFERRED: 0.60,
+    InferenceMethod.DEFAULTED: 0.35,
+}
+
+
+def baseline_confidence_for(method: InferenceMethod) -> float:
+    """Return the baseline confidence for a given inference method."""
+
+    return _INFERENCE_METHOD_CONFIDENCE[method]
+
+
 class OccupancyStrategy(str, Enum):
     FULL_RENTAL = "full_rental"
     OWNER_OCCUPY_PARTIAL = "owner_occupy_partial"
@@ -73,6 +104,7 @@ class CanonicalFieldProvenance:
     confidence: float = 0.0
     mapper_version: str = "legacy"
     notes: list[str] = field(default_factory=list)
+    inference_method: InferenceMethod = InferenceMethod.EXTRACTED
 
 
 @dataclass(slots=True)

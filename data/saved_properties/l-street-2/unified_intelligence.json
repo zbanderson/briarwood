@@ -1,0 +1,36 @@
+{
+  "recommendation": "Mixed. More diligence is needed before committing.",
+  "decision": "mixed",
+  "best_path": "Treat the additional-unit income as an option and verify rentability before leaning on it.",
+  "key_value_drivers": [
+    "Briarwood Current Value is about $824,935 under a hybrid front-house plus accessory-income framework, which appears fairly priced versus the ask by 2.9%. Confidence is 64%.",
+    "Briarwood used a hybrid valuation for this multi-unit property: the primary dwelling was comped at $763,652 using 5 same-town SFR comps, and 1 additional rental unit added $123,375 via income capitalization, for a combined value of $887,027. Unit breakdown: rear unit: rear unit \u2192 $1,175/mo (user_input)."
+  ],
+  "key_risks": [
+    "Rental ease looks mixed rather than fully durable. The strongest pillar is liquidity, while rent support remains the main constraint. Belmar has a favorable rental liquidity prior within Briarwood's Monmouth scope. Flood exposure is medium, which can narrow the renter pool. Confidence is 0.62."
+  ],
+  "confidence": 0.6,
+  "analysis_depth_used": "snapshot",
+  "next_questions": [
+    "What is the true all-in basis after negotiation and closing costs?"
+  ],
+  "recommended_next_run": "decision",
+  "supporting_facts": {
+    "property_id": "l-street-2",
+    "selected_modules": [
+      "carry_cost",
+      "confidence",
+      "rent_stabilization",
+      "rental_option",
+      "risk_model",
+      "unit_income_offset",
+      "valuation"
+    ],
+    "mispricing_pct": -0.0295,
+    "monthly_cash_flow": null,
+    "execution_mode": "scoped",
+    "context_type": "property",
+    "missing_context": false,
+    "was_conditional_answer": false
+  }
+}

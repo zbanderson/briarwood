@@ -1,0 +1,30 @@
+{
+  "recommendation": "Buy with measured conviction.",
+  "decision": "buy",
+  "best_path": "Proceed as a straight buy decision and verify the carry and evidence stack before committing.",
+  "key_value_drivers": [
+    "Briarwood Current Value is about $769,828, which appears undervalued versus the ask by 10.0%. Confidence is 62%."
+  ],
+  "key_risks": [],
+  "confidence": 0.56,
+  "analysis_depth_used": "snapshot",
+  "next_questions": [
+    "What is the true all-in basis after negotiation and closing costs?"
+  ],
+  "recommended_next_run": "decision",
+  "supporting_facts": {
+    "property_id": "11-test-ave-belmar-nj-07719",
+    "selected_modules": [
+      "carry_cost",
+      "confidence",
+      "risk_model",
+      "valuation"
+    ],
+    "mispricing_pct": 0.0998,
+    "monthly_cash_flow": null,
+    "execution_mode": "scoped",
+    "context_type": "property",
+    "missing_context": false,
+    "was_conditional_answer": false
+  }
+}

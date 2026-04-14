@@ -1,0 +1,137 @@
+{
+  "property_id": "1232-briarwood-road-belmar-nj",
+  "facts": {
+    "address": "1232 Briarwood Road, Belmar, NJ",
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "latitude": 40.1766282,
+    "longitude": -74.0355737,
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lot_size": null,
+    "property_type": null,
+    "condition_profile": null,
+    "capex_lane": null,
+    "year_built": null,
+    "garage_spaces": null,
+    "garage_type": null,
+    "has_detached_garage": null,
+    "has_back_house": null,
+    "adu_type": null,
+    "adu_sqft": null,
+    "has_basement": null,
+    "basement_finished": null,
+    "has_pool": null,
+    "parking_spaces": null,
+    "corner_lot": null,
+    "driveway_off_street": null,
+    "purchase_price": null,
+    "taxes": null,
+    "monthly_hoa": null,
+    "days_on_market": null,
+    "listing_description": "Started from intelligence landing."
+  },
+  "market_signals": {},
+  "user_assumptions": {
+    "occupancy_strategy": null,
+    "owner_occupied_unit_count": null,
+    "estimated_monthly_rent": null,
+    "back_house_monthly_rent": null,
+    "seasonal_monthly_rent": null,
+    "unit_rents": [],
+    "rent_confidence_override": null,
+    "insurance": null,
+    "monthly_maintenance_reserve_override": null,
+    "condition_profile_override": null,
+    "condition_confirmed": null,
+    "capex_lane_override": null,
+    "capex_confirmed": null,
+    "repair_capex_budget": null,
+    "strategy_intent": null,
+    "hold_period_years": null,
+    "risk_tolerance": null,
+    "manual_comp_inputs": []
+  },
+  "source_metadata": {
+    "evidence_mode": "public_record",
+    "provenance": [
+      "manual_subject_entry"
+    ],
+    "source_coverage": {
+      "address": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "price_ask": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "beds_baths": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      },
+      "sqft": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "lot_size": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "taxes": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "hoa": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "listing_history": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "rent_estimate": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "occupancy_strategy": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "rent_confidence": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "insurance_estimate": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "comp_support": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "condition_assumption": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "capex_assumption": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "capex_budget": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "strategy_intent": {
+        "status": "missing",
+        "source_name": "manual entry"
+      },
+      "scarcity_inputs": {
+        "status": "user_supplied",
+        "source_name": "manual entry"
+      }
+    }
+  }
+}

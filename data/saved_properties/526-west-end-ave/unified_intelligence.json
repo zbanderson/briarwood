@@ -1,0 +1,36 @@
+{
+  "recommendation": "Mixed. More diligence is needed before committing.",
+  "decision": "mixed",
+  "best_path": "Treat the additional-unit income as an option and verify rentability before leaning on it.",
+  "key_value_drivers": [
+    "Briarwood Current Value is about $1,379,080 under a hybrid front-house plus accessory-income framework, which appears fully valued versus the ask by 8.0%. Confidence is 59%.",
+    "Briarwood used a hybrid valuation for this multi-unit property: the primary dwelling was comped at $1,367,542 using 5 same-town SFR comps, and 1 additional rental unit added $182,000 via income capitalization, for a combined value of $1,549,542. Unit breakdown: rear unit: rear unit \u2192 $2,100/mo (user_input)."
+  ],
+  "key_risks": [
+    "Rental absorption looks fragile under current evidence. The strongest pillar is structural support, while rent support remains the main constraint. Zillow rent forecast remains positive, which supports the rental backdrop. Town/county demand support is only mixed, which weakens absorption durability. Confidence is 0.56."
+  ],
+  "confidence": 0.58,
+  "analysis_depth_used": "snapshot",
+  "next_questions": [
+    "What is the true all-in basis after negotiation and closing costs?"
+  ],
+  "recommended_next_run": "decision",
+  "supporting_facts": {
+    "property_id": "526-west-end-ave",
+    "selected_modules": [
+      "carry_cost",
+      "confidence",
+      "rent_stabilization",
+      "rental_option",
+      "risk_model",
+      "unit_income_offset",
+      "valuation"
+    ],
+    "mispricing_pct": -0.08,
+    "monthly_cash_flow": null,
+    "execution_mode": "scoped",
+    "context_type": "property",
+    "missing_context": false,
+    "was_conditional_answer": false
+  }
+}

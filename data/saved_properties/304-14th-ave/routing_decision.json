@@ -1,0 +1,35 @@
+{
+  "intent_type": "buy_decision",
+  "analysis_depth": "snapshot",
+  "core_questions": [
+    "should_i_buy",
+    "future_income",
+    "what_could_go_wrong",
+    "where_is_value"
+  ],
+  "selected_modules": [
+    "valuation",
+    "confidence",
+    "carry_cost",
+    "risk_model"
+  ],
+  "parser_output": {
+    "intent_type": "buy_decision",
+    "analysis_depth": "snapshot",
+    "question_focus": [
+      "should_i_buy",
+      "future_income"
+    ],
+    "hold_period_years": null,
+    "occupancy_type": "investor",
+    "renovation_plan": null,
+    "exit_options": [
+      "rent"
+    ],
+    "has_additional_units": true,
+    "confidence": 0.57,
+    "missing_inputs": [
+      "purchase_price"
+    ]
+  }
+}
