@@ -1,0 +1,16 @@
+{
+  "session_id": "e782488e1552",
+  "current_property_id": "526-west-end-ave",
+  "turns": [
+    {
+      "user": "What's the address of 526-west-end-ave?",
+      "assistant": "526 West End Ave \u2014 ask $1,499,000, BCV $1,379,080, appears fully valued.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "Should I buy 526-west-end-ave?",
+      "assistant": "Stance: buy_if_price_improves. Primary value source: unknown. Fair value $1,379,080 vs ask $1,524,000 (+8.0%). Trust flags: weak_town_context, incomplete_carry_inputs.",
+      "answer_type": "decision"
+    }
+  ]
+}

@@ -64,6 +64,29 @@ class CurrentValueAgent:
                         f"Independent market data (ZHVI-based) is {abs(market_divergence_pct):.0%} {direction} ask. "
                         "This signal is included fully in BCV and may cause BCV to diverge from ask."
                     )
+            # De-emphasize the county-level ZHVI anchor when a direct-comp anchor
+            # exists and the ZHVI value diverges materially from it. Accept either
+            # a healthy comp count (>= 4) or a healthy comp confidence (>= 0.5) —
+            # input feeds don't always populate the count even when comps are solid.
+            # Keeps ZHVI as a secondary signal rather than a ~24%-weight override
+            # that drags luxury-market properties toward county medians.
+            comps_healthy = comparable_sales_value is not None and comparable_sales_value > 0 and (
+                (input_data.comparable_sales_count or 0) >= 4
+                or (comparable_sales_confidence or 0) >= 0.5
+            )
+            if comps_healthy and market_adjusted_value is not None:
+                comp_divergence = abs(market_adjusted_value - comparable_sales_value) / comparable_sales_value
+                if comp_divergence > 0.30:
+                    market_component_confidence *= 0.35
+                    warnings.append(
+                        f"Market-adjusted (ZHVI-based) anchor diverges {comp_divergence:.0%} from "
+                        "the direct-comp anchor; ZHVI was de-emphasized so county-level medians "
+                        "don't override property-specific comps."
+                    )
+                    assumptions.append(
+                        "Market-adjusted (ZHVI) anchor was de-emphasized because direct comps "
+                        "are healthy and the county-level signal diverges materially from them."
+                    )
         else:
             unsupported_claims.append("Market-adjusted value is unavailable because market history is missing.")
 

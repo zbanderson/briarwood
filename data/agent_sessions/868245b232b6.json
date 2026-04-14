@@ -1,0 +1,16 @@
+{
+  "session_id": "868245b232b6",
+  "current_property_id": null,
+  "turns": [
+    {
+      "user": "what do you think of 526 W End Ave?",
+      "assistant": "Which property should I underwrite?",
+      "answer_type": "decision"
+    },
+    {
+      "user": "526-w-end-ave",
+      "assistant": "Which property? I don't have one loaded yet.",
+      "answer_type": "lookup"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "session_id": "a88ad3381b2a",
+  "current_property_id": "119-4th-ave-avon-by-the-sea-nj-07717",
+  "turns": [
+    {
+      "user": "find me 3 bed properties within 8 blocks of the beach under 1.7M",
+      "assistant": "Matched 1 of the saved corpus on filters {'within_blocks_of_beach': 8, 'beds': 3, 'max_price': 1700000.0}:\n- 119-4th-ave-avon-by-the-sea-nj-07717 \u2014 119 4th Ave, Avon By The Sea, NJ 07717, 3bd/1.5ba, $1,699,000 5.5 blocks to beach",
+      "answer_type": "search"
+    }
+  ]
+}

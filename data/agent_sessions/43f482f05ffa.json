@@ -1,0 +1,11 @@
+{
+  "session_id": "43f482f05ffa",
+  "current_property_id": null,
+  "turns": [
+    {
+      "user": "compare 526-west-end-ave vs 119-4th-ave-avon-by-the-sea-nj-07717",
+      "assistant": "Comparison:\n- 526-west-end-ave: buy_if_price_improves (+8.0%), flags: weak_town_context, incomplete_carry_inputs\n- 119-4th-ave-avon-by-the-sea-nj-07717: pass_unless_changes (+47.8%), flags: weak_town_context, incomplete_carry_inputs",
+      "answer_type": "comparison"
+    }
+  ]
+}

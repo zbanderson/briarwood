@@ -25,6 +25,7 @@ ENDPOINT_PATHS = {
     "assessment_detail": "/assessment/detail",
     "assessment_history": "/assessmenthistory/detail",
     "sale_detail": "/sale/detail",
+    "sale_history_detail": "/saleshistory/detail",
     "building_permits": "/buildingpermit/detail",
     "rental_avm": "/avm/rental/detail",
     "avm_detail": "/avm/detail",
@@ -41,6 +42,7 @@ ENDPOINT_TIERS = {
     "property_expanded": "conditional",
     "assessment_detail": "core",
     "sale_detail": "core",
+    "sale_history_detail": "conditional",
     "rental_avm": "conditional",
     "avm_detail": "core",
     "avm_history": "conditional",
@@ -59,6 +61,7 @@ ENDPOINT_FIELD_MAP = {
     "assessment_detail": ("tax_amount", "tax_year", "assessed_land", "assessed_improvement", "assessed_total", "market_value"),
     "assessment_history": ("history",),
     "sale_detail": ("last_sale_date", "last_sale_price", "seller_name", "buyer_name"),
+    "sale_history_detail": ("sale_count", "first_sale_date", "first_sale_price", "last_sale_date", "last_sale_price", "sale_history"),
     "rental_avm": ("estimated_monthly_rent", "rent_low", "rent_high", "confidence_score"),
     "avm_detail": ("avm_value", "avm_low", "avm_high", "avm_confidence", "avm_fsd"),
     "avm_history": ("avm_history",),
@@ -118,6 +121,11 @@ class AttomClient:
     def sale_detail(self, canonical_key: str, **params: str) -> AttomResponse:
         return self._fetch("sale_detail", canonical_key, params=params)
 
+    def sale_history_detail(self, canonical_key: str, **params: str) -> AttomResponse:
+        """Full transaction history for one property. Per ATTOM rep: use this
+        for per-property trend/hold analysis instead of /sale/detail."""
+        return self._fetch("sale_history_detail", canonical_key, params=params)
+
     def building_permits(self, canonical_key: str, **params: str) -> AttomResponse:
         return self._fetch("building_permits", canonical_key, params=params)
 
@@ -168,6 +176,14 @@ class AttomClient:
             self._log(endpoint, cache_key, "config_missing", error=error)
             return AttomResponse(endpoint, cache_key, None, {}, False, None, error)
 
+        from briarwood.cost_guard import BudgetExceeded, get_guard
+        guard = get_guard()
+        try:
+            guard.check_attom()
+        except BudgetExceeded as exc:
+            self._log(endpoint, cache_key, "budget_exceeded", error=str(exc))
+            return AttomResponse(endpoint, cache_key, None, {}, False, None, str(exc))
+
         headers = {"apikey": self.api_key, "Accept": "application/json"}
         url = f"{BASE_URL}{ENDPOINT_PATHS[endpoint]}"
         last_error: str | None = None
@@ -178,6 +194,7 @@ class AttomClient:
                 fetched_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 self._write_cache(cache_key, raw_payload=raw_payload, normalized_payload=normalized, fetched_at=fetched_at)
                 self.tracker.record_call(endpoint=endpoint, analysis_id=canonical_key, from_cache=False)
+                guard.record_attom(from_cache=False)
                 self._log(endpoint, cache_key, "success", error=None, attempt=attempt)
                 return AttomResponse(endpoint, cache_key, raw_payload, normalized, False, fetched_at, None)
             except Exception as exc:  # never crash caller
@@ -201,6 +218,8 @@ class AttomClient:
             return {"history": history}
         if endpoint == "sale_detail":
             return _normalize_sale_detail(first_property)
+        if endpoint == "sale_history_detail":
+            return _normalize_sale_history_detail(first_property)
         if endpoint == "building_permits":
             permits = first_property.get("buildingpermit", []) if isinstance(first_property, dict) else []
             return {"permit_count": len(permits), "permits": permits}
@@ -349,6 +368,35 @@ def _normalize_sale_detail(property_row: dict[str, Any]) -> dict[str, Any]:
         "last_sale_price": latest.get("saleamt"),
         "seller_name": latest.get("seller"),
         "buyer_name": latest.get("buyer"),
+    }
+
+
+def _normalize_sale_history_detail(property_row: dict[str, Any]) -> dict[str, Any]:
+    """Normalize /saleshistory/detail — full transaction history for one property."""
+    sale = property_row.get("sale", {}) if isinstance(property_row, dict) else {}
+    rows = sale.get("saleshistory", []) if isinstance(sale, dict) else []
+    history: list[dict[str, Any]] = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        history.append({
+            "date": row.get("saledate") or row.get("recordingdate"),
+            "price": row.get("saleamt"),
+            "seller": row.get("seller"),
+            "buyer": row.get("buyer"),
+            "transaction_type": row.get("saletranstype"),
+            "deed_type": row.get("deedtype"),
+        })
+    history.sort(key=lambda r: r.get("date") or "", reverse=True)
+    last = history[0] if history else {}
+    first = history[-1] if history else {}
+    return {
+        "sale_count": len(history),
+        "first_sale_date": first.get("date"),
+        "first_sale_price": first.get("price"),
+        "last_sale_date": last.get("date"),
+        "last_sale_price": last.get("price"),
+        "sale_history": history,
     }
 
 

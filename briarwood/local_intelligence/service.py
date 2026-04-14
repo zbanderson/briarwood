@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from briarwood.local_intelligence.adapters import LocalIntelligenceExtractor, RuleBasedLocalIntelligenceExtractor
@@ -86,6 +87,68 @@ class LocalIntelligenceService:
             summary=summary,
             warnings=warnings,
             missing_inputs=[],
+        )
+
+
+    def research(
+        self,
+        *,
+        town: str,
+        state: str,
+        focus: list[str] | None = None,
+        budget_seconds: float = 30.0,
+    ) -> LocalIntelligenceRun:
+        """Exploratory research: re-collect documents with a focus hint, re-extract,
+        reconcile into the signal store, and return a fresh summary.
+
+        Unlike ``analyze``, this path intentionally bypasses the warm cache
+        (the focus hint is the entire point) and honors a wall-clock budget.
+        Partial results are returned on timeout rather than raising.
+        """
+        started = time.monotonic()
+        warnings: list[str] = []
+        documents_raw: list[dict[str, Any]] = []
+        if self.collector is not None:
+            try:
+                documents_raw = self.collector.collect(
+                    town=town, state=state, use_cache=False, focus=focus or []
+                )
+            except Exception as exc:  # pragma: no cover - environment/network
+                logger.warning("Research collection failed for %s, %s: %s", town, state, exc)
+                warnings.append("Research document collection failed.")
+                documents_raw = []
+
+        documents = normalize_source_documents(documents_raw, town=town, state=state)
+        persisted_signals = self.store.load_town_signals(town=town, state=state)
+
+        extracted_signals = []
+        for document in documents:
+            if time.monotonic() - started > budget_seconds:
+                warnings.append("Research budget exceeded — used partial results.")
+                break
+            try:
+                signals = self.extractor.extract(document)
+            except Exception as exc:
+                logger.warning("Research extraction failed for %s: %s", document.id, exc)
+                warnings.append(f"Extraction failed for '{document.title}'.")
+                continue
+            extracted_signals.extend(signals)
+
+        reconciled = reconcile_signals(extracted_signals, existing_signals=persisted_signals)
+        if reconciled != persisted_signals:
+            self.store.save_town_signals(town=town, state=state, signals=reconciled)
+        summary = build_town_summary(town=town, state=state, signals=reconciled) if reconciled else _empty_summary(town, state)
+        if not documents:
+            warnings.append("No new documents were retrieved.")
+
+        return LocalIntelligenceRun(
+            town=town,
+            state=state,
+            documents=documents,
+            signals=reconciled,
+            summary=summary,
+            warnings=warnings,
+            missing_inputs=[] if reconciled else ["local_documents"],
         )
 
 

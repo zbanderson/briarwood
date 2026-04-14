@@ -1,0 +1,21 @@
+{
+  "session_id": "3dadc6b5526e",
+  "current_property_id": "526-west-end-ave",
+  "turns": [
+    {
+      "user": "hat do you think about 526 w end ave, i think we might be able to get it for 1.3m",
+      "assistant": "overrides applied: entry basis $1,300,000\nThe recommendation is to \"buy if price improves,\" given the current asking price of $1,325,000, which exceeds the fair value base of $1,196,000. This results in a premium discount percentage of 0.08. Trust flags include noted discrepancies in valuation, weak town context, and incomplete carry inputs, suggesting caution. Always consider these factors before making a final decision.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "is there any new develpoment in avon? how far from the beach?",
+      "assistant": "526-west-end-ave: 6.4 blocks to beach (0.39 mi).",
+      "answer_type": "micro_location"
+    },
+    {
+      "user": "any new development in avon",
+      "assistant": "Town research (external sources) arrives in Phase C. Phase A only serves cached town signals when a property is loaded.",
+      "answer_type": "research"
+    }
+  ]
+}

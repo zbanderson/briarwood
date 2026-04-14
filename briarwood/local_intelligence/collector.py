@@ -28,7 +28,13 @@ Fetcher = Callable[[str], FetchResult]
 
 
 class MunicipalDocumentCollector:
-    """Collect a small set of known municipal source documents for Town Pulse."""
+    """Collect municipal source documents for Town Pulse via pluggable adapters.
+
+    The collector does not know where documents come from — adapters do.
+    Default adapters preserve legacy behavior (curated seed registry). New
+    sources (web search, minutes feeds) are added by passing additional
+    adapters at construction time, not by editing this class.
+    """
 
     def __init__(
         self,
@@ -37,45 +43,59 @@ class MunicipalDocumentCollector:
         fetcher: Fetcher | None = None,
         cache_root: Path | None = None,
         timeout_seconds: float = 12.0,
+        adapters: "list | None" = None,
     ) -> None:
+        from briarwood.local_intelligence.sources import StaticRegistryAdapter
+
         self.registry = registry or MUNICIPAL_SOURCE_REGISTRY
         self.fetcher = fetcher or _default_fetcher(timeout_seconds)
         self.cache_root = cache_root or Path(__file__).resolve().parents[2] / "data" / "local_intelligence" / "documents"
+        # Default: just the curated-seed adapter, preserving legacy behavior.
+        self.adapters = adapters if adapters is not None else [
+            StaticRegistryAdapter(
+                registry=self.registry,
+                fetcher=self.fetcher,
+                text_extractor=self._extract_text,
+            )
+        ]
 
-    def collect(self, *, town: str, state: str, use_cache: bool = True) -> list[dict[str, object]]:
+    def collect(
+        self,
+        *,
+        town: str,
+        state: str,
+        use_cache: bool = True,
+        focus: list[str] | None = None,
+    ) -> list[dict[str, object]]:
         cache_path = self._cache_path(town=town, state=state)
-        if use_cache:
+        # Focus-scoped research calls should bypass the cache; generic
+        # warm-cache reads still honor it.
+        if use_cache and not focus:
             cached = self._load_cache(cache_path)
             if cached is not None:
                 return cached
 
-        seeds = self.registry.get((_normalize_town_key(town), state.strip().upper()), [])
         documents: list[dict[str, object]] = []
-        for seed in seeds:
+        seen_urls: set[str] = set()
+        for adapter in self.adapters:
             try:
-                payload, content_type = self.fetcher(seed.url)
-            except Exception as exc:  # pragma: no cover - environment/network specific
-                logger.warning("Municipal source fetch failed for %s: %s", seed.url, exc)
+                fetched = adapter.fetch(town=town, state=state, focus=focus)
+            except Exception as exc:  # pragma: no cover - adapter-specific
+                logger.warning(
+                    "Adapter %s failed for %s, %s: %s",
+                    getattr(adapter, "name", type(adapter).__name__),
+                    town,
+                    state,
+                    exc,
+                )
                 continue
-
-            text = self._extract_text(payload, content_type=content_type, url=seed.url)
-            if not text:
-                logger.warning("Municipal source yielded no readable text for %s", seed.url)
-                continue
-
-            published_at = _parse_datetime(seed.metadata.get("published_at"))
-            documents.append(
-                {
-                    "title": seed.title,
-                    "url": seed.url,
-                    "source_type": seed.source_type.value,
-                    "published_at": published_at.isoformat() if published_at is not None else None,
-                    "retrieved_at": datetime.now(timezone.utc).isoformat(),
-                    "raw_text": text,
-                    "cleaned_text": _clean_text(text),
-                    "metadata": dict(seed.metadata),
-                }
-            )
+            for doc in fetched or []:
+                url = str(doc.get("url") or "").strip()
+                if url and url in seen_urls:
+                    continue
+                if url:
+                    seen_urls.add(url)
+                documents.append(doc)
 
         self._save_cache(cache_path, town=town, state=state, documents=documents)
         return documents

@@ -252,6 +252,12 @@ def _extract_execution_assumptions(
             "rent_confidence_override",
             property_data.get("rent_confidence_override"),
         ),
+        "purchase_price": property_data.get("purchase_price"),
+        "capex_lane": property_data.get("capex_lane"),
+        "repair_capex_budget_override": property_assumptions.get(
+            "repair_capex_budget_override",
+            property_data.get("repair_capex_budget_override"),
+        ),
     }
     return values
 

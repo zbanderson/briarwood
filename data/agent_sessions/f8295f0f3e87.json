@@ -1,0 +1,41 @@
+{
+  "session_id": "f8295f0f3e87",
+  "current_property_id": "526-west-end-ave",
+  "turns": [
+    {
+      "user": "should i buy 526 west end ave?",
+      "assistant": "Which property should I underwrite?",
+      "answer_type": "decision"
+    },
+    {
+      "user": "should i buy 526-west-end-ave?",
+      "assistant": "Stance: buy_if_price_improves. Primary value source: unknown. Fair value $1,379,080 vs ask $1,524,000 (+8.0%). Trust flags: valuation_anchor_divergence, weak_town_context, incomplete_carry_inputs.\nResearch update: no material change after fetching 0 document(s) for weak_town_context.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "show me the value picture on 526-west-end-ave",
+      "assistant": "Rendered value_opportunity for 526-west-end-ave: file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/f8295f0f3e87/20260414-152628-value_opportunity.html",
+      "answer_type": "visualize"
+    },
+    {
+      "user": "how much could i rent it for?",
+      "assistant": "526 West End Ave \u2014 ask $1,499,000, BCV $1,379,080, appears fully valued.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "how close to the beach is it?",
+      "assistant": "526 West End Ave \u2014 ask $1,499,000, BCV $1,379,080, appears fully valued.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "is there a different property close by thats closer to the beach?",
+      "assistant": "526 West End Ave \u2014 ask $1,499,000, BCV $1,379,080, appears fully valued.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "can show you tell me more properties that are similar but maybe a better value?",
+      "assistant": "526 West End Ave \u2014 ask $1,499,000, BCV $1,379,080, appears fully valued.",
+      "answer_type": "lookup"
+    }
+  ]
+}

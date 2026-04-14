@@ -242,10 +242,20 @@ def collect_trust_flags(
     flags: list[str] = []
 
     # Valuation trust
-    val_metrics = _metrics(outputs.get("valuation"))
+    val_payload = outputs.get("valuation") or {}
+    val_metrics = _metrics(val_payload)
     comp_conf = _float(val_metrics.get("comp_confidence_score"))
     if comp_conf is not None and comp_conf < 0.5:
         flags.append("thin_comp_set")
+
+    # Valuation anchors disagree materially — the valuation agent flags this by
+    # emitting a "ZHVI-based" divergence warning on the wrapped CurrentValueOutput.
+    # Surface it so the stance logic and the user both see the anchor conflict
+    # instead of silently blending.
+    legacy_payload = (val_payload.get("data") or {}).get("legacy_payload") or {}
+    val_warnings = list(val_payload.get("warnings") or []) + list(legacy_payload.get("warnings") or [])
+    if any(isinstance(w, str) and "ZHVI-based" in w and "diverges" in w for w in val_warnings):
+        flags.append("valuation_anchor_divergence")
 
     # Legal confidence
     legal_conf = _confidence(outputs.get("legal_confidence"))
@@ -337,6 +347,7 @@ def _flag_to_check(flag: str) -> str:
         "execution_heavy": "Stress-test the renovation/scenario budget and timeline assumptions.",
         "rent_assumption_fragile": "Independently corroborate the rent assumption (broker, comp rentals).",
         "weak_town_context": "Pull town-level scarcity/absorption data before anchoring on town priors.",
+        "valuation_anchor_divergence": "Reconcile comps vs. ZHVI — the two anchors disagree by more than the acceptable band.",
         "incomplete_carry_inputs": "Complete the carry-cost inputs (taxes, insurance, financing).",
     }
     return mapping.get(flag, f"Resolve the {flag} trust gap before deciding.")
