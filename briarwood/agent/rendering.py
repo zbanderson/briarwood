@@ -19,7 +19,18 @@ import plotly.graph_objects as go
 
 ARTIFACTS_ROOT = Path("data/agent_artifacts")
 
-SUPPORTED_KINDS = {"verdict_gauge", "value_opportunity", "scenario_fan", "risk_bar"}
+SUPPORTED_KINDS = {
+    # Legacy answer-shaped kinds — kept for existing callers.
+    "verdict_gauge",
+    "value_opportunity",
+    "scenario_fan",
+    "risk_bar",
+    # Architecture-diagram visualization-shaped kinds (Layer 05 chart router).
+    "line_area",
+    "bar_compare",
+    "geo_map",
+    "radar_score",
+}
 
 
 class ChartUnavailable(Exception):
@@ -69,7 +80,101 @@ def _build_figure(kind: str, unified: dict[str, Any]) -> go.Figure:
         return _scenario_fan(unified)
     if kind == "risk_bar":
         return _risk_bar(unified)
+    if kind == "line_area":
+        return _line_area(unified)
+    if kind == "bar_compare":
+        return _bar_compare(unified)
+    if kind == "geo_map":
+        return _geo_map(unified)
+    if kind == "radar_score":
+        return _radar_score(unified)
     raise ChartUnavailable(f"No builder for kind '{kind}'")  # pragma: no cover
+
+
+def _line_area(payload: dict[str, Any]) -> go.Figure:
+    """Generic time series / projection chart (Layer 05 chart kind)."""
+    series = payload.get("series") or []
+    ask = payload.get("ask_price")
+    bull = payload.get("bull_case_value")
+    bear = payload.get("bear_case_value")
+    if not series and isinstance(ask, (int, float)) and isinstance(bull, (int, float)):
+        years = list(range(6))
+        base_path = [ask + (bull - ask) * (y / 5) for y in years]
+        bear_path = [ask + ((bear or ask) - ask) * (y / 5) for y in years]
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=years, y=base_path, mode="lines", name="Base"))
+        fig.add_trace(go.Scatter(x=years, y=bear_path, mode="lines", name="Bear",
+                                 fill="tonexty", fillcolor="rgba(25,118,210,0.08)"))
+        fig.update_layout(title="Projected value", xaxis_title="Years",
+                          yaxis_title="Value ($)", height=320)
+        return fig
+    if not series:
+        raise ChartUnavailable("line_area requires `series` or projection values.")
+    fig = go.Figure()
+    for name, values in (series.items() if isinstance(series, dict) else []):
+        fig.add_trace(go.Scatter(y=list(values), mode="lines", name=str(name), fill="tozeroy"))
+    fig.update_layout(title="Trend", height=320)
+    return fig
+
+
+def _bar_compare(payload: dict[str, Any]) -> go.Figure:
+    """Side-by-side comparison chart (Layer 05 chart kind)."""
+    items = payload.get("items")
+    if isinstance(items, dict):
+        labels = list(items.keys())
+        values = [float(v) if isinstance(v, (int, float)) else 0.0 for v in items.values()]
+    elif isinstance(items, list):
+        labels = [str(i.get("label")) for i in items if isinstance(i, dict)]
+        values = [float(i.get("value") or 0) for i in items if isinstance(i, dict)]
+    else:
+        raise ChartUnavailable("bar_compare requires `items` as dict or list of {label, value}.")
+    if not labels:
+        raise ChartUnavailable("bar_compare has no items to plot.")
+    fig = go.Figure(go.Bar(x=labels, y=values, marker_color="#1976d2"))
+    fig.update_layout(title=payload.get("title") or "Comparison", height=340)
+    return fig
+
+
+def _geo_map(payload: dict[str, Any]) -> go.Figure:
+    """Scatter-geo / map visualization (Layer 05 chart kind).
+
+    Expects a `points` list of {lat, lon, label?, score?}. Falls back to a
+    placeholder figure when coordinates are not available.
+    """
+    points = payload.get("points") or []
+    if not points:
+        fig = go.Figure()
+        fig.add_annotation(text="No geocoded points available",
+                           xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(title="Location", height=320)
+        return fig
+    lats = [p.get("lat") for p in points if isinstance(p, dict)]
+    lons = [p.get("lon") for p in points if isinstance(p, dict)]
+    labels = [str(p.get("label") or "") for p in points if isinstance(p, dict)]
+    fig = go.Figure(go.Scattergeo(lat=lats, lon=lons, text=labels, mode="markers"))
+    fig.update_geos(fitbounds="locations")
+    fig.update_layout(title=payload.get("title") or "Location", height=360)
+    return fig
+
+
+def _radar_score(payload: dict[str, Any]) -> go.Figure:
+    """Radar / polar multi-factor score chart (Layer 05 chart kind)."""
+    factors = payload.get("factors")
+    if isinstance(factors, dict):
+        labels = list(factors.keys())
+        values = [float(v) if isinstance(v, (int, float)) else 0.0 for v in factors.values()]
+    else:
+        raise ChartUnavailable("radar_score requires `factors` dict of name→score.")
+    if not labels:
+        raise ChartUnavailable("radar_score has no factors.")
+    # Close the polygon
+    values_closed = values + [values[0]]
+    labels_closed = labels + [labels[0]]
+    fig = go.Figure(go.Scatterpolar(r=values_closed, theta=labels_closed, fill="toself"))
+    fig.update_layout(title=payload.get("title") or "Fit index",
+                      polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                      height=360)
+    return fig
 
 
 _RISK_FLAG_LABELS = {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from briarwood.execution.context import ExecutionContext
@@ -279,12 +280,24 @@ def execute_plan(
     context: ExecutionContext,
     registry: dict[str, ModuleSpec],
     module_output_cache: dict[str, dict[str, Any]] | None = None,
+    *,
+    parallel: bool = False,
+    max_workers: int = 4,
 ) -> dict[str, Any]:
     """Execute only the modules in an execution plan using shared context.
 
     Each module runner receives the shared ``ExecutionContext`` and is expected
     to return a structured result compatible with the ModulePayload contract.
+
+    When ``parallel=True`` (opt-in, new pipeline adapters only) independent
+    modules within the same dependency level run concurrently via a thread
+    pool. ``parallel=False`` preserves the legacy sequential behavior.
     """
+
+    if parallel:
+        return _execute_plan_parallel(
+            plan, context, registry, module_output_cache, max_workers=max_workers
+        )
 
     if not isinstance(plan, ExecutionPlan):
         raise TypeError("plan must be an ExecutionPlan instance.")
@@ -338,6 +351,76 @@ def execute_plan(
         "outputs": outputs,
         "trace": trace,
     }
+
+
+def _execute_plan_parallel(
+    plan: ExecutionPlan,
+    context: ExecutionContext,
+    registry: dict[str, ModuleSpec],
+    module_output_cache: dict[str, dict[str, Any]] | None,
+    *,
+    max_workers: int,
+) -> dict[str, Any]:
+    """Level-by-level parallel execution honoring the DAG.
+
+    Modules at the same dependency level run concurrently. Context writes
+    happen on the main thread after each level resolves, so ExecutionContext
+    mutation stays single-threaded.
+    """
+
+    outputs: dict[str, Any] = {}
+    trace: list[dict[str, Any]] = []
+    rerun_modules: set[str] = set()
+
+    completed: set[str] = set()
+    remaining = [m for m in plan.ordered_modules if m in registry]
+    for m in plan.ordered_modules:
+        if m not in registry:
+            raise ValueError(f"Execution plan references unknown module '{m}'.")
+
+    while remaining:
+        level = [
+            m for m in remaining
+            if all(dep in completed for dep in registry[m].depends_on)
+        ]
+        if not level:
+            raise ValueError("Execution stalled — unresolved module dependencies.")
+
+        def _run_one(module_name: str) -> tuple[str, dict[str, Any], str, str]:
+            module_spec = registry[module_name]
+            validate_required_context(module_spec, context)
+            runner = module_spec.runner
+            if runner is None:
+                raise ValueError(f"Module '{module_name}' does not define a runner.")
+            cache_key = build_module_cache_key(module_name, context)
+            dep_reran = any(d in rerun_modules for d in module_spec.depends_on)
+            cached = None if dep_reran else (module_output_cache or {}).get(cache_key)
+            if cached is not None:
+                return module_name, dict(cached), "cache", cache_key
+            result = runner(context)
+            normalized = normalize_module_result(module_name, result)
+            return module_name, normalized, "run", cache_key
+
+        with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
+            results = list(pool.map(_run_one, level))
+
+        for module_name, normalized, source, cache_key in results:
+            module_spec = registry[module_name]
+            if source == "run":
+                if module_output_cache is not None:
+                    module_output_cache[cache_key] = dict(normalized)
+                rerun_modules.add(module_name)
+            outputs[module_name] = normalized
+            context.store_module_output(module_name, normalized)
+            trace.append(
+                build_execution_trace(
+                    module_name, module_spec, normalized, source=source, cache_key=cache_key,
+                )
+            )
+            completed.add(module_name)
+            remaining.remove(module_name)
+
+    return {"outputs": outputs, "trace": trace}
 
 
 __all__ = [

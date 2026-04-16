@@ -1,0 +1,32 @@
+{
+  "notes": "Coastal/flood-exposed property — expects risk score to tank, security/town to remain baseline",
+  "inputs": {
+    "property_id": "synth-coastal-flood",
+    "address": "100 Ocean Ave, Sea Bright, NJ 07760",
+    "town": "Sea Bright",
+    "state": "NJ",
+    "county": "Monmouth",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1400,
+    "lot_size": 0.12,
+    "property_type": "single family residence",
+    "condition_profile": "average",
+    "capex_lane": "light",
+    "year_built": 1978,
+    "purchase_price": 850000.0,
+    "taxes": 12500.0,
+    "insurance": 7500.0,
+    "estimated_monthly_rent": 3800.0,
+    "monthly_maintenance_reserve_override": 400.0,
+    "condition_confirmed": true,
+    "capex_confirmed": true,
+    "town_population_trend": 0.002,
+    "town_price_trend": 0.035,
+    "school_rating": 6.0,
+    "flood_risk": "high"
+  },
+  "expected": {
+    "risk_score_max": 50
+  }
+}

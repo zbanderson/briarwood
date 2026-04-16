@@ -32,8 +32,17 @@ def build_routed_capture_record(
     unified_output: dict[str, Any],
     missing_context: bool = False,
     was_conditional_answer: bool = False,
+    session_id: str | None = None,
+    contribution_map: dict[str, float] | None = None,
+    explicit_signal: str | None = None,
+    outcome: str | None = None,
 ) -> dict[str, Any]:
-    """Build a reviewable routed interaction payload for product learning."""
+    """Build a reviewable routed interaction payload for product learning.
+
+    New pipeline fields (``session_id``, ``contribution_map``,
+    ``explicit_signal``, ``outcome``) default to null for records emitted by
+    legacy callers — readers tolerate missing keys.
+    """
 
     parser_output = dict(routing_decision.get("parser_output") or {})
     tags = _capture_tags(
@@ -61,6 +70,10 @@ def build_routed_capture_record(
         "missing_context": missing_context,
         "was_conditional_answer": was_conditional_answer,
         "tags": tags,
+        "session_id": session_id,
+        "contribution_map": dict(contribution_map) if contribution_map else None,
+        "explicit_signal": explicit_signal,
+        "outcome": outcome,
     }
 
 

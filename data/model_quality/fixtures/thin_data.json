@@ -1,0 +1,18 @@
+{
+  "notes": "Minimum-viable inputs — many fields null. Confidence should be LOW across models.",
+  "inputs": {
+    "property_id": "synth-thin-data",
+    "address": "1 Unknown Ln, Anywhere, NJ 08000",
+    "town": "Anywhere",
+    "state": "NJ",
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": 1500,
+    "purchase_price": 400000.0,
+    "taxes": 7000.0,
+    "estimated_monthly_rent": 2800.0
+  },
+  "expected": {
+    "confidence_ceiling": 0.6
+  }
+}

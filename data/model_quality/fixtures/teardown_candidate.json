@@ -1,0 +1,30 @@
+{
+  "notes": "Small/dated structure on an above-average lot — expect teardown scenario to activate and risk to reflect condition",
+  "inputs": {
+    "property_id": "synth-teardown",
+    "address": "42 Elm St, Red Bank, NJ 07701",
+    "town": "Red Bank",
+    "state": "NJ",
+    "county": "Monmouth",
+    "beds": 2,
+    "baths": 1.0,
+    "sqft": 820,
+    "lot_size": 0.35,
+    "property_type": "single family residence",
+    "condition_profile": "needs_work",
+    "capex_lane": "heavy",
+    "year_built": 1942,
+    "purchase_price": 525000.0,
+    "taxes": 6800.0,
+    "insurance": 1800.0,
+    "estimated_monthly_rent": 2400.0,
+    "monthly_maintenance_reserve_override": 350.0,
+    "condition_confirmed": true,
+    "capex_confirmed": true,
+    "town_population_trend": 0.008,
+    "town_price_trend": 0.055,
+    "school_rating": 7.2,
+    "flood_risk": "low"
+  },
+  "expected": {}
+}

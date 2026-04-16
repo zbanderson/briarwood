@@ -1,0 +1,32 @@
+{
+  "notes": "Strong rent-to-price — income model should show healthy operating cash flow",
+  "inputs": {
+    "property_id": "synth-cashflow",
+    "address": "88 Pine St, Trenton, NJ 08611",
+    "town": "Trenton",
+    "state": "NJ",
+    "county": "Mercer",
+    "beds": 4,
+    "baths": 2.0,
+    "sqft": 1850,
+    "lot_size": 0.14,
+    "property_type": "single family residence",
+    "condition_profile": "average",
+    "capex_lane": "light",
+    "year_built": 1985,
+    "purchase_price": 240000.0,
+    "taxes": 5200.0,
+    "insurance": 1400.0,
+    "estimated_monthly_rent": 2600.0,
+    "monthly_maintenance_reserve_override": 250.0,
+    "condition_confirmed": true,
+    "capex_confirmed": true,
+    "town_population_trend": -0.004,
+    "town_price_trend": 0.02,
+    "school_rating": 3.4,
+    "flood_risk": "low"
+  },
+  "expected": {
+    "operating_monthly_cash_flow_min": 0
+  }
+}

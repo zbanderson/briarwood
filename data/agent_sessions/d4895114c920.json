@@ -1,0 +1,11 @@
+{
+  "session_id": "d4895114c920",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "what do you think of 1222 briarwood road in belmar",
+      "assistant": "The recommendation for 1222 Briarwood Road in Belmar is to \"pass unless changes\" occur. The fair value is listed at $781,303.46, while the asking price is $824,200.00, indicating a premium of -0.1589. Trust flags include \"weak_town_context\" and \"incomplete_carry_inputs,\" which may impact the reliability of the assessment. Research update: no material change after fetching 0 document(s) for weak_town_context.",
+      "answer_type": "decision"
+    }
+  ]
+}

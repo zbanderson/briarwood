@@ -19,6 +19,10 @@ from briarwood.intelligence_capture import (
     build_routed_capture_record,
 )
 from briarwood.orchestrator import run_briarwood_analysis_with_artifacts
+from briarwood.pipeline.triage import (
+    compute_contribution_map_from_outputs,
+    load_model_weights,
+)
 from briarwood.schemas import AnalysisReport, PropertyInput
 from briarwood.routing_schema import (
     AnalysisDepth,
@@ -588,9 +592,15 @@ def run_routed_analysis_for_property(
     report = report_cache.get("report")
 
     module_results = dict(routed_artifacts.get("module_results") or {})
-    engine_output = EngineOutput.model_validate(
-        {"outputs": dict(module_results.get("outputs") or {})}
+    module_outputs = dict(module_results.get("outputs") or {})
+    engine_output = EngineOutput.model_validate({"outputs": module_outputs})
+
+    import uuid as _uuid
+    session_id = _uuid.uuid4().hex[:12]
+    contribution_map = compute_contribution_map_from_outputs(
+        module_outputs, weights=load_model_weights()
     )
+
     append_intelligence_capture(
         build_routed_capture_record(
             question=routing_text,
@@ -600,6 +610,10 @@ def run_routed_analysis_for_property(
             unified_output=unified_output.model_dump(mode="json"),
             missing_context=False,
             was_conditional_answer=False,
+            session_id=session_id,
+            contribution_map=contribution_map,
+            explicit_signal=None,
+            outcome=None,
         )
     )
 
