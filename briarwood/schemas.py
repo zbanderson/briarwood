@@ -133,6 +133,7 @@ class PropertyFacts:
     architectural_style: str | None = None
     condition_profile: str | None = None
     capex_lane: str | None = None
+    renovation_mode: str | None = None
     year_built: int | None = None
     stories: float | None = None
     garage_spaces: int | None = None
@@ -247,6 +248,7 @@ class PropertyInput:
     architectural_style: str | None = None
     condition_profile: str | None = None
     capex_lane: str | None = None
+    renovation_mode: str | None = None
     lot_size: float | None = None
     year_built: int | None = None
     stories: float | None = None
@@ -332,6 +334,7 @@ class PropertyInput:
             architectural_style=facts.architectural_style,
             condition_profile=assumptions.condition_profile_override or facts.condition_profile,
             capex_lane=assumptions.capex_lane_override or facts.capex_lane,
+            renovation_mode=facts.renovation_mode,
             lot_size=facts.lot_size,
             year_built=facts.year_built,
             stories=facts.stories,

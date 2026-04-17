@@ -8,7 +8,7 @@
       ],
       "canonical_key": null,
       "confidence": 0.92,
-      "created_at": "2026-04-15T00:07:52.161225Z",
+      "created_at": "2026-04-17T13:29:44.075409Z",
       "evidence_excerpt": "The proposal for 500 River Road residential project with 12 units was denied after traffic concern and parking issue were discussed.",
       "facts": [
         "Signal classified as amenity.",
@@ -17,12 +17,12 @@
         "Document references approximately 12 units.",
         "Location referenced: 500 River Road."
       ],
-      "first_seen_at": "2026-04-15T00:07:52.161231Z",
+      "first_seen_at": "2026-04-17T13:29:44.075415Z",
       "id": "sig-025be82937ad",
       "impact_direction": "negative",
       "impact_magnitude": 3,
       "inference": "This may create downside pressure or execution risk if the concern persists.",
-      "last_seen_at": "2026-04-15T00:07:52.161231Z",
+      "last_seen_at": "2026-04-17T13:29:44.075415Z",
       "last_transition_at": null,
       "metadata": {
         "location": "500 River Road",
@@ -30,7 +30,7 @@
       },
       "occurrence_count": 1,
       "previous_status": null,
-      "reconciliation_status": null,
+      "reconciliation_status": "new",
       "signal_type": "amenity",
       "source_date": "2026-02-25T00:00:00Z",
       "source_document_id": "doc-297f24e40a30",
@@ -41,7 +41,7 @@
       "time_horizon": "medium_term",
       "title": "500 River Road residential project with 12 units was denied after traffic concer",
       "town": "Belmar",
-      "updated_at": "2026-04-15T00:07:52.161225Z"
+      "updated_at": "2026-04-17T13:29:44.075409Z"
     },
     {
       "affected_dimensions": [
@@ -51,7 +51,7 @@
       ],
       "canonical_key": "tsk-457c92a39da2714f",
       "confidence": 0.92,
-      "created_at": "2026-04-15T00:07:52.161198Z",
+      "created_at": "2026-04-17T13:29:44.075380Z",
       "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved. Board members found the project consistent with the master plan.",
       "facts": [
         "Existing signal for the same project.",
@@ -67,7 +67,7 @@
       "impact_direction": "positive",
       "impact_magnitude": 4,
       "inference": "This may influence future supply and pricing dynamics if the 24-unit pipeline reaches delivery. This may add moderate supply. Earlier extraction run.",
-      "last_seen_at": "2026-04-15T00:07:52.161231Z",
+      "last_seen_at": "2026-04-17T13:29:44.075415Z",
       "last_transition_at": null,
       "metadata": {
         "location": "1201 Main Street",
@@ -83,7 +83,7 @@
       },
       "occurrence_count": 3,
       "previous_status": null,
-      "reconciliation_status": null,
+      "reconciliation_status": "updated",
       "signal_type": "supply",
       "source_date": "2026-02-11T00:00:00Z",
       "source_document_id": "doc-5b47002292f8",
@@ -94,7 +94,7 @@
       "time_horizon": "medium_term",
       "title": "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
       "town": "Belmar",
-      "updated_at": "2026-04-15T00:07:52.161231Z"
+      "updated_at": "2026-04-17T13:29:44.075415Z"
     }
   ],
   "state": "NJ",

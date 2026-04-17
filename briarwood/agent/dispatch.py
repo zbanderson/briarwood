@@ -15,6 +15,7 @@ from briarwood.agent.session import Session
 from briarwood.agent.fuzzy_terms import translate
 from briarwood.agent.feedback import log_turn as _log_untracked
 from briarwood.agent.overrides import parse_overrides, summarize as _override_summary
+from briarwood.agent.property_view import PropertyView
 from briarwood.agent.tools import (
     ToolUnavailable,
     analyze_property,
@@ -111,6 +112,10 @@ def _resolve_property_id(
 
     The router extracts hyphenated refs only. Users also type "526 W End Ave"
     or "526 west end avenue avon" — those fall through to the resolver.
+
+    Session fallback is skipped when the user clearly *tried* to reference a
+    property (hyphenated slug, street number) but it didn't resolve. Otherwise
+    a failed lookup for 1223 silently becomes an answer about the stale 526.
     """
     for ref in decision.target_refs:
         if _SAVED_DIR_EXISTS(ref):
@@ -123,7 +128,29 @@ def _resolve_property_id(
         if pid:
             return pid
 
+    if _text_references_unknown_property(decision, text):
+        return None
+
     return session.current_property_id
+
+
+def _text_references_unknown_property(
+    decision: RouterDecision, text: str | None
+) -> bool:
+    """True when the user named a property we couldn't resolve.
+
+    Suppresses the session fallback so stale pids don't hijack mismatched
+    references. Matches: an unresolved hyphenated slug in target_refs, or
+    a street-number + street-word pattern in the free text.
+    """
+    if any(not _SAVED_DIR_EXISTS(r) for r in decision.target_refs):
+        return True
+    if text:
+        from briarwood.agent.resolver import _extract_street_number
+
+        if _extract_street_number(text) is not None:
+            return True
+    return False
 
 
 def _SAVED_DIR_EXISTS(property_id: str) -> bool:
@@ -172,7 +199,7 @@ def handle_decision(
         return "Which property should I underwrite?"
     overrides = parse_overrides(text)
     try:
-        unified = analyze_property(pid, overrides=overrides)
+        view = PropertyView.load(pid, overrides=overrides, depth="decision")
     except ToolUnavailable as exc:
         return f"I couldn't analyze that ({exc})."
     session.current_property_id = pid
@@ -182,8 +209,7 @@ def handle_decision(
     # mandatory so the user never wonders where latency came from.
     # Skip research when overrides are present — what-if turns aren't about
     # new town context, they're about re-underwriting at a user-supplied basis.
-    initial_flags = set(unified.get("trust_flags") or [])
-    research_targets = initial_flags & _AUTO_RESEARCH_FLAGS
+    research_targets = set(view.trust_flags) & _AUTO_RESEARCH_FLAGS
     research_lines: list[str] = []
     if research_targets and not overrides:
         town, state = _summary_town_state(pid)
@@ -195,12 +221,12 @@ def handle_decision(
                 research_result = research_town(town, state, focus)
             except Exception as exc:  # pragma: no cover - defensive
                 research_result = {"warnings": [f"research error: {exc}"]}
-            before = unified
+            before = view
             try:
-                unified = analyze_property(pid, overrides=overrides)
+                view = PropertyView.load(pid, overrides=overrides, depth="decision")
             except ToolUnavailable:
-                unified = before
-            diff = _diff_unified(before, unified)
+                view = before
+            diff = _diff_unified(before.unified or {}, view.unified or {})
             if diff:
                 research_lines.append("Research update: " + "; ".join(diff) + ".")
             else:
@@ -209,15 +235,14 @@ def handle_decision(
                     f"document(s) for {first_flag}."
                 )
 
-    stance = unified.get("decision_stance", "unknown")
-    if hasattr(stance, "value"):
-        stance = stance.value
-    pvs = unified.get("primary_value_source", "unknown")
-    flags = unified.get("trust_flags") or []
-    vp = unified.get("value_position") or {}
-    fair = vp.get("fair_value_base")
-    ask = vp.get("ask_price")
-    premium = vp.get("premium_discount_pct")
+    stance = view.decision_stance or "unknown"
+    pvs = view.primary_value_source or "unknown"
+    flags = list(view.trust_flags)
+    # Decision narration shows the all-in basis — what the buyer actually
+    # commits — not just the listing ask. Ask vs basis diverge whenever
+    # capex is applied (renovation override, capex lane, etc.).
+    basis = view.all_in_basis if view.all_in_basis is not None else view.ask_price
+    premium = view.basis_premium_pct
 
     if llm is None:
         money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
@@ -225,7 +250,8 @@ def handle_decision(
         flags_s = ", ".join(flags) if flags else "none"
         base = (
             f"Stance: {stance}. Primary value source: {pvs}. "
-            f"Fair value {money(fair)} vs ask {money(ask)} ({pct}). "
+            f"Fair value {money(view.fair_value_base)} vs all-in {money(basis)} "
+            f"(ask {money(view.ask_price)}, {pct}). "
             f"Trust flags: {flags_s}."
         )
         if research_lines:
@@ -235,16 +261,21 @@ def handle_decision(
     system = (
         "Compose a 3-5 sentence decision summary from the structured fields provided. "
         "Lead with the stance, cite the trust flags, quote the numbers verbatim — never invent. "
+        "Distinguish ask_price (listing) from all_in_basis (post-capex commitment) when they differ. "
         "If a research_update line is provided, include it verbatim."
     )
     user = (
         f"User question: {text}\n\n"
-        f"overrides_applied: {overrides or 'none'}\n"
+        f"overrides_applied: {dict(view.overrides_applied) or 'none'}\n"
         f"decision_stance: {stance}\n"
         f"primary_value_source: {pvs}\n"
-        f"value_position: {vp}\n"
+        f"ask_price: {view.ask_price}\n"
+        f"all_in_basis: {view.all_in_basis}\n"
+        f"fair_value_base: {view.fair_value_base}\n"
+        f"basis_premium_pct: {view.basis_premium_pct}\n"
+        f"ask_premium_pct: {view.ask_premium_pct}\n"
         f"trust_flags: {flags}\n"
-        f"what_must_be_true: {unified.get('what_must_be_true') or []}\n"
+        f"what_must_be_true: {list(view.what_must_be_true)}\n"
         f"research_update: {' | '.join(research_lines) or 'none'}"
     )
     return llm.complete(system=system, user=user, max_tokens=260).strip()
@@ -603,7 +634,7 @@ def handle_edge(
 
     chart_line = ""
     try:
-        unified = analyze_property(pid)
+        unified = analyze_property(pid, overrides=overrides)
         path = _render("value_opportunity", unified, session_id=session.session_id or "default")
         chart_line = f"\nChart: file://{path.resolve()}"
     except (ChartUnavailable, ToolUnavailable) as exc:
@@ -706,6 +737,99 @@ def handle_strategy(
     return narrative or (fit.get("best_path") or "No strategy fit cached.")
 
 
+# ---------- BROWSE ----------
+
+
+def handle_browse(
+    text: str, decision: RouterDecision, session: Session, llm: LLMClient | None
+) -> str:
+    """Quick first read on a property: summary + similar nearby listings.
+
+    Deliberately avoids the underwrite cascade. Browse is the default for
+    open-ended questions ("what do you think of X?") — decision unlocks only
+    on explicit buy/pass phrasing.
+    """
+    pid = _resolve_property_id(decision, session, text)
+    if pid is None:
+        return "Which property would you like a quick read on?"
+    try:
+        view = PropertyView.load(pid, depth="browse")
+    except ToolUnavailable as exc:
+        return f"I couldn't find summary data ({exc})."
+    session.current_property_id = pid
+
+    filters: dict = {}
+    if view.town:
+        filters["town"] = view.town
+    if view.state:
+        filters["state"] = view.state
+    if isinstance(view.beds, int):
+        filters["beds_min"] = max(1, view.beds - 1)
+        filters["beds_max"] = view.beds + 1
+    if isinstance(view.ask_price, (int, float)) and view.ask_price > 0:
+        filters["min_price"] = view.ask_price * 0.75
+        filters["max_price"] = view.ask_price * 1.25
+
+    try:
+        neighbors = search_listings(filters) if filters else []
+    except Exception:
+        neighbors = []
+    neighbors = [n for n in neighbors if n.get("property_id") != pid][:5]
+
+    money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
+
+    # Build the head conditionally — never emit "?" for missing fields. The
+    # prior behavior ("{beds or '?'}bd/{baths or '?'}ba") let the LLM parrot
+    # the literal ? as "bedroom count unspecified", which was the Bug A
+    # narration leak. Also: browse no longer surfaces fair value or pricing
+    # view — valuation math is the decision tier's job (intent-tier direction).
+    parts: list[str] = [view.address or view.pid]
+    if view.beds is not None and view.baths is not None:
+        parts.append(f"{view.beds}bd/{view.baths}ba")
+    if view.ask_price is not None:
+        parts.append(f"ask {money(view.ask_price)}")
+    head = " — ".join(parts)
+
+    if neighbors:
+        similar_lines = [f"Similar in {view.town or 'the area'}:"]
+        for n in neighbors:
+            bits: list[str] = []
+            if n.get("address"):
+                bits.append(n["address"])
+            if n.get("beds") is not None and n.get("baths") is not None:
+                bits.append(f"{n['beds']}bd/{n['baths']}ba")
+            if n.get("ask_price") is not None:
+                bits.append(money(n.get("ask_price")))
+            if isinstance(n.get("blocks_to_beach"), (int, float)):
+                bits.append(f"{n['blocks_to_beach']:.1f} blocks to beach")
+            tail = ", ".join(bits) if bits else ""
+            similar_lines.append(f"- {n['property_id']}" + (f" — {tail}" if tail else ""))
+        similar_block = "\n".join(similar_lines)
+    else:
+        similar_block = f"(no similar listings cached in {view.town or 'the area'} yet.)"
+
+    if llm is None:
+        return head + "\n\n" + similar_block + "\n\nWant a full underwrite?"
+
+    system = (
+        "You give a 2-3 sentence first read on a property. This is BROWSE mode — a quick "
+        "orientation, not an underwrite. Do NOT say 'buy', 'pass', 'stance', give a verdict, "
+        "or mention fair value, premium, or valuation. If Subject does not mention a fact "
+        "(beds, baths, price), DO NOT fill it in, guess, or say 'unspecified' — simply omit "
+        "that fact. Never invent numbers. Do not include the similar-listings list in your "
+        "output — that will be appended deterministically. End with exactly: 'Want a full underwrite?'"
+    )
+    user = (
+        f"User question: {text}\n\n"
+        f"Subject: {head}\n"
+        f"Has comparables cached: {bool(neighbors)}"
+    )
+    narrative = llm.complete(system=system, user=user, max_tokens=180).strip()
+    if not narrative:
+        narrative = head
+    return narrative + "\n\n" + similar_block
+
+
 # ---------- CHITCHAT ----------
 
 
@@ -728,6 +852,7 @@ DISPATCH_TABLE = {
     AnswerType.RISK: handle_risk,
     AnswerType.EDGE: handle_edge,
     AnswerType.STRATEGY: handle_strategy,
+    AnswerType.BROWSE: handle_browse,
     AnswerType.CHITCHAT: handle_chitchat,
 }
 
@@ -741,9 +866,46 @@ _OVERRIDE_AWARE_TYPES = {
 }
 
 
+_AFFIRMATIVE_FIRST_WORDS = frozenset(
+    {"yes", "yeah", "yep", "yup", "ok", "okay", "sure", "proceed", "underwrite"}
+)
+
+
+def _is_browse_affirmative(text: str) -> bool:
+    t = text.strip().lower()
+    if not t or "?" in t or len(t) > 60:
+        return False
+    first = re.split(r"[\s,.!]+", t, maxsplit=1)[0]
+    return first in _AFFIRMATIVE_FIRST_WORDS
+
+
+def _escalate_browse_affirmative(
+    text: str, decision: RouterDecision, session: Session
+) -> RouterDecision:
+    """'yes/ok' after a BROWSE turn promotes to DECISION on the pinned property.
+
+    Why: handle_browse ends with 'Want a full underwrite?' but nothing caught
+    the affirmative follow-up, so users got the same browse summary on repeat.
+    """
+    if not session.turns or session.turns[-1].answer_type != AnswerType.BROWSE.value:
+        return decision
+    if not session.current_property_id:
+        return decision
+    if not _is_browse_affirmative(text):
+        return decision
+    return RouterDecision(
+        answer_type=AnswerType.DECISION,
+        confidence=max(decision.confidence, 0.7),
+        target_refs=[session.current_property_id],
+        reason="browse-followup escalate",
+        llm_suggestion=decision.llm_suggestion,
+    )
+
+
 def dispatch(
     text: str, decision: RouterDecision, session: Session, llm: LLMClient | None
 ) -> str:
+    decision = _escalate_browse_affirmative(text, decision, session)
     handler = DISPATCH_TABLE[decision.answer_type]
     response = handler(text, decision, session, llm)
     # Echo what-if overrides at the top so the user sees the underwrite
@@ -753,7 +915,12 @@ def dispatch(
         if overrides:
             response = _override_summary(overrides) + "\n" + response
     try:
-        _log_untracked(text=text, decision=decision, response=response)
+        _log_untracked(
+            text=text,
+            decision=decision,
+            response=response,
+            extra={"llm_used": llm is not None},
+        )
     except Exception:
         pass  # never let telemetry break a turn
     return response

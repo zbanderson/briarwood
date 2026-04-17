@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 import json
 import hashlib
 import logging
@@ -26,6 +27,7 @@ ENDPOINT_PATHS = {
     "assessment_history": "/assessmenthistory/detail",
     "sale_detail": "/sale/detail",
     "sale_history_detail": "/saleshistory/detail",
+    "sale_history_snapshot": "/saleshistory/snapshot",
     "building_permits": "/buildingpermit/detail",
     "rental_avm": "/avm/rental/detail",
     "avm_detail": "/avm/detail",
@@ -43,6 +45,7 @@ ENDPOINT_TIERS = {
     "assessment_detail": "core",
     "sale_detail": "core",
     "sale_history_detail": "conditional",
+    "sale_history_snapshot": "conditional",
     "rental_avm": "conditional",
     "avm_detail": "core",
     "avm_history": "conditional",
@@ -62,6 +65,7 @@ ENDPOINT_FIELD_MAP = {
     "assessment_history": ("history",),
     "sale_detail": ("last_sale_date", "last_sale_price", "seller_name", "buyer_name"),
     "sale_history_detail": ("sale_count", "first_sale_date", "first_sale_price", "last_sale_date", "last_sale_price", "sale_history"),
+    "sale_history_snapshot": ("sale_count", "first_sale_date", "first_sale_price", "last_sale_date", "last_sale_price", "sale_history", "history_confidence"),
     "rental_avm": ("estimated_monthly_rent", "rent_low", "rent_high", "confidence_score"),
     "avm_detail": ("avm_value", "avm_low", "avm_high", "avm_confidence", "avm_fsd"),
     "avm_history": ("avm_history",),
@@ -125,6 +129,10 @@ class AttomClient:
         """Full transaction history for one property. Per ATTOM rep: use this
         for per-property trend/hold analysis instead of /sale/detail."""
         return self._fetch("sale_history_detail", canonical_key, params=params)
+
+    def sale_history_snapshot(self, canonical_key: str, **params: str) -> AttomResponse:
+        """Lighter-weight sales history lookup for snapshot comp history scans."""
+        return self._fetch("sale_history_snapshot", canonical_key, params=params)
 
     def building_permits(self, canonical_key: str, **params: str) -> AttomResponse:
         return self._fetch("building_permits", canonical_key, params=params)
@@ -220,6 +228,8 @@ class AttomClient:
             return _normalize_sale_detail(first_property)
         if endpoint == "sale_history_detail":
             return _normalize_sale_history_detail(first_property)
+        if endpoint == "sale_history_snapshot":
+            return _normalize_sale_history_snapshot(first_property, raw_payload)
         if endpoint == "building_permits":
             permits = first_property.get("buildingpermit", []) if isinstance(first_property, dict) else []
             return {"permit_count": len(permits), "permits": permits}
@@ -375,29 +385,23 @@ def _normalize_sale_history_detail(property_row: dict[str, Any]) -> dict[str, An
     """Normalize /saleshistory/detail — full transaction history for one property."""
     sale = property_row.get("sale", {}) if isinstance(property_row, dict) else {}
     rows = sale.get("saleshistory", []) if isinstance(sale, dict) else []
-    history: list[dict[str, Any]] = []
-    for row in rows if isinstance(rows, list) else []:
-        if not isinstance(row, dict):
-            continue
-        history.append({
-            "date": row.get("saledate") or row.get("recordingdate"),
-            "price": row.get("saleamt"),
-            "seller": row.get("seller"),
-            "buyer": row.get("buyer"),
-            "transaction_type": row.get("saletranstype"),
-            "deed_type": row.get("deedtype"),
-        })
-    history.sort(key=lambda r: r.get("date") or "", reverse=True)
-    last = history[0] if history else {}
-    first = history[-1] if history else {}
-    return {
-        "sale_count": len(history),
-        "first_sale_date": first.get("date"),
-        "first_sale_price": first.get("price"),
-        "last_sale_date": last.get("date"),
-        "last_sale_price": last.get("price"),
-        "sale_history": history,
-    }
+    history = _normalize_sales_history_rows(rows)
+    return _summarize_sales_history(history)
+
+
+def _normalize_sale_history_snapshot(
+    property_row: dict[str, Any],
+    raw_payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Normalize /saleshistory/snapshot — lighter-weight history surface."""
+    sale = property_row.get("sale", {}) if isinstance(property_row, dict) else {}
+    rows = sale.get("saleshistory", []) if isinstance(sale, dict) else []
+    if not rows and isinstance(raw_payload, dict):
+        rows = raw_payload.get("saleshistory") or raw_payload.get("salesHistory") or []
+    history = _normalize_sales_history_rows(rows)
+    summary = _summarize_sales_history(history)
+    summary["source_surface"] = "snapshot"
+    return summary
 
 
 def _normalize_rental_avm(property_row: dict[str, Any]) -> dict[str, Any]:
@@ -472,3 +476,174 @@ def _normalize_preforeclosure(property_row: dict[str, Any], raw_payload: dict[st
 def _cache_key(*, endpoint: str, canonical_key: str, params: dict[str, str]) -> str:
     raw = json.dumps({"endpoint": endpoint, "canonical_key": canonical_key, "params": params}, sort_keys=True)
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def _normalize_sales_history_rows(rows: Any) -> list[dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        transaction_date = row.get("saleTransDate") or row.get("saledate") or row.get("saleTransdate")
+        recording_date = row.get("saleRecDate") or row.get("recordingdate")
+        search_date = row.get("saleSearchDate") or row.get("salesearchdate")
+        price = _as_number(row.get("saleAmt") or row.get("saleamt"))
+        price_per_sqft = _as_number(row.get("pricePerSizeUnit") or row.get("pricepersizeunit"))
+        history.append(
+            {
+                "date": transaction_date or recording_date or search_date,
+                "transaction_date": transaction_date,
+                "recording_date": recording_date,
+                "search_date": search_date,
+                "price": price,
+                "seller": row.get("seller"),
+                "buyer": row.get("buyer"),
+                "transaction_type": row.get("saleTransType") or row.get("saletranstype"),
+                "deed_type": row.get("saleDocType") or row.get("deedtype"),
+                "document_number": row.get("saleDocNum") or row.get("documentnumber"),
+                "disclosure_type": row.get("saleDisclosureType") or row.get("saledisclosuretype"),
+                "sale_code": row.get("saleCode") or row.get("salecode"),
+                "price_per_sqft": price_per_sqft,
+                "price_per_bed": _as_number(row.get("pricePerBed") or row.get("priceperbed")),
+                "property_quality": row.get("quality"),
+                "story_description": row.get("storyDesc") or row.get("storydesc"),
+                "units_count": _as_number(row.get("unitsCount") or row.get("unitscount")),
+            }
+        )
+    history.sort(key=lambda item: item.get("date") or "", reverse=True)
+    return history
+
+
+def _summarize_sales_history(history: list[dict[str, Any]]) -> dict[str, Any]:
+    last = history[0] if history else {}
+    first = history[-1] if history else {}
+    repeat_sale_pairs = _build_repeat_sale_pairs(history)
+    flags: list[str] = []
+    complete_events = 0
+    for row in history:
+        if row.get("price") and row.get("date"):
+            complete_events += 1
+        if row.get("disclosure_type") in (None, "", "unknown"):
+            flags.append("disclosure_gap")
+        if not row.get("price_per_sqft"):
+            flags.append("missing_price_per_sqft")
+    flags = sorted(set(flags))
+    confidence_score = _score_sales_history_confidence(
+        event_count=len(history),
+        complete_events=complete_events,
+        repeat_sale_pairs=len(repeat_sale_pairs),
+        flags=flags,
+    )
+    return {
+        "sale_count": len(history),
+        "complete_event_count": complete_events,
+        "first_sale_date": first.get("date"),
+        "first_sale_price": first.get("price"),
+        "last_sale_date": last.get("date"),
+        "last_sale_price": last.get("price"),
+        "sale_history": history,
+        "repeat_sale_pairs": repeat_sale_pairs,
+        "history_span_years": _year_delta(first.get("date"), last.get("date")),
+        "most_recent_hold_years": _most_recent_hold_years(history),
+        "history_flags": flags,
+        "history_confidence": confidence_score,
+        "history_confidence_label": _history_confidence_label(confidence_score),
+    }
+
+
+def _build_repeat_sale_pairs(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    pairs: list[dict[str, Any]] = []
+    ordered = list(reversed(history))
+    for previous, current in zip(ordered, ordered[1:]):
+        from_price = _as_number(previous.get("price"))
+        to_price = _as_number(current.get("price"))
+        years_held = _year_delta(previous.get("date"), current.get("date"))
+        price_change = None
+        price_change_pct = None
+        if from_price is not None and to_price is not None:
+            price_change = round(to_price - from_price, 2)
+            if from_price:
+                price_change_pct = round((to_price - from_price) / from_price, 4)
+        pairs.append(
+            {
+                "from_date": previous.get("date"),
+                "to_date": current.get("date"),
+                "from_price": from_price,
+                "to_price": to_price,
+                "price_change": price_change,
+                "price_change_pct": price_change_pct,
+                "years_held": years_held,
+            }
+        )
+    return pairs
+
+
+def _score_sales_history_confidence(
+    *,
+    event_count: int,
+    complete_events: int,
+    repeat_sale_pairs: int,
+    flags: list[str],
+) -> float:
+    if event_count <= 0:
+        return 0.15
+    score = 0.35
+    score += min(event_count, 4) * 0.10
+    score += min(complete_events, 4) * 0.08
+    score += min(repeat_sale_pairs, 3) * 0.05
+    if "disclosure_gap" in flags:
+        score -= 0.08
+    if "missing_price_per_sqft" in flags:
+        score -= 0.05
+    return round(max(0.15, min(score, 0.95)), 3)
+
+
+def _history_confidence_label(score: float) -> str:
+    if score >= 0.8:
+        return "high"
+    if score >= 0.6:
+        return "moderate"
+    if score >= 0.35:
+        return "low"
+    return "thin"
+
+
+def _as_number(value: Any) -> float | int | None:
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number.is_integer():
+        return int(number)
+    return number
+
+
+def _year_delta(older: Any, newer: Any) -> float | None:
+    older_dt = _parse_attom_date(older)
+    newer_dt = _parse_attom_date(newer)
+    if older_dt is None or newer_dt is None:
+        return None
+    return round((newer_dt - older_dt).days / 365.25, 2)
+
+
+def _most_recent_hold_years(history: list[dict[str, Any]]) -> float | None:
+    if len(history) < 2:
+        return None
+    newest = history[0]
+    prior = history[1]
+    return _year_delta(prior.get("date"), newest.get("date"))
+
+
+def _parse_attom_date(value: Any) -> date | None:
+    if not value:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(text[:10], fmt).date()
+        except ValueError:
+            continue
+    return None

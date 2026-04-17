@@ -182,6 +182,7 @@ class BullBaseBearModule:
             town_confidence=outlook_result.confidence,
             risk_confidence=risk_result.confidence,
             scarcity_confidence=scarcity_result.confidence,
+            scenario_reordered=scenario_reordered,
             s=s,
         )
 
@@ -368,6 +369,7 @@ class BullBaseBearModule:
         town_confidence: float,
         risk_confidence: float,
         scarcity_confidence: float,
+        scenario_reordered: bool = False,
         s: BullBaseBearSettings,
     ) -> tuple[float, list[str]]:
         confidence = s.bbb_confidence_base
@@ -397,7 +399,24 @@ class BullBaseBearModule:
             confidence -= s.bbb_confidence_deduction_scarcity_weak
             notes.append("Scarcity confidence is below 0.60.")
 
+        if scenario_reordered:
+            confidence -= s.bbb_confidence_deduction_reordered
+            notes.append("Scenario values had to be reordered to enforce bull ≥ base ≥ bear — inputs are inconsistent.")
+
+        # High-quality credit: all anchor inputs strong AND history is long.
+        anchors_strong = (
+            bcv_confidence >= 0.85
+            and history_points_count >= 24
+            and town_confidence >= 0.75
+            and risk_confidence >= 0.75
+            and not scenario_reordered
+        )
+        if anchors_strong:
+            confidence += s.bbb_confidence_credit_high_quality
+            notes.append("All anchor inputs strong — confidence credit applied.")
+
         confidence = max(confidence, s.bbb_confidence_floor)
+        confidence = min(confidence, 1.0)
         return round(confidence, 2), notes
 
     def _annualize(self, cumulative_change: float | None, *, years: int) -> float | None:

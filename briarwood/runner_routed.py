@@ -64,6 +64,27 @@ ROUTING_MODULE_MAP: dict[ModuleName, tuple[str, ...]] = {
 }
 
 
+def _extract_model_confidences(
+    module_outputs: dict[str, Any],
+) -> dict[str, float | None]:
+    """Collect per-module confidence values from raw module outputs.
+
+    Preserves ``None`` explicitly so downstream eval can distinguish between
+    a module that never ran and one that ran but declined to emit confidence.
+    """
+
+    confidences: dict[str, float | None] = {}
+    for name, payload in (module_outputs or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        conf = payload.get("confidence")
+        if isinstance(conf, (int, float)):
+            confidences[name] = float(conf)
+        else:
+            confidences[name] = None
+    return confidences
+
+
 def _routing_user_input_from_property(
     property_input: PropertyInput,
     *,
@@ -600,6 +621,7 @@ def run_routed_analysis_for_property(
     contribution_map = compute_contribution_map_from_outputs(
         module_outputs, weights=load_model_weights()
     )
+    model_confidences = _extract_model_confidences(module_outputs)
 
     append_intelligence_capture(
         build_routed_capture_record(
@@ -612,6 +634,7 @@ def run_routed_analysis_for_property(
             was_conditional_answer=False,
             session_id=session_id,
             contribution_map=contribution_map,
+            model_confidences=model_confidences,
             explicit_signal=None,
             outcome=None,
         )

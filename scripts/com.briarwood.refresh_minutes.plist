@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent for Briarwood's minutes-refresh runner.
+
+  Install (once):
+      cp scripts/com.briarwood.refresh_minutes.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/com.briarwood.refresh_minutes.plist
+
+  Uninstall:
+      launchctl unload ~/Library/LaunchAgents/com.briarwood.refresh_minutes.plist
+      rm ~/Library/LaunchAgents/com.briarwood.refresh_minutes.plist
+
+  The agent runs daily at 03:15 local time. Most town feeds are skipped
+  (stale_after_days hasn't elapsed), so the daily cost is a few HTTP HEADs
+  and the occasional LLM call. Per-feed TTLs in minutes_registry.py are the
+  right place to tune responsiveness per town.
+
+  Adjust the WorkingDirectory and ProgramArguments paths if your checkout
+  lives somewhere other than /Users/zachanderson/projects/briarwood.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.briarwood.refresh_minutes</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/zachanderson/projects/briarwood</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/zachanderson/projects/briarwood/venv/bin/python</string>
+        <string>-m</string>
+        <string>scripts.refresh_minutes</string>
+        <string>--polite-delay</string>
+        <string>1.5</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>15</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/zachanderson/projects/briarwood/logs/refresh_minutes.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/zachanderson/projects/briarwood/logs/refresh_minutes.err</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

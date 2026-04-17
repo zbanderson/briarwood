@@ -184,14 +184,20 @@ class BullBaseBearSettings:
     bbb_stress_drawdown_flood_high: float = 0.35     # -35% for high flood exposure
 
     # --- Confidence deductions ---
-    bbb_confidence_base: float = 0.80
-    bbb_confidence_deduction_bcv_low: float = 0.15      # BCV confidence < 0.60
-    bbb_confidence_deduction_history_short: float = 0.10  # < 2 years of market history
-    bbb_confidence_deduction_history_very_short: float = 0.20  # < 1 year of market history
-    bbb_confidence_deduction_town_weak: float = 0.05    # town score confidence < 0.70
-    bbb_confidence_deduction_risk_weak: float = 0.05    # risk confidence < 0.70
+    # Recalibration (2026-04-17): perf log showed mean_conf 0.55 with 0.45
+    # calibration miss — the distribution was too flat and too optimistic.
+    # Lowered base and deepened the major deductions so weak-data sessions
+    # land near the floor and strong-data sessions can clear 0.70.
+    bbb_confidence_base: float = 0.70
+    bbb_confidence_deduction_bcv_low: float = 0.22      # BCV confidence < 0.60
+    bbb_confidence_deduction_history_short: float = 0.12  # < 2 years of market history
+    bbb_confidence_deduction_history_very_short: float = 0.25  # < 1 year of market history
+    bbb_confidence_deduction_town_weak: float = 0.08    # town score confidence < 0.70
+    bbb_confidence_deduction_risk_weak: float = 0.08    # risk confidence < 0.70
     bbb_confidence_deduction_scarcity_weak: float = 0.05  # scarcity confidence < 0.60
-    bbb_confidence_floor: float = 0.35
+    bbb_confidence_deduction_reordered: float = 0.08    # scenario ordering had to be repaired
+    bbb_confidence_credit_high_quality: float = 0.07    # all anchor inputs strong (see _compute_confidence)
+    bbb_confidence_floor: float = 0.30
 
 
 @dataclass(slots=True)

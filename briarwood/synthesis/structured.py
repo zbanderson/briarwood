@@ -211,22 +211,37 @@ def compute_value_position(
     outputs: dict[str, dict[str, Any]],
     bridges: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    """Build the value_position dict {fair_value_base, ask_price, premium_discount_pct}."""
+    """Build the value_position dict.
+
+    Invariant: ``ask_price`` is always the listing ask (a listing fact). The
+    old contract silently aliased ``ask_price = all_in_basis`` which made the
+    same nominal field mean different things in different handlers. The two
+    are now distinct:
+
+    - ``ask_price``         = listing ask (from valuation.listing_ask_price)
+    - ``all_in_basis``      = purchase_price + capex
+    - ``ask_premium_pct``   = (all-in basis, actually) vs fair; legacy alias for ``premium_discount_pct``
+    - ``basis_premium_pct`` = all_in_basis vs fair value
+    """
 
     val_metrics = _metrics(outputs.get("valuation"))
     fair_value = _float(val_metrics.get("briarwood_current_value"))
-    ask_price = _float(val_metrics.get("all_in_basis"))
+    ask_price = _float(val_metrics.get("listing_ask_price"))
+    all_in_basis = _float(val_metrics.get("all_in_basis"))
     mispricing_pct = _float(val_metrics.get("mispricing_pct"))
+    basis_mispricing_pct = _float(val_metrics.get("basis_mispricing_pct"))
 
-    # mispricing_pct in our valuation metric is (fair - ask) / ask (i.e. positive =
-    # undervalued). We surface the opposite sign as premium: positive = above fair.
-    premium_discount_pct = -mispricing_pct if mispricing_pct is not None else None
+    ask_premium_pct = -mispricing_pct if mispricing_pct is not None else None
+    basis_premium_pct = -basis_mispricing_pct if basis_mispricing_pct is not None else None
 
     return {
         "fair_value_base": fair_value,
         "ask_price": ask_price,
+        "all_in_basis": all_in_basis,
+        "ask_premium_pct": round(ask_premium_pct, 4) if ask_premium_pct is not None else None,
+        "basis_premium_pct": round(basis_premium_pct, 4) if basis_premium_pct is not None else None,
         "premium_discount_pct": (
-            round(premium_discount_pct, 4) if premium_discount_pct is not None else None
+            round(basis_premium_pct, 4) if basis_premium_pct is not None else None
         ),
         "value_low": _float(val_metrics.get("value_low")),
         "value_high": _float(val_metrics.get("value_high")),

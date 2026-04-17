@@ -23,6 +23,11 @@ from briarwood.local_intelligence.sources.minutes_feed_adapter import (
     MinutesFeedConfig,
 )
 from briarwood.local_intelligence.sources.web_search_adapter import WebSearchAdapter
+from briarwood.local_intelligence.sources.web_search_adapter import (
+    TavilyCrawlOptions,
+    TavilyExtractOptions,
+    WebSearchOptions,
+)
 
 
 def _fake_html(body: str) -> bytes:
@@ -111,6 +116,99 @@ class WebSearchAdapterTests(unittest.TestCase):
             max_results=2,
         )
         self.assertEqual(len(adapter.fetch(town="T", state="NJ")), 2)
+
+    def test_tavily_search_options_and_extract_are_added_to_metadata(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_search(query: str, max_results: int, options: WebSearchOptions):
+            captured["query"] = query
+            captured["max_results"] = max_results
+            captured["options"] = options
+            return (
+                [
+                    {
+                        "title": "Planning Board Minutes",
+                        "url": "https://example.gov/minutes",
+                        "snippet": "search snippet",
+                        "published_at": "2026-01-20",
+                        "score": 0.92,
+                    }
+                ],
+                {"credits": 1},
+            )
+
+        def fake_extract(api_key, urls, timeout, options, project_id):
+            captured["extract_api_key"] = api_key
+            captured["extract_urls"] = urls
+            captured["extract_options"] = options
+            captured["project_id"] = project_id
+            return {
+                "results": [
+                    {
+                        "url": urls[0],
+                        "raw_content": "# Minutes\nTown council planning discussion",
+                    }
+                ],
+                "usage": {"credits": 2},
+            }
+
+        adapter = WebSearchAdapter(
+            provider="tavily",
+            api_key="test",
+            search_fn=fake_search,
+            extract_fn=fake_extract,
+            max_results=2,
+            search_options=WebSearchOptions(
+                search_depth="advanced",
+                topic="news",
+                include_domains=["example.gov"],
+                start_date="2026-01-01",
+                end_date="2026-01-31",
+                include_raw_content=True,
+                include_usage=True,
+            ),
+            extract_options=TavilyExtractOptions(
+                enabled=True,
+                extract_depth="advanced",
+                include_usage=True,
+            ),
+            project_id="local-intel",
+        )
+        docs = adapter.fetch(town="Belmar", state="NJ", focus=["development"])
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0]["cleaned_text"], "# Minutes Town council planning discussion")
+        self.assertEqual(docs[0]["metadata"]["usage"]["credits"], 3)
+        self.assertEqual(docs[0]["metadata"]["search_options"]["search_depth"], "advanced")
+        self.assertTrue(docs[0]["metadata"]["extract_enabled"])
+        self.assertEqual(captured["project_id"], "local-intel")
+
+    def test_tavily_crawl_uses_option_payload(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_crawl(api_key, url, timeout, options, project_id):
+            captured["api_key"] = api_key
+            captured["url"] = url
+            captured["options"] = options
+            captured["project_id"] = project_id
+            return {"results": [{"url": "https://example.gov/docs/1", "raw_content": "Minutes"}]}
+
+        adapter = WebSearchAdapter(
+            provider="tavily",
+            api_key="test",
+            crawl_fn=fake_crawl,
+            project_id="minutes-refresh",
+        )
+        results = adapter.crawl(
+            url="https://example.gov",
+            options=TavilyCrawlOptions(
+                max_depth=2,
+                instructions="Find planning board and ordinance pages",
+                select_paths=["/docs/.*"],
+            ),
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(captured["project_id"], "minutes-refresh")
+        self.assertEqual(captured["options"].max_depth, 2)
 
 
 class MinutesFeedAdapterTests(unittest.TestCase):

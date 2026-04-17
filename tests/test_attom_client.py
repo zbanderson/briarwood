@@ -73,3 +73,48 @@ class AttomClientTests(unittest.TestCase):
         self.assertIn("housing_median_rent", demographics.normalized_payload)
         self.assertTrue(permits.ok)
         self.assertIn("permit_count", permits.normalized_payload)
+
+    def test_attom_client_normalizes_sales_history_detail(self) -> None:
+        fixture_dir = Path(__file__).resolve().parent / "fixtures" / "attom"
+        payload = json.loads((fixture_dir / "sales_history_detail.json").read_text())
+
+        def transport(url, params, headers, timeout):
+            return payload
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            client = AttomClient(api_key="test-key", cache_dir=tmpdir, transport=transport)
+            response = client.sale_history_detail(
+                "belmar-1223-briarwood",
+                address1="1223 Briarwood Rd",
+                address2="Belmar, NJ",
+            )
+
+        self.assertTrue(response.ok)
+        self.assertEqual(response.normalized_payload["sale_count"], 3)
+        self.assertEqual(response.normalized_payload["last_sale_price"], 815000)
+        self.assertEqual(len(response.normalized_payload["repeat_sale_pairs"]), 2)
+        self.assertGreaterEqual(response.normalized_payload["history_confidence"], 0.75)
+        self.assertEqual(
+            response.normalized_payload["sale_history"][0]["document_number"],
+            "2025001234",
+        )
+
+    def test_attom_client_normalizes_sales_history_snapshot(self) -> None:
+        fixture_dir = Path(__file__).resolve().parent / "fixtures" / "attom"
+        payload = json.loads((fixture_dir / "sales_history_snapshot.json").read_text())
+
+        def transport(url, params, headers, timeout):
+            return payload
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            client = AttomClient(api_key="test-key", cache_dir=tmpdir, transport=transport)
+            response = client.sale_history_snapshot(
+                "belmar-1223-briarwood",
+                address1="1223 Briarwood Rd",
+                address2="Belmar, NJ",
+            )
+
+        self.assertTrue(response.ok)
+        self.assertEqual(response.normalized_payload["source_surface"], "snapshot")
+        self.assertEqual(response.normalized_payload["first_sale_price"], 560000)
+        self.assertEqual(response.normalized_payload["last_sale_price"], 780000)

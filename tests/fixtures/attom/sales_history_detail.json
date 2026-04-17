@@ -1,0 +1,61 @@
+{
+  "property": [
+    {
+      "sale": {
+        "saleshistory": [
+          {
+            "saleSearchDate": "2025-02-01",
+            "saleTransDate": "2025-01-15",
+            "saleRecDate": "2025-01-22",
+            "saleAmt": 815000,
+            "saleDisclosureType": 0,
+            "saleDocType": "WD",
+            "saleTransType": "TRANSFER",
+            "saleDocNum": "2025001234",
+            "pricePerSizeUnit": 512.4,
+            "pricePerBed": 203750,
+            "seller": "Seller A",
+            "buyer": "Buyer A",
+            "quality": "C3",
+            "storyDesc": "TWO STORY",
+            "unitsCount": 1
+          },
+          {
+            "saleSearchDate": "2019-08-01",
+            "saleTransDate": "2019-07-10",
+            "saleRecDate": "2019-07-16",
+            "saleAmt": 620000,
+            "saleDisclosureType": 0,
+            "saleDocType": "WD",
+            "saleTransType": "TRANSFER",
+            "saleDocNum": "2019009876",
+            "pricePerSizeUnit": 389.9,
+            "pricePerBed": 155000,
+            "seller": "Seller B",
+            "buyer": "Buyer B",
+            "quality": "C3",
+            "storyDesc": "TWO STORY",
+            "unitsCount": 1
+          },
+          {
+            "saleSearchDate": "2013-05-01",
+            "saleTransDate": "2013-04-15",
+            "saleRecDate": "2013-04-20",
+            "saleAmt": 455000,
+            "saleDisclosureType": 0,
+            "saleDocType": "WD",
+            "saleTransType": "TRANSFER",
+            "saleDocNum": "2013004321",
+            "pricePerSizeUnit": 286.2,
+            "pricePerBed": 113750,
+            "seller": "Seller C",
+            "buyer": "Buyer C",
+            "quality": "C3",
+            "storyDesc": "TWO STORY",
+            "unitsCount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

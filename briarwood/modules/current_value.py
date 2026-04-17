@@ -169,6 +169,14 @@ class CurrentValueModule:
                 f"{abs(output.mispricing_pct):.1%}. Confidence is {output.confidence:.0%}."
             )
 
+        # Derived: premium of all-in basis over fair value. Distinct from
+        # mispricing_pct (which is vs listing ask) so synthesis can surface both.
+        basis_mispricing_pct: float | None
+        if output.all_in_basis and output.all_in_basis > 0:
+            basis_mispricing_pct = (output.briarwood_current_value - output.all_in_basis) / output.all_in_basis
+        else:
+            basis_mispricing_pct = None
+
         return ModuleResult(
             module_name=self.name,
             metrics={
@@ -177,6 +185,8 @@ class CurrentValueModule:
                 "value_high": round(output.value_high, 2),
                 "mispricing_amount": round(output.mispricing_amount, 2),
                 "mispricing_pct": round(output.mispricing_pct, 4),
+                "basis_mispricing_pct": round(basis_mispricing_pct, 4) if basis_mispricing_pct is not None else None,
+                "listing_ask_price": round(float(property_input.purchase_price), 2) if property_input.purchase_price is not None else None,
                 "pricing_view": output.pricing_view,
                 "all_in_basis": round(output.all_in_basis, 2) if output.all_in_basis is not None else None,
                 "capex_basis_used": round(output.capex_basis_used, 2) if output.capex_basis_used is not None else None,

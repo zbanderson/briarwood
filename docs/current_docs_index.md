@@ -8,6 +8,8 @@ Use this file as the starting point for product and implementation work.
   Repo rules for routing, scoped execution, UI direction, and agent behavior
 - `docs/scoped_execution_support.md`
   Current V2 scoped execution coverage and fallback status
+- `docs/operational_model_sweep.md`
+  Operational review entrypoint for routed/scoped model and data-source audits
 - `unified_intelligence.md`
   Unified Intelligence behavior and output contract
 - `briarwood/routing_schema.py`

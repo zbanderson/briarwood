@@ -20,6 +20,13 @@ def infer_capex_amount(property_input: Any) -> tuple[float | None, str]:
     if explicit_budget is not None:
         return float(explicit_budget), "user_budget"
 
+    # User-declared renovation plan — "what if we renovate" — applies a real
+    # capex dollar amount on top of the basis. Flat prototype heuristic;
+    # scaling by sqft/beds is a follow-up.
+    mode = (getattr(property_input, "renovation_mode", None) or "").strip().lower()
+    if mode == "will_renovate":
+        return 150_000.0, "user_renovation_plan"
+
     lane = (getattr(property_input, "capex_lane", None) or "").strip().lower()
     if lane == "light":
         return 25000.0, "inferred_lane"

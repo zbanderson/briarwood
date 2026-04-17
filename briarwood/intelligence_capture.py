@@ -34,14 +34,15 @@ def build_routed_capture_record(
     was_conditional_answer: bool = False,
     session_id: str | None = None,
     contribution_map: dict[str, float] | None = None,
+    model_confidences: dict[str, float | None] | None = None,
     explicit_signal: str | None = None,
     outcome: str | None = None,
 ) -> dict[str, Any]:
     """Build a reviewable routed interaction payload for product learning.
 
     New pipeline fields (``session_id``, ``contribution_map``,
-    ``explicit_signal``, ``outcome``) default to null for records emitted by
-    legacy callers — readers tolerate missing keys.
+    ``model_confidences``, ``explicit_signal``, ``outcome``) default to null
+    for records emitted by legacy callers — readers tolerate missing keys.
     """
 
     parser_output = dict(routing_decision.get("parser_output") or {})
@@ -72,6 +73,7 @@ def build_routed_capture_record(
         "tags": tags,
         "session_id": session_id,
         "contribution_map": dict(contribution_map) if contribution_map else None,
+        "model_confidences": dict(model_confidences) if model_confidences else None,
         "explicit_signal": explicit_signal,
         "outcome": outcome,
     }

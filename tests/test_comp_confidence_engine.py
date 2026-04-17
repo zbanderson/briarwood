@@ -18,6 +18,7 @@ from briarwood.comp_confidence_engine import (
     _price_agreement_score,
     _score_label,
     _tier_distribution_score,
+    SalesHistoryEvidence,
     evaluate_comp_confidence,
 )
 from briarwood.feature_adjustment_engine import (
@@ -258,6 +259,51 @@ class TestBaseShellScoring(unittest.TestCase):
         result = evaluate_comp_confidence(comp_output=output, base_comp_selection=sel)
         base = result.layers["base_shell"]
         self.assertLess(base.score, 0.55)
+
+
+class TestSalesHistoryConfidence(unittest.TestCase):
+    def test_sales_history_evidence_is_reported_when_present(self) -> None:
+        output = _comp_output()
+        history = SalesHistoryEvidence(
+            event_count=3,
+            complete_event_count=3,
+            repeat_sale_pairs=2,
+            history_span_years=11.5,
+            most_recent_hold_years=5.5,
+            history_confidence=0.82,
+            history_confidence_label="strong",
+            history_flags=[],
+        )
+
+        result = evaluate_comp_confidence(
+            comp_output=output,
+            sales_history_evidence=history,
+        )
+
+        self.assertIsNotNone(result.history_confidence)
+        self.assertEqual(result.history_confidence.label, "strong")
+        self.assertIn("sales history evidence is strong", result.narrative)
+
+    def test_thin_sales_history_adds_actionable_gap(self) -> None:
+        output = _comp_output()
+        history = SalesHistoryEvidence(
+            event_count=1,
+            complete_event_count=0,
+            repeat_sale_pairs=0,
+            history_span_years=None,
+            history_confidence=0.28,
+            history_confidence_label="thin",
+            history_flags=["disclosure_gap", "missing_price_per_sqft"],
+        )
+
+        result = evaluate_comp_confidence(
+            comp_output=output,
+            sales_history_evidence=history,
+        )
+
+        self.assertIsNotNone(result.history_confidence)
+        self.assertLess(result.history_confidence.score, 0.6)
+        self.assertTrue(any(g.layer == "sales_history" for g in result.actionable_gaps))
         self.assertIn(base.label, ("weak", "unsupported"))
 
     def test_moderate_support_is_middle(self):

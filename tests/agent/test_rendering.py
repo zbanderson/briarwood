@@ -45,6 +45,11 @@ class RenderChartTests(unittest.TestCase):
         ):
             path = render_chart("verdict_gauge", _UNIFIED, session_id="t")
             self.assertTrue(path.exists())
+            body = path.read_text()
+            # Stance label (verdict) + premium datapoint must both render —
+            # "file exists" is too weak; an empty figure would pass that.
+            self.assertIn("buy_if_price_improves", body)
+            self.assertIn('"value":8', body)  # premium_discount_pct 0.08 -> 8%
 
     def test_unknown_kind_raises(self) -> None:
         with self.assertRaises(ChartUnavailable):

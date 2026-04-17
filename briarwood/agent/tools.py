@@ -432,9 +432,9 @@ def render_chart(
 
 
 TOOL_ALLOWED_FOR: dict[str, set[AnswerType]] = {
-    "get_property_summary": {AnswerType.LOOKUP, AnswerType.SEARCH, AnswerType.CHITCHAT},
+    "get_property_summary": {AnswerType.LOOKUP, AnswerType.SEARCH, AnswerType.BROWSE, AnswerType.CHITCHAT},
     "analyze_property": {AnswerType.DECISION, AnswerType.COMPARISON, AnswerType.VISUALIZE},
-    "search_listings": {AnswerType.SEARCH},
+    "search_listings": {AnswerType.SEARCH, AnswerType.BROWSE},
     "underwrite_matches": {AnswerType.SEARCH, AnswerType.COMPARISON},
     "research_town": {AnswerType.RESEARCH, AnswerType.DECISION},
     "render_chart": {AnswerType.VISUALIZE},

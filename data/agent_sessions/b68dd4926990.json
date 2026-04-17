@@ -1,0 +1,11 @@
+{
+  "session_id": "b68dd4926990",
+  "current_property_id": "526-w-end-ave-avon-by-the-sea-nj",
+  "turns": [
+    {
+      "user": "what do you think of 526 w end ave in avon by the sea",
+      "assistant": "**Property Card:** 526 W End Ave, Avon By The Sea NJ \u2014 3 beds, 2 baths, 1,400 sqft \u2014 listed at $1,490,000.\n\nIf you're looking for something nearby, check out 119 4th Ave, also in Avon By The Sea, which has 3 beds, 1.5 baths, and is priced at $1,699,000, but it's about 5.5 blocks from the beach. Alternatively, in Belmar, there\u2019s 1302 L Street with 3 beds and 2 baths at $850,000, though it's a bit further from the coast.\n\nAvon By The Sea is a charming seaside town known for its beautiful beaches and close-knit community vibe. Would you like to dive deeper into comparable properties or explore potential renovation scenarios?",
+      "answer_type": "orient"
+    }
+  ]
+}

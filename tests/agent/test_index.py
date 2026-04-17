@@ -108,6 +108,13 @@ class SearchTests(unittest.TestCase):
         hits = search({"town": "BELMAR", "state": "nj"}, idx=idx)
         self.assertEqual({h.property_id for h in hits}, {"b", "c"})
 
+    def test_town_filter_normalizes_hyphens_and_whitespace(self) -> None:
+        """'Avon By The Sea', 'avon by the sea', and 'Avon-By-The-Sea' match."""
+        idx = _sample_index()
+        for variant in ("Avon By The Sea", "avon by the sea", "Avon-By-The-Sea"):
+            hits = search({"town": variant}, idx=idx)
+            self.assertEqual({h.property_id for h in hits}, {"a"}, f"failed: {variant!r}")
+
 
 if __name__ == "__main__":
     unittest.main()

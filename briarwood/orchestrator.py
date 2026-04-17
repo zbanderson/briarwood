@@ -9,6 +9,7 @@ from typing import Any, Protocol
 
 from briarwood.execution.context import ExecutionContext
 from briarwood.execution.executor import execute_plan
+from briarwood.execution.macro_context import resolve_macro_context
 from briarwood.execution.planner import ExecutionPlan, build_execution_plan
 from briarwood.execution.registry import ModuleSpec, build_module_registry
 from briarwood.interactions import InteractionTrace, run_all_bridges
@@ -208,6 +209,10 @@ def _build_execution_context(
     """Build the shared scoped execution context for V2 module execution."""
 
     assumptions = _extract_execution_assumptions(property_data, parser_output)
+    facts = dict(property_data.get("facts") or {})
+    county = facts.get("county") or property_summary.get("county")
+    state = facts.get("state") or property_summary.get("state")
+    macro_context = resolve_macro_context(county=county, state=state) or {}
     return ExecutionContext(
         property_id=str(property_summary.get("property_id") or property_data.get("property_id") or ""),
         property_data=dict(property_data),
@@ -216,6 +221,7 @@ def _build_execution_context(
         assumptions=assumptions,
         market_context=dict(property_data.get("market_signals") or {}),
         comp_context=dict(property_data.get("comp_context") or {}),
+        macro_context=macro_context,
     )
 
 

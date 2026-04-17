@@ -92,6 +92,29 @@ class ConfidenceGap:
 
 
 @dataclass(slots=True)
+class SalesHistoryEvidence:
+    """Structured sales-history quality signal for subject or comp history."""
+
+    event_count: int = 0
+    complete_event_count: int = 0
+    repeat_sale_pairs: int = 0
+    history_span_years: float | None = None
+    most_recent_hold_years: float | None = None
+    history_confidence: float | None = None
+    history_confidence_label: str | None = None
+    history_flags: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class HistoryConfidenceAssessment:
+    """Explicit history-confidence result kept separate from value math."""
+
+    score: float
+    label: str
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class CompConfidenceResult:
     """Complete output of the Comp Confidence Engine."""
     composite_score: float
@@ -100,6 +123,7 @@ class CompConfidenceResult:
     weakest_layer: str
     actionable_gaps: list[ConfidenceGap]
     narrative: str
+    history_confidence: HistoryConfidenceAssessment | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -114,6 +138,7 @@ def evaluate_comp_confidence(
     feature_result: FeatureAdjustmentResult | None = None,
     location_result: MicroLocationResult | None = None,
     transfer_result: TransferResult | None = None,
+    sales_history_evidence: SalesHistoryEvidence | None = None,
 ) -> CompConfidenceResult:
     """Evaluate confidence across the entire comp valuation stack.
 
@@ -147,8 +172,16 @@ def evaluate_comp_confidence(
 
     composite, weakest = _compute_composite(layers, base_shell_value)
     label = _composite_label(composite)
-    gaps = _find_gaps(layers, feature_result, location_result, transfer_result)
-    narrative = _build_narrative(layers, composite, label, weakest)
+    history_confidence = _score_sales_history(sales_history_evidence)
+    gaps = _find_gaps(
+        layers,
+        feature_result,
+        location_result,
+        transfer_result,
+        history_confidence,
+    )
+    narrative = _build_narrative(layers, composite, label, weakest, history_confidence)
+    notes = list(history_confidence.notes) if history_confidence is not None else []
 
     return CompConfidenceResult(
         composite_score=composite,
@@ -157,6 +190,8 @@ def evaluate_comp_confidence(
         weakest_layer=weakest,
         actionable_gaps=gaps[:5],
         narrative=narrative,
+        history_confidence=history_confidence,
+        notes=notes,
     )
 
 
@@ -548,6 +583,7 @@ def _find_gaps(
     feature_result: FeatureAdjustmentResult | None,
     location_result: MicroLocationResult | None,
     transfer_result: TransferResult | None,
+    history_confidence: HistoryConfidenceAssessment | None,
 ) -> list[ConfidenceGap]:
     gaps: list[ConfidenceGap] = []
 
@@ -599,6 +635,17 @@ def _find_gaps(
             action="Add direct same-town comparable sales to eliminate need for cross-town transfer.",
         ))
 
+    if history_confidence is not None and history_confidence.score < 0.6:
+        gaps.append(ConfidenceGap(
+            layer="sales_history",
+            gap="Sales history evidence is thin or incomplete",
+            impact="moderate",
+            action=(
+                "Use ATTOM sales-history detail/snapshot to verify repeat-sale chains, "
+                "recency ordering, disclosure gaps, and price-per-sqft history for subject and key comps."
+            ),
+        ))
+
     impact_order = {"high": 0, "moderate": 1, "low": 2}
     gaps.sort(key=lambda g: impact_order.get(g.impact, 3))
     return gaps
@@ -613,6 +660,7 @@ def _build_narrative(
     composite: float,
     label: str,
     weakest: str,
+    history_confidence: HistoryConfidenceAssessment | None,
 ) -> str:
     parts: list[str] = []
     base = layers["base_shell"]
@@ -624,6 +672,8 @@ def _build_narrative(
         parts.append(f"location adjustments are {layers['location'].label} confidence")
     if layers["town_transfer"].active:
         parts.append(f"town-transferred evidence is {layers['town_transfer'].label}")
+    if history_confidence is not None:
+        parts.append(f"sales history evidence is {history_confidence.label}")
 
     detail = ", ".join(parts)
 
@@ -743,3 +793,49 @@ def _contribution(score: float) -> str:
     if score >= 0.45:
         return "neutral"
     return "negative"
+
+
+def _score_sales_history(
+    evidence: SalesHistoryEvidence | None,
+) -> HistoryConfidenceAssessment | None:
+    if evidence is None:
+        return None
+
+    score = evidence.history_confidence
+    if not isinstance(score, (float, int)):
+        score = 0.3
+        score += min(evidence.event_count, 4) * 0.10
+        score += min(evidence.complete_event_count, 4) * 0.07
+        score += min(evidence.repeat_sale_pairs, 3) * 0.05
+        if "disclosure_gap" in evidence.history_flags:
+            score -= 0.08
+        if "missing_price_per_sqft" in evidence.history_flags:
+            score -= 0.05
+        score = max(0.15, min(score, 0.95))
+
+    label = evidence.history_confidence_label or _history_label(float(score))
+    notes = [
+        f"{evidence.event_count} sales history event(s)",
+        f"{evidence.complete_event_count} complete event(s)",
+    ]
+    if evidence.repeat_sale_pairs:
+        notes.append(f"{evidence.repeat_sale_pairs} repeat-sale pair(s)")
+    if evidence.history_span_years is not None:
+        notes.append(f"history span {evidence.history_span_years:.2f} years")
+    if evidence.history_flags:
+        notes.append("flags: " + ", ".join(evidence.history_flags))
+    return HistoryConfidenceAssessment(
+        score=round(float(score), 3),
+        label=label,
+        notes=notes,
+    )
+
+
+def _history_label(score: float) -> str:
+    if score >= 0.8:
+        return "strong"
+    if score >= 0.6:
+        return "adequate"
+    if score >= 0.35:
+        return "weak"
+    return "thin"

@@ -1,0 +1,11 @@
+{
+  "session_id": "248b8034ca90",
+  "current_property_id": "526-w-end-ave-avon-by-the-sea-nj",
+  "turns": [
+    {
+      "user": "What do you think of 526 W End Ave in Avon?",
+      "assistant": "The decision is to \"pass unless changes\" are made regarding 526 W End Ave in Avon. Key financial indicators show a fair value base of $920,405.42 compared to an asking price of $1,565,000.00, resulting in a premium discount percentage of 0.3823. The estimated value range is between $833,472.97 and $1,007,337.87. Trust flags remain due to \"incomplete_carry_inputs.\"",
+      "answer_type": "decision"
+    }
+  ]
+}

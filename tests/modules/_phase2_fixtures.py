@@ -121,6 +121,7 @@ def _make_context(
     market_context: dict[str, Any] | None = None,
     comp_context: dict[str, Any] | None = None,
     prior_outputs: dict[str, Any] | None = None,
+    macro_context: dict[str, Any] | None = None,
 ) -> ExecutionContext:
     return ExecutionContext(
         property_id=str(property_data.get("property_id") or "test-prop"),
@@ -134,6 +135,7 @@ def _make_context(
         market_context=dict(market_context or {}),
         comp_context=dict(comp_context or {}),
         prior_outputs=dict(prior_outputs or {}),
+        macro_context=dict(macro_context or {}),
     )
 
 

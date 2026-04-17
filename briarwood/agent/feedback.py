@@ -5,8 +5,12 @@ one of these signals fires, so we can review what the router/handlers
 don't yet handle well and patch rules accordingly:
 
 - router confidence < 0.5
-- router reason is "default fallback" or "llm fallback"
-- LLM override fired (rule and LLM disagreed)
+- router reason is "default fallback" (no cache rule, no LLM available)
+- router reason is "llm classify" (LLM owned the decision — candidate for
+  promotion to a cache rule if the pattern appears in volume)
+- handler took the deterministic (no-LLM) fallback path — important signal
+  for "this deployment isn't narrating" and for sampling which intents
+  actually need LLM shaping.
 - handler returned a "no-help" sentinel (couldn't resolve, missing property, etc.)
 
 The log is plain jsonl — one record per line — safe to tail, grep, or
@@ -33,16 +37,25 @@ _NO_HELP_RE = re.compile(
 )
 
 
-def _classify_signal(decision: RouterDecision, response: str) -> list[str]:
+def _classify_signal(
+    decision: RouterDecision,
+    response: str,
+    extra: dict[str, Any] | None = None,
+) -> list[str]:
     signals: list[str] = []
     if decision.confidence < 0.5:
         signals.append("low_confidence")
-    if decision.reason in ("default fallback", "llm fallback"):
-        signals.append(decision.reason.replace(" ", "_"))
-    if decision.reason.startswith("llm override"):
-        signals.append("llm_override")
+    if decision.reason == "default fallback":
+        signals.append("default_fallback")
+    if decision.reason == "llm classify":
+        signals.append("llm_classify")
     if _NO_HELP_RE.search(response or ""):
         signals.append("handler_no_help")
+    # Deterministic-mode turns matter for telemetry: we want to see which
+    # intents are shipping without LLM narration so we can prioritize
+    # prompt work (or detect an unconfigured deployment).
+    if extra and extra.get("llm_used") is False:
+        signals.append("llm_fallback")
     return signals
 
 
@@ -58,7 +71,7 @@ def log_turn(
     Returns the list of signals logged (empty if the turn tracked cleanly
     and nothing was written).
     """
-    signals = _classify_signal(decision, response)
+    signals = _classify_signal(decision, response, extra)
     if not signals:
         return []
 

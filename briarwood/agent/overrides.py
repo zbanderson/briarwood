@@ -31,7 +31,9 @@ _PRICE_TRIGGER_RE = re.compile(
     r"(?:what if|if i|assume|suppose|say)\s+(?:i\s+)?(?:buy|bought|paid|pay|offer|offered)"
     r"|(?:buy|bought|paid|pay|offer|offered)\s+(?:it\s+|this\s+)?(?:at|for)"
     r"|(?:bought|paid|pay|offer|offering|offered)\s+\$?\d"
-    r"|(?:at|for)\s+\$?\d"
+    # "at/for" must carry a price cue, not just any digit — otherwise street
+    # numbers ("for 526 west end") and bed counts ("for 4-bed") hijack the turn.
+    r"|(?:at|for)\s+(?:\$\s*\d|\d+(?:\.\d+)?\s*(?:m|mm|mil|million|k|thousand)|\d{1,3}(?:,\d{3})+|\d{4,})"
     r"|ask(?:ing)?\s+(?:price\s+)?(?:of\s+|at\s+)?\$?\d"
     r"|pric(?:e|ed)\s+at\s+\$?\d"
     r")",
@@ -53,15 +55,11 @@ def _to_dollars(raw: str, trailing: str) -> float | None:
         base *= 1_000_000
     elif t in ("k", "thousand"):
         base *= 1_000
-    else:
-        # Bare numbers: "1.3" or "1.35" → millions (real-estate context);
-        # "300" → thousands; "300000" / "1,300,000" → literal.
-        if "," not in raw:
-            if base < 10:  # "1.3", "2"
-                base *= 1_000_000
-            elif base < 1_000:  # "300", "500"
-                base *= 1_000
-    return base if base >= 10_000 else None  # sanity floor
+    # Bare numbers are taken literally. Guessing magnitude (1.3 → $1.3M,
+    # 526 → $526k) silently turned street numbers and bed counts into
+    # prices. The sanity floor below rejects anything too small to plausibly
+    # be a real-estate price.
+    return base if base >= 10_000 else None
 
 
 def _extract_price(text: str, start: int = 0) -> float | None:
@@ -133,7 +131,10 @@ def inputs_with_overrides(inputs_path: Path, overrides: dict[str, Any]):
     if "ask_price" in overrides:
         facts["purchase_price"] = float(overrides["ask_price"])
     if overrides.get("mode") == "renovated":
-        facts["capex_lane"] = "full"
+        # User intent for "if we renovate" = apply renovation capex to basis.
+        # The capex_lane field has no "full" case; renovation_mode is the
+        # dedicated field that infer_capex_amount understands.
+        facts["renovation_mode"] = "will_renovate"
 
     tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
     try:

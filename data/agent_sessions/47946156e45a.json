@@ -1,0 +1,21 @@
+{
+  "session_id": "47946156e45a",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "tell me about 1223 briarwood road in belmar",
+      "assistant": "1223 Briarwood Road in Belmar is listed at $674,200, with a comps-based fair value of $777,693, suggesting it may be undervalued. The property features ? bedrooms and ? bathrooms, making it potentially appealing to a range of buyers. Want a full underwrite?\n\nSimilar in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "yeah sure",
+      "assistant": "The decision is to pass unless changes occur due to weak trust flags, specifically \"weak_town_context\" and \"incomplete_carry_inputs.\" The fair value base is $781,303.46, with an ask price of $824,200.00, resulting in a premium discount of -15.89%. The value range is between $693,653.26 and $868,953.67. Research update: no material change after fetching 0 document(s) for weak_town_context.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what would the value be if we renovate?",
+      "assistant": "overrides applied: full renovation\nThe decision stance is to \"pass unless changes\" regarding the value post-renovation. The fair value base is noted at $781,303.46, while the ask price stands at $824,200.00, reflecting a premium discount percentage of -0.1589. The range of value is between $693,653.26 and $868,953.67. Trust flags identified include 'weak_town_context' and 'incomplete_carry_inputs,' highlighting potential uncertainties in the analysis.",
+      "answer_type": "decision"
+    }
+  ]
+}

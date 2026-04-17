@@ -14,6 +14,7 @@ from briarwood.modules.renovation_impact_scoped import run_renovation_impact
 from briarwood.modules.rent_stabilization import run_rent_stabilization
 from briarwood.modules.resale_scenario_scoped import run_resale_scenario
 from briarwood.modules.risk_model import run_risk_model
+from briarwood.modules.town_development_index import run_town_development_index
 from briarwood.modules.unit_income_offset import run_unit_income_offset
 from briarwood.modules.valuation import run_valuation
 
@@ -84,7 +85,7 @@ def build_module_registry() -> dict[str, ModuleSpec]:
         ),
         ModuleSpec(
             name="resale_scenario",
-            depends_on=["valuation", "carry_cost"],
+            depends_on=["valuation", "carry_cost", "town_development_index"],
             required_context_keys=["property_data", "assumptions"],
             optional_context_keys=["prior_outputs", "market_context"],
             runner=run_resale_scenario,
@@ -153,6 +154,17 @@ def build_module_registry() -> dict[str, ModuleSpec]:
             optional_context_keys=["market_context", "prior_outputs"],
             runner=run_legal_confidence,
             description="Legality confidence module for use-permission uncertainty.",
+        ),
+        ModuleSpec(
+            name="town_development_index",
+            depends_on=[],
+            required_context_keys=["property_data"],
+            optional_context_keys=["property_summary"],
+            runner=run_town_development_index,
+            description=(
+                "Rolling town-level development velocity derived from "
+                "planning/zoning minutes. Feeds forward-looking modules."
+            ),
         ),
     ]
 

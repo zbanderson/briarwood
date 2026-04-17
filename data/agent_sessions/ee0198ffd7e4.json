@@ -1,0 +1,11 @@
+{
+  "session_id": "ee0198ffd7e4",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "what do you think of 1223 Briarwood Road in belmar",
+      "assistant": "Absolutely! Let\u2019s dive into the details for 1223 Briarwood Road in Belmar. This charming property features 3 bedrooms and 2 bathrooms, encompassing 1,196 square feet. It\u2019s currently listed at $674,200.\n\nBriarwood's model puts fair value around $781,000, with a fair value range between $694,000 and $869,000. The primary value drivers for this estimate are anchored mostly to comparable sales at 44%, with market-adjusted overlays contributing 40%, followed by income-supported factors at 9% and town-aware considerations at 7%. \n\nLooking ahead, our forward view estimates indicate that in bullish scenarios, property values might reach approximately $873,000, settling around $814,000 in our base case, while in bearish conditions, values could drop to about $764,000. This provides a clear spectrum of potential future value trajectories depending on market conditions.\n\nIf you're interested in similar properties, you might want to check out these active listings: \n1. 11 Test Ave, Belmar, NJ \u2013 3 beds, 2 baths, 1,200 sqft, listed at $700,000.\n2. 123 Test St, Belmar, NJ \u2013 3 beds, 2 baths, 1,500 sqft, listed at $500,000.\n3. 1302 L Street, Belmar, NJ \u2013 3 beds, 2 baths, 1,500 sqft, listed at $850,000.\n\nBelmar is known for its vibrant beach community, adding an appealing touch to any property in the area.\n\nFor a deeper insight, you can explore more about value opportunities here: [Value Opportunity](file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/ee0198ffd7e4/20260416-205109-value_opportunity.html) and our scenario fan analysis here: [Scenario Fan](file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/ee0198ffd7e4/20260416",
+      "answer_type": "orient"
+    }
+  ]
+}

@@ -25,6 +25,7 @@ class ExecutionContext(BaseModel):
     prior_outputs: dict[str, Any] = Field(default_factory=dict)
     market_context: dict[str, Any] = Field(default_factory=dict)
     comp_context: dict[str, Any] = Field(default_factory=dict)
+    macro_context: dict[str, Any] = Field(default_factory=dict)
 
     def store_module_output(self, module_name: str, output: dict[str, Any]) -> None:
         """Store one scoped module output into ``prior_outputs`` by module name."""
@@ -49,6 +50,7 @@ class ExecutionContext(BaseModel):
             "prior_output_modules": sorted(self.prior_outputs.keys()),
             "has_market_context": bool(self.market_context),
             "has_comp_context": bool(self.comp_context),
+            "has_macro_context": bool(self.macro_context),
         }
 
 

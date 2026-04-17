@@ -11,9 +11,19 @@ from briarwood.local_intelligence.sources.base import (
     MunicipalSourceDocument,
 )
 from briarwood.local_intelligence.sources.static_registry import StaticRegistryAdapter
+from briarwood.local_intelligence.sources.web_search_adapter import (
+    TavilyCrawlOptions,
+    TavilyExtractOptions,
+    WebSearchAdapter,
+    WebSearchOptions,
+)
 
 __all__ = [
     "MunicipalSourceAdapter",
     "MunicipalSourceDocument",
     "StaticRegistryAdapter",
+    "TavilyCrawlOptions",
+    "TavilyExtractOptions",
+    "WebSearchAdapter",
+    "WebSearchOptions",
 ]

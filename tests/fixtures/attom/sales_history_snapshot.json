@@ -1,0 +1,30 @@
+{
+  "property": [
+    {
+      "sale": {
+        "saleshistory": [
+          {
+            "saleTransDate": "2024-03-02",
+            "saleRecDate": "2024-03-10",
+            "saleAmt": 780000,
+            "saleDocType": "WD",
+            "saleTransType": "TRANSFER",
+            "pricePerSizeUnit": 490.1,
+            "seller": "Seller D",
+            "buyer": "Buyer D"
+          },
+          {
+            "saleTransDate": "2018-06-21",
+            "saleRecDate": "2018-06-28",
+            "saleAmt": 560000,
+            "saleDocType": "WD",
+            "saleTransType": "TRANSFER",
+            "pricePerSizeUnit": 351.2,
+            "seller": "Seller E",
+            "buyer": "Buyer E"
+          }
+        ]
+      }
+    }
+  ]
+}

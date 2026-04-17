@@ -168,6 +168,18 @@ FILTER_KEYS = {
 }
 
 
+def _norm_place(name: str | None) -> str:
+    """Canonicalize a town/state for equality compare.
+
+    "Avon By The Sea", "avon by the sea", and "Avon-By-The-Sea" must all
+    match. Hyphens and extra whitespace get folded to single spaces.
+    """
+    if not name:
+        return ""
+    lowered = name.lower().replace("-", " ")
+    return " ".join(lowered.split())
+
+
 def _matches(p: IndexedProperty, filters: dict[str, Any]) -> bool:
     def ge(value: Any, threshold: Any) -> bool:
         return isinstance(value, (int, float)) and value >= threshold
@@ -203,9 +215,9 @@ def _matches(p: IndexedProperty, filters: dict[str, Any]) -> bool:
         p.distance_to_train_miles, filters["max_distance_to_train_miles"]
     ):
         return False
-    if "town" in filters and (p.town or "").strip().lower() != filters["town"].strip().lower():
+    if "town" in filters and _norm_place(p.town) != _norm_place(filters["town"]):
         return False
-    if "state" in filters and (p.state or "").strip().lower() != filters["state"].strip().lower():
+    if "state" in filters and _norm_place(p.state) != _norm_place(filters["state"]):
         return False
     if "min_confidence" in filters and not ge(p.confidence, filters["min_confidence"]):
         return False

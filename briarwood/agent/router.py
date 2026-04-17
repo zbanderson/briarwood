@@ -3,17 +3,23 @@
 Every user turn is classified into exactly one AnswerType before any tool
 fires. This keeps behavior predictable and bounds tool usage.
 
-Hybrid classifier:
-1. Rule-based pass (deterministic keyword/regex match)
-2. Qualifier detection ("for a family", "as an investment", lifestyle fit
-   language) — flags the question as semantically complex even when a rule
-   fires with high confidence.
-3. LLM consulted when:
-   - no rule matched, OR
-   - rule match is ambiguous (multiple rules fire), OR
-   - qualifier phrase is present (rule might be right but worth a second look)
-4. LLM can OVERRIDE the rule when the rule was ambiguous OR a qualifier is
-   present; otherwise rule wins and LLM guess is advisory (llm_suggestion).
+Design: LLM-first with a tiny regex cache.
+
+- 4 high-precision cache rules catch the ~50% of traffic that's unambiguous:
+  greetings, explicit comparisons, explicit buy/pass phrasing, explicit search
+  imperatives. Cache hits are sub-ms and don't consult the LLM.
+- Everything else is classified by the LLM — the single source of truth for
+  semantic routing. Drifting language and new intents are handled by updating
+  the prompt, not by growing a regex list.
+- The untracked log (`data/agent_feedback/untracked.jsonl`) captures low-
+  confidence / fallback turns so patterns that appear in volume can be
+  promoted to cache rules deliberately.
+
+Rationale: maintaining a second-source-of-truth regex ontology alongside the
+LLM prompt caused drift — every new intent required updating both, and the
+rules couldn't express semantic nuance (browse vs. decision on identical
+surface tokens). Cache rules are restricted to cases where regex is genuinely
+decisive.
 """
 
 from __future__ import annotations
@@ -39,6 +45,7 @@ class AnswerType(str, Enum):
     RISK = "risk"
     EDGE = "edge"
     STRATEGY = "strategy"
+    BROWSE = "browse"
     CHITCHAT = "chitchat"
 
 
@@ -48,113 +55,66 @@ class RouterDecision:
     confidence: float
     target_refs: list[str] = field(default_factory=list)
     reason: str = ""
-    llm_suggestion: AnswerType | None = None
+    llm_suggestion: AnswerType | None = None  # set when LLM participated
 
 
-_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
+# ─── Cache rules ──────────────────────────────────────────────────────────────
+# Only patterns where regex is decisive. Scanned in order; first match wins.
+# Anything semantically subtle is the LLM's job, not the cache's.
+
+_CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
+    # Stand-alone greeting/thanks — must be the whole message.
+    (
+        AnswerType.CHITCHAT,
+        re.compile(
+            r"^\s*(hi|hello|hey|yo|sup|thanks|thank you|ok|okay|cool|nice)\b[\s\.!?]*$",
+            re.IGNORECASE,
+        ),
+        "greeting",
+    ),
+    # Explicit multi-property comparison.
     (
         AnswerType.COMPARISON,
         re.compile(
-            r"\bcompare\b|\bwhich\b[^?]*\b(?:better|worse)\b"
-            r"|(?:[a-z0-9]+(?:-[a-z0-9]+){2,})\s+(?:vs\.?|versus)\s+(?:[a-z0-9]+(?:-[a-z0-9]+){2,})",
+            r"\bcompare\b|"
+            r"(?:[a-z0-9]+(?:-[a-z0-9]+){2,})\s+(?:vs\.?|versus)\s+(?:[a-z0-9]+(?:-[a-z0-9]+){2,})|"
+            r"\bwhich (?:one )?is (?:better|worse)\b",
             re.IGNORECASE,
         ),
         "compare/vs keyword",
     ),
+    # Explicit decisive verbs — buy/pass/underwrite call, not opinion-solicit.
+    (
+        AnswerType.DECISION,
+        re.compile(
+            r"\b(should i (?:buy|pass|offer)"
+            r"|underwrite"
+            r"|worth (?:it|buying)"
+            r"|go/no-?go"
+            r"|is this a (?:buy|deal|good deal|bad deal|good|bad))\b",
+            re.IGNORECASE,
+        ),
+        "decision verb",
+    ),
+    # Explicit search imperative — "find me X", "show me listings/properties".
     (
         AnswerType.SEARCH,
         re.compile(
-            r"\b("
-            r"find|search for|look for|"
-            r"show me (properties|listings|homes|options)|"
-            r"(another|other|different|similar|nearby|close ?by|better)\s+(property|properties|listing|listings|home|homes|option|options|deal|deals)|"
-            r"tell me (about )?(more |other |similar )?(property|properties|listings?|homes?|options?|deals?)|"
-            r"(any|are there|is there|any other).*(property|properties|listings?|homes?|options?|deals?)|"
-            r"properties (that are |similar|like|nearby|close)"
-            r")\b",
+            r"\b(find me|search for|look for|"
+            r"show me (?:properties|listings|homes|options|similar|other|nearby|more))\b",
             re.IGNORECASE,
         ),
-        "search keyword",
+        "search imperative",
     ),
-    (
-        AnswerType.MICRO_LOCATION,
-        re.compile(
-            r"\b(how (close|far)|distance|blocks|miles|minutes|walk(able|ing)?|commute)\b.*\b(beach|train|downtown|ocean|station|shops?)\b"
-            r"|\b(beach|train|downtown|ocean|station)\b.*\b(how (close|far)|distance|blocks|miles|walk)\b",
-            re.IGNORECASE,
-        ),
-        "micro-location keyword",
-    ),
+    # Explicit chart/plot command — render instruction, unambiguous.
     (
         AnswerType.VISUALIZE,
-        re.compile(r"\b(chart|plot|visuali[sz]e|graph|gauge|show (me )?(the )?(value picture|verdict|gauge))\b", re.IGNORECASE),
+        re.compile(
+            r"\b(chart|plot|visuali[sz]e|graph|gauge"
+            r"|show (?:me )?(?:the )?(?:value picture|verdict|gauge))\b",
+            re.IGNORECASE,
+        ),
         "visualize keyword",
-    ),
-    (
-        AnswerType.PROJECTION,
-        re.compile(
-            r"\b(project(ion)?|forecast|forward[- ]looking|bull[/ -]?b(ear|ase)|bear case|base case|bull case|"
-            r"(what|how) (does|will|would) (this|it) (become|look|be worth|trade|sell) (in|over|after|at|for)|"
-            r"(what|how) would (this|it) trade at|"
-            r"what does (this|it) trade at|"
-            r"(\d+)[- ]?year (outlook|projection|forecast|picture)|"
-            r"break[- ]?even|rent ramp|stabiliz(e|ed|ation)|over time|scenarios?)\b",
-            re.IGNORECASE,
-        ),
-        "projection keyword",
-    ),
-    (
-        AnswerType.RENT_LOOKUP,
-        re.compile(r"\b(rent|rental|lease|how much (could|can|would) (i|it|this) (rent|lease))\b", re.IGNORECASE),
-        "rent keyword",
-    ),
-    (
-        AnswerType.RISK,
-        re.compile(
-            r"\b(what could go wrong|worst[- ]?case|downside|risks?|red flags?|what am i missing|blow ?up|break)\b",
-            re.IGNORECASE,
-        ),
-        "risk keyword",
-    ),
-    (
-        AnswerType.EDGE,
-        re.compile(
-            r"\b(where'?s? the value|where is the value|what'?s? the edge|what is the edge|"
-            r"why is this a deal|why does this deal exist|what'?s? the angle|what'?s? the catch|"
-            r"value thesis|mispriced?|underpriced?)\b",
-            re.IGNORECASE,
-        ),
-        "edge keyword",
-    ),
-    (
-        AnswerType.STRATEGY,
-        re.compile(
-            r"\b(best way to play|best play|what strategy|which strategy|"
-            r"flip (vs|or) rent|rent (vs|or) hold|flip or hold|primary (vs|or) rental|"
-            r"how should i play|what'?s? the play)\b",
-            re.IGNORECASE,
-        ),
-        "strategy keyword",
-    ),
-    (
-        AnswerType.DECISION,
-        re.compile(r"\b(should i (buy|pass|offer)|is this a (buy|deal|good|bad)|worth( buying| it)?|underwrite|go/no-?go)\b", re.IGNORECASE),
-        "decision keyword",
-    ),
-    (
-        AnswerType.RESEARCH,
-        re.compile(r"\b(what'?s happening in|research|town news|permits|zoning|developments?)\b", re.IGNORECASE),
-        "research keyword",
-    ),
-    (
-        AnswerType.LOOKUP,
-        re.compile(r"\b(what'?s the|what is the|how many|address|price|beds?|baths?|sqft|square feet|year built|list(ed)? price)\b", re.IGNORECASE),
-        "lookup keyword",
-    ),
-    (
-        AnswerType.CHITCHAT,
-        re.compile(r"^\s*(hi|hello|hey|thanks|thank you|ok|okay|cool)\b", re.IGNORECASE),
-        "greeting",
     ),
 )
 
@@ -162,55 +122,12 @@ _RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
 _PROPERTY_ID_RE = re.compile(r"\b([a-z0-9]+(?:-[a-z0-9]+){2,})\b", re.IGNORECASE)
 
 
-_PRIORITY = [
-    AnswerType.COMPARISON,
-    AnswerType.VISUALIZE,
-    AnswerType.RISK,
-    AnswerType.EDGE,
-    AnswerType.STRATEGY,
-    AnswerType.DECISION,
-    AnswerType.PROJECTION,
-    AnswerType.RENT_LOOKUP,
-    AnswerType.MICRO_LOCATION,
-    AnswerType.SEARCH,
-    AnswerType.RESEARCH,
-    AnswerType.LOOKUP,
-    AnswerType.CHITCHAT,
-]
-
-
-def _rule_classify(text: str) -> tuple[AnswerType, float, str, int] | None:
-    """Return (answer_type, confidence, reason, match_count). None if no match."""
-    matches: list[tuple[AnswerType, str]] = []
-    for answer_type, pattern, reason in _RULES:
+def _cache_classify(text: str) -> tuple[AnswerType, str] | None:
+    """Return (answer_type, reason) for the first matching cache rule, or None."""
+    for answer_type, pattern, reason in _CACHE_RULES:
         if pattern.search(text):
-            matches.append((answer_type, reason))
-    if not matches:
-        return None
-    for candidate in _PRIORITY:
-        for answer_type, reason in matches:
-            if answer_type is candidate:
-                confidence = 0.9 if len(matches) == 1 else 0.65
-                return answer_type, confidence, reason, len(matches)
-    return None  # pragma: no cover
-
-
-# Phrases that signal the question has layered intent beyond surface keywords.
-# When any of these fire, we force an LLM consult even if a rule matched cleanly.
-_QUALIFIER_RE = re.compile(
-    r"\b(for (a |my |our |the )?(family|investor|investment|rental|retiree|couple|flipper|kid|kids)"
-    r"|as (a |an )?(investment|rental|flip|primary|second home|airbnb|str|ltr)"
-    r"|if (i|we|you) (plan|want|were|are going|can|could|can't)"
-    r"|make sense (for|as|to)"
-    r"|best (way|strategy|play)"
-    r"|worst case|downside|what could go wrong"
-    r"|how (should|would) i|what'?s the (edge|play|angle|catch))\b",
-    re.IGNORECASE,
-)
-
-
-def _has_qualifier(text: str) -> bool:
-    return bool(_QUALIFIER_RE.search(text))
+            return answer_type, reason
+    return None
 
 
 def _extract_refs(text: str) -> list[str]:
@@ -223,7 +140,12 @@ _LLM_SYSTEM = (
     "Respond with strict JSON: {\"answer_type\": <one>, \"reason\": <short>}. "
     "Types: "
     "lookup = factual retrieval about a known property (address, beds, price, year built). "
-    "decision = should-I-buy / underwrite / go-no-go / 'is this a good deal' for a specific property. "
+    "browse = browse-style first read on ONE specific property. Opinion-solicit phrasing with "
+    "no decisive verb: 'what do you think of X', 'your take on X', 'thoughts on X', 'tell me about X'. "
+    "Returns a quick summary + similar nearby listings. NOT an underwrite. This is the DEFAULT "
+    "for any open-ended question about a single property that doesn't explicitly ask for a decision. "
+    "decision = EXPLICIT buy/pass phrasing on a specific property: 'should I buy', 'is this a good deal', "
+    "'underwrite this', 'worth it at $X', 'go/no-go'. Requires decisive verb, not just opinion. "
     "comparison = compare two or more specific properties. "
     "search = find other properties matching criteria (beds/price/distance/similar). "
     "research = town-level news, zoning, permits, development context. "
@@ -241,16 +163,21 @@ _LLM_SYSTEM = (
     "'best way to play'), pick the intent that ANSWERS the user's underlying need, not the "
     "surface keyword. "
     "IMPORTANT MAPPINGS: "
+    "'what do you think of X' / 'your take on X' / 'thoughts on X' -> browse (NOT decision). "
     "'what could go wrong' / 'downside' / 'worst case' / 'risks' -> risk. "
     "'where is the value' / 'what is the edge' / 'why does this deal exist' -> edge. "
     "'best way to play' / 'what strategy' / 'flip vs rent vs hold' -> strategy. "
-    "'does X make sense for a family/investor/...' -> decision. "
-    "Example: 'does 526 make sense for a family that wants to walk to ocean?' is DECISION, "
-    "not MICRO_LOCATION."
+    "'should I buy X' / 'is X a good deal' / 'underwrite X' -> decision. "
+    "'does X make sense for a family/investor/...' -> decision (has decisive framing). "
+    "Example: 'what do you think of 526 W End Ave?' is BROWSE, not DECISION — the user is asking "
+    "for a first read, not a buy/pass call. Decision requires explicit buy/pass/underwrite verb."
 )
 
 
-_CHITCHAT_ONLY_RE = re.compile(r"^\s*(hi|hello|hey|yo|sup|thanks|thank you|ok|okay|cool|nice)\b[\s\.!?]*$", re.IGNORECASE)
+_CHITCHAT_ONLY_RE = re.compile(
+    r"^\s*(hi|hello|hey|yo|sup|thanks|thank you|ok|okay|cool|nice)\b[\s\.!?]*$",
+    re.IGNORECASE,
+)
 
 
 def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
@@ -263,10 +190,11 @@ def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
         guess = AnswerType(payload["answer_type"])
     except (ValueError, KeyError, json.JSONDecodeError):
         return None
-    # Sanity guard: LLMs sometimes return CHITCHAT for real questions it doesn't
-    # have a better bucket for. Force DECISION unless the text really is a greeting.
+    # Sanity guard: LLMs sometimes return CHITCHAT for real questions they
+    # don't have a better bucket for. Default to BROWSE (quick read) unless
+    # the text really is a greeting — safer than DECISION (full cascade).
     if guess is AnswerType.CHITCHAT and not _CHITCHAT_ONLY_RE.match(text):
-        return AnswerType.DECISION
+        return AnswerType.BROWSE
     return guess
 
 
@@ -274,21 +202,33 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
     """Classify a user turn into an AnswerType.
 
     Policy:
-    - Rule alone: strong single match (confidence 0.9) and no qualifier -> rule wins outright.
-    - Rule + ambiguity: multi-match OR qualifier present -> consult LLM; LLM overrides when it
-      disagrees (signals layered intent the rule missed).
-    - No rule: LLM decides; defaults to LOOKUP if LLM unavailable.
+    - Empty input → CHITCHAT.
+    - What-if price override ("if I bought at 1.3M") → DECISION short-circuit.
+    - Cache rule hit (greetings / compare / explicit buy / explicit search) →
+      rule wins immediately, no LLM call.
+    - Everything else → LLM classifies. LLM unavailable → LOOKUP default.
     """
     text = text.strip()
     if not text:
         return RouterDecision(AnswerType.CHITCHAT, confidence=1.0, reason="empty input")
 
     refs = _extract_refs(text)
-    rule = _rule_classify(text)
-    qualifier = _has_qualifier(text)
 
-    # What-if price overrides ("if i bought at 1.3M") are inherently decisions.
-    # Bias toward DECISION when no rule fires or only a weak factual rule matches.
+    # Cache rules run first — explicit commands (chart, compare, find me, should
+    # I buy) shouldn't be short-circuited by incidental number parsing downstream.
+    cache_hit = _cache_classify(text)
+    if cache_hit is not None:
+        answer_type, reason = cache_hit
+        return RouterDecision(
+            answer_type=answer_type,
+            confidence=0.9,
+            target_refs=refs,
+            reason=reason,
+        )
+
+    # What-if price overrides are inherently decisions. Only consulted when
+    # no cache rule fired — avoids the override parser's false positives on
+    # street numbers ("for 526") or bed counts ("4-bed") hijacking the turn.
     try:
         from briarwood.agent.overrides import parse_overrides
 
@@ -296,36 +236,11 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
     except Exception:
         has_override = False
     if has_override:
-        weak_rule = rule is None or rule[0] in (AnswerType.LOOKUP, AnswerType.CHITCHAT)
-        if weak_rule:
-            return RouterDecision(
-                answer_type=AnswerType.DECISION,
-                confidence=0.7,
-                target_refs=refs,
-                reason="what-if price override",
-            )
-    llm_guess: AnswerType | None = None
-
-    if rule is not None:
-        rule_type, rule_confidence, rule_reason, match_count = rule
-        ambiguous = match_count > 1 or qualifier
-        if client is not None and (ambiguous or rule_confidence < 0.8):
-            llm_guess = _llm_classify(text, client)
-        # Override rule when LLM disagrees on an ambiguous question.
-        if llm_guess is not None and llm_guess is not rule_type and ambiguous:
-            return RouterDecision(
-                answer_type=llm_guess,
-                confidence=0.75,
-                target_refs=refs,
-                reason=f"llm override ({rule_reason} -> {llm_guess.value}; qualifier={qualifier})",
-                llm_suggestion=llm_guess,
-            )
         return RouterDecision(
-            answer_type=rule_type,
-            confidence=rule_confidence,
+            answer_type=AnswerType.DECISION,
+            confidence=0.7,
             target_refs=refs,
-            reason=rule_reason + (" + qualifier" if qualifier else ""),
-            llm_suggestion=llm_guess,
+            reason="what-if price override",
         )
 
     if client is not None:
@@ -335,7 +250,7 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
                 answer_type=llm_guess,
                 confidence=0.6,
                 target_refs=refs,
-                reason="llm fallback",
+                reason="llm classify",
                 llm_suggestion=llm_guess,
             )
 

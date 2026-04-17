@@ -14,6 +14,7 @@ Resolution order:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -35,9 +36,51 @@ _STOP = {"the", "of", "at", "in", "on", "and", "a", "an"}
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
+# Digits followed (within a few tokens) by a street-type or directional word.
+# Anchors "1223 Briarwood Road" / "526 W End Ave" while rejecting "at 3 bedrooms".
+_STREET_WORDS_RE = (
+    r"(?:ave|avenue|st|street|rd|road|dr|drive|ln|lane|blvd|boulevard|"
+    r"pkwy|parkway|ct|court|pl|place|ter|terrace|hwy|highway|cir|circle|"
+    r"way|w|e|n|s|west|east|north|south)"
+)
+_QUERY_STREET_NUM_RE = re.compile(
+    rf"\b(\d+)(?:\s+\w+){{0,3}}?\s+{_STREET_WORDS_RE}\b",
+    re.IGNORECASE,
+)
+_LEADING_DIGITS_RE = re.compile(r"^\s*(\d+)")
+
 
 def _tokens(text: str) -> list[str]:
     return [t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOP]
+
+
+def _extract_street_number(text: str) -> str | None:
+    """Return the first digit-run adjacent to a street word, or None.
+
+    Distinguishes a real address reference ("1223 Briarwood Road") from
+    incidental digits ("at 3 bedrooms", "4-bed homes"). Without this,
+    the token-overlap score was happily matching "1223 Ocean Ave" to a
+    saved "1232 Ocean Ave".
+    """
+    m = _QUERY_STREET_NUM_RE.search(text)
+    return m.group(1) if m else None
+
+
+def _candidate_street_number(slug: str) -> str | None:
+    """Pull a saved property's street number from slug or inputs.json."""
+    m = _LEADING_DIGITS_RE.match(slug)
+    if m:
+        return m.group(1)
+    inputs_path = SAVED_PROPERTIES_DIR / slug / "inputs.json"
+    if not inputs_path.exists():
+        return None
+    try:
+        data = json.loads(inputs_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    address = data.get("facts", {}).get("address", "")
+    addr_match = _LEADING_DIGITS_RE.match(address)
+    return addr_match.group(1) if addr_match else None
 
 
 def _known_ids() -> list[str]:
@@ -81,6 +124,14 @@ def resolve_property_id(text: str) -> tuple[str | None, list[str]]:
 
     scored = [(c, _score(query, c)) for c in known]
     scored = [(c, s) for c, s in scored if s >= 4]  # at least 2 solid token hits
+
+    # Street-number guardrail: when the user names a specific address
+    # ("1223 Briarwood Road"), reject candidates whose number doesn't match.
+    # Token overlap alone will happily fuse 1223 onto a saved 1232.
+    query_num = _extract_street_number(text)
+    if query_num is not None:
+        scored = [(c, s) for c, s in scored if _candidate_street_number(c) == query_num]
+
     scored.sort(key=lambda x: (-x[1], x[0]))
 
     if not scored:
