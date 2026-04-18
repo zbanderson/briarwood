@@ -96,6 +96,26 @@ _CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
         ),
         "decision verb",
     ),
+    # Explicit renovation / resale / capex scenario questions.
+    (
+        AnswerType.PROJECTION,
+        re.compile(
+            r"\b("
+            r"what if (?:we|i) invest(?:ed|ing)?\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?"
+            r"|invest(?:ed|ing)?\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?\s+(?:into|in)\s+(?:it|this)"
+            r"|if (?:we|i) renovat(?:e|ed)"
+            r"|renovat(?:e|ed|ion).*(?:sell|resale|arv|after repair value)"
+            r"|what could (?:we|i) sell (?:it|this) for"
+            r"|turn around and sell"
+            r"|\barv\b"
+            r"|after repair value"
+            r"|resale value"
+            r"|flip (?:it|this)"
+            r")\b",
+            re.IGNORECASE,
+        ),
+        "renovation/resale scenario",
+    ),
     # Explicit search imperative — "find me X", "show me listings/properties".
     (
         AnswerType.SEARCH,
@@ -142,7 +162,7 @@ _LLM_SYSTEM = (
     "lookup = factual retrieval about a known property (address, beds, price, year built). "
     "browse = browse-style first read on ONE specific property. Opinion-solicit phrasing with "
     "no decisive verb: 'what do you think of X', 'your take on X', 'thoughts on X', 'tell me about X'. "
-    "Returns a quick summary + similar nearby listings. NOT an underwrite. This is the DEFAULT "
+    "Returns an underwrite-lite purchase brief. This is the DEFAULT "
     "for any open-ended question about a single property that doesn't explicitly ask for a decision. "
     "decision = EXPLICIT buy/pass phrasing on a specific property: 'should I buy', 'is this a good deal', "
     "'underwrite this', 'worth it at $X', 'go/no-go'. Requires decisive verb, not just opinion. "
@@ -152,8 +172,9 @@ _LLM_SYSTEM = (
     "visualize = user asks for a chart, plot, gauge, or says 'show me the X picture'. "
     "rent_lookup = how much could it rent, rental income, rental profile, NOI. "
     "micro_location = how close/far to beach/train/downtown, walkability, commute distance. "
-    "projection = forward-looking: 5-year outlook, bull/base/bear cases, break-even, rent ramp, "
-    "what this becomes over time, scenarios. "
+    "projection = forward-looking or scenario analysis: 5-year outlook, bull/base/bear cases, break-even, rent ramp, "
+    "what this becomes over time, scenarios, renovation budget questions, ARV, resale-after-renovation, "
+    "'what if we invested 100k', 'if we renovated it', 'what could we sell it for'. "
     "risk = 'what could go wrong', 'downside', 'worst case', 'risks', 'red flags', 'what am i missing'. "
     "edge = 'where's the value', 'what's the edge', 'why is this a deal', 'value thesis', 'angle', 'catch'. "
     "strategy = 'best way to play', 'flip vs rent vs hold', 'primary or rental', 'what strategy'. "
@@ -167,6 +188,7 @@ _LLM_SYSTEM = (
     "'what could go wrong' / 'downside' / 'worst case' / 'risks' -> risk. "
     "'where is the value' / 'what is the edge' / 'why does this deal exist' -> edge. "
     "'best way to play' / 'what strategy' / 'flip vs rent vs hold' -> strategy. "
+    "'what if we invested 100k' / 'if we renovated it' / 'what could we sell it for' / 'ARV' -> projection. "
     "'should I buy X' / 'is X a good deal' / 'underwrite X' -> decision. "
     "'does X make sense for a family/investor/...' -> decision (has decisive framing). "
     "Example: 'what do you think of 526 W End Ave?' is BROWSE, not DECISION — the user is asking "
@@ -176,6 +198,16 @@ _LLM_SYSTEM = (
 
 _CHITCHAT_ONLY_RE = re.compile(
     r"^\s*(hi|hello|hey|yo|sup|thanks|thank you|ok|okay|cool|nice)\b[\s\.!?]*$",
+    re.IGNORECASE,
+)
+
+_RENT_LOOKUP_HINT_RE = re.compile(
+    r"\b(how much could .* rent for|what would .* rent for|rent for|monthly rent|rental income|lease for)\b",
+    re.IGNORECASE,
+)
+
+_PROJECTION_OVERRIDE_HINT_RE = re.compile(
+    r"\b(arv|after repair value|sell it for|resale|turn around and sell|flip)\b",
     re.IGNORECASE,
 )
 
@@ -236,6 +268,20 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
     except Exception:
         has_override = False
     if has_override:
+        if _RENT_LOOKUP_HINT_RE.search(text):
+            return RouterDecision(
+                answer_type=AnswerType.RENT_LOOKUP,
+                confidence=0.75,
+                target_refs=refs,
+                reason="override with rent question",
+            )
+        if _PROJECTION_OVERRIDE_HINT_RE.search(text):
+            return RouterDecision(
+                answer_type=AnswerType.PROJECTION,
+                confidence=0.75,
+                target_refs=refs,
+                reason="override with projection question",
+            )
         return RouterDecision(
             answer_type=AnswerType.DECISION,
             confidence=0.7,

@@ -7,6 +7,7 @@ code — all adapters wrap existing implementations.
 """
 
 from briarwood.pipeline.decision import DecisionAgent
+from briarwood.pipeline.enrichment import PropertyEnrichmentBundle, enrich_property, load_saved_enrichment
 from briarwood.pipeline.feedback import FeedbackLogger
 from briarwood.pipeline.feedback_mixin import (
     FeedbackReceiverMixin,
@@ -14,6 +15,7 @@ from briarwood.pipeline.feedback_mixin import (
 )
 from briarwood.pipeline.runner import Pipeline
 from briarwood.pipeline.scenario_adapter import ScenarioModelAdapter
+from briarwood.pipeline.presentation import PropertyPresentationPayload, build_property_presentation
 from briarwood.pipeline.session import (
     ModelResult,
     PipelineSession,
@@ -30,10 +32,15 @@ __all__ = [
     "ModelResult",
     "Pipeline",
     "PipelineSession",
+    "PropertyEnrichmentBundle",
+    "PropertyPresentationPayload",
     "ScenarioModelAdapter",
     "TriageAgent",
     "UnifiedIntelligenceAgent",
     "attach_feedback_interface",
+    "build_property_presentation",
+    "enrich_property",
+    "load_saved_enrichment",
     "session_from_execution_context",
     "session_to_execution_context",
 ]

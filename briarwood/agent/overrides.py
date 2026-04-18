@@ -2,6 +2,7 @@
 
 "what if i bought at 1.3M" -> {"ask_price": 1_300_000}
 "renovate and price at $1.35m" -> {"ask_price": 1_350_000, "mode": "renovated"}
+"what if we invested 100k into it" -> {"repair_capex_budget": 100_000, "mode": "renovated"}
 
 The override dict is applied to a property's inputs.json before the routed
 pipeline runs, so the underwrite reflects the user's actual scenario
@@ -41,6 +42,17 @@ _PRICE_TRIGGER_RE = re.compile(
 )
 
 _RENO_RE = re.compile(r"\b(renovate[d]?|renovation|fully renovated|post[- ]reno|after reno)\b", re.IGNORECASE)
+_CAPEX_TRIGGER_RE = re.compile(
+    r"\b("
+    r"invest(?:ed|ing)?\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?"
+    r"|put\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?\s+(?:into|in)\s+(?:it|this)"
+    r"|spend\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?\s+(?:on|into)\s+(?:it|this|renovation|repairs?)"
+    r"|budget\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?\s+(?:for\s+)?(?:renovation|rehab|repairs?)"
+    r"|renovation budget"
+    r"|repair budget"
+    r")\b",
+    re.IGNORECASE,
+)
 
 
 def _to_dollars(raw: str, trailing: str) -> float | None:
@@ -95,7 +107,8 @@ def parse_overrides(text: str) -> dict[str, Any]:
     """Extract what-if overrides from a user turn.
 
     Returns an empty dict when nothing override-shaped is present.
-    Keys: ``ask_price`` (float), ``mode`` ('renovated' | 'as_is').
+    Keys: ``ask_price`` (float), ``repair_capex_budget`` (float),
+    ``mode`` ('renovated' | 'as_is').
     """
     overrides: dict[str, Any] = {}
 
@@ -112,6 +125,12 @@ def parse_overrides(text: str) -> dict[str, Any]:
 
     if _RENO_RE.search(text):
         overrides["mode"] = "renovated"
+
+    if _CAPEX_TRIGGER_RE.search(text):
+        capex_budget = _extract_price(text)
+        if capex_budget is not None:
+            overrides["repair_capex_budget"] = capex_budget
+            overrides.setdefault("mode", "renovated")
 
     return overrides
 
@@ -135,6 +154,20 @@ def inputs_with_overrides(inputs_path: Path, overrides: dict[str, Any]):
         # The capex_lane field has no "full" case; renovation_mode is the
         # dedicated field that infer_capex_amount understands.
         facts["renovation_mode"] = "will_renovate"
+        assumptions = data.setdefault("user_assumptions", {})
+        assumptions["condition_profile_override"] = "renovated"
+        assumptions["condition_confirmed"] = True
+    if "repair_capex_budget" in overrides:
+        assumptions = data.setdefault("user_assumptions", {})
+        assumptions["repair_capex_budget"] = float(overrides["repair_capex_budget"])
+        assumptions["capex_confirmed"] = True
+    if overrides.get("mode") == "renovated":
+        budget = float(overrides.get("repair_capex_budget") or 150_000.0)
+        data["renovation_scenario"] = {
+            "enabled": True,
+            "renovation_budget": budget,
+            "target_condition": "renovated",
+        }
 
     tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
     try:
@@ -155,4 +188,6 @@ def summarize(overrides: dict[str, Any]) -> str:
         bits.append(f"entry basis ${overrides['ask_price']:,.0f}")
     if overrides.get("mode") == "renovated":
         bits.append("full renovation")
+    if "repair_capex_budget" in overrides:
+        bits.append(f"renovation budget ${overrides['repair_capex_budget']:,.0f}")
     return "overrides applied: " + ", ".join(bits)

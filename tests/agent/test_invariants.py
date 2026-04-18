@@ -20,6 +20,7 @@ from briarwood.agent.dispatch import handle_browse
 from briarwood.agent.property_view import PropertyView
 from briarwood.agent.router import AnswerType, RouterDecision
 from briarwood.agent.session import Session
+from briarwood.agent.tools import PropertyBrief
 from briarwood.opportunity_metrics import (
     calculate_net_opportunity_delta,
     infer_capex_amount,
@@ -163,20 +164,38 @@ class BrowseNarrationInvariants(unittest.TestCase):
     """Bug A: browse must never narrate placeholder ``?`` for missing fields."""
 
     def test_browse_never_shows_question_marks_when_beds_missing(self) -> None:
-        summary = {
-            **_LISTING_SUMMARY,
-            "beds": None,
-            "baths": None,
-        }
         decision = RouterDecision(
             AnswerType.BROWSE,
             confidence=0.9,
             target_refs=["1223-briarwood-rd"],
             reason="browse",
         )
+        brief = PropertyBrief(
+            property_id="1223-briarwood-rd",
+            address="1223 Briarwood Rd",
+            town="Belmar",
+            state="NJ",
+            beds=None,
+            baths=None,
+            ask_price=1_000_000,
+            pricing_view="at ask",
+            analysis_depth_used="snapshot",
+            recommendation="Buy if the price improves.",
+            decision="buy",
+            decision_stance="buy_if_price_improves",
+            best_path="Proceed carefully.",
+            key_value_drivers=["Ask sits below the fair value anchor"],
+            key_risks=["Thin carry inputs"],
+            trust_flags=["weak_town_context"],
+            recommended_next_run="decision",
+            next_questions=["should I buy this at the current ask?"],
+            primary_value_source="current_value",
+            fair_value_base=1_080_000,
+            ask_premium_pct=-0.074,
+        )
         with patch(
-            "briarwood.agent.property_view.get_property_summary",
-            return_value=summary,
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=brief,
         ), patch("briarwood.agent.dispatch.search_listings", return_value=[]):
             response = handle_browse(
                 "tell me about 1223 briarwood", decision, Session(), llm=None

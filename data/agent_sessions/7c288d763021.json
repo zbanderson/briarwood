@@ -1,0 +1,17 @@
+{
+  "session_id": "7c288d763021",
+  "current_property_id": null,
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "can you perform a CMA on 1600 L Street, Belmar, NJ",
+      "assistant": "I couldn't translate that into concrete saved-corpus filters, and I didn't get a clean town-level live listing pull. Try wording like 'show me houses for sale in Belmar' or '3 beds near the beach under $1.5M'.",
+      "answer_type": "search"
+    }
+  ]
+}

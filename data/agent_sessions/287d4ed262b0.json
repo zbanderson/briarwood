@@ -1,0 +1,179 @@
+{
+  "session_id": "287d4ed262b0",
+  "current_property_id": null,
+  "current_live_listing": null,
+  "last_live_listing_results": [
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1611 River Road, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1590000.0,
+      "beds": 5,
+      "baths": 4.0,
+      "sqft": 2469,
+      "property_type": "MULTI_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/",
+      "external_id": "39225462",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "304 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1250000.0,
+      "beds": 6,
+      "baths": 4.0,
+      "sqft": 1298,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/304-14th-Ave-Belmar-NJ-07719/39224611_zpid/",
+      "external_id": "39224611",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1708 A Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1195000.0,
+      "beds": 5,
+      "baths": 2.0,
+      "sqft": 1440,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/",
+      "external_id": "39225114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 749000.0,
+      "beds": 2,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "CONDO",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/",
+      "external_id": "39223261",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "301 10th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 2699900.0,
+      "beds": 6,
+      "baths": 4.0,
+      "sqft": 3792,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+      "external_id": "331325114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "105 11th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 3999999.0,
+      "beds": 5,
+      "baths": 5.0,
+      "sqft": 3977,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/105-11th-Ave-Belmar-NJ-07719/325562278_zpid/",
+      "external_id": "325562278",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "107 3rd Avenue #F2, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 510000.0,
+      "beds": 1,
+      "baths": 1.0,
+      "sqft": 625,
+      "property_type": "CONDO",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/107-3rd-Ave-APT-F2-Belmar-NJ-07719/39223366_zpid/",
+      "external_id": "39223366",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "turns": [
+    {
+      "user": "What are the 3 bedroom homes for sale in belmar",
+      "assistant": "I can run live listing discovery for Belmar, but I need the state too. Please provide the town and state, like 'Belmar, NJ'.",
+      "answer_type": "search"
+    },
+    {
+      "user": "Yes belmar NJ",
+      "assistant": "I found a few close matches:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave\n- 1232-briarwood-road-belmar-nj",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what are the home for sale in belmar nj",
+      "assistant": "Found 8 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\n- 1611 River Road, Belmar, NJ 07719 \u2014 5bd/4.0ba, $1,590,000, 2,469 sqft, MULTI_FAMILY\n  https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/\n- 304 14th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $1,250,000, 1,298 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/304-14th-Ave-Belmar-NJ-07719/39224611_zpid/\n- 1708 A Street, Belmar, NJ 07719 \u2014 5bd/2.0ba, $1,195,000, 1,440 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/\n- 103 2nd Avenue #A3, Belmar, NJ 07719 \u2014 2bd/1.0ba, $749,000, 960 sqft, CONDO\n  https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/\n- 301 10th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $2,699,900, 3,792 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "what about just 3 beds?",
+      "assistant": "Matched 7 of the saved corpus on filters {'beds': 3}:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 119-4th-ave-avon-by-the-sea-nj-07717 \u2014 119 4th Ave, Avon By The Sea, NJ 07717, 3bd/1.5ba, $1,699,000 5.5 blocks to beach\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- 526-w-end-ave-avon-by-the-sea-nj \u2014 526 W End Ave, Avon By The Sea NJ, 3bd/2.0ba, $1,490,000\n- briarwood-rd-belmar \u2014 1223 Briarwood Rd, Belmar, NJ 07719, 3bd/2.0ba, $674,200\n(+2 more)",
+      "answer_type": "search"
+    },
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar nj",
+      "assistant": "Found 1 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "how close to the beach is this house?",
+      "assistant": "Which property? Give me a saved property id.",
+      "answer_type": "micro_location"
+    },
+    {
+      "user": "what are the homes in belmar nj that are close to the beach",
+      "assistant": "Found 8 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\n- 1611 River Road, Belmar, NJ 07719 \u2014 5bd/4.0ba, $1,590,000, 2,469 sqft, MULTI_FAMILY\n  https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/\n- 304 14th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $1,250,000, 1,298 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/304-14th-Ave-Belmar-NJ-07719/39224611_zpid/\n- 1708 A Street, Belmar, NJ 07719 \u2014 5bd/2.0ba, $1,195,000, 1,440 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/\n- 103 2nd Avenue #A3, Belmar, NJ 07719 \u2014 2bd/1.0ba, $749,000, 960 sqft, CONDO\n  https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/\n- 301 10th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $2,699,900, 3,792 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "what do you think of 301 10th Avenue, Belmar, NJ 07719",
+      "assistant": "I couldn't match that property to the saved corpus yet.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "is belmar up and coming?",
+      "assistant": "Which property or town should I research? I need a loaded property or a saved town context.",
+      "answer_type": "research"
+    },
+    {
+      "user": "is belmar NJ up and coming?",
+      "assistant": "Which property or town should I research? I need a loaded property or a saved town context.",
+      "answer_type": "research"
+    }
+  ]
+}

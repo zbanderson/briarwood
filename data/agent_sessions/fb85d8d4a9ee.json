@@ -1,0 +1,26 @@
+{
+  "session_id": "fb85d8d4a9ee",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "tell me about 1223 briarwood road in belmar",
+      "assistant": "1223 Briarwood Rd \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is below the fair value anchor by 15.9%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what if we invested 100k into the property, what would we be able to sell it for?",
+      "assistant": "overrides applied: full renovation, renovation budget $100,000\n1223 Briarwood Rd renovation resale read: buy around $674,200 and all-in basis lands around $824,200.\nExpected resale anchor: n/a vs current value anchor $781,303.\nRenovation budget: $0; modeled ROI on the value-add path: +0.0%.\nWhat has to go right: hold/selling drag stays near $0 and budget cushion remains +0.0% before breakeven.\nStress check: Budget +20% leaves net profit around $-781,303.\nConfidence drag: weak_town_context, incomplete_carry_inputs.",
+      "answer_type": "projection"
+    },
+    {
+      "user": "what would a fully renovated 3 bed 2 bath house rent for in belmar, maybe we can buy it, live there, renovate, rent it",
+      "assistant": "overrides applied: full renovation\nThe decision is to buy if the price improves. The ask price is $674,200, while the all-in basis, which includes post-capex commitment, is $824,200. The fair value base is $781,303.46, indicating a basis premium of 5.2% and an ask premium of -15.89%. However, it's important to note the weak town context and incomplete carry inputs, which raise trust flags.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "\u001b[A",
+      "assistant": "1223 Briarwood Rd \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is below the fair value anchor by 15.9%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    }
+  ]
+}

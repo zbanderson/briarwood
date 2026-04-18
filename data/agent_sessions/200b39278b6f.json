@@ -1,0 +1,82 @@
+{
+  "session_id": "200b39278b6f",
+  "current_property_id": "1600-l-street-belmar-nj-07719",
+  "current_live_listing": {
+    "address": "1600 L Street, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 899000.0,
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": null,
+    "property_type": "SINGLE_FAMILY",
+    "listing_status": null,
+    "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+    "external_id": "39225096",
+    "source": "searchapi_zillow"
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3
+    }
+  },
+  "selected_search_result": {
+    "address": "1600 L Street, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 899000.0,
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": null,
+    "property_type": "SINGLE_FAMILY",
+    "listing_status": null,
+    "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+    "external_id": "39225096",
+    "source": "searchapi_zillow"
+  },
+  "promoted_property_id": "1600-l-street-belmar-nj-07719",
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes avialable in belmar nj",
+      "assistant": "Found 1 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "lets look at 1600 L street",
+      "assistant": "Briarwood saved 1600 L Street, Belmar, NJ 07719 as 1600-l-street-belmar-nj-07719 from live Zillow discovery.\nSource coverage: Zillow/SearchAPI sourced address, price_ask, beds_baths.\nBriarwood inferred or normalized county.\nStill missing for higher-confidence reads: sqft, year_built, days_on_market, price_per_sqft.\n1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba \u2014 ask $899,000\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is above the fair value anchor by 10.5%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in Belmar:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- l-street-2 \u2014 1302 L Street, 3bd/1.5ba, $850,000, 18.9 blocks to beach",
+      "answer_type": "browse"
+    },
+    {
+      "user": "is there any upside in renovation?",
+      "assistant": "overrides applied: full renovation\nThe decision stance is to \"buy if price improves.\" The current ask price is $899,000, which matches the all-in basis of $899,000, yet the fair value base is only $804,396.62. This reflects a basis premium of 10.52% and an ask premium of 10.52%. Trust flags indicating concerns include 'weak_town_context' and 'incomplete_carry_inputs.'",
+      "answer_type": "decision"
+    },
+    {
+      "user": "is belmar up and coming?",
+      "assistant": "Belmar, NJ market read (High confidence): Belmar has 2 constructive catalysts; 1 local risk signal need monitoring; 2 items remain on the watchlist. Confidence is high.\nWhat looks constructive: 1201 Main Street mixed-use redevelopment with 24 residential units was approved (approved); 601 Main Street (completed).\nWhat could weigh on the market: 500 River Road residential project with 12 units was denied after traffic concer (rejected).\nResearch pull: 4 document(s) reviewed.",
+      "answer_type": "research"
+    }
+  ]
+}

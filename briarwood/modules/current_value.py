@@ -129,6 +129,7 @@ class CurrentValueModule:
                 town_median_sqft=(town_context.median_sqft if town_context else None),
                 town_median_lot_size=(town_context.median_lot_size if town_context else None),
                 town_context_confidence=(town_context.context_confidence if town_context else None),
+                town_intelligence_doc_count=len(property_input.local_documents) if property_input.local_documents else 0,
             )
         )
         modeled_fields, non_modeled_fields = audit_property_fields(property_input)
@@ -213,6 +214,7 @@ class CurrentValueModule:
                 "income_weight": round(output.weights.income_weight, 4),
                 "town_prior_weight": round(output.weights.town_prior_weight, 4),
                 "town_context_confidence": output.town_context_confidence,
+                "town_context_confidence_raw": output.town_context_confidence_raw,
                 "direct_value_low": output.direct_value_range.low if output.direct_value_range is not None else None,
                 "direct_value_midpoint": output.direct_value_range.midpoint if output.direct_value_range is not None else None,
                 "direct_value_high": output.direct_value_range.high if output.direct_value_range is not None else None,

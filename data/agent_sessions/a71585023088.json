@@ -1,0 +1,58 @@
+{
+  "session_id": "a71585023088",
+  "current_property_id": null,
+  "current_live_listing": {
+    "address": "1600 L Street, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 899000.0,
+    "beds": 3,
+    "baths": 2.0,
+    "sqft": null,
+    "property_type": "SINGLE_FAMILY",
+    "listing_status": null,
+    "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+    "external_id": "39225096",
+    "source": "searchapi_zillow"
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar nj",
+      "assistant": "Found 1 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "what do you think of this house? 1600 L Street, Belmar, NJ 07719",
+      "assistant": "1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba \u2014 ask $899,000\nThis is a live Zillow listing in Belmar, NJ for a single family.\nWhat is still missing: Briarwood has not run the full saved-property underwrite path on this live listing yet, so value posture, trust flags, and strategy fit are still provisional.\nNext best move: use this Zillow URL for a deeper purchase read.\nhttps://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "answer_type": "browse"
+    },
+    {
+      "user": "yes, lets use this house for a full analysis",
+      "assistant": "1600 L Street, Belmar, NJ 07719 \u2014 ask $899,000\nDecision stance: buy if price improves. Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin.\nFair value anchor: $804,397 against all-in basis $899,000.\nPrimary value source: unknown.\nTrust flags: weak_town_context, incomplete_carry_inputs.\nBest path: Make an offer inside the risk-adjusted band rather than at ask..",
+      "answer_type": "decision"
+    },
+    {
+      "user": "is belmar up and coming?",
+      "assistant": "Which property or town should I research? I need a loaded property or a saved town context.",
+      "answer_type": "research"
+    }
+  ]
+}

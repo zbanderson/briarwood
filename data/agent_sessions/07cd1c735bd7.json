@@ -1,0 +1,17 @@
+{
+  "session_id": "07cd1c735bd7",
+  "current_property_id": "briarwood-rd-belmar",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "what do you think of 1223 briarwood road, belmar nj",
+      "assistant": "1223 Briarwood Rd, Belmar, NJ 07719 \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves. Ask is 15.9% below the fair value anchor.\nWhat supports that view: Make an offer inside the risk-adjusted band rather than at ask.\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nSource coverage: ATTOM added structured sale history and ownership timing context. Still missing: Google Maps enrichment unavailable: GOOGLE_MAPS_API_KEY is not configured.; ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    }
+  ]
+}

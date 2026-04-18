@@ -12,15 +12,30 @@ import unittest
 from unittest.mock import patch
 
 from briarwood.agent.dispatch import (
+    _deepen_browse_followup,
     _escalate_browse_affirmative,
+    handle_edge,
+    contextualize_decision,
     dispatch,
     handle_browse,
     handle_decision,
-    handle_edge,
     handle_lookup,
+    handle_micro_location,
+    handle_projection,
+    handle_research,
+    handle_rent_lookup,
+    handle_search,
 )
+from briarwood.agent.property_view import PropertyView
 from briarwood.agent.router import AnswerType, RouterDecision
 from briarwood.agent.session import Session, Turn
+from briarwood.agent.tools import LiveListingCandidate
+from briarwood.agent.tools import LiveListingDecision
+from briarwood.agent.tools import PromotedPropertyRecord
+from briarwood.agent.tools import PropertyBrief
+from briarwood.agent.tools import RenovationResaleOutlook
+from briarwood.agent.tools import ToolUnavailable
+from briarwood.agent.tools import _clean_address_query
 
 
 REF = "526-west-end-ave"
@@ -37,6 +52,68 @@ class LookupHandlerTests(unittest.TestCase):
         analyzer.assert_not_called()
         self.assertIn("West End", response)
         self.assertEqual(session.current_property_id, REF)
+
+    def test_clean_address_query_extracts_address_from_natural_question(self) -> None:
+        extracted = _clean_address_query(
+            "how much do you think 1228 briarwood road, belmar, nj is worth?"
+        )
+        self.assertEqual(extracted, "1228 briarwood road, belmar, nj")
+
+    def test_lookup_listing_history_question_does_not_invent_date(self) -> None:
+        decision = RouterDecision(
+            AnswerType.LOOKUP, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": "526 West End Ave, Avon By The Sea, NJ 07717"},
+        ), patch(
+            "briarwood.agent.dispatch._load_property_facts",
+            return_value={"listing_date": None, "price_history": []},
+        ):
+            response = handle_lookup(
+                "when was the last time it was listed?",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("don't have a recorded listing-date event", response)
+        self.assertNotIn("2026", response)
+
+
+class SearchHandlerInvestmentScreenTests(unittest.TestCase):
+    def test_search_cap_rate_runs_saved_corpus_screen(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.dispatch.screen_saved_listings_by_cap_rate",
+            return_value=[
+                type(
+                    "Screened",
+                    (),
+                    {
+                        "property_id": "briarwood-rd-belmar",
+                        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+                        "ask_price": 674200.0,
+                        "annual_noi": 38000.0,
+                        "cap_rate": 0.056,
+                        "monthly_rent": 4200.0,
+                        "rent_source_type": "estimated",
+                    },
+                )()
+            ],
+        ) as screener:
+            response = handle_search(
+                "can you show me houses in belmar nj that have a 5.5 cap rate?",
+                decision,
+                Session(),
+                llm=None,
+            )
+        screener.assert_called_once()
+        self.assertIn("Saved-corpus cap-rate screen", response)
+        self.assertIn("cap 5.6%", response)
+        self.assertIn("underwrite whether that cap rate is actually durable", response)
 
 
 class DecisionHandlerTests(unittest.TestCase):
@@ -70,6 +147,111 @@ class DecisionHandlerTests(unittest.TestCase):
         researcher.assert_not_called()
         self.assertIn("buy_if_price_improves", response)
         self.assertEqual(session.current_property_id, REF)
+
+    def test_decision_value_question_uses_fair_value_anchor(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        payload = {
+            "decision_stance": "pass_unless_changes",
+            "primary_value_source": "current_value",
+            "trust_flags": ["incomplete_carry_inputs"],
+            "value_position": {
+                "fair_value_base": 804396.62,
+                "value_low": 742000.0,
+                "value_high": 861000.0,
+                "ask_price": None,
+            },
+            "what_must_be_true": [],
+        }
+        with patch(
+            "briarwood.agent.property_view.analyze_property", return_value=payload
+        ), patch(
+            "briarwood.agent.property_view.get_property_summary",
+            return_value={"address": "1600 L Street, Belmar, NJ 07719", "ask_price": None},
+        ):
+            response = handle_decision(
+                "what is this house worth?",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("$804,397", response)
+        self.assertIn("$742,000 to $861,000", response)
+        self.assertNotIn("unknown", response.lower())
+
+
+class EdgeHandlerTests(unittest.TestCase):
+    def test_cma_includes_support_comps(self) -> None:
+        decision = RouterDecision(
+            AnswerType.EDGE, confidence=0.8, target_refs=[REF], reason="cma rewrite"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.get_value_thesis",
+            return_value={
+                "property_id": REF,
+                "ask_price": 700000.0,
+                "fair_value_base": 742000.0,
+                "premium_discount_pct": -0.06,
+                "pricing_view": "appears modestly undervalued",
+                "value_drivers": ["shore location", "3/2 layout"],
+                "key_value_drivers": ["shore location", "layout"],
+                "what_must_be_true": ["comps stay supportive"],
+                "primary_value_source": "current_value",
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={
+                "address": "11 Test Ave, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2.0,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[
+                {
+                    "property_id": REF,
+                    "address": "11 Test Ave, Belmar, NJ 07719",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 700000.0,
+                    "blocks_to_beach": 4.0,
+                },
+                {
+                    "property_id": "briarwood-rd-belmar",
+                    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 674200.0,
+                    "blocks_to_beach": None,
+                },
+                {
+                    "property_id": "1302-l-street",
+                    "address": "1302 L Street, Belmar, NJ 07719",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 850000.0,
+                    "blocks_to_beach": 18.9,
+                },
+            ],
+        ), patch(
+            "briarwood.agent.dispatch.analyze_property",
+            side_effect=ToolUnavailable("skip chart"),
+        ):
+            response = handle_edge(
+                "can you perform a CMA on 11 Test Ave, Belmar, NJ?",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("CMA for", response)
+        self.assertIn("CMA support comps:", response)
+        self.assertIn("briarwood-rd-belmar", response)
+        self.assertIn("1302-l-street", response)
 
     def test_decision_auto_researches_on_weak_town_context(self) -> None:
         """Phase C: weak_town_context triggers exactly one auto-research + re-analyze."""
@@ -143,52 +325,450 @@ class DecisionHandlerTests(unittest.TestCase):
         response = handle_decision("should I buy?", decision, session, llm=None)
         self.assertIn("Which property", response)
 
+    def test_decision_can_analyze_current_live_listing(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.8, target_refs=[], reason="browse-followup escalate"
+        )
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        with patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address", "price_ask", "beds_baths"],
+                inferred_fields=["county"],
+                missing_fields=["sqft"],
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            ),
+        ) as promoter, patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=PropertyView(
+                pid="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=2.0,
+                ask_price=899000.0,
+                bcv=None,
+                pricing_view=None,
+                fair_value_base=842000.0,
+                all_in_basis=899000.0,
+                decision_stance="pass_unless_price_changes",
+                primary_value_source="current_value",
+                trust_flags=("weak_town_context",),
+            ),
+        ) as loader:
+            response = handle_decision("yes lets run the full analysis", decision, session, llm=None)
+        promoter.assert_called_once()
+        self.assertGreaterEqual(loader.call_count, 1)
+        self.assertEqual(loader.call_args_list[0].args[0], "1600-l-street-belmar-nj-07719")
+        self.assertEqual(session.current_property_id, "1600-l-street-belmar-nj-07719")
+        self.assertIn("Stance: pass_unless_price_changes", response)
+
+    def test_decision_prefers_current_live_listing_when_last_results_are_present(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.8, target_refs=[], reason="browse-followup escalate"
+        )
+        current = {
+            "address": "1600 L Street, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+        }
+        session = Session(
+            current_live_listing=current,
+            last_live_listing_results=[
+                current,
+                {
+                    "address": "301 10th Avenue, Belmar, NJ 07719",
+                    "town": "Belmar",
+                    "state": "NJ",
+                    "listing_url": "https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+                },
+            ],
+        )
+        with patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="reused",
+                intake_warnings=[],
+                created_new=False,
+                sourced_fields=["address"],
+                inferred_fields=[],
+                missing_fields=[],
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            ),
+        ) as promoter, patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=PropertyView(
+                pid="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=2.0,
+                ask_price=899000.0,
+                bcv=None,
+                pricing_view=None,
+                fair_value_base=842000.0,
+                all_in_basis=899000.0,
+                decision_stance="pass_unless_price_changes",
+                primary_value_source="current_value",
+                trust_flags=("weak_town_context",),
+            ),
+        ) as loader:
+            response = handle_decision("yes lets run the full analysis", decision, session, llm=None)
+        promoter.assert_called_once_with(listing_context=current)
+        self.assertGreaterEqual(loader.call_count, 1)
+        self.assertEqual(loader.call_args_list[0].args[0], "1600-l-street-belmar-nj-07719")
+        self.assertIn("Stance: pass_unless_price_changes", response)
+
 
 class BrowseHandlerTests(unittest.TestCase):
-    """Browse: summary + similar listings, NO underwrite cascade."""
+    """Browse: underwrite-lite property brief + optional nearby support."""
 
     def _decision(self) -> RouterDecision:
         return RouterDecision(
             AnswerType.BROWSE, confidence=0.9, target_refs=[REF], reason="browse keyword"
         )
 
-    def test_browse_never_calls_analyze_property(self) -> None:
-        """Browse must NOT trigger the full cascade — that's the whole point."""
-        fake_summary = {
-            "property_id": REF,
-            "address": "526 West End Ave",
-            "town": "Avon By The Sea",
-            "state": "NJ",
-            "beds": 3,
-            "baths": 2.0,
-            "ask_price": 1_499_000,
-            "bcv": 1_379_080,
-            "pricing_view": "appears fully valued",
-        }
+    def _brief(self, **overrides) -> PropertyBrief:
+        payload = dict(
+            property_id=REF,
+            address="526 West End Ave",
+            town="Avon By The Sea",
+            state="NJ",
+            beds=3,
+            baths=2.0,
+            ask_price=1_499_000,
+            pricing_view="appears fully valued",
+            analysis_depth_used="snapshot",
+            recommendation="Buy if the price improves.",
+            decision="buy",
+            decision_stance="buy_if_price_improves",
+            best_path="Proceed carefully with a snapshot-to-decision escalation.",
+            key_value_drivers=["Ask sits below the fair value anchor", "Strong beach access"],
+            key_risks=["Thin carry inputs"],
+            trust_flags=["weak_town_context"],
+            recommended_next_run="decision",
+            next_questions=["should I buy this at the current ask?"],
+            primary_value_source="current_value",
+            fair_value_base=1_560_000,
+            ask_premium_pct=-0.039,
+        )
+        payload.update(overrides)
+        return PropertyBrief(**payload)
+
+    def test_browse_uses_property_brief_contract(self) -> None:
         with patch(
-            "briarwood.agent.property_view.get_property_summary", return_value=fake_summary
-        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(),
+        ) as brief_tool, patch(
             "briarwood.agent.dispatch.search_listings", return_value=[]
-        ), patch("briarwood.agent.property_view.analyze_property") as analyzer:
+        ), patch("briarwood.agent.dispatch.analyze_property") as analyzer:
             response = handle_browse(
                 "what do you think of 526?", self._decision(), Session(), llm=None
             )
         analyzer.assert_not_called()
+        brief_tool.assert_called_once_with(REF, overrides={})
         self.assertIn("526 West End Ave", response)
-        self.assertIn("Want a full underwrite?", response)
 
-    def test_browse_lists_similar_nearby(self) -> None:
-        fake_summary = {
-            "property_id": REF,
-            "address": "526 West End Ave",
-            "town": "Avon By The Sea",
-            "state": "NJ",
-            "beds": 3,
-            "baths": 2.0,
-            "ask_price": 1_500_000,
-            "bcv": 1_400_000,
-            "pricing_view": "fairly valued",
-        }
+
+class SearchHandlerTests(unittest.TestCase):
+    def _decision(self) -> RouterDecision:
+        return RouterDecision(
+            AnswerType.BROWSE, confidence=0.9, target_refs=[REF], reason="browse keyword"
+        )
+
+    def _brief(self, **overrides) -> PropertyBrief:
+        payload = dict(
+            property_id=REF,
+            address="526 West End Ave",
+            town="Avon By The Sea",
+            state="NJ",
+            beds=3,
+            baths=2.0,
+            ask_price=1_499_000,
+            pricing_view="appears fully valued",
+            analysis_depth_used="snapshot",
+            recommendation="Buy if the price improves.",
+            decision="buy",
+            decision_stance="buy_if_price_improves",
+            best_path="Proceed carefully with a snapshot-to-decision escalation.",
+            key_value_drivers=["Ask sits below the fair value anchor", "Strong beach access"],
+            key_risks=["Thin carry inputs"],
+            trust_flags=["weak_town_context"],
+            recommended_next_run="decision",
+            next_questions=["should I buy this at the current ask?"],
+            primary_value_source="current_value",
+            fair_value_base=1_560_000,
+            ask_premium_pct=-0.039,
+        )
+        payload.update(overrides)
+        return PropertyBrief(**payload)
+
+    def test_search_prefers_live_zillow_discovery_for_town_queries(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.9, target_refs=[], reason="search imperative"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings"
+        ) as saved_search:
+            response = handle_search(
+                "show me the houses that are listed for sale in Belmar",
+                decision,
+                session,
+                llm=None,
+            )
+        live_search.assert_not_called()
+        saved_search.assert_not_called()
+        self.assertIn("I can run live listing discovery for Belmar, but I need the state too.", response)
+        self.assertIn("Belmar, NJ", response)
+        self.assertIsNone(session.current_live_listing)
+        self.assertEqual(session.last_live_listing_results, [])
+
+    def test_search_does_not_treat_generic_near_the_beach_phrase_as_town_prompt(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.9, target_refs=[], reason="search imperative"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            side_effect=ToolUnavailable("no live path"),
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[
+                {
+                    "property_id": "304-14th-ave",
+                    "address": "304 14th Ave",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 1425000,
+                }
+            ],
+        ) as saved_search:
+            response = handle_search(
+                "show me listings near the beach under 1.5m",
+                decision,
+                session,
+                llm=None,
+            )
+        live_search.assert_called_once()
+        saved_search.assert_called_once()
+        self.assertNotIn("Please provide the town and state", response)
+        self.assertIn("Live Zillow discovery was unavailable", response)
+        self.assertIn("Matched 1 of the saved corpus", response)
+
+    def test_search_prefers_live_zillow_discovery_when_town_and_state_are_provided(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.9, target_refs=[], reason="search imperative"
+        )
+        session = Session()
+        live_rows = [
+            LiveListingCandidate(
+                address="1223 Briarwood Rd, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                zip_code="07719",
+                ask_price=674200,
+                beds=3,
+                baths=2.0,
+                sqft=1468,
+                property_type="Single Family",
+                listing_status="For sale",
+                listing_url="https://www.zillow.com/homedetails/1223-Briarwood-Rd-Belmar-NJ-07719/39225332_zpid/",
+                external_id="39225332",
+            )
+        ]
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            return_value=live_rows,
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings"
+        ) as saved_search:
+            response = handle_search(
+                "show me the houses that are listed for sale in Belmar, NJ",
+                decision,
+                session,
+                llm=None,
+            )
+        live_search.assert_called_once_with(
+            query="Belmar, NJ",
+            town="Belmar",
+            state="NJ",
+            beds=None,
+            beds_min=None,
+        )
+        saved_search.assert_not_called()
+        self.assertIn("Found 1 live Zillow listing", response)
+        self.assertIn("1223 Briarwood Rd", response)
+        self.assertIn("Next best move", response)
+        self.assertEqual(session.current_live_listing["address"], "1223 Briarwood Rd, Belmar, NJ 07719")
+        self.assertEqual(len(session.last_live_listing_results), 1)
+        self.assertIn("Belmar, NJ", response)
+
+    def test_search_followup_place_completion_rewrites_to_search(self) -> None:
+        session = Session(search_context={"town": "Belmar", "state": None, "filters": {"beds": 3}})
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        out = contextualize_decision("Yes belmar NJ", decision, session)
+        self.assertEqual(out.answer_type, AnswerType.SEARCH)
+        self.assertEqual(out.reason, "search-followup place completion")
+
+    def test_search_followup_place_completion_uses_pending_filters(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="search-followup place completion"
+        )
+        session = Session(search_context={"town": "Belmar", "state": None, "filters": {"beds": 3}})
+        live_rows = [
+            LiveListingCandidate(
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                zip_code="07719",
+                ask_price=899000,
+                beds=3,
+                baths=2.0,
+                sqft=1500,
+                property_type="Single Family",
+                listing_status="For sale",
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+                external_id="39225096",
+            )
+        ]
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            return_value=live_rows,
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings"
+        ) as saved_search:
+            response = handle_search("Yes belmar NJ", decision, session, llm=None)
+        live_search.assert_called_once_with(
+            query="Belmar, NJ",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            beds_min=None,
+        )
+        saved_search.assert_not_called()
+        self.assertIn("Found 1 live Zillow listing", response)
+
+    def test_search_refines_live_search_with_session_town_state(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session(search_context={"town": "Belmar", "state": "NJ", "filters": {}})
+        live_rows = [
+            LiveListingCandidate(
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                zip_code="07719",
+                ask_price=899000,
+                beds=3,
+                baths=2.0,
+                sqft=1500,
+                property_type="Single Family",
+                listing_status="For sale",
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+                external_id="39225096",
+            )
+        ]
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            return_value=live_rows,
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings"
+        ) as saved_search:
+            response = handle_search("what about just 3 beds?", decision, session, llm=None)
+        live_search.assert_called_once_with(
+            query="Belmar, NJ",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            beds_min=None,
+        )
+        saved_search.assert_not_called()
+        self.assertIn("Found 1 live Zillow listing", response)
+
+    def test_search_passes_bedroom_count_into_live_zillow_query(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            return_value=[],
+        ) as live_search, patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[],
+        ):
+            handle_search(
+                "what are the 3 bedroom homes listed for sale in Belmar, NJ",
+                decision,
+                Session(),
+                llm=None,
+            )
+        live_search.assert_called_once_with(
+            query="Belmar, NJ",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            beds_min=None,
+        )
+
+    def test_search_falls_back_to_saved_corpus_filters_when_live_discovery_is_not_available(self) -> None:
+        decision = RouterDecision(
+            AnswerType.SEARCH, confidence=0.9, target_refs=[], reason="search imperative"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.search_live_listings",
+            side_effect=ToolUnavailable("no live path"),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[
+                {
+                    "property_id": "304-14th-ave",
+                    "address": "304 14th Ave",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 1425000,
+                    "blocks_to_beach": 2.5,
+                }
+            ],
+        ):
+            response = handle_search(
+                "show me listings near the beach under 1.5m",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("Live Zillow discovery was unavailable", response)
+        self.assertIn("Matched 1 of the saved corpus", response)
+        self.assertIn("304-14th-ave", response)
+        self.assertIsNone(session.current_live_listing)
+        self.assertEqual(session.last_live_listing_results, [])
+
+    def test_browse_lists_similar_nearby_as_secondary_support(self) -> None:
         fake_neighbors = [
             {
                 "property_id": "304-14th-ave",
@@ -208,7 +788,8 @@ class BrowseHandlerTests(unittest.TestCase):
             },
         ]
         with patch(
-            "briarwood.agent.property_view.get_property_summary", return_value=fake_summary
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(ask_price=1_500_000),
         ), patch(
             "briarwood.agent.dispatch.search_listings", return_value=fake_neighbors
         ) as search:
@@ -222,32 +803,21 @@ class BrowseHandlerTests(unittest.TestCase):
         self.assertEqual(call_filters["town"], "Avon By The Sea")
         self.assertAlmostEqual(call_filters["min_price"], 1_500_000 * 0.75)
         self.assertAlmostEqual(call_filters["max_price"], 1_500_000 * 1.25)
-        # subject filtered, neighbor present
+        self.assertIn("Briarwood sees the immediate setup", response)
         self.assertIn("304-14th-ave", response)
         self.assertNotIn("- 526-west-end-ave", response)
 
     def test_browse_omits_missing_fields_instead_of_rendering_question_marks(self) -> None:
         """Bug A: null beds/baths must not render as '? bedrooms'."""
-        fake_summary = {
-            "property_id": REF,
-            "address": "526 West End Ave",
-            "town": "Avon By The Sea",
-            "state": "NJ",
-            "beds": None,
-            "baths": None,
-            "ask_price": 1_499_000,
-        }
         with patch(
-            "briarwood.agent.property_view.get_property_summary", return_value=fake_summary
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(beds=None, baths=None),
         ), patch(
             "briarwood.agent.dispatch.search_listings", return_value=[]
         ):
             response = handle_browse(
                 "tell me about 526", self._decision(), Session(), llm=None
             )
-        # Bug A: specific failure modes — placeholder "?" next to bd/ba tokens,
-        # and LLM paraphrases like "unspecified bedrooms". The trailing CTA
-        # "Want a full underwrite?" is allowed; everything else must be clean.
         self.assertNotIn("?bd", response)
         self.assertNotIn("?ba", response)
         self.assertNotIn("? bd", response)
@@ -255,31 +825,36 @@ class BrowseHandlerTests(unittest.TestCase):
         self.assertNotIn("unspecified", response.lower())
         self.assertIn("526 West End Ave", response)
 
-    def test_browse_does_not_leak_valuation_math(self) -> None:
-        """Intent tier: browse is orientation, not valuation — no fair value / premium."""
-        fake_summary = {
-            "property_id": REF,
-            "address": "526 West End Ave",
-            "town": "Avon By The Sea",
-            "state": "NJ",
-            "beds": 3,
-            "baths": 2.0,
-            "ask_price": 1_499_000,
-            "bcv": 1_379_080,
-            "pricing_view": "appears fully valued",
-        }
+    def test_browse_brings_forward_purchase_relevant_signals(self) -> None:
         with patch(
-            "briarwood.agent.property_view.get_property_summary", return_value=fake_summary
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(),
         ), patch(
             "briarwood.agent.dispatch.search_listings", return_value=[]
         ):
             response = handle_browse(
                 "tell me about 526", self._decision(), Session(), llm=None
             )
-        self.assertNotIn("fair value", response.lower())
-        self.assertNotIn("premium", response.lower())
-        # BCV is a valuation concept — must not surface in browse narration either.
-        self.assertNotIn("1,379,080", response)
+        self.assertIn("fair value anchor", response.lower())
+        self.assertIn("weak_town_context", response)
+        self.assertIn("Next best question", response)
+
+    def test_browse_does_not_surface_unknown_primary_value_source(self) -> None:
+        with patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                key_value_drivers=[],
+                primary_value_source="unknown",
+                best_path="Proceed through the snapshot-to-decision path.",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "tell me about 526", self._decision(), Session(), llm=None
+            )
+        self.assertNotIn("primary value source is unknown", response.lower())
+        self.assertIn("snapshot-to-decision path", response.lower())
 
     def test_browse_without_property_prompts_for_one(self) -> None:
         decision = RouterDecision(
@@ -289,6 +864,326 @@ class BrowseHandlerTests(unittest.TestCase):
             "what do you think?", decision, Session(), llm=None
         )
         self.assertIn("Which property", response)
+
+    def test_browse_unresolved_property_mentions_saved_corpus(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.9, target_refs=[], reason="test"
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id", return_value=(None, [])
+        ):
+            response = handle_browse(
+                "tell me about 1223 ocean ave", decision, Session(), llm=None
+            )
+        self.assertIn("saved corpus", response.lower())
+
+    def test_browse_ambiguous_property_returns_candidates(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.9, target_refs=[], reason="test"
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=(None, ["526-west-end-ave", "304-14th-ave"]),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            side_effect=[
+                {"address": "526 West End Ave", "town": "Avon By The Sea"},
+                {"address": "304 14th Ave", "town": "Belmar"},
+            ],
+        ):
+            response = handle_browse(
+                "tell me about west end", decision, Session(), llm=None
+            )
+        self.assertIn("close matches", response.lower())
+        self.assertIn("526-west-end-ave", response)
+
+    def test_reported_transcript_gets_purchase_brief(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=("briarwood-rd-belmar", ["briarwood-rd-belmar"]),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="briarwood-rd-belmar",
+                address="1223 Briarwood Rd",
+                town="Belmar",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what can you tell me about 1223 Briarwood Road, in Belmar",
+                decision,
+                Session(),
+                llm=None,
+            )
+        self.assertIn("1223 Briarwood Rd", response)
+        self.assertIn("Briarwood sees the immediate setup", response)
+        self.assertIn("What supports that view", response)
+        self.assertIn("What could weaken confidence", response)
+        self.assertIn("Next best question", response)
+
+    def test_unsaved_address_can_auto_promote_into_browse(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=(None, []),
+        ), patch(
+            "briarwood.agent.dispatch.promote_unsaved_address",
+            return_value=PromotedPropertyRecord(
+                property_id="25-main-street-belmar-nj-07719",
+                address="25 Main Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address", "beds_baths", "sqft"],
+                inferred_fields=["county"],
+                missing_fields=["price"],
+                listing_url=None,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="25-main-street-belmar-nj-07719",
+                address="25 Main Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                ask_price=None,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={
+                "cards": [
+                    {"key": "property_header", "body": ["25 Main Street, Belmar, NJ 07719"]},
+                    {
+                        "key": "purchase_brief",
+                        "body": [
+                            "Immediate setup: buy if price improves.",
+                            "What supports it: Make an offer inside the risk-adjusted band rather than at ask.",
+                            "What could weaken confidence: weak_town_context.",
+                            "Next best question: should I buy this at the current ask?",
+                        ],
+                    },
+                    {
+                        "key": "data_coverage",
+                        "body": ["ATTOM added structured sale history and ownership timing context."],
+                    },
+                ]
+            },
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 25 Main Street, Belmar, NJ 07719",
+                decision,
+                Session(),
+                llm=None,
+            )
+        self.assertIn("25 Main Street, Belmar, NJ 07719", response)
+        self.assertIn("buy if price improves", response)
+
+    def test_browse_ignores_poisoned_saved_record_and_repromotes_address(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=("1228-briarwood-road-belmar-nj", ["1228-briarwood-road-belmar-nj"]),
+        ), patch(
+            "briarwood.agent.dispatch.saved_property_has_valid_location",
+            side_effect=lambda pid: False if pid == "1228-briarwood-road-belmar-nj" else True,
+        ), patch(
+            "briarwood.agent.dispatch.promote_unsaved_address",
+            return_value=PromotedPropertyRecord(
+                property_id="1228-briarwood-road-belmar-nj",
+                address="1228 Briarwood Road, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address", "beds_baths", "sqft"],
+                inferred_fields=["county"],
+                missing_fields=["price"],
+                listing_url=None,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="1228-briarwood-road-belmar-nj",
+                address="1228 Briarwood Road, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                ask_price=None,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={
+                "cards": [
+                    {"key": "property_header", "body": ["1228 Briarwood Road, Belmar, NJ 07719"]},
+                    {
+                        "key": "purchase_brief",
+                        "body": [
+                            "Immediate setup: buy if price improves.",
+                            "What supports it: Make an offer inside the risk-adjusted band rather than at ask.",
+                            "What could weaken confidence: weak_town_context.",
+                            "Next best question: should I buy this at the current ask?",
+                        ],
+                    },
+                    {"key": "data_coverage", "body": ["ATTOM added structured sale history and ownership timing context."]},
+                ]
+            },
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 1228 briarwood road, belmar nj",
+                decision,
+                Session(),
+                llm=None,
+            )
+        self.assertIn("1228 Briarwood Road, Belmar, NJ 07719", response)
+
+    def test_browse_resolves_this_house_after_single_live_search_result(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "ask_price": 899000.0,
+                "beds": 3,
+                "baths": 2.0,
+                "property_type": "SINGLE_FAMILY",
+                "listing_status": "FOR_SALE",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            },
+            last_live_listing_results=[
+                {
+                    "address": "1600 L Street, Belmar, NJ 07719",
+                    "town": "Belmar",
+                    "state": "NJ",
+                    "ask_price": 899000.0,
+                    "beds": 3,
+                    "baths": 2.0,
+                    "property_type": "SINGLE_FAMILY",
+                    "listing_status": "FOR_SALE",
+                    "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+                }
+            ],
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id", return_value=(None, [])
+        ), patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address", "price_ask", "beds_baths"],
+                inferred_fields=["county"],
+                missing_fields=["sqft"],
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_enrichment",
+            return_value={
+                "attom": {"sale_history_snapshot": {"sale_count": 2}, "rental_avm": {"estimated_monthly_rent": 3600}},
+                "google": {"geocode": {"county": "Monmouth"}, "nearby_places": {"type_counts": {"school": 1}}, "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?..."},
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                ask_price=899000,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of this house?",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("1600 L Street, Belmar, NJ 07719", response)
+        self.assertIn("Briarwood saved", response)
+        self.assertIn("Source coverage", response)
+        self.assertIn("Structured enrichment pulled from ATTOM", response)
+        self.assertIn("Location enrichment pulled from Google Maps", response)
+
+    def test_browse_resolves_explicit_live_listing_address_from_last_results(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session(
+            last_live_listing_results=[
+                {
+                    "address": "301 10th Avenue, Belmar, NJ 07719",
+                    "town": "Belmar",
+                    "state": "NJ",
+                    "ask_price": 2699900.0,
+                    "beds": 6,
+                    "baths": 4.0,
+                    "property_type": "SINGLE_FAMILY",
+                    "listing_status": "FOR_SALE",
+                    "listing_url": "https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+                }
+            ]
+        )
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id", return_value=(None, [])
+        ), patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="301-10th-avenue-belmar-nj-07719",
+                address="301 10th Avenue, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address", "price_ask", "beds_baths"],
+                inferred_fields=["county"],
+                missing_fields=[],
+                listing_url="https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="301-10th-avenue-belmar-nj-07719",
+                address="301 10th Avenue, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                ask_price=2699900,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 301 10th Avenue, Belmar, NJ 07719",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("301 10th Avenue, Belmar, NJ 07719", response)
+        self.assertIn("Briarwood saved", response)
 
 
 class SessionPropertyLeakTests(unittest.TestCase):
@@ -351,6 +1246,174 @@ class EdgeHandlerTests(unittest.TestCase):
         analyzer.assert_called_once_with(REF, overrides={"ask_price": 1_300_000.0})
 
 
+class ResearchHandlerTests(unittest.TestCase):
+    def test_research_uses_loaded_property_town_context(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RESEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session(current_property_id=REF)
+        with patch(
+            "briarwood.agent.dispatch._summary_town_state",
+            return_value=("Belmar", "NJ"),
+        ), patch(
+            "briarwood.agent.dispatch.research_town",
+            return_value={
+                "document_count": 3,
+                "warnings": [],
+                "summary": {
+                    "confidence_label": "Medium",
+                    "narrative_summary": "Belmar shows active but mixed development signals.",
+                    "bullish_signals": ["Board activity is picking up"],
+                    "bearish_signals": ["Supply additions could weigh on pricing"],
+                    "watch_items": [],
+                },
+            },
+        ) as researcher:
+            response = handle_research(
+                "is belmar up and coming? is there improvement in the market?",
+                decision,
+                session,
+                llm=None,
+            )
+        researcher.assert_called_once()
+        self.assertIn("Belmar, NJ market read", response)
+        self.assertIn("What looks constructive", response)
+        self.assertIn("What could weigh on the market", response)
+
+    def test_research_accepts_explicit_town_state_without_loaded_context(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RESEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        with patch(
+            "briarwood.agent.dispatch.research_town",
+            return_value={
+                "document_count": 2,
+                "warnings": [],
+                "summary": {
+                    "confidence_label": "Medium",
+                    "narrative_summary": "Belmar shows improving demand and selective reinvestment momentum.",
+                    "bullish_signals": ["Shore demand remains resilient"],
+                    "bearish_signals": [],
+                    "watch_items": ["Seasonality"],
+                },
+            },
+        ) as researcher:
+            response = handle_research(
+                "is belmar NJ up and coming?",
+                decision,
+                Session(),
+                llm=None,
+            )
+        researcher.assert_called_once_with("Belmar", "NJ", ["development", "demand", "migration"])
+        self.assertIn("Belmar, NJ market read", response)
+        self.assertIn("Shore demand remains resilient", response)
+
+
+class ProjectionHandlerTests(unittest.TestCase):
+    def test_renovation_resale_question_uses_dedicated_outlook(self) -> None:
+        decision = RouterDecision(
+            AnswerType.PROJECTION, confidence=0.7, target_refs=[REF], reason="test"
+        )
+        outlook = RenovationResaleOutlook(
+            property_id=REF,
+            address="526 West End Ave",
+            town="Avon By The Sea",
+            state="NJ",
+            listing_ask_price=1_499_000,
+            entry_basis=699_000,
+            all_in_basis=849_000,
+            fair_value_base=781_303.46,
+            decision_stance="buy_if_price_improves",
+            recommendation="Buy if price improves.",
+            best_path="Underwrite the renovation path only if margin remains strong after cost and execution friction.",
+            renovated_bcv=975_000,
+            current_bcv=781_303.46,
+            renovation_budget=150_000,
+            gross_value_creation=193_696.54,
+            net_value_creation=43_696.54,
+            roi_pct=29.1,
+            total_hold_cost=24_000,
+            budget_overrun_margin_pct=18.0,
+            margin_scenarios=[
+                {"label": "Budget +20%, Value -10%", "net_profit": -12_000},
+            ],
+            trust_flags=["weak_town_context"],
+            key_risks=["Thin carry inputs"],
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_renovation_resale_outlook",
+            return_value=outlook,
+        ) as outlook_tool:
+            response = handle_projection(
+                "if we renovated it, what could we turn around and sell it for...lets assume we can get it for 699k",
+                decision,
+                Session(),
+                llm=None,
+            )
+        outlook_tool.assert_called_once_with(
+            REF, overrides={"ask_price": 699_000.0, "mode": "renovated"}
+        )
+        self.assertIn("Expected resale anchor", response)
+        self.assertIn("Rough spread after renovation", response)
+        self.assertIn("Stress check", response)
+        self.assertIn("Confidence drag", response)
+
+
+class RentLookupHandlerTests(unittest.TestCase):
+    def test_rent_lookup_threads_overrides_and_owner_occupy_then_rent_hint(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RENT_LOOKUP, confidence=0.75, target_refs=[REF], reason="test"
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={
+                "monthly_rent": 4200,
+                "effective_monthly_rent": 3800,
+                "rent_source_type": "estimated",
+                "rental_ease_label": "Stable Rental Profile",
+                "rental_ease_score": 68.0,
+                "annual_noi": 22000,
+            },
+        ) as rent_tool, patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={"best_path": "Owner-occupy first, then verify the rent-conversion path before committing to a longer hold."},
+        ) as fit_tool:
+            response = handle_rent_lookup(
+                "what would a fully renovated 3 bed 2 bath house rent for in belmar, maybe we can buy it, live there, renovate, rent it",
+                decision,
+                Session(),
+                llm=None,
+            )
+        rent_tool.assert_called_once_with(REF, overrides={"mode": "renovated"})
+        fit_tool.assert_called_once_with(REF, overrides={"mode": "renovated"})
+        self.assertIn("Estimated monthly rent", response)
+        self.assertIn("Likely path", response)
+
+    def test_future_rent_question_gets_year_horizon_range(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RENT_LOOKUP, confidence=0.75, target_refs=[REF], reason="future rent rewrite"
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={
+                "monthly_rent": 4200,
+                "effective_monthly_rent": 3800,
+                "rent_source_type": "estimated",
+                "rental_ease_label": "Stable Rental Profile",
+                "rental_ease_score": 68.0,
+                "annual_noi": 22000,
+            },
+        ):
+            response = handle_rent_lookup(
+                "what do you think i could rent the house for in 2 years?",
+                decision,
+                Session(),
+                llm=None,
+            )
+        self.assertIn("Working 2-year rent range", response)
+        self.assertIn("3% annually", response)
+
+
 class BrowseAffirmativeEscalationTests(unittest.TestCase):
     """After a BROWSE turn, 'yes/ok/sure' should promote to DECISION."""
 
@@ -389,6 +1452,18 @@ class BrowseAffirmativeEscalationTests(unittest.TestCase):
         out = _escalate_browse_affirmative("yes", self._browse_decision(), s)
         self.assertEqual(out.answer_type, AnswerType.BROWSE)
 
+    def test_live_listing_browse_affirmative_escalates_to_decision(self) -> None:
+        s = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        s.turns.append(Turn(user="what do you think of this house?", assistant="…", answer_type="browse"))
+        out = _escalate_browse_affirmative("yes lets run the full analysis", self._browse_decision(), s)
+        self.assertEqual(out.answer_type, AnswerType.DECISION)
+        self.assertEqual(out.target_refs, [])
+
     def test_question_does_not_escalate(self) -> None:
         out = _escalate_browse_affirmative(
             "yes but how big is the yard?",
@@ -396,6 +1471,19 @@ class BrowseAffirmativeEscalationTests(unittest.TestCase):
             self._session_post_browse(),
         )
         self.assertEqual(out.answer_type, AnswerType.BROWSE)
+
+    def test_and_after_browse_deepens_to_decision(self) -> None:
+        out = _deepen_browse_followup(
+            "and?", self._browse_decision(), self._session_post_browse()
+        )
+        self.assertEqual(out.answer_type, AnswerType.DECISION)
+        self.assertEqual(out.reason, "browse-followup deepen")
+
+    def test_go_on_after_browse_deepens_to_decision(self) -> None:
+        out = _deepen_browse_followup(
+            "go on", self._browse_decision(), self._session_post_browse()
+        )
+        self.assertEqual(out.answer_type, AnswerType.DECISION)
 
     def test_dispatch_routes_affirmative_to_decision_handler(self) -> None:
         """End-to-end: dispatch() should call handle_decision, not handle_browse."""
@@ -416,6 +1504,253 @@ class BrowseAffirmativeEscalationTests(unittest.TestCase):
         decision_mock.assert_called_once()
         browse_mock.assert_not_called()
         self.assertEqual(out, "D")
+
+    def test_dispatch_routes_and_followup_to_decision_handler(self) -> None:
+        from unittest.mock import MagicMock
+
+        from briarwood.agent import dispatch as dispatch_mod
+
+        session = self._session_post_browse()
+        decision_mock = MagicMock(return_value="D")
+        browse_mock = MagicMock(return_value="B")
+        table = {
+            **dispatch_mod.DISPATCH_TABLE,
+            AnswerType.DECISION: decision_mock,
+            AnswerType.BROWSE: browse_mock,
+        }
+        with patch.object(dispatch_mod, "DISPATCH_TABLE", table):
+            out = dispatch("and?", self._browse_decision(), session, llm=None)
+        decision_mock.assert_called_once()
+        browse_mock.assert_not_called()
+        self.assertEqual(out, "D")
+
+    def test_dispatch_routes_live_listing_affirmative_to_decision_handler(self) -> None:
+        from unittest.mock import MagicMock
+
+        from briarwood.agent import dispatch as dispatch_mod
+
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        session.turns.append(Turn(user="what do you think of this house?", assistant="…", answer_type="browse"))
+        decision_mock = MagicMock(return_value="D")
+        browse_mock = MagicMock(return_value="B")
+        table = {
+            **dispatch_mod.DISPATCH_TABLE,
+            AnswerType.DECISION: decision_mock,
+            AnswerType.BROWSE: browse_mock,
+        }
+        with patch.object(dispatch_mod, "DISPATCH_TABLE", table):
+            out = dispatch("yes lets run the full analysis", self._browse_decision(), session, llm=None)
+        decision_mock.assert_called_once()
+        browse_mock.assert_not_called()
+        self.assertEqual(out, "D")
+
+
+class BrowseContextFollowupTests(unittest.TestCase):
+    def _session_post_browse(self) -> Session:
+        s = Session(current_property_id=REF)
+        s.turns.append(Turn(user="tell me about it", assistant="…", answer_type="browse"))
+        return s
+
+    def _browse_decision(self) -> RouterDecision:
+        return RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+
+    def test_absorption_followup_rewrites_to_explainer_reason(self) -> None:
+        out = contextualize_decision(
+            "what is absorption data?", self._browse_decision(), self._session_post_browse()
+        )
+        self.assertEqual(out.answer_type, AnswerType.BROWSE)
+        self.assertEqual(out.reason, "browse-followup explain")
+
+    def test_dispatch_returns_absorption_explanation(self) -> None:
+        session = self._session_post_browse()
+        with patch(
+            "briarwood.agent.dispatch._summary_town_state",
+            return_value=("Belmar", "NJ"),
+        ):
+            out = dispatch(
+                "what is absorption data?",
+                self._browse_decision(),
+                session,
+                llm=None,
+            )
+        self.assertIn("market-speed read", out)
+        self.assertIn("Belmar", out)
+
+    def test_town_followup_rewrites_to_research(self) -> None:
+        with patch(
+            "briarwood.agent.dispatch._summary_town_state",
+            return_value=("Belmar", "NJ"),
+        ):
+            out = contextualize_decision(
+                "how is belmar?", self._browse_decision(), self._session_post_browse()
+            )
+        self.assertEqual(out.answer_type, AnswerType.RESEARCH)
+        self.assertEqual(out.reason, "browse-followup town research")
+
+    def test_live_listing_town_followup_rewrites_to_research(self) -> None:
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        session.turns.append(Turn(user="what do you think of this house?", assistant="…", answer_type="browse"))
+        out = contextualize_decision(
+            "is belmar up and coming?", self._browse_decision(), session
+        )
+        self.assertEqual(out.answer_type, AnswerType.RESEARCH)
+        self.assertEqual(out.reason, "browse-followup town research")
+
+    def test_owner_occupy_then_rent_rewrites_to_strategy(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "Could i live here and then rent it out in a couple years?",
+            RouterDecision(
+                AnswerType.DECISION, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.STRATEGY)
+        self.assertEqual(out.reason, "owner-occupy then rent rewrite")
+        self.assertEqual(out.target_refs, [REF])
+
+    def test_future_rent_rewrites_to_rent_lookup(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "what do you think i could rent the house for in 2 years?",
+            RouterDecision(
+                AnswerType.PROJECTION, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.RENT_LOOKUP)
+        self.assertEqual(out.reason, "future rent rewrite")
+        self.assertEqual(out.target_refs, [REF])
+
+    def test_cma_rewrites_to_edge_on_active_property(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "Can you perform a CMA on this property?",
+            RouterDecision(
+                AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.EDGE)
+        self.assertEqual(out.reason, "cma rewrite")
+        self.assertEqual(out.target_refs, [REF])
+
+    def test_cma_rewrites_to_edge_when_property_is_named_in_text(self) -> None:
+        session = Session()
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=("1600-l-street-belmar-nj-07719", ["1600-l-street-belmar-nj-07719"]),
+        ), patch(
+            "briarwood.agent.dispatch.saved_property_has_valid_location",
+            return_value=True,
+        ):
+            out = contextualize_decision(
+                "can you perform a CMA on 1600 L Street, Belmar, NJ",
+                RouterDecision(
+                    AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+                ),
+                session,
+            )
+        self.assertEqual(out.answer_type, AnswerType.EDGE)
+        self.assertEqual(out.reason, "cma rewrite")
+        self.assertEqual(out.target_refs, ["1600-l-street-belmar-nj-07719"])
+
+    def test_research_uses_live_listing_context(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RESEARCH, confidence=0.6, target_refs=[], reason="browse-followup town research"
+        )
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        with patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address"],
+                inferred_fields=["county"],
+                missing_fields=["sqft"],
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.research_town",
+            return_value={
+                "summary": {
+                    "confidence_label": "Moderate",
+                    "narrative_summary": "Belmar shows improving demand and selective reinvestment momentum.",
+                    "bullish_signals": ["Strong shore demand"],
+                    "bearish_signals": [],
+                    "watch_items": ["Seasonality"],
+                },
+                "document_count": 3,
+                "warnings": [],
+            },
+        ) as research:
+            out = handle_research("is belmar up and coming?", decision, session, llm=None)
+        research.assert_called_once()
+        self.assertIn("Belmar, NJ market read", out)
+        self.assertIn("Strong shore demand", out)
+
+
+class MicroLocationHandlerTests(unittest.TestCase):
+    def test_micro_location_uses_live_listing_context_when_saved_property_missing(self) -> None:
+        decision = RouterDecision(
+            AnswerType.MICRO_LOCATION, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session(
+            current_live_listing={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            }
+        )
+        fake_index = type("Idx", (), {"properties": []})()
+        with patch(
+            "briarwood.agent.dispatch.promote_discovered_listing",
+            return_value=PromotedPropertyRecord(
+                property_id="1600-l-street-belmar-nj-07719",
+                address="1600 L Street, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                promotion_status="created",
+                intake_warnings=[],
+                created_new=True,
+                sourced_fields=["address"],
+                inferred_fields=["county"],
+                missing_fields=["sqft"],
+                listing_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+            ),
+        ), patch(
+            "briarwood.agent.index.load_index", return_value=fake_index
+        ):
+            response = handle_micro_location("how close to the beach is this house?", decision, session, llm=None)
+        self.assertIn("1600-l-street-belmar-nj-07719", response)
+        self.assertIn("micro-location row", response)
 
 
 if __name__ == "__main__":

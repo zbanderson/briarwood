@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from urllib.parse import urlparse
 
+from briarwood.data_sources.searchapi_zillow_client import SearchApiZillowClient
 from briarwood.listing_intake.schemas import (
     ListingRawData,
     PriceHistoryEntry,
@@ -24,8 +25,9 @@ class ListingParser:
 
 
 class ZillowUrlParser(ListingParser):
-    def __init__(self) -> None:
+    def __init__(self, *, client: SearchApiZillowClient | None = None) -> None:
         super().__init__(source_name="zillow")
+        self.client = client or SearchApiZillowClient()
 
     def can_parse(self, source: str) -> bool:
         return source.strip().startswith(("http://", "https://")) and "zillow.com" in source
@@ -37,10 +39,32 @@ class ZillowUrlParser(ListingParser):
         if parts:
             slug = parts[1] if parts[0].lower() == "homedetails" and len(parts) > 1 else parts[0]
         address = _address_from_slug(slug)
-        warnings = [
-            "URL intake is metadata-only in v1; no live page fetching is performed.",
-            "Provide pasted listing text to extract richer fields like description, HOA, tax history, and price history.",
-        ]
+        if self.client.is_configured:
+            response = self.client.lookup_listing(source_url=source.strip(), address_hint=address)
+            if response.ok and response.normalized_payload:
+                raw = self.client.to_listing_raw_data(
+                    response.normalized_payload,
+                    source_url=source.strip(),
+                    fallback_address=address,
+                )
+                warnings = [
+                    "Live Zillow hydration succeeded via SearchAPI.",
+                ]
+                if raw.sqft is None or raw.listing_description is None:
+                    warnings.append(
+                        "Live Zillow hydration returned partial field coverage; pasted listing text can still add richer description and history detail."
+                    )
+                return raw, warnings
+            warnings = [
+                f"SearchAPI Zillow hydration failed; falling back to URL metadata only ({response.error})."
+            ]
+        else:
+            warnings = [
+                "URL intake is metadata-only unless SearchAPI Zillow is configured.",
+            ]
+        warnings.append(
+            "Provide pasted listing text to extract richer fields like description, HOA, tax history, and price history."
+        )
         raw = ListingRawData(
             source=self.source_name,
             intake_mode="url_intake",

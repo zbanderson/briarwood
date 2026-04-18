@@ -1,0 +1,26 @@
+{
+  "session_id": "0801af419118",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "what can you tell me about 1228 Briarwood Road, in Belmar",
+      "assistant": "Which property would you like a quick read on?",
+      "answer_type": "browse"
+    },
+    {
+      "user": "1223 Briarwood Road",
+      "assistant": "The property at 1223 Briarwood Road is listed for $674,200 and is considered to appear undervalued compared to its market value of approximately $777,693.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "and",
+      "assistant": "1223 Briarwood Rd is listed at $674,200. The property\u2019s details suggest it has strong market appeal, and it may be positioned well within its neighborhood based on comparable analysis. \n\nWant a full underwrite?\n\nSimilar in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "yes lets do a full underwrite",
+      "assistant": "The decision stance is to **buy if the price improves**. The current ask price is **$674,200**, while the all-in basis, considering post-capex commitments, is **$824,200**. This results in a basis premium percentage of **5.2%** and an ask premium percentage of **-15.89%**. Trust flags include **weak town context** and **incomplete carry inputs**. According to the research update: **\"no material change after fetching 3 document(s) for weak_town_context.\"**",
+      "answer_type": "decision"
+    }
+  ]
+}

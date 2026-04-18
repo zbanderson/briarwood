@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from briarwood.agent.index import _is_fixture
 from briarwood.agents.comparable_sales.schemas import ActiveListingRecord, ComparableSale
 from briarwood.agents.comparable_sales.store import JsonActiveListingStore, JsonComparableSalesStore
 
@@ -71,6 +72,9 @@ def load_comp_rows(
         validation_errors: list[str] = []
         for index, raw in enumerate(reader, start=2):
             row = {key: (value.strip() if isinstance(value, str) else value) for key, value in raw.items()}
+            address_value = _field_value(row, "address")
+            if address_value and _is_fixture("", str(address_value)):
+                continue
             status = _normalize_status(_field_value(row, "status"))
             if status == "for_sale":
                 continue
@@ -137,6 +141,9 @@ def load_active_listing_rows(
         validation_errors: list[str] = []
         for index, raw in enumerate(reader, start=2):
             row = {key: (value.strip() if isinstance(value, str) else value) for key, value in raw.items()}
+            address_value = _field_value(row, "address")
+            if address_value and _is_fixture("", str(address_value)):
+                continue
             status = _normalize_status(_field_value(row, "status"))
             if status not in {"for_sale", "pending", "coming_soon", "active"}:
                 continue

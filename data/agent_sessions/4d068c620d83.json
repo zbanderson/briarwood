@@ -1,0 +1,17 @@
+{
+  "session_id": "4d068c620d83",
+  "current_property_id": "1600-l-street-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "can you perform a CMA on 1600 L Strret, Belmar, NJ",
+      "assistant": "The current ask price of $899,000 for 1600 L Street in Belmar, NJ suggests it is trading at a premium of 10.52% over a fair value base of $804,396.62, indicating that it appears overpriced. The primary value source remains unknown, but several anchors are influencing fair value, including comparable sales (46%), market-adjusted anchors (38%), and income-supported anchors (9%). For an edge to exist, market conditions must shift significantly, such as an increase in demand or a decrease in comparable sales prices.\nChart: file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/4d068c620d83/20260417-141307-value_opportunity.html",
+      "answer_type": "edge"
+    }
+  ]
+}

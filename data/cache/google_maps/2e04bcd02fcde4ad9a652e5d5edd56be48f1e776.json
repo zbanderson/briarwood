@@ -1,0 +1,320 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "526",
+            "short_name": "526",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "West End Avenue",
+            "short_name": "West End Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Statesville",
+            "short_name": "Statesville",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Iredell County",
+            "short_name": "Iredell County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "North Carolina",
+            "short_name": "NC",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "28677",
+            "short_name": "28677",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "5156",
+            "short_name": "5156",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "526 West End Ave, Statesville, NC 28677, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 35.78418449999999,
+              "lng": -80.8963775
+            },
+            "southwest": {
+              "lat": 35.7840158,
+              "lng": -80.896568
+            }
+          },
+          "location": {
+            "lat": 35.7841002,
+            "lng": -80.8964727
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 35.78536143029149,
+              "lng": -80.8951024197085
+            },
+            "southwest": {
+              "lat": 35.7826634697085,
+              "lng": -80.8978003802915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 35.7838985,
+              "longitude": -80.8963646
+            }
+          }
+        ],
+        "place_id": "ChIJ4foF5YBZUYgRbbuFl63imqc",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      },
+      {
+        "address_components": [
+          {
+            "long_name": "526",
+            "short_name": "526",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "West End Avenue",
+            "short_name": "West End Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Haddonfield",
+            "short_name": "Haddonfield",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Camden County",
+            "short_name": "Camden County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "08033",
+            "short_name": "08033",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2630",
+            "short_name": "2630",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "526 West End Ave, Haddonfield, NJ 08033, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 39.9001372,
+              "lng": -75.0474284
+            },
+            "southwest": {
+              "lat": 39.90001729999999,
+              "lng": -75.0475718
+            }
+          },
+          "location": {
+            "lat": 39.9000772,
+            "lng": -75.0475001
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 39.90147423029149,
+              "lng": -75.0460659697085
+            },
+            "southwest": {
+              "lat": 39.89877626970849,
+              "lng": -75.0487639302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 39.9001908,
+              "longitude": -75.0473188
+            }
+          }
+        ],
+        "place_id": "ChIJx-ve6QjMxokR4xIzs8ILCc8",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      },
+      {
+        "address_components": [
+          {
+            "long_name": "526",
+            "short_name": "526",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "West End Avenue",
+            "short_name": "West End Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Elizabeth",
+            "short_name": "Elizabeth",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Union County",
+            "short_name": "Union County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07202",
+            "short_name": "07202",
+            "types": [
+              "postal_code"
+            ]
+          }
+        ],
+        "formatted_address": "526 West End Ave, Elizabeth, NJ 07202, USA",
+        "geometry": {
+          "location": {
+            "lat": 40.6638195,
+            "lng": -74.2328922
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.66528478029149,
+              "lng": -74.23148401970849
+            },
+            "southwest": {
+              "lat": 40.6625868197085,
+              "lng": -74.2341819802915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.6639933,
+              "longitude": -74.2328037
+            }
+          }
+        ],
+        "place_id": "ChIJueA8_KSyw4kRS7MIBOUtuac",
+        "types": [
+          "street_address",
+          "subpremise"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "526 West End Ave, Statesville, NC 28677, USA",
+    "latitude": 35.7841002,
+    "longitude": -80.8964727,
+    "place_id": "ChIJ4foF5YBZUYgRbbuFl63imqc",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Statesville",
+    "state": "NC",
+    "county": "Iredell",
+    "zip_code": "28677"
+  },
+  "fetched_at": "2026-04-17T20:45:22Z"
+}

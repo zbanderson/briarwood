@@ -25,7 +25,14 @@ class ListingIntakeService:
         return normalize_listing(raw_data, warnings)
 
     def intake_url(self, url: str) -> ListingIntakeResult:
-        parser = ZillowUrlParser()
+        parser = next(
+            (
+                candidate
+                for candidate in self.parsers
+                if isinstance(candidate, ZillowUrlParser) and candidate.can_parse(url)
+            ),
+            ZillowUrlParser(),
+        )
         raw_data, warnings = parser.parse(url)
         return normalize_listing(raw_data, warnings)
 

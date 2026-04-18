@@ -144,12 +144,17 @@ def resolve_property_id(text: str) -> tuple[str | None, list[str]]:
     # Tie at the top: prefer the candidate with the most of its OWN
     # tokens covered by the query. This rewards specificity when the
     # query mentions town/state, without penalising noisy queries that
-    # drag in filler words.
+    # drag in filler words. If coverage is still tied, report ambiguity
+    # so callers can prompt with concrete candidates.
     if len(top) == 1:
         return top[0], ranked
     query_set = set(query) | {_EXPAND[t] for t in query if t in _EXPAND}
     def _coverage(candidate: str) -> int:
         cand_tokens = set(_tokens(candidate))
         return sum(1 for t in cand_tokens if t in query_set or _EXPAND.get(t) in query_set)
-    best = max(top, key=lambda c: (_coverage(c), -len(c), c))
-    return best, ranked
+    coverages = {candidate: _coverage(candidate) for candidate in top}
+    best_coverage = max(coverages.values())
+    best = [candidate for candidate, coverage in coverages.items() if coverage == best_coverage]
+    if len(best) == 1:
+        return best[0], ranked
+    return None, ranked

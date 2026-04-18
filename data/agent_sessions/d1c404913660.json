@@ -1,0 +1,21 @@
+{
+  "session_id": "d1c404913660",
+  "current_property_id": "briarwood-rd-belmar",
+  "turns": [
+    {
+      "user": "tell me about 1223 briarwood road",
+      "assistant": "1223 Briarwood Rd \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is below the fair value anchor by 15.9%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what is absorption data?",
+      "assistant": "1223 Briarwood Rd \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is below the fair value anchor by 15.9%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "how is belmar?",
+      "assistant": "1223 Briarwood Rd \u2014 ask $674,200\nBriarwood sees the immediate setup as buy if price improves: Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin. Ask is below the fair value anchor by 15.9%.\nWhat supports that view: best path currently reads as Make an offer inside the risk-adjusted band rather than at ask..\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nNearby support in the area:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000",
+      "answer_type": "browse"
+    }
+  ]
+}

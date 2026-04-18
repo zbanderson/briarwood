@@ -61,6 +61,13 @@ class PricePhrasingTests(unittest.TestCase):
         self.assertEqual(result["ask_price"], 1_350_000.0)
         self.assertEqual(result["mode"], "renovated")
 
+    def test_capex_budget_implies_renovation_override(self) -> None:
+        result = parse_overrides("what if we invested 100k into it")
+        self.assertEqual(
+            result,
+            {"repair_capex_budget": 100_000.0, "mode": "renovated"},
+        )
+
 
 class InputsWithOverridesTests(unittest.TestCase):
     def test_passthrough_when_empty(self) -> None:
@@ -90,6 +97,31 @@ class InputsWithOverridesTests(unittest.TestCase):
         finally:
             original.unlink(missing_ok=True)
 
+    def test_writes_capex_budget_into_user_assumptions(self) -> None:
+        with NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"facts": {"purchase_price": 1_000_000}, "user_assumptions": {}}, f)
+            original = Path(f.name)
+        try:
+            with inputs_with_overrides(
+                original, {"repair_capex_budget": 100_000.0, "mode": "renovated"}
+            ) as path:
+                data = json.loads(path.read_text())
+                self.assertEqual(data["user_assumptions"]["repair_capex_budget"], 100_000.0)
+                self.assertTrue(data["user_assumptions"]["capex_confirmed"])
+                self.assertEqual(data["facts"]["renovation_mode"], "will_renovate")
+                self.assertEqual(data["user_assumptions"]["condition_profile_override"], "renovated")
+                self.assertTrue(data["user_assumptions"]["condition_confirmed"])
+                self.assertEqual(
+                    data["renovation_scenario"],
+                    {
+                        "enabled": True,
+                        "renovation_budget": 100_000.0,
+                        "target_condition": "renovated",
+                    },
+                )
+        finally:
+            original.unlink(missing_ok=True)
+
 
 class SummarizeTests(unittest.TestCase):
     def test_empty_overrides_empty_string(self) -> None:
@@ -105,6 +137,12 @@ class SummarizeTests(unittest.TestCase):
         self.assertEqual(
             summarize({"ask_price": 1_500_000, "mode": "renovated"}),
             "overrides applied: entry basis $1,500,000, full renovation",
+        )
+
+    def test_capex_budget_summary(self) -> None:
+        self.assertEqual(
+            summarize({"repair_capex_budget": 100_000, "mode": "renovated"}),
+            "overrides applied: full renovation, renovation budget $100,000",
         )
 
 

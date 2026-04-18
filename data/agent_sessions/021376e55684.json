@@ -1,0 +1,16 @@
+{
+  "session_id": "021376e55684",
+  "current_property_id": null,
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar nj",
+      "assistant": "Found 1 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    },
+    {
+      "user": "what do you think of this house?",
+      "assistant": "Which property would you like a first purchase read on?",
+      "answer_type": "browse"
+    }
+  ]
+}

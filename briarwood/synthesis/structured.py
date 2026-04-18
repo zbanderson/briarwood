@@ -291,8 +291,12 @@ def collect_trust_flags(
     if downgrade is not None and downgrade > 0.2:
         flags.append("rent_assumption_fragile")
 
-    # Town context
-    town_conf = _float(val_metrics.get("town_context_confidence"))
+    # Town context. Fires off RAW data quality (market aggregates +
+    # local-intelligence coverage), not the downweighted prior — otherwise
+    # towns with rich seeded context flag as weak whenever direct comps exist.
+    town_conf = _float(val_metrics.get("town_context_confidence_raw"))
+    if town_conf is None:
+        town_conf = _float(val_metrics.get("town_context_confidence"))
     if town_conf is not None and town_conf < 0.4:
         flags.append("weak_town_context")
 

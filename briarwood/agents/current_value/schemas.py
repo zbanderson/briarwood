@@ -68,6 +68,10 @@ class CurrentValueInput(BaseModel):
     town_median_sqft: float | None = Field(default=None, gt=0)
     town_median_lot_size: float | None = Field(default=None, ge=0)
     town_context_confidence: float | None = Field(default=None, ge=0, le=1)
+    # Count of seeded local-intelligence source documents for this town.
+    # Used to strengthen the raw town-context signal when we have ground
+    # truth (planning/zoning/redevelopment docs) beyond market aggregates.
+    town_intelligence_doc_count: int | None = Field(default=None, ge=0)
 
 
 class CurrentValueOutput(BaseModel):
@@ -99,7 +103,13 @@ class CurrentValueOutput(BaseModel):
     modeled_fields: list[str] = Field(default_factory=list)
     non_modeled_fields: list[str] = Field(default_factory=list)
     confidence: float
+    # Downweighted town-prior confidence used for valuation blending and
+    # component weight math. Shrinks as direct-comp coverage grows.
     town_context_confidence: float | None = None
+    # Raw town-data quality (market aggregates + local-intelligence coverage),
+    # independent of comp count. Use this — not the downweighted prior — for
+    # UI trust signals like the weak_town_context flag.
+    town_context_confidence_raw: float | None = None
     assumptions: list[str]
     unsupported_claims: list[str]
     warnings: list[str]

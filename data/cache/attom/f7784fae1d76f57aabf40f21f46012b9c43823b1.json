@@ -1,0 +1,114 @@
+{
+  "fetched_at": "2026-04-17T20:45:23Z",
+  "normalized_payload": {
+    "complete_event_count": 0,
+    "first_sale_date": null,
+    "first_sale_price": null,
+    "history_confidence": 0.15,
+    "history_confidence_label": "thin",
+    "history_flags": [],
+    "history_span_years": null,
+    "last_sale_date": null,
+    "last_sale_price": null,
+    "most_recent_hold_years": null,
+    "repeat_sale_pairs": [],
+    "sale_count": 0,
+    "sale_history": [],
+    "source_surface": "snapshot"
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NC",
+          "line1": "526 W END AVE",
+          "line2": "STATESVILLE, NC 28677",
+          "locality": "STATESVILLE",
+          "matchCode": "ExaStr",
+          "oneLine": "526 W END AVE, STATESVILLE, NC 28677",
+          "postal1": "28677",
+          "postal2": "5156"
+        },
+        "building": {
+          "rooms": {
+            "bathstotal": 2.5,
+            "beds": 4
+          },
+          "size": {
+            "universalsize": 2633
+          }
+        },
+        "identifier": {
+          "Id": 48405327,
+          "apn": "4734-75-5638.000",
+          "apnOrig": "4734-75-5638.000",
+          "attomId": 48405327,
+          "fips": "37097"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "cef9a8f777a560aa9139d9c447139bb6",
+            "CS": "757523a519ee48a582f67a2a800e4bec",
+            "DB": "b4a1a62933868e4b259c0addf2b9f718",
+            "PL": "e97e54bd5a6f5e29c3c2ede692da43cb",
+            "SB": "02946a54fe6e2f0787f59099ac12cbd5, 871dc206c7d1be1976aa34335c46ca29, 292130214557640c9850e8f5d7bc4974",
+            "ZI": "6b4da4aaa8eb13a40a3bab75b41b3e0d"
+          },
+          "geoid": "CO37097, CS3793104, DB3702310, PL3764740, SB0000100035, SB0000100036, SB0000100043, ZI28677",
+          "latitude": "35.784105",
+          "longitude": "-80.896548"
+        },
+        "lot": {
+          "lotSize1": 0.379
+        },
+        "salehistory": [
+          {
+            "amount": {
+              "saleamt": 450000,
+              "saledisclosuretype": 0,
+              "saledocnum": "0029971799",
+              "salerecdate": "2023-06-13",
+              "saletranstype": "Resale"
+            },
+            "calculation": {
+              "priceperbed": 112500,
+              "pricepersizeunit": 170.91
+            },
+            "saleSearchDate": "2023-06-13",
+            "saleTransDate": "2023-06-13",
+            "vintage": {
+              "lastModified": "2023-07-05"
+            }
+          }
+        ],
+        "summary": {
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1917
+        },
+        "vintage": {
+          "lastModified": "2023-07-05",
+          "pubDate": "2023-07-05"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 48405327,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-17T20:45:23.139Z",
+      "total": 1,
+      "transactionID": "7e436740a5dcf62c11a62b9c437ace59",
+      "version": "1.0.0"
+    }
+  }
+}

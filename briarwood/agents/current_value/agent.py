@@ -139,6 +139,7 @@ class CurrentValueAgent:
 
         town_prior_value = self._town_prior_value(input_data)
         town_prior_confidence = self._town_prior_confidence(input_data)
+        town_prior_confidence_raw = self._town_prior_raw_confidence(input_data)
         if town_prior_value is not None and town_prior_confidence > 0:
             assumptions.append(
                 "Town prior uses the subject town's median pricing structure as a bounded secondary anchor, never as a hard override."
@@ -233,6 +234,7 @@ class CurrentValueAgent:
             ),
             confidence=round(confidence, 2),
             town_context_confidence=round(town_prior_confidence, 2) if town_prior_confidence > 0 else None,
+            town_context_confidence_raw=round(town_prior_confidence_raw, 2) if town_prior_confidence_raw > 0 else None,
             modeled_fields=[],
             non_modeled_fields=[],
             assumptions=assumptions,
@@ -256,6 +258,22 @@ class CurrentValueAgent:
             return input_data.town_median_price
         return None
 
+    def _town_prior_raw_confidence(self, input_data: CurrentValueInput) -> float:
+        """Data-quality confidence for town context, independent of comp count.
+
+        Blends the upstream market-aggregate confidence with a bonus for
+        seeded local-intelligence documents. A town with rich planning/zoning
+        coverage should not read as "weak context" just because we also have
+        direct sale comps for the subject property.
+        """
+        raw = float(input_data.town_context_confidence or 0.0)
+        if raw <= 0:
+            return 0.0
+        doc_count = input_data.town_intelligence_doc_count or 0
+        # Saturating bonus: 3+ docs → full +0.15; scales linearly below that.
+        intel_bonus = min(doc_count / 3.0, 1.0) * 0.15
+        return round(min(raw + intel_bonus, 0.92), 2)
+
     def _town_prior_confidence(self, input_data: CurrentValueInput) -> float:
         confidence = float(input_data.town_context_confidence or 0.0)
         if confidence <= 0:
@@ -272,6 +290,13 @@ class CurrentValueAgent:
 
         if input_data.town_median_ppsf is None and input_data.town_median_price is None:
             return 0.0
+
+        # Floor the downweight against raw data quality (including intel
+        # coverage). Prevents well-seeded towns from being crushed below the
+        # UI weak-context threshold purely because direct comps exist.
+        raw = self._town_prior_raw_confidence(input_data)
+        confidence = max(confidence, raw * 0.55)
+
         return round(max(0.0, min(confidence, 0.78)), 2)
 
     def _property_adjustment_factor(self, input_data: CurrentValueInput) -> tuple[float, int]:

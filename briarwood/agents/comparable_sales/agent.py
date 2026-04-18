@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 import json
 
+from briarwood.agent.index import _is_fixture
 from briarwood.agents.comparable_sales.schemas import (
     AdjustedComparable,
     BaseCompSelection,
@@ -48,6 +49,15 @@ class FileBackedComparableSalesProvider:
             if not isinstance(item, dict):
                 continue
             payload = dict(item)
+            # Defense-in-depth: refuse fixture rows and non-sold listings at
+            # load time, before they can reach the gate or the scorer. The
+            # gate enforces the same invariants — this is here so that a
+            # corrupted dataset can't even *count* as rejected.
+            if _is_fixture("", payload.get("address")):
+                continue
+            ls = payload.get("listing_status")
+            if ls is not None and ls != "sold":
+                continue
             if payload.get("quality_status") is None:
                 record_type = "sale" if payload.get("sale_date") or payload.get("sale_price") else "listing"
                 result = self.pipeline.run(payload, record_type=record_type)
@@ -319,6 +329,12 @@ class ComparableSalesAgent:
             return False, "address_verification_failed"
         if sale.sale_verification_status == "questioned":
             return False, "sale_verification_failed"
+
+        # Valuation comps must be SOLD. Schema permits for_sale/pending/coming_soon/
+        # active values, but those are competing supply, not closed-sale evidence.
+        # None is allowed because the legacy seed corpus predates the field.
+        if sale.listing_status is not None and sale.listing_status != "sold":
+            return False, "listing_not_sold"
 
         if request.property_type and sale.property_type:
             if self._property_type_family(request.property_type) != self._property_type_family(sale.property_type):

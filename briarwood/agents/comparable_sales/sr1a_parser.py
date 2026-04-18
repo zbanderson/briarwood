@@ -172,14 +172,14 @@ def parse_sr1a_line(line: str) -> SR1ARawRecord | None:
 
 
 def _parse_deed_date(raw: str) -> str | None:
-    """Convert SR1A YYMMDD deed date to YYYY-MM-DD.
+    """Convert SR1A MMDDYY deed date to YYYY-MM-DD.
 
     Handles 2-digit years: 00-49 → 2000s, 50-99 → 1900s.
     """
     if not raw or len(raw) != 6:
         return None
     try:
-        dt = datetime.strptime(raw, "%y%m%d")
+        dt = datetime.strptime(raw, "%m%d%y")
         return dt.strftime("%Y-%m-%d")
     except ValueError:
         return None

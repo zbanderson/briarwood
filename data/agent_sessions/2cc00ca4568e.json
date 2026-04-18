@@ -1,0 +1,27 @@
+{
+  "session_id": "2cc00ca4568e",
+  "current_property_id": "1228-briarwood-road-belmar-nj",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": "1228-briarwood-road-belmar-nj",
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "how much do you think 1228 briarwood road, belmar, nj is worth?",
+      "assistant": "Briarwood reused 1228 BRIARWOOD RD, BELMAR, NJ 07719 as 1228-briarwood-road-belmar-nj from live Zillow discovery.\nSource coverage: Zillow/SearchAPI sourced address, beds_baths, sqft, taxes.\nBriarwood inferred or normalized county, town, state.\nStill missing for higher-confidence reads: price, days_on_market, price_per_sqft, hoa_monthly.\nStructured enrichment pulled from ATTOM: sale history, tax/assessment.\nLocation enrichment pulled from Google Maps: geocode.\n1228 BRIARWOOD RD, BELMAR, NJ 07719 \u2014 3bd/2.0ba\nBriarwood sees the immediate setup as pass unless changes.\nWhat supports that view: Identify which trust_flags or conflicts most change the picture and resolve those first.\nWhat could weaken confidence: incomplete_carry_inputs.\nNext best question: Complete the carry-cost inputs (taxes, insurance, financing).\nSource coverage: ATTOM added structured sale history and ownership timing context. Google Maps added geocode and nearby-place context.\nNearby support in Belmar:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- briarwood-rd-belmar \u2014 1223 Briarwood Rd, Belmar, NJ 07719, 3bd/2.0ba, $674,200",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what is this house worth?",
+      "assistant": "The decision is to pass unless changes occur, as the primary value source is unknown and trust flags indicate 'incomplete_carry_inputs'. There is no ask price or all-in basis provided, which further complicates valuation. Without complete information, further assessment is not viable.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "when was the last time it was listed?",
+      "assistant": "The last time the property at 1228 Briarwood Rd, Belmar, NJ, was listed was on April 17, 2026.",
+      "answer_type": "lookup"
+    }
+  ]
+}

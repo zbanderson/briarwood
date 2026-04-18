@@ -43,6 +43,7 @@ class PipelineSession:
     model_outputs: dict[str, ModelResult] = field(default_factory=dict)
     synthesis: dict[str, Any] = field(default_factory=dict)
     decision: dict[str, Any] = field(default_factory=dict)
+    decision_rationale: str = ""
 
     contribution_map: dict[str, float] = field(default_factory=dict)
     feedback: dict[str, Any] = field(default_factory=dict)

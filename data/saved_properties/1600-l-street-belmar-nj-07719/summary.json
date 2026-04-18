@@ -1,0 +1,20 @@
+{
+  "property_id": "1600-l-street-belmar-nj-07719",
+  "address": "1600 L Street, Belmar, NJ 07719",
+  "label": "1600 L Street",
+  "town": "Belmar",
+  "state": "NJ",
+  "county": "Monmouth",
+  "beds": 3,
+  "baths": 2.0,
+  "ask_price": 899000.0,
+  "bcv": null,
+  "pricing_view": null,
+  "property_type": "SINGLE_FAMILY",
+  "source_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+  "confidence": null,
+  "comp_trust": "pending",
+  "missing_input_count": 5,
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-17T12:25:28"
+}

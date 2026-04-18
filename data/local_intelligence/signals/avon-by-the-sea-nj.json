@@ -60,7 +60,7 @@
       "impact_direction": "positive",
       "impact_magnitude": 4,
       "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-17T13:28:24.311117Z",
+      "last_seen_at": "2026-04-17T17:15:30.629590Z",
       "last_transition_at": null,
       "metadata": {
         "location": "301 Main Street",
@@ -71,7 +71,7 @@
           "planning_board_minutes"
         ]
       },
-      "occurrence_count": 2,
+      "occurrence_count": 14,
       "previous_status": null,
       "reconciliation_status": "unchanged",
       "signal_type": "zoning_change",
@@ -84,7 +84,7 @@
       "time_horizon": "long_term",
       "title": "Francis & Jacqueline Mish \u2013 335 Sylvania Avenue, from the November 18, 2021 meet",
       "town": "Avon-by-the-Sea",
-      "updated_at": "2026-04-17T13:28:24.311117Z"
+      "updated_at": "2026-04-17T17:15:30.629590Z"
     },
     {
       "affected_dimensions": [
@@ -146,7 +146,7 @@
       "impact_direction": "positive",
       "impact_magnitude": 4,
       "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-17T13:28:24.311117Z",
+      "last_seen_at": "2026-04-17T17:15:30.629590Z",
       "last_transition_at": null,
       "metadata": {
         "location": "510 West End Ave",
@@ -157,7 +157,7 @@
           "ordinance"
         ]
       },
-      "occurrence_count": 2,
+      "occurrence_count": 14,
       "previous_status": null,
       "reconciliation_status": "unchanged",
       "signal_type": "regulation_change",
@@ -170,7 +170,7 @@
       "time_horizon": "long_term",
       "title": "THE BOROUGH OF AVON BY THE SEA, COUNTY OF MONMOUTH, STATE OF NEWJERSEY, ADOPTING",
       "town": "Avon-by-the-Sea",
-      "updated_at": "2026-04-17T13:28:24.311117Z"
+      "updated_at": "2026-04-17T17:15:30.629590Z"
     },
     {
       "affected_dimensions": [
@@ -235,7 +235,7 @@
       "impact_direction": "positive",
       "impact_magnitude": 4,
       "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-17T13:28:24.311117Z",
+      "last_seen_at": "2026-04-17T17:15:30.629590Z",
       "last_transition_at": null,
       "metadata": {
         "location": "507 Sylvania Avenue",
@@ -247,7 +247,7 @@
         ],
         "units": 15
       },
-      "occurrence_count": 2,
+      "occurrence_count": 14,
       "previous_status": null,
       "reconciliation_status": "unchanged",
       "signal_type": "zoning_change",
@@ -260,7 +260,7 @@
       "time_horizon": "long_term",
       "title": "t here the board members when 25 they were speaking I guess she couldn",
       "town": "Avon-by-the-Sea",
-      "updated_at": "2026-04-17T13:28:24.311117Z"
+      "updated_at": "2026-04-17T17:15:30.629590Z"
     }
   ],
   "state": "NJ",

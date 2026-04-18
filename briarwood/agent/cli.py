@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sys
 
-from briarwood.agent.dispatch import dispatch
+from briarwood.agent.dispatch import contextualize_decision, dispatch
 from briarwood.agent.llm import default_client
 from briarwood.agent.router import classify
 from briarwood.agent.session import Session
@@ -39,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         decision = classify(text, client=llm)
+        decision = contextualize_decision(text, decision, session)
         sys.stdout.write(
             f"[route: {decision.answer_type.value} ({decision.confidence:.2f}) — {decision.reason}]\n"
         )
@@ -46,6 +47,10 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             response = dispatch(text, decision, session, llm)
+        except KeyboardInterrupt:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            break
         except Exception as exc:  # surface the error, don't crash the REPL
             response = f"(agent error: {exc})"
 

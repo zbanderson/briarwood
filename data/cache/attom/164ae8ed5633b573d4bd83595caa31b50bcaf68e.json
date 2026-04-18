@@ -1,0 +1,136 @@
+{
+  "fetched_at": "2026-04-17T20:45:22Z",
+  "normalized_payload": {
+    "address": "526 W END AVE, STATESVILLE, NC 28677",
+    "baths": 2.5,
+    "beds": 4,
+    "garage_spaces": null,
+    "latitude": "35.784105",
+    "longitude": "-80.896548",
+    "lot_size": 0.379,
+    "property_type": "SFR",
+    "sqft": 2633,
+    "stories": 2,
+    "year_built": 1917
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NC",
+          "line1": "526 W END AVE",
+          "line2": "STATESVILLE, NC 28677",
+          "locality": "STATESVILLE",
+          "matchCode": "ExaStr",
+          "oneLine": "526 W END AVE, STATESVILLE, NC 28677",
+          "postal1": "28677",
+          "postal2": "5156"
+        },
+        "area": {
+          "blockNum": "75",
+          "countrysecsubd": "Iredell",
+          "countyuse1": "01",
+          "muncode": "IR",
+          "munname": "IREDELL",
+          "subdname": "MITCHELL COLLEGE HISTORIC",
+          "taxcodearea": ""
+        },
+        "building": {
+          "construction": {
+            "roofShape": "HIP",
+            "roofcover": "ASPHALT",
+            "wallType": "BRICK VENEER"
+          },
+          "interior": {
+            "bsmtsize": 1321,
+            "bsmttype": "UNFINISHED",
+            "floors": "CERAMIC TILE",
+            "fplccount": 1
+          },
+          "parking": {
+            "prkgSpaces": "1"
+          },
+          "rooms": {
+            "bathsfull": 1,
+            "bathspartial": 1,
+            "bathstotal": 2.5,
+            "beds": 4
+          },
+          "size": {
+            "bldgsize": 2633,
+            "grosssize": 5626,
+            "grosssizeadjusted": 2633,
+            "livingsize": 2633,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 2633
+          },
+          "summary": {
+            "levels": 2,
+            "quality": "NP",
+            "yearbuilteffective": 1982
+          }
+        },
+        "identifier": {
+          "Id": 48405327,
+          "apn": "4734-75-5638.000",
+          "apnOrig": "4734-75-5638.000",
+          "attomId": 48405327,
+          "fips": "37097"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "cef9a8f777a560aa9139d9c447139bb6",
+            "CS": "757523a519ee48a582f67a2a800e4bec",
+            "DB": "b4a1a62933868e4b259c0addf2b9f718",
+            "PL": "e97e54bd5a6f5e29c3c2ede692da43cb",
+            "SB": "02946a54fe6e2f0787f59099ac12cbd5, 871dc206c7d1be1976aa34335c46ca29, 292130214557640c9850e8f5d7bc4974",
+            "ZI": "6b4da4aaa8eb13a40a3bab75b41b3e0d"
+          },
+          "geoid": "CO37097, CS3793104, DB3702310, PL3764740, SB0000100035, SB0000100036, SB0000100043, ZI28677",
+          "latitude": "35.784105",
+          "longitude": "-80.896548"
+        },
+        "lot": {
+          "depth": 155,
+          "frontage": 110,
+          "lotsize1": 0.379,
+          "lotsize2": 16509
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "legal1": "W END AVE",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1917
+        },
+        "utilities": {
+          "coolingtype": "CENTRAL",
+          "heatingfuel": "GAS",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING"
+        },
+        "vintage": {
+          "lastModified": "2026-04-07",
+          "pubDate": "2026-04-07"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 48405327,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-17T20:45:22.705Z",
+      "total": 1,
+      "transactionID": "577b3d0bfe45099909f451513e726719",
+      "version": "1.0.0"
+    }
+  }
+}

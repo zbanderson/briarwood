@@ -10,6 +10,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from briarwood.local_intelligence.collector import (
     MUNICIPAL_SOURCE_REGISTRY,
@@ -75,13 +76,19 @@ class StaticRegistryAdapterTests(unittest.TestCase):
 class WebSearchAdapterTests(unittest.TestCase):
     def test_disabled_without_api_key_returns_empty(self) -> None:
         # No key, no search_fn injected → adapter must no-op silently.
-        adapter = WebSearchAdapter(provider=None, api_key=None)
-        self.assertEqual(adapter.fetch(town="Avon by the Sea", state="NJ"), [])
+        # Clear provider env vars so a developer's local .env cannot leak a real key in.
+        with patch.dict(
+            "os.environ",
+            {"TAVILY_API_KEY": "", "SERPER_API_KEY": "", "BRAVE_SEARCH_API_KEY": ""},
+        ):
+            adapter = WebSearchAdapter(provider=None, api_key=None)
+            self.assertEqual(adapter.fetch(town="Avon by the Sea", state="NJ"), [])
 
     def test_search_fn_drives_url_fetch(self) -> None:
         def fake_search(query: str, max_results: int):
             self.assertIn("Avon by the Sea", query)
             self.assertIn("zoning", query)
+            self.assertIn("planning board minutes", query)
             return [{"title": "Zoning Update", "url": "https://example.gov/zoning", "snippet": "..."}]
 
         def fetcher(url: str):
@@ -102,6 +109,31 @@ class WebSearchAdapterTests(unittest.TestCase):
         self.assertEqual(len(docs), 1)
         self.assertEqual(docs[0]["url"], "https://example.gov/zoning")
         self.assertEqual(docs[0]["metadata"]["focus"], ["zoning_unverified"])
+
+    def test_tavily_defaults_bias_toward_municipal_research(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_search(query: str, max_results: int, options: WebSearchOptions):
+            captured["query"] = query
+            captured["options"] = options
+            return []
+
+        adapter = WebSearchAdapter(
+            provider="tavily",
+            api_key="test",
+            search_fn=fake_search,
+        )
+        adapter.fetch(town="Belmar", state="NJ", focus=["development"])
+        options = captured["options"]
+        self.assertEqual(options.search_depth, "advanced")
+        self.assertEqual(options.topic, "news")
+        self.assertTrue(options.include_usage)
+        self.assertIn("zillow.com", options.exclude_domains)
+        self.assertIn("planning board approvals", captured["query"])
+
+    def test_tavily_enables_extract_by_default(self) -> None:
+        adapter = WebSearchAdapter(provider="tavily", api_key="test")
+        self.assertTrue(adapter.extract_options.enabled)
 
     def test_respects_max_results_cap(self) -> None:
         def fake_search(q, n):
@@ -181,6 +213,7 @@ class WebSearchAdapterTests(unittest.TestCase):
         self.assertEqual(docs[0]["metadata"]["search_options"]["search_depth"], "advanced")
         self.assertTrue(docs[0]["metadata"]["extract_enabled"])
         self.assertEqual(captured["project_id"], "local-intel")
+        self.assertEqual(docs[0]["source_type"], SourceType.PLANNING_BOARD_MINUTES.value)
 
     def test_tavily_crawl_uses_option_payload(self) -> None:
         captured: dict[str, object] = {}

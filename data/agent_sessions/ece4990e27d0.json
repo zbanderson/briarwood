@@ -1,0 +1,22 @@
+{
+  "session_id": "ece4990e27d0",
+  "current_property_id": "1600-l-street-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "what do you think of 1600 L Street, Belmar, NJ",
+      "assistant": "1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba \u2014 ask $899,000\nBriarwood sees the immediate setup as buy if price improves. Ask is 10.5% above the fair value anchor.\nWhat supports that view: Make an offer inside the risk-adjusted band rather than at ask.\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nSource coverage: SearchAPI/Zillow hydrated the live listing context. ATTOM added structured sale history and ownership timing context.\nNearby support in Belmar:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- l-street-2 \u2014 1302 L Street, 3bd/1.5ba, $850,000, 18.9 blocks to beach",
+      "answer_type": "browse"
+    },
+    {
+      "user": "Can you perform a CMA on this property?",
+      "assistant": "I couldn't translate that into concrete saved-corpus filters, and I didn't get a clean town-level live listing pull. Try wording like 'show me houses for sale in Belmar' or '3 beds near the beach under $1.5M'.",
+      "answer_type": "search"
+    }
+  ]
+}

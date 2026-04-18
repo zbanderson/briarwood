@@ -1,0 +1,127 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "1223",
+            "short_name": "1223",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Briarwood Road",
+            "short_name": "Briarwood Rd",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07719",
+            "short_name": "07719",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2825",
+            "short_name": "2825",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "1223 Briarwood Rd, Belmar, NJ 07719, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.1772054,
+              "lng": -74.0350613
+            },
+            "southwest": {
+              "lat": 40.1771388,
+              "lng": -74.0352451
+            }
+          },
+          "location": {
+            "lat": 40.1771721,
+            "lng": -74.0351573
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1785210802915,
+              "lng": -74.0338837697085
+            },
+            "southwest": {
+              "lat": 40.1758231197085,
+              "lng": -74.0365817302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1771735,
+              "longitude": -74.0353221
+            }
+          }
+        ],
+        "place_id": "ChIJw9eKrwgowokRjQjOvj8-UDU",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "1223 Briarwood Rd, Belmar, NJ 07719, USA",
+    "latitude": 40.1771721,
+    "longitude": -74.0351573,
+    "place_id": "ChIJw9eKrwgowokRjQjOvj8-UDU",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719"
+  },
+  "fetched_at": "2026-04-18T02:04:55Z"
+}

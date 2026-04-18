@@ -4,3 +4,5 @@ dash>=2.18,<3
 plotly>=5.24,<6
 weasyprint>=62,<69
 pypdf>=4,<6
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1

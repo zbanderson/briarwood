@@ -1,0 +1,17 @@
+{
+  "session_id": "854d0990bc1f",
+  "current_property_id": "1228-briarwood-road-belmar-nj",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": "1228-briarwood-road-belmar-nj",
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "what do you think of 1228 briarwood road, belmar nj",
+      "assistant": "(agent error: 1 validation error for TownCountySourceRecord\nstate\n  String should have at most 2 characters [type=string_too_long, input_value='Unknown', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/string_too_long)",
+      "answer_type": "browse"
+    }
+  ]
+}

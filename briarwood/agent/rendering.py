@@ -15,7 +15,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import plotly.graph_objects as go
+try:  # pragma: no cover - environment-specific optional dependency
+    import plotly.graph_objects as go
+except ModuleNotFoundError:  # pragma: no cover - exercised via import-only tests
+    go = None
 
 ARTIFACTS_ROOT = Path("data/agent_artifacts")
 
@@ -25,6 +28,7 @@ SUPPORTED_KINDS = {
     "value_opportunity",
     "scenario_fan",
     "risk_bar",
+    "rent_burn",
     # Architecture-diagram visualization-shaped kinds (Layer 05 chart router).
     "line_area",
     "bar_compare",
@@ -48,6 +52,8 @@ def render_chart(
 
     ``fmt`` may be ``"html"`` (always works) or ``"png"`` (requires kaleido).
     """
+    if go is None:
+        raise ChartUnavailable("plotly is not installed")
     if kind not in SUPPORTED_KINDS:
         raise ChartUnavailable(f"Unsupported chart kind '{kind}'. Supported: {sorted(SUPPORTED_KINDS)}")
     if fmt not in {"html", "png"}:
@@ -80,6 +86,8 @@ def _build_figure(kind: str, unified: dict[str, Any]) -> go.Figure:
         return _scenario_fan(unified)
     if kind == "risk_bar":
         return _risk_bar(unified)
+    if kind == "rent_burn":
+        return _rent_burn(unified)
     if kind == "line_area":
         return _line_area(unified)
     if kind == "bar_compare":
@@ -294,6 +302,64 @@ def _scenario_fan(projection: dict[str, Any]) -> go.Figure:
         yaxis=dict(title="Value", tickformat="$,.0f"),
         height=380, margin=dict(t=60, b=50, l=70, r=40),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    return fig
+
+
+def _rent_burn(payload: dict[str, Any]) -> go.Figure:
+    """Rent burn chart from a rent outlook burn payload."""
+    points = list(payload.get("series") or [])
+    if not points:
+        raise ChartUnavailable("rent_burn requires `series` points.")
+    years = [point.get("year") for point in points]
+    base = [point.get("rent_base") for point in points]
+    bull = [point.get("rent_bull") for point in points]
+    bear = [point.get("rent_bear") for point in points]
+    obligation = [point.get("monthly_obligation") for point in points]
+    if not any(isinstance(value, (int, float)) for value in base):
+        raise ChartUnavailable("rent_burn requires at least one rent series.")
+
+    fig = go.Figure()
+    if any(isinstance(v, (int, float)) for v in bull) and any(isinstance(v, (int, float)) for v in bear):
+        fig.add_trace(go.Scatter(x=years, y=bull, mode="lines", line=dict(width=0), showlegend=False, hoverinfo="skip"))
+        fig.add_trace(
+            go.Scatter(
+                x=years,
+                y=bear,
+                mode="lines",
+                line=dict(width=0),
+                fill="tonexty",
+                fillcolor="rgba(25, 118, 210, 0.08)",
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=years,
+            y=base,
+            mode="lines+markers",
+            name="Rent base",
+            line=dict(color="#1976d2", width=2.5),
+            marker=dict(size=6),
+        )
+    )
+    if any(isinstance(v, (int, float)) for v in obligation):
+        fig.add_trace(
+            go.Scatter(
+                x=years,
+                y=obligation,
+                mode="lines",
+                name="Monthly obligation",
+                line=dict(color="#c62828", width=2, dash="dash"),
+            )
+        )
+    fig.update_layout(
+        title=dict(text=payload.get("title") or "Rent burn chart", x=0, xanchor="left"),
+        xaxis=dict(title="Year", dtick=1),
+        yaxis=dict(title="Monthly dollars", tickformat="$,.0f"),
+        height=360,
+        margin=dict(t=60, b=50, l=70, r=40),
     )
     return fig
 

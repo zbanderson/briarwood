@@ -1,0 +1,369 @@
+{
+  "property_id": "1008-14th-ave-belmar-nj-07719",
+  "facts": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719",
+    "latitude": null,
+    "longitude": null,
+    "beds": 3,
+    "baths": 1.0,
+    "sqft": 960,
+    "lot_size": 0.15,
+    "property_type": "SINGLE_FAMILY",
+    "architectural_style": null,
+    "condition_profile": null,
+    "capex_lane": null,
+    "renovation_mode": null,
+    "year_built": null,
+    "stories": null,
+    "garage_spaces": null,
+    "garage_type": null,
+    "has_detached_garage": null,
+    "has_back_house": null,
+    "adu_type": null,
+    "adu_sqft": null,
+    "additional_units": [],
+    "has_basement": null,
+    "basement_finished": null,
+    "has_pool": null,
+    "parking_spaces": null,
+    "corner_lot": null,
+    "driveway_off_street": null,
+    "purchase_price": 767000.0,
+    "taxes": null,
+    "monthly_hoa": null,
+    "days_on_market": null,
+    "listing_date": null,
+    "listing_description": null,
+    "price_history": [],
+    "sale_history": [],
+    "source_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/"
+  },
+  "market_signals": {
+    "town_population_trend": null,
+    "town_price_trend": null,
+    "county_price_trend": null,
+    "county_population_trend": null,
+    "county_macro_sentiment": null,
+    "liquidity_signal": null,
+    "scarcity_signal": null,
+    "coastal_profile_signal": null,
+    "market_history_current_value": null,
+    "market_history_one_year_change_pct": null,
+    "market_history_three_year_change_pct": null,
+    "market_history_geography_type": null,
+    "market_history_as_of": null,
+    "school_rating": null,
+    "flood_risk": null,
+    "town_population": null,
+    "market_price_to_rent_benchmark": null,
+    "landmark_points": {},
+    "zone_flags": {},
+    "local_documents": []
+  },
+  "user_assumptions": {
+    "occupancy_strategy": null,
+    "owner_occupied_unit_count": null,
+    "estimated_monthly_rent": null,
+    "back_house_monthly_rent": null,
+    "seasonal_monthly_rent": null,
+    "unit_rents": [],
+    "rent_confidence_override": null,
+    "insurance": null,
+    "down_payment_percent": null,
+    "interest_rate": null,
+    "loan_term_years": null,
+    "vacancy_rate": null,
+    "monthly_maintenance_reserve_override": null,
+    "condition_profile_override": null,
+    "condition_confirmed": null,
+    "capex_lane_override": null,
+    "capex_confirmed": null,
+    "repair_capex_budget": null,
+    "strategy_intent": null,
+    "hold_period_years": null,
+    "risk_tolerance": null,
+    "manual_comp_inputs": []
+  },
+  "source_metadata": {
+    "evidence_mode": "listing_assisted",
+    "source_coverage": {
+      "address": {
+        "category": "address",
+        "status": "sourced",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "price_ask": {
+        "category": "price_ask",
+        "status": "sourced",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "beds_baths": {
+        "category": "beds_baths",
+        "status": "sourced",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "sqft": {
+        "category": "sqft",
+        "status": "sourced",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "lot_size": {
+        "category": "lot_size",
+        "status": "sourced",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "taxes": {
+        "category": "taxes",
+        "status": "missing",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "hoa": {
+        "category": "hoa",
+        "status": "missing",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "sale_history": {
+        "category": "sale_history",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "listing_history": {
+        "category": "listing_history",
+        "status": "missing",
+        "source_name": "zillow",
+        "freshness": null,
+        "note": null
+      },
+      "rent_estimate": {
+        "category": "rent_estimate",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "insurance_estimate": {
+        "category": "insurance_estimate",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "school_signal": {
+        "category": "school_signal",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "flood_risk": {
+        "category": "flood_risk",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "liquidity_signal": {
+        "category": "liquidity_signal",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "market_history": {
+        "category": "market_history",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "scarcity_inputs": {
+        "category": "scarcity_inputs",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "comp_support": {
+        "category": "comp_support",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "financing_down_payment": {
+        "category": "financing_down_payment",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      },
+      "financing_interest_rate": {
+        "category": "financing_interest_rate",
+        "status": "missing",
+        "source_name": null,
+        "freshness": null,
+        "note": null
+      }
+    },
+    "provenance": [
+      "zillow:https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/"
+    ],
+    "freshest_as_of": null,
+    "field_provenance": {
+      "address": {
+        "value": "1008 14th Avenue, Belmar, NJ 07719",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "town": {
+        "value": "Belmar",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "state": {
+        "value": "NJ",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "county": {
+        "value": "Monmouth",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "zip_code": {
+        "value": "07719",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "beds": {
+        "value": 3,
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "baths": {
+        "value": 1.0,
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "sqft": {
+        "value": 960,
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "lot_size": {
+        "value": 0.15,
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.8,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "derived"
+      },
+      "property_type": {
+        "value": "SINGLE_FAMILY",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "purchase_price": {
+        "value": 767000.0,
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      },
+      "source_url": {
+        "value": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+        "source": "zillow",
+        "source_tier": "tier_1",
+        "verified_status": "verified",
+        "last_updated": null,
+        "confidence": 0.9,
+        "mapper_version": "listing_intake/v1",
+        "notes": [],
+        "inference_method": "extracted"
+      }
+    },
+    "mapper_version": "listing_intake/v1",
+    "property_evidence_profile": null
+  }
+}

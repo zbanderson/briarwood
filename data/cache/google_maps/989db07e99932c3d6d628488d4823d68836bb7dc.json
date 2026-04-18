@@ -1,0 +1,125 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "1302",
+            "short_name": "1302",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "East L Street",
+            "short_name": "E L St",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Wilmington",
+            "short_name": "Wilmington",
+            "types": [
+              "neighborhood",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Los Angeles",
+            "short_name": "Los Angeles",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Los Angeles County",
+            "short_name": "Los Angeles County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "California",
+            "short_name": "CA",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "90744",
+            "short_name": "90744",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2804",
+            "short_name": "2804",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "1302 E L St, Wilmington, CA 90744, USA",
+        "geometry": {
+          "location": {
+            "lat": 33.7874036,
+            "lng": -118.2476682
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 33.78882073029149,
+              "lng": -118.2463318197085
+            },
+            "southwest": {
+              "lat": 33.78612276970849,
+              "lng": -118.2490297802915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 33.787477,
+              "longitude": -118.2476884
+            }
+          }
+        ],
+        "place_id": "ChIJjZhKzS003YARqAyeK88dpRw",
+        "types": [
+          "street_address",
+          "subpremise"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "1302 E L St, Wilmington, CA 90744, USA",
+    "latitude": 33.7874036,
+    "longitude": -118.2476682,
+    "place_id": "ChIJjZhKzS003YARqAyeK88dpRw",
+    "types": [
+      "street_address",
+      "subpremise"
+    ],
+    "town": "Los Angeles",
+    "state": "CA",
+    "county": "Los Angeles",
+    "zip_code": "90744"
+  },
+  "fetched_at": "2026-04-18T02:04:55Z"
+}

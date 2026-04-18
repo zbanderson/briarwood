@@ -70,6 +70,28 @@ def normalize_address_string(value: object) -> str | None:
     return text.title() if text else None
 
 
+def normalize_full_address_string(value: object) -> str | None:
+    """Preserve the full street + city + state + ZIP form, just tidy whitespace.
+
+    Use this when the consumer wants the human-readable address intact
+    (e.g., listing-derived ``PropertyInput.address``). For dedup/comp-store
+    hygiene where only the street portion is wanted, use
+    ``normalize_address_string`` instead.
+    """
+    text = treat_missing(value)
+    if text is None:
+        return None
+    assert isinstance(text, str)
+    text = re.sub(r"\s+", " ", text).strip(" ,")
+    if not text:
+        return None
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    if not parts:
+        return None
+    parts[0] = parts[0].title()
+    return ", ".join(parts)
+
+
 def strip_redundant_address_suffix(value: object) -> str | None:
     text = treat_missing(value)
     if text is None:

@@ -16,6 +16,15 @@ class SessionStateTests(unittest.TestCase):
         s = Session()
         self.assertEqual(len(s.session_id), 12)
         self.assertIsNone(s.current_property_id)
+        self.assertIsNone(s.current_live_listing)
+        self.assertEqual(s.last_live_listing_results, [])
+        self.assertIsNone(s.current_search_context)
+        self.assertIsNone(s.search_context)
+        self.assertIsNone(s.selected_search_result)
+        self.assertIsNone(s.promoted_property_id)
+        self.assertIsNone(s.promotion_error)
+        self.assertIsNone(s.last_answer_contract)
+        self.assertIsNone(s.last_analysis_mode)
         self.assertEqual(s.turns, [])
 
     def test_record_appends_turn(self) -> None:
@@ -38,7 +47,18 @@ class SessionPersistenceTests(unittest.TestCase):
     def test_save_then_load_round_trip(self) -> None:
         with TemporaryDirectory() as tmp:
             with patch.object(session_mod, "SESSION_DIR", Path(tmp)):
-                s = Session(current_property_id="526-west-end-ave")
+                s = Session(
+                    current_property_id="526-west-end-ave",
+                    current_live_listing={"address": "1600 L Street, Belmar, NJ 07719"},
+                    last_live_listing_results=[{"address": "1600 L Street, Belmar, NJ 07719"}],
+                    current_search_context={"town": "Belmar", "state": "NJ", "filters": {"beds": 3}},
+                    search_context={"town": "Belmar", "state": "NJ", "filters": {"beds": 3}},
+                    selected_search_result={"address": "1600 L Street, Belmar, NJ 07719"},
+                    promoted_property_id="1600-l-street-belmar-nj-07719",
+                    promotion_error=None,
+                    last_answer_contract="property_brief",
+                    last_analysis_mode="browse",
+                )
                 s.record("hi", "hello", "chitchat")
                 s.record("should i buy?", "analyzing...", "decision")
                 s.save()
@@ -47,6 +67,15 @@ class SessionPersistenceTests(unittest.TestCase):
 
             self.assertEqual(loaded.session_id, s.session_id)
             self.assertEqual(loaded.current_property_id, "526-west-end-ave")
+            self.assertEqual(loaded.current_live_listing, {"address": "1600 L Street, Belmar, NJ 07719"})
+            self.assertEqual(loaded.last_live_listing_results, [{"address": "1600 L Street, Belmar, NJ 07719"}])
+            self.assertEqual(loaded.current_search_context, {"town": "Belmar", "state": "NJ", "filters": {"beds": 3}})
+            self.assertEqual(loaded.search_context, {"town": "Belmar", "state": "NJ", "filters": {"beds": 3}})
+            self.assertEqual(loaded.selected_search_result, {"address": "1600 L Street, Belmar, NJ 07719"})
+            self.assertEqual(loaded.promoted_property_id, "1600-l-street-belmar-nj-07719")
+            self.assertIsNone(loaded.promotion_error)
+            self.assertEqual(loaded.last_answer_contract, "property_brief")
+            self.assertEqual(loaded.last_analysis_mode, "browse")
             self.assertEqual(len(loaded.turns), 2)
             self.assertEqual(loaded.turns[0].user, "hi")
             self.assertEqual(loaded.turns[1].answer_type, "decision")

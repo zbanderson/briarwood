@@ -304,7 +304,7 @@ class TestSalesHistoryConfidence(unittest.TestCase):
         self.assertIsNotNone(result.history_confidence)
         self.assertLess(result.history_confidence.score, 0.6)
         self.assertTrue(any(g.layer == "sales_history" for g in result.actionable_gaps))
-        self.assertIn(base.label, ("weak", "unsupported"))
+        self.assertIn(result.history_confidence.label, ("thin", "weak"))
 
     def test_moderate_support_is_middle(self):
         sel = _selection(comp_count=3, support_quality="moderate", tier="loose_local", similarity=0.65)

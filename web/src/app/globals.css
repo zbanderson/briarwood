@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* Claude.ai-inspired dark theme. Warm, slightly desaturated, hairline borders.
+   Tailwind v4 — design tokens live in @theme; no tailwind.config.ts. */
+
+@theme {
+  --color-bg: #1f1e1d;
+  --color-bg-elevated: #262524;
+  --color-bg-sunken: #1a1918;
+  --color-surface: #2b2a28;
+  --color-surface-hover: #34322f;
+
+  --color-border: #3a3835;
+  --color-border-subtle: #2f2d2b;
+
+  --color-text: #f3efe6;
+  --color-text-muted: #b8b2a4;
+  --color-text-faint: #8a847a;
+
+  --color-accent: #c96442;
+  --color-accent-hover: #d87354;
+  --color-accent-fg: #fff8f3;
+
+  --color-user-bubble: #2f2d2a;
+
+  --font-sans: var(--font-sans-app), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-mono-app), ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  --radius-card: 0.75rem;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-faint);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+.dot-pulse > span {
+  animation: blink 1.2s infinite both;
+}
+.dot-pulse > span:nth-child(2) { animation-delay: 0.15s; }
+.dot-pulse > span:nth-child(3) { animation-delay: 0.3s; }

@@ -1,0 +1,13 @@
+{
+  "session_id": "fe8c6e7eeb8b",
+  "current_property_id": "11-test-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar?",
+      "assistant": "Live Zillow discovery was unavailable (SearchAPI Zillow returned no live listing candidates for the requested town/filters), so I fell back to the saved corpus.\nMatched 7 of the saved corpus on filters {'beds': 3}:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 119-4th-ave-avon-by-the-sea-nj-07717 \u2014 119 4th Ave, Avon By The Sea, NJ 07717, 3bd/1.5ba, $1,699,000 5.5 blocks to beach\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- 526-w-end-ave-avon-by-the-sea-nj \u2014 526 W End Ave, Avon By The Sea NJ, 3bd/2.0ba, $1,490,000\n- briarwood-rd-belmar \u2014 1223 Briarwood Rd, Belmar, NJ 07719, 3bd/2.0ba, $674,200\n(+2 more)",
+      "answer_type": "search"
+    }
+  ]
+}

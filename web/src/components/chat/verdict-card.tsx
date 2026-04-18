@@ -1,0 +1,163 @@
+"use client";
+
+import { cn } from "@/lib/cn";
+import type { VerdictEvent } from "@/lib/chat/events";
+
+type Props = {
+  verdict: VerdictEvent;
+};
+
+const STANCE_TONE: Record<string, string> = {
+  buy: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  buy_if_price_improves:
+    "bg-amber-500/15 text-amber-200 border-amber-500/30",
+  pass_unless_changes: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  pass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+};
+
+function stanceLabel(s: string | null | undefined) {
+  if (!s) return "Undecided";
+  return s
+    .split("_")
+    .map((w) => w[0]?.toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function money(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+function pct(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const sign = n >= 0 ? "+" : "";
+  return `${sign}${(n * 100).toFixed(1)}%`;
+}
+
+export function VerdictCard({ verdict }: Props) {
+  const stance = verdict.stance ?? null;
+  const tone = stance ? STANCE_TONE[stance] : undefined;
+
+  const ask = verdict.ask_price ?? null;
+  const fair = verdict.fair_value_base ?? null;
+  const low = verdict.value_low ?? null;
+  const high = verdict.value_high ?? null;
+
+  // Position the ask price marker within the value range bar.
+  let askPos: number | null = null;
+  if (ask != null && low != null && high != null && high > low) {
+    const clamped = Math.max(low, Math.min(high, ask));
+    askPos = ((clamped - low) / (high - low)) * 100;
+  }
+
+  const subjectLine = [verdict.address, verdict.town, verdict.state]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <div
+      className={cn(
+        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
+        "bg-[var(--color-surface)] p-4",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          {subjectLine && (
+            <div className="text-[13px] text-[var(--color-text-muted)]">
+              {subjectLine}
+            </div>
+          )}
+          <div className="mt-0.5 text-base font-semibold text-[var(--color-text)]">
+            Decision
+          </div>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider",
+            tone ??
+              "bg-[var(--color-bg-sunken)] text-[var(--color-text-muted)] border-[var(--color-border-subtle)]",
+          )}
+        >
+          {stanceLabel(stance)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
+        <Stat label="Ask" value={money(ask)} />
+        <Stat label="Fair value" value={money(fair)} />
+        <Stat label="vs ask" value={pct(verdict.ask_premium_pct)} />
+        <Stat label="vs basis" value={pct(verdict.basis_premium_pct)} />
+      </div>
+
+      {low != null && high != null && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-[11px] text-[var(--color-text-faint)]">
+            <span>{money(low)}</span>
+            <span className="uppercase tracking-wider">Value range</span>
+            <span>{money(high)}</span>
+          </div>
+          <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--color-bg-sunken)]">
+            <div className="absolute inset-y-0 left-0 right-0 bg-gradient-to-r from-emerald-500/30 via-amber-500/30 to-rose-500/30" />
+            {askPos != null && (
+              <div
+                className="absolute top-1/2 h-3 w-[2px] -translate-y-1/2 bg-[var(--color-text)]"
+                style={{ left: `${askPos}%` }}
+                aria-label={`Ask: ${money(ask)}`}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {verdict.trust_flags.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {verdict.trust_flags.map((f) => (
+            <span
+              key={f}
+              className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-200/90"
+            >
+              {f}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {verdict.what_must_be_true.length > 0 && (
+        <ListBlock label="What must be true" items={verdict.what_must_be_true} />
+      )}
+      {verdict.key_risks.length > 0 && (
+        <ListBlock label="Key risks" items={verdict.key_risks} />
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
+        {label}
+      </div>
+      <div className="mt-0.5 font-medium text-[var(--color-text)]">{value}</div>
+    </div>
+  );
+}
+
+function ListBlock({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div className="mt-4">
+      <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
+        {label}
+      </div>
+      <ul className="mt-1.5 space-y-1 text-[13px] text-[var(--color-text-muted)]">
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="mt-2 inline-block h-1 w-1 shrink-0 rounded-full bg-[var(--color-text-faint)]" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

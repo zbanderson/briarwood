@@ -27,6 +27,20 @@ class Turn:
 class Session:
     session_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     current_property_id: str | None = None
+    current_live_listing: dict[str, object] | None = None
+    last_live_listing_results: list[dict[str, object]] = field(default_factory=list)
+    current_search_context: dict[str, object] | None = None
+    search_context: dict[str, object] | None = None
+    selected_search_result: dict[str, object] | None = None
+    promoted_property_id: str | None = None
+    promotion_error: str | None = None
+    last_answer_contract: str | None = None
+    last_analysis_mode: str | None = None
+    last_decision_view: dict[str, object] | None = None
+    last_projection_view: dict[str, object] | None = None
+    last_comparison_view: list[dict[str, object]] | None = None
+    last_town_summary: dict[str, object] | None = None
+    last_comps_preview: dict[str, object] | None = None
     turns: list[Turn] = field(default_factory=list)
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
@@ -49,5 +63,19 @@ class Session:
         return cls(
             session_id=data["session_id"],
             current_property_id=data.get("current_property_id"),
+            current_live_listing=data.get("current_live_listing"),
+            last_live_listing_results=list(data.get("last_live_listing_results") or []),
+            current_search_context=data.get("current_search_context") or data.get("search_context"),
+            search_context=data.get("search_context"),
+            selected_search_result=data.get("selected_search_result"),
+            promoted_property_id=data.get("promoted_property_id"),
+            promotion_error=data.get("promotion_error"),
+            last_answer_contract=data.get("last_answer_contract"),
+            last_analysis_mode=data.get("last_analysis_mode"),
+            last_decision_view=data.get("last_decision_view"),
+            last_projection_view=data.get("last_projection_view"),
+            last_comparison_view=data.get("last_comparison_view"),
+            last_town_summary=data.get("last_town_summary"),
+            last_comps_preview=data.get("last_comps_preview"),
             turns=turns,
         )

@@ -1,0 +1,108 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "123",
+            "short_name": "123",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Test Street",
+            "short_name": "Test St",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Council Bluffs",
+            "short_name": "Council Bluffs",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Pottawattamie County",
+            "short_name": "Pottawattamie County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Iowa",
+            "short_name": "IA",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "51503",
+            "short_name": "51503",
+            "types": [
+              "postal_code"
+            ]
+          }
+        ],
+        "formatted_address": "123 Test St, Council Bluffs, IA 51503, USA",
+        "geometry": {
+          "location": {
+            "lat": 41.2593991,
+            "lng": -95.84235059999999
+          },
+          "location_type": "RANGE_INTERPOLATED",
+          "viewport": {
+            "northeast": {
+              "lat": 41.2607173302915,
+              "lng": -95.84107061970849
+            },
+            "southwest": {
+              "lat": 41.2580193697085,
+              "lng": -95.8437685802915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 41.2593422,
+              "longitude": -95.8424783
+            }
+          }
+        ],
+        "place_id": "EioxMjMgVGVzdCBTdCwgQ291bmNpbCBCbHVmZnMsIElBIDUxNTAzLCBVU0EiMBIuChQKEglHLDo48YSThxFzH_4zwdD1lRB7KhQKEgmjFzc88YSThxFu34aUWJ0Vag",
+        "types": [
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "123 Test St, Council Bluffs, IA 51503, USA",
+    "latitude": 41.2593991,
+    "longitude": -95.84235059999999,
+    "place_id": "EioxMjMgVGVzdCBTdCwgQ291bmNpbCBCbHVmZnMsIElBIDUxNTAzLCBVU0EiMBIuChQKEglHLDo48YSThxFzH_4zwdD1lRB7KhQKEgmjFzc88YSThxFu34aUWJ0Vag",
+    "types": [
+      "street_address"
+    ],
+    "town": "Council Bluffs",
+    "state": "IA",
+    "county": "Pottawattamie",
+    "zip_code": "51503"
+  },
+  "fetched_at": "2026-04-18T02:05:16Z"
+}

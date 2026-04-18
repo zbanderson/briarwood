@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from briarwood.agent.dispatch import handle_visualize
+from briarwood.agent import rendering as rendering_mod
 from briarwood.agent.rendering import ChartUnavailable, render_chart
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import Session
@@ -28,6 +29,10 @@ _UNIFIED = {
 
 
 class RenderChartTests(unittest.TestCase):
+    def setUp(self) -> None:
+        if rendering_mod.go is None:
+            self.skipTest("plotly is not installed")
+
     def test_value_opportunity_writes_html(self) -> None:
         with TemporaryDirectory() as tmp, patch(
             "briarwood.agent.rendering.ARTIFACTS_ROOT", Path(tmp)
@@ -59,6 +64,23 @@ class RenderChartTests(unittest.TestCase):
         with self.assertRaises(ChartUnavailable):
             render_chart("verdict_gauge", {"value_position": {}})
 
+    def test_rent_burn_writes_html(self) -> None:
+        payload = {
+            "series": [
+                {"year": 0, "rent_base": 3600, "rent_bull": 3800, "rent_bear": 3400, "monthly_obligation": 4100},
+                {"year": 1, "rent_base": 3708, "rent_bull": 3990, "rent_bear": 3434, "monthly_obligation": 4100},
+            ],
+            "title": "Rent burn chart",
+        }
+        with TemporaryDirectory() as tmp, patch(
+            "briarwood.agent.rendering.ARTIFACTS_ROOT", Path(tmp)
+        ):
+            path = render_chart("rent_burn", payload, session_id="t")
+            self.assertTrue(path.exists())
+            body = path.read_text()
+            self.assertIn("Rent burn chart", body)
+            self.assertIn("Monthly obligation", body)
+
 
 class VisualizeRouterTests(unittest.TestCase):
     def test_show_value_picture_routes_to_visualize(self) -> None:
@@ -82,6 +104,8 @@ class VisualizeHandlerTests(unittest.TestCase):
         )
         with patch("briarwood.agent.dispatch.render_chart") as mock_render, patch(
             "briarwood.agent.dispatch._SAVED_DIR_EXISTS", return_value=True
+        ), patch(
+            "briarwood.agent.dispatch.saved_property_has_valid_location", return_value=True
         ):
             mock_render.return_value = {
                 "property_id": "any-saved-id",

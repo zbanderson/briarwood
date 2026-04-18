@@ -1,0 +1,157 @@
+{
+  "session_id": "e002c171e4d3",
+  "current_property_id": null,
+  "current_live_listing": null,
+  "last_live_listing_results": [
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1611 River Road, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1590000.0,
+      "beds": 5,
+      "baths": 4.0,
+      "sqft": 2469,
+      "property_type": "MULTI_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/",
+      "external_id": "39225462",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "304 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1250000.0,
+      "beds": 6,
+      "baths": 4.0,
+      "sqft": 1298,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/304-14th-Ave-Belmar-NJ-07719/39224611_zpid/",
+      "external_id": "39224611",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1708 A Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1195000.0,
+      "beds": 5,
+      "baths": 2.0,
+      "sqft": 1440,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/",
+      "external_id": "39225114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 749000.0,
+      "beds": 2,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "CONDO",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/",
+      "external_id": "39223261",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "301 10th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 2699900.0,
+      "beds": 6,
+      "baths": 4.0,
+      "sqft": 3792,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+      "external_id": "331325114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "105 11th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 3999999.0,
+      "beds": 5,
+      "baths": 5.0,
+      "sqft": 3977,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/105-11th-Ave-Belmar-NJ-07719/325562278_zpid/",
+      "external_id": "325562278",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "107 3rd Avenue #F2, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 510000.0,
+      "beds": 1,
+      "baths": 1.0,
+      "sqft": 625,
+      "property_type": "CONDO",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/107-3rd-Ave-APT-F2-Belmar-NJ-07719/39223366_zpid/",
+      "external_id": "39223366",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {}
+  },
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "turns": [
+    {
+      "user": "what do you think of 1600 L Street, Belmar NJ",
+      "assistant": "1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba \u2014 ask $899,000\nBriarwood sees the immediate setup as buy if price improves. Ask is 10.5% above the fair value anchor.\nWhat supports that view: Make an offer inside the risk-adjusted band rather than at ask.\nWhat could weaken confidence: weak_town_context, incomplete_carry_inputs.\nNext best question: Pull town-level scarcity/absorption data before anchoring on town priors.\nSource coverage: SearchAPI/Zillow hydrated the live listing context. ATTOM added structured sale history and ownership timing context.\nNearby support in Belmar:\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave, Belmar, NJ 07719, 3bd/2.0ba, $700,000\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- l-street-2 \u2014 1302 L Street, 3bd/1.5ba, $850,000, 18.9 blocks to beach",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what is the future value of the house?",
+      "assistant": "The base case for the house, currently priced at $899,000, projects a value of $849,741, reflecting a decline of 5.5%. In a bullish scenario, the house could see a minor increase to $907,220, representing a 0.9% gain, while in a bearish scenario, it may decrease to $802,797, a 10.7% drop. The stress case indicates a more severe downturn, with a potential value of $563,078. This scenario outlines a range of future values contingent on market conditions and trends.\nChart: file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/e002c171e4d3/20260417-132634-scenario_fan.html",
+      "answer_type": "projection"
+    },
+    {
+      "user": "what do you think i could rent the house for in 2 years?",
+      "assistant": "In the base case scenario, the estimated value of the house in two years is projected to be **$849,741**, reflecting a **5.5%** decrease from the current ask price of **$899,000**. In a bullish scenario, the value could rise slightly to **$907,220**, marking a **0.9%** increase, while in a bearish outlook, the value could decline to **$802,797**, indicating a **10.7%** drop. This creates a potential upside range of **$907,220** to a downside risk of **$563,078** under a stress case, defining the future rental landscape.\nChart: file:///Users/zachanderson/projects/briarwood/data/agent_artifacts/e002c171e4d3/20260417-132710-scenario_fan.html",
+      "answer_type": "projection"
+    },
+    {
+      "user": "can you show me houses in belmar nj that have a 5.5 cap rate?",
+      "assistant": "Found 8 live Zillow listing(s) for sale in Belmar, NJ:\n- 1600 L Street, Belmar, NJ 07719 \u2014 3bd/2.0ba, $899,000, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/\n- 1611 River Road, Belmar, NJ 07719 \u2014 5bd/4.0ba, $1,590,000, 2,469 sqft, MULTI_FAMILY\n  https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/\n- 304 14th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $1,250,000, 1,298 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/304-14th-Ave-Belmar-NJ-07719/39224611_zpid/\n- 1708 A Street, Belmar, NJ 07719 \u2014 5bd/2.0ba, $1,195,000, 1,440 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/\n- 103 2nd Avenue #A3, Belmar, NJ 07719 \u2014 2bd/1.0ba, $749,000, 960 sqft, CONDO\n  https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/\n- 301 10th Avenue, Belmar, NJ 07719 \u2014 6bd/4.0ba, $2,699,900, 3,792 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    }
+  ]
+}

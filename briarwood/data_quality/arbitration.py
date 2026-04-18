@@ -6,8 +6,8 @@ from typing import Any
 
 from briarwood.data_quality.normalizers import (
     is_listing_description_as_address,
-    normalize_address_string,
     normalize_date,
+    normalize_full_address_string,
     normalize_lot_size,
     normalize_numeric,
     normalize_sqft,
@@ -344,7 +344,7 @@ def _normalize_candidate(candidate: FieldCandidate) -> FieldCandidate:
 
 def _field_normalizer(field_name: str):
     if field_name == "address":
-        return normalize_address_string
+        return normalize_full_address_string
     if field_name == "town":
         return normalize_town
     if field_name == "state":

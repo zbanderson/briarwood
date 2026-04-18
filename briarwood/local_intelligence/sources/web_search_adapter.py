@@ -23,9 +23,10 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Callable
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from briarwood.local_intelligence.models import SourceType
@@ -40,7 +41,29 @@ _FOCUS_QUERY_TERMS = {
     "short_term_rental": "short-term rental ordinance airbnb",
     "flood": "flood zone ordinance",
     "development": "planning board approvals",
+    "scarcity": "inventory supply absorption housing pipeline",
+    "pricing": "home prices demand inventory",
+    "permits": "building permits redevelopment approvals",
+    "demand": "housing demand inventory absorption",
+    "migration": "population growth demand housing",
 }
+
+_BASELINE_QUERY_TERMS = (
+    "planning board minutes",
+    "zoning ordinance",
+    "redevelopment",
+)
+
+_TAVILY_DEFAULT_EXCLUDE_DOMAINS = (
+    "zillow.com",
+    "realtor.com",
+    "redfin.com",
+    "trulia.com",
+    "facebook.com",
+    "instagram.com",
+    "linkedin.com",
+    "youtube.com",
+)
 
 
 @dataclass(slots=True)
@@ -116,7 +139,8 @@ class WebSearchAdapter:
         # Injectable search for tests — bypasses the HTTP layer.
         self._search_fn = search_fn
         self.search_options = search_options or WebSearchOptions()
-        self.extract_options = extract_options or TavilyExtractOptions()
+        default_extract_enabled = self.provider == "tavily"
+        self.extract_options = extract_options or TavilyExtractOptions(enabled=default_extract_enabled)
         self._extract_fn = extract_fn
         self._crawl_fn = crawl_fn
         self.project_id = project_id or os.environ.get("TAVILY_PROJECT")
@@ -145,8 +169,8 @@ class WebSearchAdapter:
             logger.info("WebSearchAdapter disabled — no API key in environment.")
             return []
 
-        query_terms = _focus_to_query(focus)
-        query = f'"{town}" {state} {query_terms}'.strip()
+        query = _build_municipal_query(town=town, state=state, focus=focus)
+        search_options = self._effective_search_options(focus)
 
         # Real API calls go through the cost guard; injected search_fn (tests) does not.
         if self._search_fn is None:
@@ -160,7 +184,7 @@ class WebSearchAdapter:
             guard.record_websearch()
 
         try:
-            results, usage = self._run_search(query)
+            results, usage = self._run_search(query, search_options)
         except Exception as exc:  # pragma: no cover - network specific
             logger.warning("Web search failed for %s: %s", query, exc)
             return []
@@ -196,7 +220,7 @@ class WebSearchAdapter:
                 {
                     "title": str(result.get("title") or url),
                     "url": url,
-                    "source_type": SourceType.NEWS.value if "news" in url.lower() else SourceType.OTHER.value,
+                    "source_type": _infer_source_type(url, result).value,
                     "published_at": result.get("published_at"),
                     "retrieved_at": datetime.now(timezone.utc).isoformat(),
                     "raw_text": text,
@@ -208,7 +232,7 @@ class WebSearchAdapter:
                         "snippet": result.get("snippet"),
                         "published_at": result.get("published_at"),
                         "score": result.get("score"),
-                        "search_options": _search_options_metadata(self.search_options),
+                        "search_options": _search_options_metadata(search_options),
                         "extract_enabled": self.provider == "tavily" and self.extract_options.enabled,
                         "extract_options": _extract_options_metadata(self.extract_options),
                         "project_id": self.project_id,
@@ -240,14 +264,34 @@ class WebSearchAdapter:
         )
         return payload.get("results", []) if isinstance(payload, dict) else []
 
-    def _run_search(self, query: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    def _run_search(
+        self,
+        query: str,
+        options: WebSearchOptions,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
         search_impl = self._search_fn or self._provider_search
-        response = _call_search_impl(search_impl, query, self.max_results, self.search_options)
+        response = _call_search_impl(search_impl, query, self.max_results, options)
         if isinstance(response, tuple) and len(response) == 2:
             results, usage = response
         else:
             results, usage = response, None
         return list(results or []), usage if isinstance(usage, dict) else None
+
+    def _effective_search_options(self, focus: list[str] | None) -> WebSearchOptions:
+        options = deepcopy(self.search_options)
+        if self.provider != "tavily":
+            return options
+        if options.search_depth is None:
+            options.search_depth = "advanced"
+        if options.topic is None and _focus_requests_freshness(focus):
+            options.topic = "news"
+        if not options.exclude_domains:
+            options.exclude_domains = list(_TAVILY_DEFAULT_EXCLUDE_DOMAINS)
+        if not self.extract_options.enabled and not options.include_raw_content:
+            options.include_raw_content = True
+        if not options.include_usage:
+            options.include_usage = True
+        return options
 
     def _extract_search_results(
         self,
@@ -293,15 +337,24 @@ class WebSearchAdapter:
         return [], None
 
 
-def _focus_to_query(focus: list[str] | None) -> str:
-    if not focus:
-        return "planning board zoning"
-    terms: list[str] = []
-    for f in focus:
+def _focus_to_query_terms(focus: list[str] | None) -> list[str]:
+    terms: list[str] = list(_BASELINE_QUERY_TERMS)
+    for f in focus or []:
         term = _FOCUS_QUERY_TERMS.get(f) or f.replace("_", " ")
         if term not in terms:
             terms.append(term)
-    return " ".join(terms)
+    return terms
+
+
+def _build_municipal_query(*, town: str, state: str, focus: list[str] | None) -> str:
+    fragments = [f'"{town}"', state]
+    fragments.extend(_focus_to_query_terms(focus))
+    return " ".join(part for part in fragments if part).strip()
+
+
+def _focus_requests_freshness(focus: list[str] | None) -> bool:
+    lowered = {str(item).strip().lower() for item in (focus or [])}
+    return bool(lowered & {"development", "weak_town_context", "pricing", "permits", "demand", "migration"})
 
 
 def _tavily_search(
@@ -487,6 +540,26 @@ def _clean_text(text: str) -> str:
     import re
 
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _infer_source_type(url: str, result: dict[str, Any]) -> SourceType:
+    host = (urlparse(url).netloc or "").lower()
+    title = str(result.get("title") or "").lower()
+    snippet = str(result.get("snippet") or "").lower()
+    haystack = " ".join(part for part in (host, title, snippet) if part)
+    if "ordinance" in haystack or "codebook" in haystack:
+        return SourceType.ORDINANCE
+    if "planning board" in haystack or "planningboard" in haystack:
+        return SourceType.PLANNING_BOARD_MINUTES
+    if "zoning board" in haystack:
+        return SourceType.ZONING_BOARD_MINUTES
+    if "redevelopment" in haystack:
+        return SourceType.REDEVELOPMENT_PLAN
+    if "infrastructure" in haystack or "capital project" in haystack:
+        return SourceType.INFRASTRUCTURE_UPDATE
+    if any(token in host for token in ("patch.com", "tapinto.net")) or "news" in haystack:
+        return SourceType.NEWS
+    return SourceType.OTHER
 
 
 def _call_search_impl(

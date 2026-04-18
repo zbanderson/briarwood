@@ -74,6 +74,20 @@ class ResolverStreetNumberSafetyTests(unittest.TestCase):
         )
         self.assertEqual(pid, "briarwood-rd-belmar")
 
+    def test_ambiguous_tie_returns_none_with_ranked_candidates(self) -> None:
+        pid, ranked = self._resolve(
+            "west end avenue",
+            {
+                "526-west-end-ave": "526 West End Ave, Avon By The Sea, NJ",
+                "526-w-end-ave-avon-by-the-sea-nj": "526 W End Ave, Avon By The Sea, NJ",
+            },
+        )
+        self.assertIsNone(pid)
+        self.assertEqual(
+            ranked,
+            ["526-w-end-ave-avon-by-the-sea-nj", "526-west-end-ave"],
+        )
+
     def test_extract_street_number_pulls_leading_digits(self) -> None:
         from briarwood.agent.resolver import _extract_street_number
 

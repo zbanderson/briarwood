@@ -1,0 +1,127 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "1008",
+            "short_name": "1008",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "14th Avenue",
+            "short_name": "14th Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07719",
+            "short_name": "07719",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2809",
+            "short_name": "2809",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "1008 14th Ave, Belmar, NJ 07719, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.176572,
+              "lng": -74.0335909
+            },
+            "southwest": {
+              "lat": 40.1764749,
+              "lng": -74.0336904
+            }
+          },
+          "location": {
+            "lat": 40.1765245,
+            "lng": -74.03363949999999
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1778323802915,
+              "lng": -74.03228881970848
+            },
+            "southwest": {
+              "lat": 40.1751344197085,
+              "lng": -74.03498678029149
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1764577,
+              "longitude": -74.0335887
+            }
+          }
+        ],
+        "place_id": "ChIJLZjPgggowokRvr1BxjOdhBA",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "1008 14th Ave, Belmar, NJ 07719, USA",
+    "latitude": 40.1765245,
+    "longitude": -74.03363949999999,
+    "place_id": "ChIJLZjPgggowokRvr1BxjOdhBA",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719"
+  },
+  "fetched_at": "2026-04-18T02:04:47Z"
+}

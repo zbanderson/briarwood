@@ -1,0 +1,92 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          }
+        ],
+        "formatted_address": "Belmar, NJ, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.1888929,
+              "lng": -74.006481
+            },
+            "southwest": {
+              "lat": 40.167175,
+              "lng": -74.05057099999999
+            }
+          },
+          "location": {
+            "lat": 40.1782647,
+            "lng": -74.0312673
+          },
+          "location_type": "APPROXIMATE",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1888929,
+              "lng": -74.006481
+            },
+            "southwest": {
+              "lat": 40.167175,
+              "lng": -74.05057099999999
+            }
+          }
+        },
+        "partial_match": true,
+        "place_id": "ChIJP0wm6oCHwYkRsB7oVcD-tIU",
+        "types": [
+          "locality",
+          "political"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "Belmar, NJ, USA",
+    "latitude": 40.1782647,
+    "longitude": -74.0312673,
+    "place_id": "ChIJP0wm6oCHwYkRsB7oVcD-tIU",
+    "types": [
+      "locality",
+      "political"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": null
+  },
+  "fetched_at": "2026-04-18T02:04:54Z"
+}

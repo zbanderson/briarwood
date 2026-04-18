@@ -26,6 +26,10 @@ CACHE_CANNED: list[tuple[str, AnswerType]] = [
     ("Is this a good deal?", AnswerType.DECISION),
     ("Underwrite 526-west-end-ave for me", AnswerType.DECISION),
     ("Worth buying at 1.5M?", AnswerType.DECISION),
+    # projection (explicit renovation / resale / capex scenario)
+    ("What if we invested 100k into it?", AnswerType.PROJECTION),
+    ("If we renovated it, what could we sell it for?", AnswerType.PROJECTION),
+    ("What's the ARV on 526-west-end-ave?", AnswerType.PROJECTION),
     # search (explicit imperatives)
     ("Show me listings in Avon", AnswerType.SEARCH),
     ("Find me properties near the beach", AnswerType.SEARCH),
@@ -133,6 +137,13 @@ class PrecedenceTests(unittest.TestCase):
         decision = classify("what if I bought 526-west-end-ave at 1.3M?")
         self.assertIs(decision.answer_type, AnswerType.DECISION)
         self.assertEqual(decision.reason, "what-if price override")
+
+    def test_renovation_override_with_rent_question_routes_to_rent_lookup(self) -> None:
+        decision = classify(
+            "what would a fully renovated 3 bed 2 bath house rent for in belmar, maybe we can buy it, live there, renovate, rent it"
+        )
+        self.assertIs(decision.answer_type, AnswerType.RENT_LOOKUP)
+        self.assertEqual(decision.reason, "override with rent question")
 
 
 class InfrastructureTests(unittest.TestCase):

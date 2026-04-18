@@ -187,6 +187,8 @@ def load_property_from_json(path: str | Path) -> PropertyInput:
         canonical = _canonical_from_dict(data)
         canonical = _enrich_with_market_context(canonical)
         property_input = PropertyInput.from_canonical(canonical)
+        property_input.renovation_scenario = data.get("renovation_scenario")
+        property_input.teardown_scenario = data.get("teardown_scenario")
         _validate_property_input(property_input)
         return property_input
     canonical = PublicRecordAdapter().build(data, property_id=str(data.get("property_id") or "property-json"))
@@ -284,6 +286,7 @@ def _canonical_from_dict(data: dict[str, object]) -> CanonicalPropertyData:
         architectural_style=_optional_str(facts_payload.get("architectural_style", data.get("architectural_style"))),
         condition_profile=_optional_str(facts_payload.get("condition_profile", data.get("condition_profile"))),
         capex_lane=_optional_str(facts_payload.get("capex_lane", data.get("capex_lane"))),
+        renovation_mode=_optional_str(facts_payload.get("renovation_mode", data.get("renovation_mode"))),
         year_built=_optional_int(facts_payload.get("year_built", data.get("year_built"))),
         stories=_optional_float(facts_payload.get("stories", data.get("stories"))),
         garage_spaces=_optional_int(facts_payload.get("garage_spaces", data.get("garage_spaces"))),

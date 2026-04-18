@@ -62,7 +62,7 @@ def normalize_listing(raw_data: ListingRawData, warnings: list[str] | None = Non
         if value is None or value == ""
     ]
 
-    if raw_data.intake_mode == "url_intake":
+    if raw_data.intake_mode == "url_intake" and _looks_url_only(raw_data):
         warnings.append("URL-only intake stores source metadata and inferred address text, but does not extract real listing fields.")
     if normalized.address and (normalized.town is None or normalized.state is None):
         warnings.append("Address was found, but town/state could not be parsed cleanly.")
@@ -87,6 +87,21 @@ def _parse_location(address: str | None) -> tuple[str | None, str | None, str | 
         return None, None, None
     match = re.search(r",\s*([^,]+),\s*([A-Z]{2})(?:\s+(\d{5}))?$", address)
     if not match:
+        state_match = re.search(r"\b([A-Z]{2})(?:\s+(\d{5}))?$", address)
+        if state_match:
+            state = normalize_state(state_match.group(1).strip())
+            zip_code = state_match.group(2)
+            prefix = address[: state_match.start()].strip(" ,")
+            words = [part for part in re.split(r"\s+", prefix) if part]
+            if state and words:
+                for idx in range(len(words)):
+                    candidate_town = normalize_town(" ".join(words[idx:]))
+                    if candidate_town and infer_county(town=candidate_town, state=state):
+                        return candidate_town, state, zip_code
+                candidate_town = normalize_town(words[-1])
+                if candidate_town:
+                    return candidate_town, state, zip_code
+    if not match:
         return None, None, None
     town = normalize_town(match.group(1).strip())
     state = normalize_state(match.group(2).strip())
@@ -95,3 +110,17 @@ def _parse_location(address: str | None) -> tuple[str | None, str | None, str | 
 
 def _infer_county(*, town: str | None, state: str | None, zip_code: str | None) -> str | None:
     return infer_county(town=town, state=state, zip_code=zip_code)
+
+
+def _looks_url_only(raw_data: ListingRawData) -> bool:
+    return (
+        raw_data.price is None
+        and raw_data.beds is None
+        and raw_data.baths is None
+        and raw_data.sqft is None
+        and raw_data.year_built is None
+        and raw_data.hoa_monthly is None
+        and raw_data.taxes_annual is None
+        and not raw_data.tax_history
+        and not raw_data.price_history
+    )

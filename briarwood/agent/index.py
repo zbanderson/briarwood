@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -22,6 +23,34 @@ from briarwood.agent.tools import SAVED_PROPERTIES_DIR
 
 INDEX_PATH = Path("data/listing_index/index.json")
 BLOCK_MILES = 0.06  # NJ shore town residential block ≈ 0.06 mi
+
+# Fixture / development records that must never appear in user-facing comp
+# results. Scope these tightly to slug patterns we've actually used so we
+# don't accidentally drop real properties (e.g. "Demolition Ave" addresses).
+_FIXTURE_ID_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?:^|-)test(?:-|$)"),
+    re.compile(r"(?:^|-)seed(?:-|$)"),
+    re.compile(r"(?:^|-)sample(?:-|$)"),
+    re.compile(r"(?:^|-)fixture(?:-|$)"),
+    re.compile(r"^tmp[-_]"),
+    re.compile(r"^compdb[-_]"),
+)
+# Address-text backstop for records whose slug doesn't betray their fixture
+# nature (e.g. "11 Test Ave" got slugged as 11-test-ave-belmar-nj-07719,
+# which the slug check already catches — but addresses like "Demo Lane" or
+# "Sample Road" deserve a second look).
+_FIXTURE_ADDRESS_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\btest\s+(?:ave|st|street|rd|road|ln|lane)\b", re.IGNORECASE),
+)
+
+
+def _is_fixture(property_id: str, address: str | None = None) -> bool:
+    pid = (property_id or "").lower()
+    if any(p.search(pid) for p in _FIXTURE_ID_PATTERNS):
+        return True
+    if address and any(p.search(address) for p in _FIXTURE_ADDRESS_PATTERNS):
+        return True
+    return False
 
 
 @dataclass
@@ -131,7 +160,12 @@ def build_index(property_ids: Iterable[str] | None = None) -> Index:
         if property_ids is not None
         else sorted(p.name for p in SAVED_PROPERTIES_DIR.iterdir() if p.is_dir())
     )
-    records = [r for pid in ids if (r := _record_for(pid)) is not None]
+    records = [
+        r
+        for pid in ids
+        if (r := _record_for(pid)) is not None
+        and not _is_fixture(r.property_id, r.address)
+    ]
     idx = Index(properties=records)
     INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
     INDEX_PATH.write_text(json.dumps(idx.to_dict(), indent=2))
@@ -142,7 +176,15 @@ def load_index() -> Index:
     if not INDEX_PATH.exists():
         return build_index()
     data = json.loads(INDEX_PATH.read_text())
-    return Index(properties=[IndexedProperty(**p) for p in data.get("properties", [])])
+    # Drop fixture rows opportunistically too — protects against an old index
+    # written before the filter was added.
+    return Index(
+        properties=[
+            IndexedProperty(**p)
+            for p in data.get("properties", [])
+            if not _is_fixture(p.get("property_id", ""), p.get("address"))
+        ]
+    )
 
 
 # ---------- search ----------

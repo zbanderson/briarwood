@@ -1,0 +1,11 @@
+{
+  "session_id": "cab716184b8b",
+  "current_property_id": null,
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar nj",
+      "assistant": "Found 8 live Zillow listing(s) for sale in Belmar, NJ:\n- 4717 De Grey Ln, Plano, TX 75093 \u2014 4bd/4.0ba, $675,000, 2,981 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/4717-De-Grey-Ln-Plano-TX-75093/53094357_zpid/\n- 2233 Parkhaven Dr, Plano, TX 75075 \u2014 4bd/3.0ba, $575,000, 2,365 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/2233-Parkhaven-Dr-Plano-TX-75075/26603367_zpid/\n- 836 Snapdragon Ln, Plano, TX 75075 \u2014 4bd/3.0ba, $300,000, 2,275 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/836-Snapdragon-Ln-Plano-TX-75075/26653635_zpid/\n- 6857 Barbican Dr, Plano, TX 75023 \u2014 4bd/3.0ba, $420,000, 2,311 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/6857-Barbican-Dr-Plano-TX-75023/26660437_zpid/\n- 700 Player Dr, Plano, TX 75025 \u2014 5bd/3.0ba, $650,000, 3,198 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/700-Player-Dr-Plano-TX-75025/53106825_zpid/\n- 1521 Harrington Dr, Plano, TX 75075 \u2014 4bd/3.0ba, $629,900, 2,668 sqft, SINGLE_FAMILY\n  https://www.zillow.com/homedetails/1521-Harrington-Dr-Plano-TX-75075/26626556_zpid/\nNext best move: paste one Zillow URL or name one address and I can give you a first purchase read.",
+      "answer_type": "search"
+    }
+  ]
+}

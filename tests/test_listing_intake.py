@@ -1,11 +1,16 @@
+import json
 import unittest
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+from briarwood.data_sources.searchapi_zillow_client import SearchApiZillowClient
 from briarwood.inputs.property_loader import load_property_from_json
 from briarwood.inputs.property_loader import (
     load_property_from_listing_intake_result,
     load_property_from_listing_source,
     load_property_from_listing_text,
 )
+from briarwood.listing_intake.parsers import ZillowTextParser, ZillowUrlParser
 from briarwood.listing_intake.service import ListingIntakeService
 from briarwood.runner import run_report_from_listing_text
 from briarwood.schemas import EvidenceMode, InputCoverageStatus
@@ -144,8 +149,49 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertEqual(property_input.coverage_for("insurance_estimate").status, InputCoverageStatus.USER_SUPPLIED)
         self.assertEqual(property_input.coverage_for("market_history").status, InputCoverageStatus.SOURCED)
 
+    def test_json_loader_preserves_renovation_mode_and_scenario(self) -> None:
+        payload = {
+            "facts": {
+                "address": "1 Test Ave",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2,
+                "sqft": 1500,
+                "purchase_price": 674200,
+                "renovation_mode": "will_renovate",
+            },
+            "market_signals": {},
+            "user_assumptions": {"repair_capex_budget": 100000},
+            "source_metadata": {"evidence_mode": "public_record"},
+            "renovation_scenario": {
+                "enabled": True,
+                "renovation_budget": 100000,
+                "target_condition": "renovated",
+            },
+        }
+        with NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            Path(handle.name).write_text(json.dumps(payload))
+            path = handle.name
+        try:
+            property_input = load_property_from_json(path)
+        finally:
+            Path(path).unlink(missing_ok=True)
+
+        self.assertEqual(property_input.renovation_mode, "will_renovate")
+        self.assertEqual(property_input.repair_capex_budget, 100000)
+        self.assertEqual(
+            property_input.renovation_scenario,
+            {
+                "enabled": True,
+                "renovation_budget": 100000,
+                "target_condition": "renovated",
+            },
+        )
+
     def test_zillow_url_listing_returns_partial_result_with_warning(self) -> None:
-        service = ListingIntakeService()
+        disabled_client = SearchApiZillowClient(api_key="")
+        service = ListingIntakeService(parsers=[ZillowUrlParser(client=disabled_client), ZillowTextParser()])
         result = service.intake_url(
             "https://www.zillow.com/homedetails/17-Cedar-Ln-Brookline-MA-02445/123456_zpid/"
         )
@@ -155,11 +201,63 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertIn("price", result.missing_fields)
         self.assertTrue(result.warnings)
         self.assertIn(
-            "URL intake is metadata-only in v1; no live page fetching is performed.",
+            "URL intake is metadata-only unless SearchAPI Zillow is configured.",
             result.warnings,
         )
         self.assertIn(
             "Provide pasted listing text to extract richer fields like description, HOA, tax history, and price history.",
+            result.warnings,
+        )
+
+    def test_zillow_url_listing_can_be_hydrated_via_searchapi(self) -> None:
+        def transport(
+            url: str,
+            params: dict[str, str],
+            headers: dict[str, str],
+            timeout_seconds: float,
+        ) -> dict[str, object]:
+            self.assertIn("engine", params)
+            self.assertEqual(params["engine"], "zillow")
+            self.assertIn("1223 Briarwood Rd", params["q"])
+            return {
+                "organic_results": [
+                    {
+                        "zpid": "39225332",
+                        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+                        "link": "https://www.zillow.com/homedetails/1223-Briarwood-Rd-Belmar-NJ-07719/39225332_zpid/",
+                        "extracted_price": 674200,
+                        "beds": 3,
+                        "baths": 2.0,
+                        "living_area": 1468,
+                        "lot_size": 5001,
+                        "home_type": "Single Family",
+                        "year_built": 1950,
+                        "days_on_zillow": 12,
+                        "description": "Belmar shore colonial with renovation upside.",
+                    }
+                ]
+            }
+
+        live_client = SearchApiZillowClient(api_key="test-key", transport=transport, cache_dir=Path("/tmp/briarwood-searchapi-test"))
+        service = ListingIntakeService(parsers=[ZillowUrlParser(client=live_client), ZillowTextParser()])
+
+        result = service.intake_url(
+            "https://www.zillow.com/homedetails/1223-Briarwood-Rd-Belmar-NJ-07719/39225332_zpid/"
+        )
+
+        self.assertEqual(result.intake_mode, "url_intake")
+        self.assertEqual(result.normalized_property_data.address, "1223 Briarwood Rd, Belmar, NJ 07719")
+        self.assertEqual(result.normalized_property_data.price, 674200.0)
+        self.assertEqual(result.normalized_property_data.beds, 3)
+        self.assertEqual(result.normalized_property_data.baths, 2.0)
+        self.assertEqual(result.normalized_property_data.sqft, 1468)
+        self.assertEqual(result.normalized_property_data.year_built, 1950)
+        self.assertEqual(result.normalized_property_data.days_on_market, 12)
+        self.assertEqual(result.normalized_property_data.town, "Belmar")
+        self.assertEqual(result.normalized_property_data.county, "Monmouth")
+        self.assertIn("Live Zillow hydration succeeded via SearchAPI.", result.warnings)
+        self.assertNotIn(
+            "URL-only intake stores source metadata and inferred address text, but does not extract real listing fields.",
             result.warnings,
         )
 

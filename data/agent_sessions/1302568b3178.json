@@ -1,0 +1,17 @@
+{
+  "session_id": "1302568b3178",
+  "current_property_id": null,
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": "I couldn't confirm the town/state cleanly enough to promote that address yet.",
+  "turns": [
+    {
+      "user": "how much do you think 1228 briarwood road, belmar, nj is worth?",
+      "assistant": "I couldn't match that property to the saved corpus yet.",
+      "answer_type": "browse"
+    }
+  ]
+}

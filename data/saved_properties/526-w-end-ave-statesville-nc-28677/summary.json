@@ -1,0 +1,20 @@
+{
+  "property_id": "526-w-end-ave-statesville-nc-28677",
+  "address": "526 W END AVE, STATESVILLE, NC 28677",
+  "label": "526 W END AVE",
+  "town": "Statesville",
+  "state": "NC",
+  "county": "Iredell",
+  "beds": 4,
+  "baths": 2.5,
+  "ask_price": null,
+  "bcv": null,
+  "pricing_view": null,
+  "property_type": "SFR",
+  "source_url": null,
+  "confidence": null,
+  "comp_trust": "pending",
+  "missing_input_count": 4,
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-17T16:45:25"
+}
