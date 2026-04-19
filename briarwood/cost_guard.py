@@ -29,6 +29,15 @@ _OPENAI_PRICES: dict[str, tuple[float, float]] = {
     "gpt-5": (0.00125, 0.01),
     "o3-mini": (0.0011, 0.0044),
 }
+# AUDIT 1.3.4: Claude pricing alongside OpenAI so the provider abstraction
+# can account against a single USD-denominated budget surface. Prices are
+# public list prices; model ids track the Anthropic SDK naming convention.
+_ANTHROPIC_PRICES: dict[str, tuple[float, float]] = {
+    # model -> (input $/1K, output $/1K)
+    "claude-opus-4-7": (0.015, 0.075),
+    "claude-sonnet-4-6": (0.003, 0.015),
+    "claude-haiku-4-5-20251001": (0.0008, 0.004),
+}
 _DEFAULT_PRICE = (0.001, 0.004)  # fallback for unknown models
 
 
@@ -60,6 +69,10 @@ class CostGuard:
     websearch_cap: int = field(default_factory=lambda: _env_int("BRIARWOOD_BUDGET_WEBSEARCH_CALLS", 20))
     openai_usd: float = 0.0
     openai_usd_cap: float = field(default_factory=lambda: _env_float("BRIARWOOD_BUDGET_OPENAI_USD", 1.00))
+    # AUDIT 1.3.4: parallel cap for Anthropic so callers pick the provider
+    # without inheriting a shared budget that blends workload attribution.
+    anthropic_usd: float = 0.0
+    anthropic_usd_cap: float = field(default_factory=lambda: _env_float("BRIARWOOD_BUDGET_ANTHROPIC_USD", 1.00))
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     # ---- ATTOM ----
@@ -103,12 +116,28 @@ class CostGuard:
             self.openai_usd += cost
         return cost
 
+    # ---- Anthropic ----
+    def check_anthropic(self) -> None:
+        if self.anthropic_usd >= self.anthropic_usd_cap:
+            raise BudgetExceeded(
+                f"Anthropic spend cap reached (${self.anthropic_usd:.3f}/${self.anthropic_usd_cap:.2f}); "
+                f"raise BRIARWOOD_BUDGET_ANTHROPIC_USD to continue."
+            )
+
+    def record_anthropic(self, *, model: str, input_tokens: int, output_tokens: int) -> float:
+        price_in, price_out = _ANTHROPIC_PRICES.get(model, _DEFAULT_PRICE)
+        cost = (input_tokens / 1000.0) * price_in + (output_tokens / 1000.0) * price_out
+        with self._lock:
+            self.anthropic_usd += cost
+        return cost
+
     # ---- Summary ----
     def summary(self) -> str:
         return (
             f"ATTOM {self.attom_calls}/{self.attom_cap}, "
             f"web {self.websearch_calls}/{self.websearch_cap}, "
-            f"openai ${self.openai_usd:.3f}/${self.openai_usd_cap:.2f}"
+            f"openai ${self.openai_usd:.3f}/${self.openai_usd_cap:.2f}, "
+            f"anthropic ${self.anthropic_usd:.3f}/${self.anthropic_usd_cap:.2f}"
         )
 
 

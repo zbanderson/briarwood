@@ -145,8 +145,94 @@ class OpenAIChatClient:
             return None
 
 
+class AnthropicChatClient:
+    """Anthropic Claude client implementing the ``LLMClient`` protocol.
+
+    AUDIT 1.3.4: a parallel provider so narrative/critique prompts can be
+    routed to Claude without touching call sites. ``complete()`` is the
+    supported surface — the targeted migrations (decision_summary, edge,
+    risk) are all prose. ``complete_structured()`` returns ``None`` here so
+    consumers fall back deterministically; wiring Anthropic's tool-use
+    JSON mode is deferred until a structured prompt actually needs it.
+    """
+
+    def __init__(self, model: str | None = None, timeout: float = 30.0) -> None:
+        from anthropic import Anthropic
+
+        self._client = Anthropic(timeout=timeout)
+        self._model = model or os.environ.get(
+            "BRIARWOOD_ANTHROPIC_MODEL", "claude-sonnet-4-6"
+        )
+
+    def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+        from briarwood.cost_guard import get_guard
+        guard = get_guard()
+        guard.check_anthropic()
+
+        try:
+            response = self._client.messages.create(
+                model=self._model,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                max_tokens=max_tokens,
+            )
+        except Exception as exc:
+            _logger.warning("Anthropic complete() transport failed: %s", exc)
+            return ""
+
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            guard.record_anthropic(
+                model=self._model,
+                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+            )
+
+        blocks = getattr(response, "content", None) or []
+        parts: list[str] = []
+        for block in blocks:
+            text = getattr(block, "text", None)
+            if isinstance(text, str):
+                parts.append(text)
+        return "".join(parts)
+
+    def complete_structured(
+        self,
+        *,
+        system: str,
+        user: str,
+        schema: type[T],
+        model: str | None = None,
+        max_tokens: int = 600,
+    ) -> T | None:
+        """Deferred: Anthropic tool-use JSON mode isn't wired yet. Return
+        ``None`` so callers fall back deterministically — same contract as
+        the OpenAI path returning ``None`` on validation/transport failure.
+        Do NOT fall through to OpenAI here; provider selection is the
+        caller's concern."""
+        _logger.warning(
+            "AnthropicChatClient.complete_structured not implemented for %s; "
+            "caller must fall back or route to OpenAI.",
+            schema.__name__,
+        )
+        return None
+
+
 def default_client() -> LLMClient | None:
-    """Return a real client if OpenAI is available and key is set, else None."""
+    """Return a real client based on ``BRIARWOOD_AGENT_PROVIDER``.
+
+    AUDIT 1.3.4: defaults to OpenAI so existing behavior is preserved.
+    Setting the env to ``anthropic`` switches to Claude iff ``ANTHROPIC_API_KEY``
+    is set; if the Anthropic SDK isn't installed or the key is missing we
+    fall through to OpenAI rather than returning ``None`` so one-off
+    mis-configuration doesn't silently disable the agent.
+    """
+    provider = os.environ.get("BRIARWOOD_AGENT_PROVIDER", "openai").strip().lower()
+    if provider == "anthropic" and os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            return AnthropicChatClient()
+        except Exception as exc:
+            _logger.warning("Anthropic client init failed, falling back to OpenAI: %s", exc)
     if not os.environ.get("OPENAI_API_KEY"):
         return None
     try:
