@@ -791,16 +791,28 @@ def _native_cma_chart(view: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _native_risk_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    """Build the risk_bar chart spec.
+
+    AUDIT 1.4.3: `value` used to be rendered as "N pts" with no unit
+    declared in the spec, and when `total_penalty` was missing every bar
+    silently collapsed to the same fallback (0.12) without any signal that
+    it was synthesized. The spec now carries:
+
+    - `value_unit="penalty_share"` — `value` is a fraction of the total
+      risk penalty in [0, 1]. Removes the "pts of what?" ambiguity.
+    - `value_source="computed" | "fallback"` — when `total_penalty` is
+      missing, every bar falls back to a shared default; flagging the
+      source lets the frontend mute the bar values rather than render
+      identical uninformative widths.
+    """
     risk_flags = list(view.get("risk_flags") or [])
     trust_flags = list(view.get("trust_flags") or [])
     if not risk_flags and not trust_flags:
         return None
     total_penalty = view.get("total_penalty")
-    per_risk = (
-        float(total_penalty) / len(risk_flags)
-        if isinstance(total_penalty, (int, float)) and risk_flags
-        else 0.12
-    )
+    has_total = isinstance(total_penalty, (int, float)) and risk_flags
+    per_risk = float(total_penalty) / len(risk_flags) if has_total else 0.12
+    value_source = "computed" if has_total else "fallback"
     items: list[dict[str, Any]] = []
     for flag in risk_flags:
         items.append(
@@ -827,6 +839,8 @@ def _native_risk_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "ask_price": view.get("ask_price"),
             "bear_value": view.get("bear_value"),
             "stress_value": view.get("stress_value"),
+            "value_unit": "penalty_share",
+            "value_source": value_source,
             "items": items,
         },
         provenance=["Risk Profile", "Confidence Engine"],

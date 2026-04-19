@@ -53,6 +53,12 @@ export type RiskBarChartSpec = {
   ask_price?: number | null;
   bear_value?: number | null;
   stress_value?: number | null;
+  // AUDIT 1.4.3: unit + source tags for the bar values. `value_unit` tells the
+  // frontend `value` is a share of total penalty in [0, 1]. `value_source` flags
+  // whether the per-flag split was computed from a real `total_penalty` or
+  // collapsed to a fallback default (every bar identical — low signal).
+  value_unit?: "penalty_share";
+  value_source?: "computed" | "fallback";
   items: Array<{
     label: string;
     value: number;

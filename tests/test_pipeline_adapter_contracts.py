@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from api import events
 from api.pipeline_adapter import (
+    _native_risk_chart,
     _to_listing_from_facts,
     _verdict_from_view,
     browse_stream,
@@ -792,6 +793,56 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertIsNone(payload["address"])
         self.assertEqual(payload["trust_flags"], [])
         self.assertEqual(payload["trust_summary"], {})
+
+
+class NativeRiskChartTests(unittest.TestCase):
+    """AUDIT 1.4.3: the risk_bar chart spec now carries `value_unit` and
+    `value_source` so downstream can disambiguate the meaning of `value`
+    (share of total penalty, not abstract "pts") and detect the fallback
+    case where every bar collapses to the same synthesized default."""
+
+    def test_computed_path_sets_value_source_computed(self) -> None:
+        spec = _native_risk_chart(
+            {
+                "risk_flags": ["construction", "concentration"],
+                "trust_flags": ["thin_comp_set"],
+                "total_penalty": 0.4,
+                "ask_price": 800000,
+                "bear_value": 700000,
+                "stress_value": 620000,
+            }
+        )
+        self.assertIsNotNone(spec)
+        spec_body = spec["spec"]
+        self.assertEqual(spec_body["value_unit"], "penalty_share")
+        self.assertEqual(spec_body["value_source"], "computed")
+        # Sanity on the split: 0.4 / 2 flags = 0.2 per risk bar.
+        risk_values = [
+            item["value"] for item in spec_body["items"] if item["tone"] == "risk"
+        ]
+        self.assertEqual(risk_values, [0.2, 0.2])
+
+    def test_missing_total_penalty_flags_fallback_source(self) -> None:
+        spec = _native_risk_chart(
+            {
+                "risk_flags": ["construction", "concentration", "flood"],
+                "trust_flags": [],
+                # No total_penalty — each bar falls back to the 0.12 default.
+            }
+        )
+        self.assertIsNotNone(spec)
+        spec_body = spec["spec"]
+        self.assertEqual(spec_body["value_unit"], "penalty_share")
+        self.assertEqual(spec_body["value_source"], "fallback")
+        risk_values = [
+            item["value"] for item in spec_body["items"] if item["tone"] == "risk"
+        ]
+        # All identical — that is the ambiguity `value_source="fallback"` flags.
+        self.assertEqual(len(set(risk_values)), 1)
+
+    def test_no_flags_returns_none(self) -> None:
+        spec = _native_risk_chart({"risk_flags": [], "trust_flags": []})
+        self.assertIsNone(spec)
 
 
 if __name__ == "__main__":
