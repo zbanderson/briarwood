@@ -24,6 +24,27 @@ _logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+def _force_all_required(schema: Any) -> Any:
+    """Rewrite a Pydantic-generated JSON schema for OpenAI strict mode.
+
+    OpenAI's ``strict: true`` rejects schemas whose ``required`` array does
+    not contain every key in ``properties``. Pydantic omits any field with a
+    default from ``required``, so fields typed ``X | None = None`` (already
+    nullable via ``anyOf``) slip through. This walker forces every object's
+    ``required`` to mirror ``properties`` — safe because those fields are
+    still nullable, so the model can emit ``null`` to mean "skipped".
+    """
+    if isinstance(schema, dict):
+        if schema.get("type") == "object" and isinstance(schema.get("properties"), dict):
+            schema["required"] = list(schema["properties"].keys())
+        for value in schema.values():
+            _force_all_required(value)
+    elif isinstance(schema, list):
+        for item in schema:
+            _force_all_required(item)
+    return schema
+
+
 class LLMClient(Protocol):
     def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str: ...
 
@@ -111,7 +132,7 @@ class OpenAIChatClient:
                         "type": "json_schema",
                         "name": schema.__name__,
                         "strict": True,
-                        "schema": schema.model_json_schema(),
+                        "schema": _force_all_required(schema.model_json_schema()),
                     }
                 },
                 max_output_tokens=max_tokens,

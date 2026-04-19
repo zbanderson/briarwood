@@ -122,6 +122,78 @@ class OpenAIChatClientTests(unittest.TestCase):
 
         self.assertEqual(out, "")
 
+    def test_complete_structured_forces_required_for_strict_mode(self) -> None:
+        """OpenAI ``strict: true`` rejects schemas whose ``required`` array
+        does not mirror ``properties``. The client must rewrite the Pydantic
+        schema before sending it. Regression test for the 400 the API emits
+        on optional fields like ``reason: str = ''`` and ``X | None = None``."""
+        from pydantic import BaseModel, ConfigDict
+
+        class Inner(BaseModel):
+            model_config = ConfigDict(extra="forbid")
+            title: str | None = None
+            summary: str | None = None
+
+        class Outer(BaseModel):
+            model_config = ConfigDict(extra="forbid")
+            verdict: str
+            reason: str = ""
+            section: Inner | None = None
+
+        client = self._make_client()
+        resp = MagicMock()
+        resp.output_text = '{"verdict": "ok", "reason": "", "section": null}'
+        resp.usage = MagicMock(input_tokens=5, output_tokens=5)
+        client._client.responses.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=Outer)
+
+        self.assertIsNotNone(out)
+        _, kwargs = client._client.responses.create.call_args
+        sent_schema = kwargs["text"]["format"]["schema"]
+        # Every property on the outer object lands in required, including the
+        # ones Pydantic would otherwise omit (default="" or default=None).
+        self.assertEqual(
+            sorted(sent_schema["required"]),
+            ["reason", "section", "verdict"],
+        )
+        # Nested $defs object also gets its required mirrored from properties.
+        inner = sent_schema["$defs"]["Inner"]
+        self.assertEqual(sorted(inner["required"]), ["summary", "title"])
+
+
+class ForceAllRequiredTests(unittest.TestCase):
+    """AUDIT 1.3.6: guard the schema rewrite used by complete_structured."""
+
+    def test_mirrors_required_to_properties_on_every_object(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {"a": {"type": "string"}, "b": {"type": "integer"}},
+            "required": ["a"],
+            "$defs": {
+                "Nested": {
+                    "type": "object",
+                    "properties": {"x": {"type": "string"}},
+                }
+            },
+        }
+        out = llm_mod._force_all_required(schema)
+        self.assertEqual(sorted(out["required"]), ["a", "b"])
+        self.assertEqual(out["$defs"]["Nested"]["required"], ["x"])
+
+    def test_leaves_non_object_nodes_untouched(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+        }
+        out = llm_mod._force_all_required(schema)
+        self.assertEqual(out["required"], ["tags"])
+        self.assertNotIn("required", out["properties"]["tags"])
+
 
 class AnthropicChatClientTests(unittest.TestCase):
     """AUDIT 1.3.4: the Anthropic client fulfills the LLMClient protocol for
