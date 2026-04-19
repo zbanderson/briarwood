@@ -429,6 +429,25 @@ _MODULE_REGISTRY: list[tuple[str, str, str]] = [
     (events.EVENT_CHART,            "visualizer",        "Visualizer"),
 ]
 
+# AUDIT 1.5.4: grounding anchors carry prompt-facing module labels (see
+# `briarwood.agent.prompt_modules.PROMPT_MODULE_LABELS`). Mapping them to the
+# registry's module_id lets us credit a module that the cascade ran but whose
+# dedicated SSE event didn't surface — e.g., valuation informs a risk-only
+# turn, but without this mapping the badge row would show only "Risk Profile".
+# `contributed_to="narrative"` signals the citation came from the LLM prose,
+# not a structured card, so the UI can render it with a lighter weight.
+_PROMPT_LABEL_TO_MODULE: dict[str, tuple[str, str]] = {
+    "ValuationModel":      ("valuation_model",      "Valuation Model"),
+    "ValueThesis":         ("value_thesis",         "Value Thesis"),
+    "RiskProfile":         ("risk_profile",         "Risk Profile"),
+    "ProjectionEngine":    ("projection_engine",    "Projection Engine"),
+    "RentOutlook":         ("rent_outlook",         "Rent Outlook"),
+    "StrategyFit":         ("strategy_fit",         "Strategy Fit"),
+    "TownResearch":        ("town_research",        "Town Research"),
+    "DecisionSynthesizer": ("decision_synthesizer", "Decision Synthesizer"),
+}
+_NARRATIVE_SLOT = "narrative"
+
 
 class _ModuleTracker:
     """Accumulates which modules contributed to a turn, ordered by first
@@ -452,6 +471,22 @@ class _ModuleTracker:
                 entry["contributed_to"].append(et)
             return
 
+    def record_anchor(self, module_label: str | None) -> None:
+        """Credit a module cited via a grounding anchor (LLM prose). Unknown
+        labels are ignored — `PROMPT_MODULE_LABELS` is the allowlist, and the
+        `_PROMPT_LABEL_TO_MODULE` mapping is the source of truth here."""
+        if not module_label:
+            return
+        mapping = _PROMPT_LABEL_TO_MODULE.get(module_label)
+        if mapping is None:
+            return
+        mid, label = mapping
+        entry = self._modules.setdefault(
+            mid, {"module": mid, "label": label, "contributed_to": []}
+        )
+        if _NARRATIVE_SLOT not in entry["contributed_to"]:
+            entry["contributed_to"].append(_NARRATIVE_SLOT)
+
     def items(self) -> list[dict[str, Any]]:
         return list(self._modules.values())
 
@@ -466,6 +501,14 @@ async def _track_modules(
     async for ev in stream:
         if isinstance(ev, dict):
             tracker.record(ev.get("type"))
+            # AUDIT 1.5.4: a narrative-only turn (no structured cards) still
+            # cites modules via grounding anchors. Credit them too so the
+            # `modules_ran` badge row reflects the full cascade, not just the
+            # modules whose dedicated events fired.
+            if ev.get("type") == events.EVENT_GROUNDING_ANNOTATIONS:
+                for anchor in ev.get("anchors") or ():
+                    if isinstance(anchor, dict):
+                        tracker.record_anchor(anchor.get("module"))
         yield ev
     items = tracker.items()
     if items:

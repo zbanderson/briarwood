@@ -8,6 +8,7 @@ from api import events
 from api.pipeline_adapter import (
     _native_risk_chart,
     _to_listing_from_facts,
+    _track_modules,
     _verdict_from_view,
     browse_stream,
     decision_stream,
@@ -975,6 +976,66 @@ class NativeRiskChartTests(unittest.TestCase):
     def test_no_flags_returns_none(self) -> None:
         spec = _native_risk_chart({"risk_flags": [], "trust_flags": []})
         self.assertIsNone(spec)
+
+
+class GroundingAnchorAttributionTests(unittest.TestCase):
+    """AUDIT 1.5.4: a narrative-only turn (no structured card events) must
+    still credit modules the LLM cites via `[[Module:field:value]]` grounding
+    anchors. Without this, the `modules_ran` badge row underreports the
+    cascade — e.g., a risk-only card plus narrative that cites ValuationModel
+    and ValueThesis would show just "Risk Profile"."""
+
+    def test_anchors_in_grounding_event_credit_named_modules(self) -> None:
+        async def _stream():
+            yield events.grounding_annotations(
+                anchors=[
+                    {"module": "ValuationModel", "field": "fair_value_base", "value": 850000},
+                    {"module": "ValueThesis", "field": "thesis_type", "value": "scarcity"},
+                ]
+            )
+
+        collected = _run_stream(_track_modules(_stream()))
+        modules_ran = [ev for ev in collected if ev.get("type") == events.EVENT_MODULES_RAN]
+        self.assertEqual(len(modules_ran), 1)
+        items = modules_ran[0]["items"]
+        labels = {item["label"] for item in items}
+        self.assertIn("Valuation Model", labels)
+        self.assertIn("Value Thesis", labels)
+        for item in items:
+            if item["label"] in {"Valuation Model", "Value Thesis"}:
+                self.assertIn("narrative", item["contributed_to"])
+
+    def test_unknown_anchor_module_is_silently_ignored(self) -> None:
+        """Anchors that don't map to a known module (malformed LLM output,
+        future labels that haven't been wired yet) must not break the turn —
+        they just don't get credited."""
+        async def _stream():
+            yield events.grounding_annotations(
+                anchors=[{"module": "MadeUpModule", "field": "x", "value": 1}]
+            )
+
+        collected = _run_stream(_track_modules(_stream()))
+        modules_ran = [ev for ev in collected if ev.get("type") == events.EVENT_MODULES_RAN]
+        self.assertEqual(modules_ran, [])
+
+    def test_event_and_anchor_merge_on_same_module(self) -> None:
+        """When an event fires AND an anchor cites the same module, the module
+        appears once with both contribution slots."""
+        async def _stream():
+            yield {"type": events.EVENT_VALUE_THESIS, "thesis_type": "scarcity"}
+            yield events.grounding_annotations(
+                anchors=[{"module": "ValueThesis", "field": "thesis_type", "value": "scarcity"}]
+            )
+
+        collected = _run_stream(_track_modules(_stream()))
+        modules_ran = [ev for ev in collected if ev.get("type") == events.EVENT_MODULES_RAN]
+        self.assertEqual(len(modules_ran), 1)
+        items = modules_ran[0]["items"]
+        value_thesis = [i for i in items if i["module"] == "value_thesis"]
+        self.assertEqual(len(value_thesis), 1)
+        contributed = value_thesis[0]["contributed_to"]
+        self.assertIn(events.EVENT_VALUE_THESIS, contributed)
+        self.assertIn("narrative", contributed)
 
 
 if __name__ == "__main__":
