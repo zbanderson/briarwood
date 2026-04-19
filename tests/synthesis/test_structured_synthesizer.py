@@ -109,6 +109,24 @@ class StructuredSynthesizerTests(unittest.TestCase):
         # Thin inputs should not produce a strong buy.
         self.assertNotEqual(result["decision_stance"], DecisionStance.STRONG_BUY.value)
 
+    def test_conditional_stance_surfaces_trust_floor_in_why_this_stance(self) -> None:
+        """AUDIT O.5: when the trust gate collapses stance to CONDITIONAL, the
+        `why_this_stance` output must explicitly say that — otherwise downstream
+        consumers and narration can't tell the collapse apart from an ordinary
+        market-driven PASS/HOLD. The leading line is the structured signal."""
+        ps, outputs, trace = _build(context_thin())
+        result = build_unified_output(
+            property_summary=ps,
+            parser_output=_parser_output_dict(),
+            module_results=outputs,
+            interaction_trace=trace,
+        )
+        if result["decision_stance"] != DecisionStance.CONDITIONAL.value:
+            self.skipTest("thin fixture did not collapse to CONDITIONAL on this run")
+        leading = result["why_this_stance"][0].lower() if result["why_this_stance"] else ""
+        self.assertIn("trust floor", leading)
+        self.assertIn("no directional call", leading)
+
     def test_reproducible_output(self) -> None:
         """Same inputs → byte-identical decision fields (no LLM in the loop)."""
         ps, outputs, trace = _build(context_normal())

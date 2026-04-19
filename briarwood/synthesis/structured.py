@@ -75,6 +75,8 @@ def build_unified_output(
         key_risks=key_risks,
         trust_flags=trust_flags,
         bridges=bridges,
+        stance=stance,
+        aggregate_confidence=aggregate_confidence,
     )
     what_changes_my_view = _what_changes_my_view(
         value_position=value_position,
@@ -544,8 +546,25 @@ def _why_this_stance(
     key_risks: list[str],
     trust_flags: list[str],
     bridges: dict[str, dict[str, Any]],
+    stance: DecisionStance | None = None,
+    aggregate_confidence: float | None = None,
 ) -> list[str]:
     lines: list[str] = []
+    # AUDIT O.5: when the trust gate fires, the CONDITIONAL stance is an
+    # informational limit (Briarwood can't issue a directional call), not a
+    # "wait and see" market judgment. Lead with that so downstream consumers
+    # and the user can tell the collapse apart from an ordinary PASS/HOLD.
+    if stance is DecisionStance.CONDITIONAL:
+        if aggregate_confidence is not None:
+            lines.append(
+                f"Trust floor fired (confidence {aggregate_confidence:.2f} below "
+                f"{TRUST_FLOOR_ANY:.2f}) — no directional call until the flagged "
+                "gaps close."
+            )
+        else:
+            lines.append(
+                "Trust floor fired — no directional call until the flagged gaps close."
+            )
     premium = _float(value_position.get("premium_discount_pct"))
     if premium is not None:
         if premium > 0:
