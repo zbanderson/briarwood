@@ -11,6 +11,7 @@ from collections.abc import Callable
 
 from briarwood.interactions import (
     conflict_detector,
+    opportunity_x_value,
     primary_value_source,
     rent_x_cost,
     rent_x_risk,
@@ -33,6 +34,7 @@ BRIDGES: list[tuple[str, BridgeFn]] = [
     (scenario_x_risk.NAME, scenario_x_risk.run),
     (town_x_scenario.NAME, town_x_scenario.run),
     (primary_value_source.NAME, primary_value_source.run),
+    (opportunity_x_value.NAME, opportunity_x_value.run),
     (conflict_detector.NAME, conflict_detector.run),
 ]
 

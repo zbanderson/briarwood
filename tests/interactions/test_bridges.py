@@ -39,7 +39,7 @@ class BridgeRegistryTests(unittest.TestCase):
         trace = run_all_bridges(outputs)
         self.assertIsInstance(trace, InteractionTrace)
         # 8 bridges register regardless of whether they fire.
-        self.assertEqual(len(trace.records), 8)
+        self.assertEqual(len(trace.records), 9)
         for record in trace.records:
             self.assertIsInstance(record, BridgeRecord)
 
@@ -96,14 +96,14 @@ class BridgeRegistryTests(unittest.TestCase):
         serialized = trace.to_dict()
         self.assertIn("records", serialized)
         self.assertIn("fired_count", serialized)
-        self.assertEqual(serialized["total_count"], 8)
+        self.assertEqual(serialized["total_count"], 9)
 
     def test_bridge_exception_does_not_kill_run(self) -> None:
         # Pass a broken outputs dict that might trip a bridge; the registry
         # catches exceptions and records them rather than propagating.
         bogus: dict[str, dict] = {"valuation": {"data": "not a dict"}}
         trace = run_all_bridges(bogus)  # should not raise
-        self.assertEqual(len(trace.records), 8)
+        self.assertEqual(len(trace.records), 9)
 
 
 if __name__ == "__main__":

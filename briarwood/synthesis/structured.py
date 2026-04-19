@@ -431,6 +431,11 @@ def _key_value_drivers(
         if ratio is not None and ratio >= 1.0:
             drivers.append(f"Rent covers carry (ratio {ratio:.2f}).")
 
+    opp = bridges.get("opportunity_x_value") or {}
+    if opp.get("fired") and (opp.get("adjustments") or {}).get("signal") == "value_driver":
+        for reason in opp.get("reasoning") or []:
+            drivers.append(reason)
+
     return list(dict.fromkeys(drivers))[:3]
 
 
@@ -455,6 +460,11 @@ def _key_risks(
         frag_score = _float((fragility.get("adjustments") or {}).get("fragility_score"))
         if frag_score is not None and frag_score >= 0.5:
             risks.append(f"Execution fragility {frag_score:.2f} — thesis depends on assumptions holding.")
+
+    opp = bridges.get("opportunity_x_value") or {}
+    if opp.get("fired") and (opp.get("adjustments") or {}).get("signal") == "risk":
+        for reason in opp.get("reasoning") or []:
+            risks.append(reason)
 
     return list(dict.fromkeys(risks))[:3]
 

@@ -9,6 +9,7 @@ from briarwood.modules.confidence import run_confidence
 from briarwood.modules.hold_to_rent import run_hold_to_rent
 from briarwood.modules.legal_confidence import run_legal_confidence
 from briarwood.modules.margin_sensitivity_scoped import run_margin_sensitivity
+from briarwood.modules.opportunity_cost import run_opportunity_cost
 from briarwood.modules.rental_option_scoped import run_rental_option
 from briarwood.modules.renovation_impact_scoped import run_renovation_impact
 from briarwood.modules.rent_stabilization import run_rent_stabilization
@@ -154,6 +155,18 @@ def build_module_registry() -> dict[str, ModuleSpec]:
             optional_context_keys=["market_context", "prior_outputs"],
             runner=run_legal_confidence,
             description="Legality confidence module for use-permission uncertainty.",
+        ),
+        ModuleSpec(
+            name="opportunity_cost",
+            depends_on=["valuation", "resale_scenario"],
+            required_context_keys=["property_data"],
+            optional_context_keys=["assumptions", "prior_outputs"],
+            runner=run_opportunity_cost,
+            description=(
+                "Q5 capital-allocation-vs-alternatives module. Projects the "
+                "property's terminal value over the hold horizon and compares "
+                "it to passive benchmarks (T-bill, S&P). Appreciation-only."
+            ),
         ),
         ModuleSpec(
             name="town_development_index",

@@ -92,9 +92,29 @@ class AppSettings:
     default_property_path: str = "data/sample_property.json"
 
 
+@dataclass(slots=True)
+class BenchmarkSettings:
+    """Passive-alternative benchmark defaults used by the opportunity_cost module.
+
+    The property CAGR is compared against these to answer the Q5 question
+    "is this the best use of capital vs. passive alternatives?" Rates are
+    nominal annual total returns — the comparison is appreciation-only on
+    the property side (see ``opportunity_cost`` module docstring for the
+    explicit limitations).
+    """
+
+    tbill_annual_return: float = 0.042
+    sp500_annual_return: float = 0.07
+    default_hold_years: int = 5
+    # |excess bps| thresholds for emitting a synthesis signal. Below the
+    # meaningful threshold the delta is reported as "roughly in line".
+    meaningful_excess_bps: float = 150.0
+
+
 DEFAULT_COST_VALUATION_SETTINGS = CostValuationSettings()
 DEFAULT_CURRENT_VALUE_SETTINGS = CurrentValueSettings()
 DEFAULT_RELATIVE_OPPORTUNITY_SETTINGS = RelativeOpportunitySettings()
 DEFAULT_APP_SETTINGS = AppSettings()
 DEFAULT_RENOVATION_SCENARIO_SETTINGS = RenovationScenarioSettings()
 DEFAULT_TEARDOWN_SCENARIO_SETTINGS = TeardownScenarioSettings()
+DEFAULT_BENCHMARK_SETTINGS = BenchmarkSettings()

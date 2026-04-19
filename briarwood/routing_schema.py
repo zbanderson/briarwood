@@ -33,6 +33,7 @@ class CoreQuestion(str, Enum):
     WHERE_IS_VALUE = "where_is_value"
     BEST_PATH = "best_path"
     FUTURE_INCOME = "future_income"
+    CAPITAL_ALLOCATION = "capital_allocation"
     HIDDEN_UPSIDE = "hidden_upside"
 
 
@@ -95,6 +96,7 @@ class ModuleName(str, Enum):
     MARGIN_SENSITIVITY = "margin_sensitivity"
     UNIT_INCOME_OFFSET = "unit_income_offset"
     LEGAL_CONFIDENCE = "legal_confidence"
+    OPPORTUNITY_COST = "opportunity_cost"
 
 
 CORE_QUESTIONS: tuple[CoreQuestion, ...] = (
@@ -103,9 +105,10 @@ CORE_QUESTIONS: tuple[CoreQuestion, ...] = (
     CoreQuestion.WHERE_IS_VALUE,
     CoreQuestion.BEST_PATH,
     CoreQuestion.FUTURE_INCOME,
+    CoreQuestion.CAPITAL_ALLOCATION,
     CoreQuestion.HIDDEN_UPSIDE,
 )
-"""Ordered canonical set of top-level questions Briarwood can answer (Q1–Q6)."""
+"""Ordered canonical set of top-level questions Briarwood can answer (Q1–Q6 + capital-allocation)."""
 
 
 INTENT_TO_QUESTIONS: dict[IntentType, tuple[CoreQuestion, ...]] = {
@@ -250,6 +253,11 @@ QUESTION_FOCUS_TO_MODULE_HINTS: dict[CoreQuestion, tuple[ModuleName, ...]] = {
         ModuleName.RENT_STABILIZATION,
         ModuleName.UNIT_INCOME_OFFSET,
         ModuleName.HOLD_TO_RENT,
+    ),
+    CoreQuestion.CAPITAL_ALLOCATION: (
+        ModuleName.VALUATION,
+        ModuleName.RESALE_SCENARIO,
+        ModuleName.OPPORTUNITY_COST,
     ),
 }
 """Question-driven module hints for targeted synthesis and routing."""
