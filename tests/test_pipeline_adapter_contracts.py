@@ -795,6 +795,30 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertEqual(payload["trust_summary"], {})
 
 
+class ScenarioTableSpreadUnitTests(unittest.TestCase):
+    """AUDIT 1.4.4: scenario_table emits `spread_unit="dollars"` so consumers
+    never have to guess the unit of `spread`. Other modules produce a
+    percent-valued `spread_pct` and the two must not be mixed."""
+
+    def test_scenario_table_event_carries_spread_unit_literal(self) -> None:
+        payload = events.scenario_table(
+            rows=[{"scenario": "Bull", "value": 900000, "delta_pct": 0.1, "growth_rate": 0.03, "adjustment_pct": 0.05}],
+            address="123 Main St",
+            ask_price=800000,
+            basis_label="entry basis",
+            spread=150000,
+        )
+        self.assertEqual(payload["spread"], 150000)
+        self.assertEqual(payload["spread_unit"], "dollars")
+
+    def test_spread_unit_present_even_when_spread_is_none(self) -> None:
+        """The unit tag stays pinned so consumers can rely on the field
+        shape regardless of whether the projection produced a spread."""
+        payload = events.scenario_table(rows=[])
+        self.assertIsNone(payload["spread"])
+        self.assertEqual(payload["spread_unit"], "dollars")
+
+
 class NativeRiskChartTests(unittest.TestCase):
     """AUDIT 1.4.3: the risk_bar chart spec now carries `value_unit` and
     `value_source` so downstream can disambiguate the meaning of `value`

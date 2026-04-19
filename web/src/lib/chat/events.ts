@@ -143,6 +143,11 @@ export type ScenarioTableEvent = {
   ask_price?: number | null;
   basis_label?: string | null;
   spread?: number | null;
+  // AUDIT 1.4.4: bull-minus-bear dollar gap. `spread_unit` is emitted as a
+  // literal so the UI never has to infer whether this field is currency or
+  // percentage — other modules carry a `spread_pct` that must not be mixed
+  // into this event.
+  spread_unit?: "dollars";
   rows: ScenarioRow[];
 };
 

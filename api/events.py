@@ -120,13 +120,21 @@ def scenario_table(
 
     Each row carries scenario name, projected value, delta vs ask, growth rate,
     and total adjustment %. Optional `address` + `ask_price` give the card a
-    header without forcing the UI to cross-reference the listing event."""
+    header without forcing the UI to cross-reference the listing event.
+
+    `spread` is the bull-minus-bear dollar gap produced by `ScenarioOutput`
+    (bull_base_bear module). AUDIT 1.4.4: emit `spread_unit="dollars"` as a
+    literal so the UI never has to guess whether this field is a currency
+    amount or a percentage — the latter exists in other modules under similar
+    names and the two must not mix.
+    """
     return {
         "type": EVENT_SCENARIO_TABLE,
         "address": address,
         "ask_price": ask_price,
         "basis_label": basis_label,
         "spread": spread,
+        "spread_unit": "dollars",
         "rows": rows,
     }
 
