@@ -396,6 +396,9 @@ class DecisionCriticTests(unittest.TestCase):
         self.assertFalse(report["critic"]["applied_rewrite"])
         # Numeric check still logged in shadow — signal for "would this have been safe?"
         self.assertTrue(report["critic"]["numeric_check"]["ok"])
+        # Shadow mode still preserves the A/B pair for UI/telemetry inspection.
+        self.assertEqual(report["critic"]["original_draft"], draft)
+        self.assertEqual(report["critic"]["rewritten_text"], review.rewritten_text)
 
     def test_mode_on_keep_verdict_ships_draft(self) -> None:
         """Critic says keep → draft ships unchanged, telemetry reflects keep."""
@@ -409,6 +412,8 @@ class DecisionCriticTests(unittest.TestCase):
         self.assertEqual(report["critic"]["verdict"], "keep")
         self.assertFalse(report["critic"]["applied_rewrite"])
         self.assertNotIn("numeric_check", report["critic"])
+        self.assertEqual(report["critic"]["original_draft"], draft)
+        self.assertNotIn("rewritten_text", report["critic"])
 
     def test_mode_on_flag_only_ships_draft_and_records_flag(self) -> None:
         """flag_only → draft ships unchanged, flag preserved in telemetry."""
@@ -424,6 +429,8 @@ class DecisionCriticTests(unittest.TestCase):
         self.assertEqual(report["critic"]["verdict"], "flag_only")
         self.assertFalse(report["critic"]["applied_rewrite"])
         self.assertIn("not confident", report["critic"]["notes"])
+        self.assertEqual(report["critic"]["original_draft"], draft)
+        self.assertNotIn("rewritten_text", report["critic"])
 
     def test_mode_on_revise_with_numbers_preserved_applies_rewrite(self) -> None:
         """The happy path: revise + all numbers preserved → rewrite shipped."""
@@ -441,6 +448,9 @@ class DecisionCriticTests(unittest.TestCase):
         self.assertTrue(report["critic"]["applied_rewrite"])
         self.assertTrue(report["critic"]["numeric_check"]["ok"])
         self.assertEqual(report["critic"]["numeric_check"]["missing"], [])
+        # original_draft is the pre-rewrite text, even when the rewrite ships.
+        self.assertEqual(report["critic"]["original_draft"], draft)
+        self.assertEqual(report["critic"]["rewritten_text"], rewrite)
 
     def test_mode_on_revise_dropping_number_falls_back_to_draft(self) -> None:
         """The critical safety net: critic rewrite silently loses a number
@@ -459,6 +469,9 @@ class DecisionCriticTests(unittest.TestCase):
         self.assertFalse(report["critic"]["applied_rewrite"])
         self.assertFalse(report["critic"]["numeric_check"]["ok"])
         self.assertIn("820000", report["critic"]["numeric_check"]["missing"])
+        # Even when the rewrite is rejected, keep both sides for inspection.
+        self.assertEqual(report["critic"]["original_draft"], draft)
+        self.assertEqual(report["critic"]["rewritten_text"], rewrite)
 
     def test_critic_returns_none_on_refusal_no_telemetry_pollution(self) -> None:
         """Critic refusal (SDK returned None) → draft ships, telemetry shows

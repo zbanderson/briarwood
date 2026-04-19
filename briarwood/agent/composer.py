@@ -431,6 +431,7 @@ def _run_llm_with_verify(
     if tier in CRITIC_TIERS and cleaned and structured_inputs is not None:
         mode = _critic_mode()
         if mode != "off":
+            original_draft = cleaned
             review = _run_decision_critic(
                 draft=cleaned, structured_inputs=structured_inputs
             )
@@ -438,6 +439,7 @@ def _run_llm_with_verify(
                 "enabled": True,
                 "mode": mode,
                 "ran": review is not None,
+                "original_draft": original_draft,
             }
             if review is not None:
                 critic_telemetry["verdict"] = review.verdict
@@ -445,6 +447,7 @@ def _run_llm_with_verify(
                 applied_rewrite = False
                 numeric_check: dict[str, Any] | None = None
                 if review.verdict == "revise" and review.rewritten_text:
+                    critic_telemetry["rewritten_text"] = review.rewritten_text
                     ok, missing = _numbers_preserved(cleaned, review.rewritten_text)
                     numeric_check = {"ok": ok, "missing": missing}
                     if mode == "on" and ok:
