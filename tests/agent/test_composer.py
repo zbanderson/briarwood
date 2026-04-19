@@ -285,5 +285,151 @@ class BudgetExceededPropagationTests(unittest.TestCase):
         self.assertIn("$820,000", text)
 
 
+class NarrativeTierAnthropicRoutingTests(unittest.TestCase):
+    """AUDIT 1.3.5: decision_summary / edge / risk tiers route through
+    Anthropic when ANTHROPIC_API_KEY is set; everything else keeps the
+    injected OpenAI client. The injected client stays the fallback path
+    when Anthropic isn't available — no silent agent disablement."""
+
+    def setUp(self) -> None:
+        composer.reset_narrative_client_cache()
+
+    def tearDown(self) -> None:
+        composer.reset_narrative_client_cache()
+
+    def _structured_inputs(self) -> dict[str, object]:
+        return {"fair_value_base": 820000}
+
+    def test_decision_summary_routes_to_anthropic_when_key_present(self) -> None:
+        openai_llm = _mock_llm(["openai draft"])
+        anth_llm = _mock_llm(["anthropic draft"])
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", return_value=anth_llm
+        ):
+            text, _ = composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="decision_summary",
+            )
+        openai_llm.complete.assert_not_called()
+        anth_llm.complete.assert_called()
+        self.assertIn("anthropic", text)
+
+    def test_edge_tier_routes_to_anthropic(self) -> None:
+        openai_llm = _mock_llm(["openai draft"])
+        anth_llm = _mock_llm(["anthropic draft"])
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", return_value=anth_llm
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="edge",
+            )
+        openai_llm.complete.assert_not_called()
+        anth_llm.complete.assert_called()
+
+    def test_risk_tier_routes_to_anthropic(self) -> None:
+        openai_llm = _mock_llm(["openai draft"])
+        anth_llm = _mock_llm(["anthropic draft"])
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", return_value=anth_llm
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="risk",
+            )
+        openai_llm.complete.assert_not_called()
+        anth_llm.complete.assert_called()
+
+    def test_non_narrative_tier_stays_on_injected_client(self) -> None:
+        """projection / strategy / research / lookup / decision_value etc.
+        keep the injected client even when Anthropic is available."""
+        openai_llm = _mock_llm(["openai draft"])
+        anth_ctor = MagicMock()
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", anth_ctor
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="projection",
+            )
+        openai_llm.complete.assert_called()
+        anth_ctor.assert_not_called()
+
+    def test_no_anthropic_key_keeps_injected_client_for_narrative_tiers(self) -> None:
+        """Without a key, narrative tiers silently stay on OpenAI. No agent
+        disablement, no surprise failure."""
+        openai_llm = _mock_llm(["openai draft"])
+        anth_ctor = MagicMock()
+        env_without_key = {k: v for k, v in __import__("os").environ.items() if k != "ANTHROPIC_API_KEY"}
+        with patch.dict("os.environ", env_without_key, clear=True), patch(
+            "briarwood.agent.llm.AnthropicChatClient", anth_ctor
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="decision_summary",
+            )
+        openai_llm.complete.assert_called()
+        anth_ctor.assert_not_called()
+
+    def test_explicit_openai_override_forces_fallback(self) -> None:
+        """`BRIARWOOD_NARRATIVE_PROVIDER=openai` forces OpenAI even when
+        the Anthropic key is present — escape hatch for A/B or cost cap."""
+        openai_llm = _mock_llm(["openai draft"])
+        anth_ctor = MagicMock()
+        env = {
+            "ANTHROPIC_API_KEY": "sk-ant-test",
+            composer.NARRATIVE_PROVIDER_ENV: "openai",
+        }
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", anth_ctor
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="decision_summary",
+            )
+        openai_llm.complete.assert_called()
+        anth_ctor.assert_not_called()
+
+    def test_anthropic_init_failure_falls_back_to_openai(self) -> None:
+        """SDK init raising (e.g., anthropic package not installed) must
+        not break the turn — caller fallback is the injected client."""
+        openai_llm = _mock_llm(["openai draft"])
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient",
+            side_effect=RuntimeError("sdk missing"),
+        ):
+            composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._structured_inputs(),
+                tier="decision_summary",
+            )
+        openai_llm.complete.assert_called()
+
+
 if __name__ == "__main__":
     unittest.main()

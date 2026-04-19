@@ -37,6 +37,72 @@ _EMPTY_BUDGET_REPORT: dict[str, Any] = {
 # enough to catch nested `:` in values but bounded by the closing `]]`.
 _GROUNDING_MARKER_RE = re.compile(r"\[\[[^\[\]]+?\]\]")
 
+# AUDIT 1.3.5: narrative tiers that route to Anthropic Claude (Sonnet 4.6 by
+# default). These prompts are the ones where the audit flagged OpenAI's prose
+# quality: decision_summary softens bearish stances, edge under-weights
+# downside catalysts, risk skews toward boilerplate. All three are prose-only
+# renderers over structured inputs — no JSON-schema coupling to the model —
+# so swapping the provider is a per-tier routing decision, not a refactor.
+# Non-narrative tiers (projection, strategy, research, etc.) stay on the
+# injected client unchanged.
+NARRATIVE_ANTHROPIC_TIERS: frozenset[str] = frozenset(
+    {"decision_summary", "edge", "risk"}
+)
+# Env override. Values: "auto" (default — Anthropic iff ANTHROPIC_API_KEY),
+# "anthropic" (same as auto but explicit), "openai"/"off" (force OpenAI even
+# when the key is present — useful for A/B or cost-cap scenarios).
+NARRATIVE_PROVIDER_ENV = "BRIARWOOD_NARRATIVE_PROVIDER"
+
+# Cached singleton. Init is cheap but not free, and the composer runs every
+# turn on DECISION flows. Module-level cache avoids rebuilding per-call.
+_narrative_anthropic_client: LLMClient | None = None
+
+
+def _narrative_client_or_none() -> LLMClient | None:
+    """Lazily resolve the Anthropic narrative client.
+
+    AUDIT 1.3.5: returns ``None`` when narrative routing is disabled
+    (explicit env opt-out, no ANTHROPIC_API_KEY, or SDK init failure) so
+    the caller falls back to the injected OpenAI client. Env is re-read on
+    every call — the client itself is cached once initialized.
+    """
+    global _narrative_anthropic_client
+    mode = os.environ.get(NARRATIVE_PROVIDER_ENV, "auto").strip().lower()
+    if mode in {"off", "openai"}:
+        return None
+    if mode not in {"auto", "anthropic"}:
+        return None
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return None
+    if _narrative_anthropic_client is not None:
+        return _narrative_anthropic_client
+    try:
+        from briarwood.agent.llm import AnthropicChatClient
+
+        _narrative_anthropic_client = AnthropicChatClient()
+    except Exception as exc:
+        _logger.warning("narrative Anthropic init failed, staying on OpenAI: %s", exc)
+        return None
+    return _narrative_anthropic_client
+
+
+def _resolve_llm_for_tier(llm: LLMClient, tier: str | None) -> LLMClient:
+    """Route narrative tiers through Anthropic iff available; everything
+    else keeps the injected (OpenAI) client unchanged."""
+    if tier in NARRATIVE_ANTHROPIC_TIERS:
+        anth = _narrative_client_or_none()
+        if anth is not None:
+            return anth
+    return llm
+
+
+def reset_narrative_client_cache() -> None:
+    """Test hook — drop the cached Anthropic narrative client so env
+    changes take effect on the next call."""
+    global _narrative_anthropic_client
+    _narrative_anthropic_client = None
+
+
 # Env flag that toggles strict-regen mode. Default **on** (AUDIT 1.1.10): the
 # verifier strips flagged sentences and issues a single regen retry when the
 # strip count exceeds `STRICT_REGEN_THRESHOLD`. Explicit "0"/"false"/"off"
@@ -115,12 +181,17 @@ def _run_llm_with_verify(
     would empty the text entirely, the un-stripped draft is returned instead
     so the user still sees a rendered response.
     """
+    # AUDIT 1.3.5: narrative tiers (decision_summary/edge/risk) swap to
+    # Anthropic when available. The strict-regen retry below reuses the same
+    # resolved client so the whole tier stays on one provider.
+    effective_llm = _resolve_llm_for_tier(llm, tier)
+
     budget_exceeded = False
     try:
-        raw = llm.complete(system=system, user=user, max_tokens=max_tokens).strip()
+        raw = effective_llm.complete(system=system, user=user, max_tokens=max_tokens).strip()
     except BudgetExceeded as exc:
         _logger.warning(
-            "OpenAI budget cap reached in composer — falling back to deterministic text: %s",
+            "LLM budget cap reached in composer — falling back to deterministic text: %s",
             exc,
         )
         budget_exceeded = True
@@ -144,14 +215,14 @@ def _run_llm_with_verify(
         if preview_stripped >= STRICT_REGEN_THRESHOLD:
             regen_attempted = True
             try:
-                raw2 = llm.complete(
+                raw2 = effective_llm.complete(
                     system=system,
                     user=_regen_user_prompt(user, report),
                     max_tokens=max_tokens,
                 ).strip()
             except BudgetExceeded as exc:
                 _logger.warning(
-                    "OpenAI budget cap reached during composer regen — keeping original draft: %s",
+                    "LLM budget cap reached during composer regen — keeping original draft: %s",
                     exc,
                 )
                 budget_exceeded = True
@@ -280,10 +351,13 @@ def compose_contract_response(
 
 
 __all__ = [
+    "NARRATIVE_ANTHROPIC_TIERS",
+    "NARRATIVE_PROVIDER_ENV",
     "STRICT_REGEN_FLAG",
     "STRICT_REGEN_THRESHOLD",
     "compose_structured_response",
     "compose_contract_response",
     "complete_and_verify",
+    "reset_narrative_client_cache",
     "strip_grounding_markers",
 ]
