@@ -33,6 +33,7 @@ class CoreQuestion(str, Enum):
     WHERE_IS_VALUE = "where_is_value"
     BEST_PATH = "best_path"
     FUTURE_INCOME = "future_income"
+    HIDDEN_UPSIDE = "hidden_upside"
 
 
 class OccupancyType(str, Enum):
@@ -102,8 +103,9 @@ CORE_QUESTIONS: tuple[CoreQuestion, ...] = (
     CoreQuestion.WHERE_IS_VALUE,
     CoreQuestion.BEST_PATH,
     CoreQuestion.FUTURE_INCOME,
+    CoreQuestion.HIDDEN_UPSIDE,
 )
-"""Ordered canonical set of top-level questions Briarwood can answer."""
+"""Ordered canonical set of top-level questions Briarwood can answer (Q1–Q6)."""
 
 
 INTENT_TO_QUESTIONS: dict[IntentType, tuple[CoreQuestion, ...]] = {

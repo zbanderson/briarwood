@@ -1,9 +1,10 @@
 """V2 routed runner: intent-based routing, scoped execution, and unified synthesis.
 
 This module contains the new routing-aware analysis path that selects
-modules based on user intent and produces a UnifiedIntelligenceOutput.
-It falls back to the legacy engine when scoped execution is not fully
-supported for the selected module set.
+modules based on user intent and delegates synthesis to
+``briarwood.synthesis.build_unified_output``. It falls back to the legacy
+engine when scoped execution is not fully supported for the selected
+module set.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from briarwood.decision_engine import build_decision
 from briarwood.inputs.property_loader import load_property_from_json, load_property_from_listing_text
 from briarwood.intelligence_capture import (
     append_intelligence_capture,
@@ -31,8 +31,6 @@ from briarwood.routing_schema import (
     ModuleName,
     ModulePayload,
     ParserOutput,
-    RoutingDecision,
-    UnifiedIntelligenceOutput,
 )
 from briarwood.decision_model.scoring_config import BullBaseBearSettings, RiskSettings
 from briarwood.settings import CostValuationSettings
@@ -122,16 +120,6 @@ def _routing_user_input_from_property(
     if getattr(property_input, "strategy_intent", None):
         parts.append(f"Strategy intent: {property_input.strategy_intent}.")
     return " ".join(parts)
-
-
-def _decision_type_from_recommendation(recommendation: str) -> DecisionType:
-    """Map existing decision-engine labels into the routing decision contract."""
-
-    if recommendation in {"BUY", "LEAN BUY"}:
-        return DecisionType.BUY
-    if recommendation in {"LEAN PASS", "AVOID"}:
-        return DecisionType.PASS
-    return DecisionType.MIXED
 
 
 def _build_module_payload(module_name: ModuleName, report: AnalysisReport) -> ModulePayload:
@@ -408,37 +396,6 @@ def _next_questions_for_scoped_modules(
     return questions
 
 
-def _next_questions_for_decision(
-    parser_output: ParserOutput,
-    report: AnalysisReport,
-) -> list[str]:
-    """Generate a small set of high-leverage next questions from current uncertainty."""
-
-    questions: list[str] = []
-    for item in parser_output.missing_inputs:
-        if item == "purchase_price":
-            questions.append("What is the true all-in purchase basis after negotiation and closing costs?")
-        elif item == "rent_estimate":
-            questions.append("What is the most defensible rent assumption for this property as it exists today?")
-        elif item == "hold_period_years":
-            questions.append("What hold period are we actually underwriting here?")
-        elif item == "renovation_scope":
-            questions.append("What renovation scope and budget are we actually assuming?")
-        elif item == "occupancy_plan":
-            questions.append("Is this an owner-occupant path, a rental path, or a hybrid plan?")
-
-    reno_result = report.module_results.get("renovation_scenario")
-    if reno_result is not None and reno_result.summary and "could not" in reno_result.summary.lower():
-        questions.append("What renovation inputs are missing enough to make the renovation path decision-grade?")
-
-    if not questions:
-        if parser_output.analysis_depth == AnalysisDepth.SNAPSHOT:
-            questions.append("What is the next highest-conviction decision question for this property?")
-        else:
-            questions.append("Which unresolved assumption would most change the recommendation if verified?")
-    return questions[:3]
-
-
 def _recommended_next_run(parser_output: ParserOutput) -> str | None:
     """Suggest the next routing pass when a deeper answer would be useful."""
 
@@ -485,71 +442,6 @@ def _best_path_from_intent(
         "Proceed as a straight buy decision and verify the carry and evidence stack before committing."
         if decision != DecisionType.PASS
         else "Pass unless the core value and carry signals improve."
-    )
-
-
-def _synthesize_unified_output(
-    report: AnalysisReport,
-    routing_decision: RoutingDecision,
-    property_summary: dict[str, Any],
-    engine_output: EngineOutput,
-) -> UnifiedIntelligenceOutput:
-    """Build a deterministic unified-intelligence output from native modules."""
-
-    legacy_decision = build_decision(report)
-    decision = _decision_type_from_recommendation(legacy_decision.recommendation)
-    parser_output = routing_decision.parser_output
-
-    current_value = report.module_results.get("current_value")
-    income_support = report.module_results.get("income_support")
-    comparable_sales = report.module_results.get("comparable_sales")
-    risk_constraints = report.module_results.get("risk_constraints")
-
-    key_value_drivers = [legacy_decision.primary_reason]
-    if legacy_decision.secondary_reason and "thin" not in legacy_decision.secondary_reason.lower():
-        key_value_drivers.append(legacy_decision.secondary_reason)
-
-    key_risks = list(legacy_decision.required_beliefs[:2])
-    if risk_constraints is not None and risk_constraints.summary:
-        key_risks.append(risk_constraints.summary)
-    if parser_output.missing_inputs:
-        key_risks.append(
-            "Missing inputs still matter: " + ", ".join(parser_output.missing_inputs[:3]).replace("_", " ")
-        )
-
-    confidence_components = [legacy_decision.conviction, parser_output.confidence]
-    if current_value is not None:
-        confidence_components.append(float(current_value.confidence))
-    if comparable_sales is not None:
-        confidence_components.append(float(comparable_sales.confidence))
-    confidence = sum(confidence_components) / len(confidence_components)
-    confidence -= min(0.15, 0.05 * len(parser_output.missing_inputs))
-    confidence = max(0.0, min(1.0, round(confidence, 2)))
-
-    supporting_facts: dict[str, Any] = {
-        "property_id": property_summary.get("property_id"),
-        "selected_modules": [module.value for module in routing_decision.selected_modules],
-    }
-    if current_value is not None:
-        supporting_facts["mispricing_pct"] = current_value.metrics.get("mispricing_pct")
-        supporting_facts["briarwood_current_value"] = current_value.metrics.get("briarwood_current_value")
-    if income_support is not None:
-        supporting_facts["monthly_cash_flow"] = income_support.metrics.get("monthly_cash_flow")
-        supporting_facts["income_support_ratio"] = income_support.metrics.get("income_support_ratio")
-    if comparable_sales is not None:
-        supporting_facts["comp_count"] = comparable_sales.metrics.get("comp_count")
-
-    return UnifiedIntelligenceOutput(
-        recommendation=legacy_decision.primary_reason,
-        decision=decision,
-        best_path=_best_path_from_intent(parser_output, decision),
-        key_value_drivers=list(dict.fromkeys(item for item in key_value_drivers if item))[:3],
-        key_risks=list(dict.fromkeys(item for item in key_risks if item))[:3],
-        confidence=confidence,
-        analysis_depth_used=routing_decision.analysis_depth,
-        next_questions=_next_questions_for_decision(parser_output, report),
-        recommended_next_run=_recommended_next_run(parser_output),
-        supporting_facts=supporting_facts,
     )
 
 
