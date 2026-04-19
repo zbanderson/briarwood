@@ -1518,30 +1518,72 @@ async def _decision_stream_impl(
     visual_advice = _load_visual_advice(session, llm)
 
     primary_events: list[dict[str, Any]] = []
+    projection_secondary: list[dict[str, Any]] = []
+    native_projection_chart_emitted = False
+
     if isinstance(session.last_decision_view, dict):
         primary_events.append(events.verdict(_verdict_from_view(session.last_decision_view)))
 
-    # Town context card (median price/ppsf, confidence tier, seeded signals).
-    # Built by handle_decision from town aggregates + local_intelligence files.
     if isinstance(session.last_town_summary, dict):
         primary_events.append(events.town_summary(session.last_town_summary))
 
-    # Top comps used in the valuation, so the user sees the evidence base
-    # without having to ask "show me the comp set" as a follow-up.
     if isinstance(session.last_comps_preview, dict):
         primary_events.append(events.comps_preview(session.last_comps_preview))
 
+    # Value thesis / CMA / risk / strategy / rent carry the module-level evidence
+    # behind the verdict. Each is gated on its session view being populated; if a
+    # given module did not run (or ran but left no view), the corresponding card
+    # is silently skipped, matching the _dispatch_stream_impl contract.
     if isinstance(session.last_value_thesis_view, dict):
+        primary_events.append(events.value_thesis(session.last_value_thesis_view))
         cma_payload = _cma_table_from_view(session.last_value_thesis_view)
         if cma_payload is not None:
             primary_events.append(events.cma_table(cma_payload))
-            native_chart = _apply_chart_advice(
-                _native_cma_chart(session.last_value_thesis_view),
-                visual_advice,
-                "cma",
-            )
-            if _append_chart_once(projection_secondary, native_chart):
-                native_projection_chart_emitted = True
+        value_chart = _apply_chart_advice(
+            _native_value_chart(session.last_value_thesis_view),
+            visual_advice,
+            "value",
+        )
+        if _append_chart_once(projection_secondary, value_chart):
+            native_projection_chart_emitted = True
+        cma_chart = _apply_chart_advice(
+            _native_cma_chart(session.last_value_thesis_view),
+            visual_advice,
+            "cma",
+        )
+        if _append_chart_once(projection_secondary, cma_chart):
+            native_projection_chart_emitted = True
+
+    if isinstance(session.last_risk_view, dict):
+        primary_events.append(events.risk_profile(session.last_risk_view))
+        risk_chart = _apply_chart_advice(
+            _native_risk_chart(session.last_risk_view),
+            visual_advice,
+            "risk",
+        )
+        if _append_chart_once(projection_secondary, risk_chart):
+            native_projection_chart_emitted = True
+
+    if isinstance(session.last_strategy_view, dict):
+        primary_events.append(events.strategy_path(session.last_strategy_view))
+
+    if isinstance(session.last_rent_outlook_view, dict):
+        primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
+        rent_chart = _apply_chart_advice(
+            _native_rent_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(projection_secondary, rent_chart):
+            native_projection_chart_emitted = True
+        rent_ramp_chart = _apply_chart_advice(
+            _native_rent_ramp_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(projection_secondary, rent_ramp_chart):
+            native_projection_chart_emitted = True
+
     if isinstance(session.last_decision_view, dict):
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_decision_view)
         if trust_payload is not None:
@@ -1555,8 +1597,6 @@ async def _decision_stream_impl(
     # inline so the first DECISION response carries the scenario story
     # alongside the verdict, not as a follow-up. Skipped if the scenario
     # values are all zero/missing — renders as an empty card otherwise.
-    projection_secondary: list[dict[str, Any]] = []
-    native_projection_chart_emitted = False
     if isinstance(session.last_projection_view, dict):
         pv = session.last_projection_view
         if any(isinstance(pv.get(k), (int, float)) and pv.get(k)

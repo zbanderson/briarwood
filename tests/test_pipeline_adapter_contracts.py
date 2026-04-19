@@ -116,6 +116,135 @@ class PipelineAdapterContractTests(unittest.TestCase):
         self.assertEqual(scenario_table.get("basis_label"), "entry basis")
         self.assertEqual(emitted[scenario_chart_index]["spec"].get("basis_label"), "entry basis")
 
+    def test_decision_stream_emits_value_thesis_risk_strategy_rent_when_views_populated(self) -> None:
+        """Regression pin for audit finding 1.5.3: _decision_stream_impl used to
+        drop value_thesis / risk_profile / strategy_path / rent_outlook even when
+        the session views were populated. They are module-level evidence behind
+        the verdict and must surface on the decision turn."""
+        session = Session(session_id="decision-contract-full-cards")
+        session.last_decision_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "decision_stance": "buy_if_price_improves",
+            "primary_value_source": "current_value",
+            "ask_price": 800000,
+            "all_in_basis": 820000,
+            "fair_value_base": 760000,
+            "value_low": 735000,
+            "value_high": 790000,
+            "ask_premium_pct": 0.0526,
+            "basis_premium_pct": 0.0789,
+            "trust_flags": [],
+            "what_must_be_true": ["comps hold"],
+            "key_risks": ["flood exposure"],
+            "overrides_applied": {},
+        }
+        session.last_value_thesis_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 800000,
+            "fair_value_base": 760000,
+            "premium_discount_pct": 0.0526,
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+            "value_drivers": ["walkable Belmar location"],
+            "key_value_drivers": ["walkable Belmar location"],
+            "what_must_be_true": ["comps hold"],
+            "comp_selection_summary": "Saved comps.",
+            "comps": [],
+        }
+        session.last_risk_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 800000,
+            "bear_value": 720000,
+            "stress_value": 680000,
+            "risk_flags": ["flood_zone"],
+            "trust_flags": [],
+            "key_risks": ["Flood-zone exposure"],
+            "total_penalty": 0.22,
+            "confidence_tier": "moderate",
+        }
+        session.last_strategy_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "best_path": "buy_if_price_improves",
+            "recommendation": "Interesting if you can buy below ask.",
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+            "rental_ease_label": "seasonal/mixed",
+            "rental_ease_score": 57.0,
+            "rent_support_score": 52.0,
+            "liquidity_score": 61.0,
+            "monthly_cash_flow": -866,
+            "cash_on_cash_return": 0.021,
+            "annual_noi": 18500,
+        }
+        session.last_rent_outlook_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "entry_basis": 800000,
+            "monthly_rent": 2352,
+            "effective_monthly_rent": 2234,
+            "annual_noi": 18500,
+            "rent_source_type": "seasonal_mixed",
+            "rental_ease_label": "seasonal/mixed",
+            "rental_ease_score": 57.0,
+            "horizon_years": 3,
+            "future_rent_low": 2300,
+            "future_rent_mid": 2410,
+            "future_rent_high": 2600,
+            "basis_to_rent_framing": "~3.5% of basis.",
+        }
+
+        pinned_listing = {
+            "id": "subject-2",
+            "address_line": "123 Main St, Belmar, NJ 07719",
+            "city": "Belmar",
+            "state": "NJ",
+            "price": 800000,
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1500,
+            "status": "active",
+        }
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Decision narrative."),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                decision_stream(
+                    "should I buy it?",
+                    _decision(AnswerType.DECISION),
+                    pinned_listing,
+                    conversation_id="conv-full-cards",
+                )
+            )
+
+        event_types = [event["type"] for event in emitted]
+        first_text_index = event_types.index(events.EVENT_TEXT_DELTA)
+
+        for card_type in (
+            events.EVENT_VERDICT,
+            events.EVENT_VALUE_THESIS,
+            events.EVENT_RISK_PROFILE,
+            events.EVENT_STRATEGY_PATH,
+            events.EVENT_RENT_OUTLOOK,
+        ):
+            self.assertIn(card_type, event_types, f"missing {card_type}")
+            self.assertLess(
+                event_types.index(card_type),
+                first_text_index,
+                f"{card_type} must emit before the narrative",
+            )
+
     def test_dispatch_stream_emits_risk_card_then_text_then_native_chart(self) -> None:
         session = Session(session_id="risk-contract")
         session.last_risk_view = {
