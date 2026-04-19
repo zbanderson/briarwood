@@ -285,6 +285,284 @@ class BudgetExceededPropagationTests(unittest.TestCase):
         self.assertIn("$820,000", text)
 
 
+class DecisionCriticTests(unittest.TestCase):
+    """AUDIT 1.3.3: generate→critique ensemble on decision_summary.
+
+    Three env states — off / shadow / on. off skips entirely; shadow logs
+    what the critic would have done without changing the draft; on applies
+    revisions but only when the numeric-preservation check passes."""
+
+    def setUp(self) -> None:
+        composer.reset_narrative_client_cache()
+        composer.reset_critic_client_cache()
+
+    def tearDown(self) -> None:
+        composer.reset_narrative_client_cache()
+        composer.reset_critic_client_cache()
+
+    def _inputs(self) -> dict[str, object]:
+        return {
+            "decision_stance": "pass",
+            "ask_price": 820000,
+            "ask_premium_pct": 0.15,
+            "trust_flags": [],
+        }
+
+    def _baseline_env(self, mode: str) -> dict[str, str]:
+        """Env that activates the narrative Anthropic path AND the critic
+        at the given mode. Narrative path is needed so the draft is routed
+        to our stub `narrative_llm` (not OpenAI)."""
+        return {
+            "ANTHROPIC_API_KEY": "sk-ant-test",
+            composer.CRITIC_MODE_ENV: mode,
+        }
+
+    def _run_with_critic(
+        self,
+        *,
+        draft: str,
+        review: composer.DecisionCriticReview | None,
+        mode: str,
+    ) -> tuple[str, dict]:
+        """Shared harness. Stubs the narrative client to return ``draft``
+        and stubs the critic client's ``complete_structured`` to return
+        ``review``. Runs ``complete_and_verify`` with tier=decision_summary."""
+        openai_llm = _mock_llm(["openai fallback — should not be used"])
+        narrative_llm = _mock_llm([draft])
+
+        critic_client = MagicMock()
+        critic_client.complete_structured.return_value = review
+
+        def _anth_ctor(*_args: object, **_kwargs: object) -> MagicMock:
+            # First call returns the narrative client; second returns the
+            # critic client. Matches the composer's resolution order.
+            return next(_anth_ctor.queue)
+
+        _anth_ctor.queue = iter([narrative_llm, critic_client])
+
+        env = self._baseline_env(mode)
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", side_effect=_anth_ctor
+        ):
+            text, report = composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._inputs(),
+                tier="decision_summary",
+            )
+        return text, report
+
+    def test_mode_off_skips_critic_entirely(self) -> None:
+        """Default: critic doesn't run, no telemetry, draft ships unchanged."""
+        openai_llm = _mock_llm(["Draft verdict: pass. Ask $820,000 is 15% over fair."])
+        narrative_llm = _mock_llm(
+            ["Draft verdict: pass. Ask $820,000 is 15% over fair."]
+        )
+        critic_ctor = MagicMock()
+
+        def _anth_ctor(*_args: object, **_kwargs: object) -> MagicMock:
+            # Only called once (for the narrative client) since critic is off.
+            return narrative_llm
+
+        env = {"ANTHROPIC_API_KEY": "sk-ant-test"}  # no CRITIC_MODE_ENV
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", side_effect=_anth_ctor
+        ):
+            text, report = composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._inputs(),
+                tier="decision_summary",
+            )
+        self.assertIn("pass", text)
+        self.assertNotIn("critic", report)
+
+    def test_mode_shadow_runs_critic_but_ships_draft(self) -> None:
+        """Shadow: critic runs, verdict logged in telemetry, draft unchanged
+        even when verdict is revise. This is the signal-collection mode."""
+        draft = "Could be worth a closer look at $820,000."
+        review = composer.DecisionCriticReview(
+            verdict="revise",
+            rewritten_text="Pass — ask $820,000 is 15% over fair value.",
+            notes="softening: ask_premium_pct=0.15 supports a clear pass",
+        )
+        text, report = self._run_with_critic(draft=draft, review=review, mode="shadow")
+
+        self.assertEqual(text, draft)  # draft unchanged in shadow mode
+        self.assertEqual(report["critic"]["mode"], "shadow")
+        self.assertEqual(report["critic"]["verdict"], "revise")
+        self.assertFalse(report["critic"]["applied_rewrite"])
+        # Numeric check still logged in shadow — signal for "would this have been safe?"
+        self.assertTrue(report["critic"]["numeric_check"]["ok"])
+
+    def test_mode_on_keep_verdict_ships_draft(self) -> None:
+        """Critic says keep → draft ships unchanged, telemetry reflects keep."""
+        draft = "Pass — ask $820,000 is 15% over fair value."
+        review = composer.DecisionCriticReview(
+            verdict="keep", rewritten_text=None, notes="stance is appropriately bearish"
+        )
+        text, report = self._run_with_critic(draft=draft, review=review, mode="on")
+
+        self.assertEqual(text, draft)
+        self.assertEqual(report["critic"]["verdict"], "keep")
+        self.assertFalse(report["critic"]["applied_rewrite"])
+        self.assertNotIn("numeric_check", report["critic"])
+
+    def test_mode_on_flag_only_ships_draft_and_records_flag(self) -> None:
+        """flag_only → draft ships unchanged, flag preserved in telemetry."""
+        draft = "Could be interesting at $820,000."
+        review = composer.DecisionCriticReview(
+            verdict="flag_only",
+            rewritten_text=None,
+            notes="possible softening but not confident in rewrite",
+        )
+        text, report = self._run_with_critic(draft=draft, review=review, mode="on")
+
+        self.assertEqual(text, draft)
+        self.assertEqual(report["critic"]["verdict"], "flag_only")
+        self.assertFalse(report["critic"]["applied_rewrite"])
+        self.assertIn("not confident", report["critic"]["notes"])
+
+    def test_mode_on_revise_with_numbers_preserved_applies_rewrite(self) -> None:
+        """The happy path: revise + all numbers preserved → rewrite shipped."""
+        draft = "Could be worth a closer look at $820,000 despite 15% ask premium."
+        rewrite = "Pass — ask $820,000 sits 15% over fair value."
+        review = composer.DecisionCriticReview(
+            verdict="revise",
+            rewritten_text=rewrite,
+            notes="softening: 15% premium warrants a confident pass",
+        )
+        text, report = self._run_with_critic(draft=draft, review=review, mode="on")
+
+        self.assertEqual(text, rewrite)
+        self.assertEqual(report["critic"]["verdict"], "revise")
+        self.assertTrue(report["critic"]["applied_rewrite"])
+        self.assertTrue(report["critic"]["numeric_check"]["ok"])
+        self.assertEqual(report["critic"]["numeric_check"]["missing"], [])
+
+    def test_mode_on_revise_dropping_number_falls_back_to_draft(self) -> None:
+        """The critical safety net: critic rewrite silently loses a number
+        → preservation check fires, draft ships, flag in telemetry."""
+        draft = "Pass — ask $820,000 sits 15% over fair value."
+        # Rewrite drops the $820,000 figure (mutated to "high ask")
+        rewrite = "Pass — 15% over fair is a confident avoid."
+        review = composer.DecisionCriticReview(
+            verdict="revise",
+            rewritten_text=rewrite,
+            notes="strengthened stance",
+        )
+        text, report = self._run_with_critic(draft=draft, review=review, mode="on")
+
+        self.assertEqual(text, draft)  # draft wins, not rewrite
+        self.assertFalse(report["critic"]["applied_rewrite"])
+        self.assertFalse(report["critic"]["numeric_check"]["ok"])
+        self.assertIn("820000", report["critic"]["numeric_check"]["missing"])
+
+    def test_critic_returns_none_on_refusal_no_telemetry_pollution(self) -> None:
+        """Critic refusal (SDK returned None) → draft ships, telemetry shows
+        ran=False. No verdict key, no numeric_check — nothing to report."""
+        draft = "Pass — ask $820,000 is 15% over fair value."
+        text, report = self._run_with_critic(draft=draft, review=None, mode="on")
+
+        self.assertEqual(text, draft)
+        self.assertFalse(report["critic"]["ran"])
+        self.assertNotIn("verdict", report["critic"])
+
+    def test_non_decision_summary_tier_never_runs_critic(self) -> None:
+        """edge, risk, projection, etc. — critic is scoped to decision_summary
+        only. Even with mode=on, other tiers skip critic entirely."""
+        openai_llm = _mock_llm(["edge draft prose"])
+        narrative_llm = _mock_llm(["edge draft prose"])
+        critic_ctor = MagicMock()
+
+        call_log: list[str] = []
+
+        def _anth_ctor(*_args: object, **_kwargs: object) -> MagicMock:
+            call_log.append("init")
+            return narrative_llm
+
+        env = {
+            "ANTHROPIC_API_KEY": "sk-ant-test",
+            composer.CRITIC_MODE_ENV: "on",
+        }
+        with patch.dict("os.environ", env, clear=False), patch(
+            "briarwood.agent.llm.AnthropicChatClient", side_effect=_anth_ctor
+        ):
+            text, report = composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._inputs(),
+                tier="edge",
+            )
+        self.assertIn("edge draft", text)
+        self.assertNotIn("critic", report)
+        # Exactly one Anthropic init — the narrative client, not the critic.
+        self.assertEqual(len(call_log), 1)
+
+    def test_mode_on_but_no_key_records_ran_false(self) -> None:
+        """ANTHROPIC_API_KEY missing → critic short-circuits (no init).
+        Ships the draft unchanged. Telemetry records ``ran=False`` so the
+        dev tooling can distinguish 'critic skipped by mode=off' from
+        'mode=on but no key present' — those are different ops signals."""
+        openai_llm = _mock_llm(["openai decision draft at $820,000"])
+
+        env = {composer.CRITIC_MODE_ENV: "on"}
+        env_without_key = {
+            k: v for k, v in __import__("os").environ.items() if k != "ANTHROPIC_API_KEY"
+        }
+        env_without_key.update(env)
+        with patch.dict("os.environ", env_without_key, clear=True):
+            text, report = composer.complete_and_verify(
+                llm=openai_llm,
+                system="sys",
+                user="u",
+                structured_inputs=self._inputs(),
+                tier="decision_summary",
+            )
+        self.assertIn("820,000", text)
+        self.assertEqual(report["critic"]["mode"], "on")
+        self.assertFalse(report["critic"]["ran"])
+        self.assertNotIn("verdict", report["critic"])
+
+
+class NumericPreservationCheckTests(unittest.TestCase):
+    """AUDIT 1.3.3: the ten-line safety net that catches critics silently
+    mutating numbers. Unit tests on the helper so the behavior is pinned
+    independent of the critic orchestration."""
+
+    def test_identical_text_passes(self) -> None:
+        ok, missing = composer._numbers_preserved("$820,000 at 15%", "$820,000 at 15%")
+        self.assertTrue(ok)
+        self.assertEqual(missing, [])
+
+    def test_normalized_equivalents_pass(self) -> None:
+        """`$820,000` / `820,000` / `820000` all normalize to the same token."""
+        ok, _ = composer._numbers_preserved("$820,000 at 15%", "820000 at 15%")
+        self.assertTrue(ok)
+
+    def test_dropped_number_fails(self) -> None:
+        ok, missing = composer._numbers_preserved("$820,000 at 15%", "pass, high ask")
+        self.assertFalse(ok)
+        self.assertIn("820000", missing)
+        self.assertIn("15%", missing)
+
+    def test_mutated_number_fails(self) -> None:
+        """Critic changes 820,000 to 800,000 — the original token is missing."""
+        ok, missing = composer._numbers_preserved("$820,000", "$800,000")
+        self.assertFalse(ok)
+        self.assertIn("820000", missing)
+
+    def test_new_numbers_in_rewrite_are_allowed(self) -> None:
+        """Adding a number in rewrite isn't flagged (only missing originals
+        are). This is intentional — over-strict would block legitimate
+        cleanups that surface an implicit figure from structured_inputs."""
+        ok, _ = composer._numbers_preserved("$820,000", "$820,000 vs $700,000 fair")
+        self.assertTrue(ok)
+
+
 class NarrativeTierAnthropicRoutingTests(unittest.TestCase):
     """AUDIT 1.3.5: decision_summary / edge / risk tiers route through
     Anthropic when ANTHROPIC_API_KEY is set; everything else keeps the
