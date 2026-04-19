@@ -1,0 +1,45 @@
+{
+  "session_id": "d5ce348ca10c",
+  "current_property_id": "1228-briarwood-road-belmar-nj",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "value_thesis",
+  "last_analysis_mode": "edge",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": {
+    "address": "1228 BRIARWOOD RD, BELMAR, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": null,
+    "fair_value_base": null,
+    "premium_discount_pct": null,
+    "pricing_view": "unavailable",
+    "primary_value_source": "unknown",
+    "net_opportunity_delta_pct": null,
+    "value_drivers": [],
+    "key_value_drivers": [],
+    "what_must_be_true": [],
+    "comp_selection_summary": null,
+    "comps": []
+  },
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "turns": [
+    {
+      "user": "what is the value thesis?",
+      "assistant": "To construct a value thesis, I'd need specific details about the asset in question, such as the ask price, fair value, and key value drivers. However, in general, the value thesis emerges from determining if the current pricing represents a premium or discount versus its fair value estimate. \n\nThe primary value source could relate to fundamental metrics such as earnings, cash flow, or asset valuation, while top anchors might include market trends, competitive positioning, and growth projections. For an edge to exist, it must be true that market sentiment does not fully reflect the underlying fundamentals, creating an opportunity for value realization. \n\nIf you can provide more specific information, I can refine this thesis further.\n(chart unavailable: value_position requires ask_price and fair_value_base.)",
+      "answer_type": "edge"
+    }
+  ]
+}

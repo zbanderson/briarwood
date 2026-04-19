@@ -1,0 +1,139 @@
+{
+  "fetched_at": "2026-04-18T11:02:54Z",
+  "normalized_payload": {
+    "address": "1223 OCEAN RD, BRIDGEHAMPTON, NY 11932",
+    "baths": 2.0,
+    "beds": 5,
+    "garage_spaces": null,
+    "latitude": "40.904556",
+    "longitude": "-72.301998",
+    "lot_size": 0.9199954,
+    "property_type": "SFR",
+    "sqft": 6275,
+    "stories": 1,
+    "year_built": 2019
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NY",
+          "line1": "1223 OCEAN RD",
+          "line2": "BRIDGEHAMPTON, NY 11932",
+          "locality": "BRIDGEHAMPTON",
+          "matchCode": "ExaStr",
+          "oneLine": "1223 OCEAN RD, BRIDGEHAMPTON, NY 11932",
+          "postal1": "11932",
+          "postal2": ""
+        },
+        "area": {
+          "blockNum": "5",
+          "countrysecsubd": "Suffolk",
+          "countyuse1": "210  ",
+          "loctype": "VIEW - NONE",
+          "muncode": "SU",
+          "munname": "SUFFOLK",
+          "taxcodearea": "473609"
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "wallType": "WOOD"
+          },
+          "interior": {
+            "fplccount": 1,
+            "fplcind": "Y",
+            "fplctype": "YES"
+          },
+          "parking": {},
+          "rooms": {
+            "bathsfull": 2,
+            "bathstotal": 2.0,
+            "beds": 5
+          },
+          "size": {
+            "bldgsize": 6275,
+            "grosssize": 6181,
+            "grosssizeadjusted": 6275,
+            "groundfloorsize": 1606,
+            "livingsize": 6275,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 6275
+          },
+          "summary": {
+            "archStyle": "RANCH",
+            "bldgType": "CONVENTIONAL HOUSE",
+            "bldgsNum": 1,
+            "imprType": "HOUSE",
+            "levels": 1,
+            "quality": "EXCELLENT",
+            "storyDesc": "CONVENTIONAL HOUSE",
+            "view": "VIEW - NONE"
+          }
+        },
+        "identifier": {
+          "Id": 168961122,
+          "apn": "0900-134.00-05.00-035.000",
+          "attomId": 168961122,
+          "fips": "36103"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "a4c21680ee58d21595720b70bc9f7392",
+            "CS": "2f51cbfd21f240dad5eb76ee1351599b",
+            "DB": "d17d3e5d95d0a40a54921e91e311bd97",
+            "N2": "24307e426f3e2e025b6284d25b2c3271",
+            "PL": "527de83b5d27d4b8659ca21dab60ceba",
+            "SB": "9a666ae1d51a7cd561ad1dbd7e859207",
+            "ZI": "23ac7254cf05f1353dcd27eec8ca1b59"
+          },
+          "geoid": "CO36103, CS3638000, CS3668473, DB3605370, ND0000936682, PL3607157, PL3608136, SB0000104734, ZI11716, ZI11932",
+          "latitude": "40.904556",
+          "longitude": "-72.301998"
+        },
+        "lot": {
+          "lotnum": "35.000",
+          "lotsize1": 0.9199954,
+          "lotsize2": 40075,
+          "poolind": "YES"
+        },
+        "summary": {
+          "absenteeInd": "ABSENTEE(MAIL AND SITUS NOT =)",
+          "legal1": "N-FORSTER S-MAP 3465 E-SAGG BRIDGEHAMP W-OCEAN RD",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 2019
+        },
+        "utilities": {
+          "energyType": "YES",
+          "heatingfuel": "ELECTRIC",
+          "heatingtype": "HOT WATER",
+          "sewertype": "SEPTIC",
+          "waterType": "COMMERCIAL"
+        },
+        "vintage": {
+          "lastModified": "2025-06-09",
+          "pubDate": "2025-06-09"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 168961122,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-18T11:02:54.657Z",
+      "total": 1,
+      "transactionID": "16612bb8d19225a3b1ea3f72d133bed8",
+      "version": "1.0.0"
+    }
+  }
+}

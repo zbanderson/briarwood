@@ -1,0 +1,30 @@
+{
+  "session_id": "ab2fe04b04ab",
+  "current_property_id": "1004-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "property_brief",
+  "last_analysis_mode": "browse",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "turns": [
+    {
+      "user": "what do you think of 1004 14th Ave, Belmar, nj",
+      "assistant": "Briarwood sees the immediate setup as pass unless changes.\nWhat supports that view: Identify which trust_flags or conflicts most change the picture and resolve those first.\nWhat could weaken confidence: incomplete_carry_inputs.\nNext best question: Complete the carry-cost inputs (taxes, insurance, financing).\nSource coverage: Coverage is still thin; no post-promotion enrichment has been captured yet.\nNearby support in Belmar:\n- 1008-14th-ave-belmar-nj-07719 \u2014 1008 14th Avenue, Belmar, NJ 07719, 3bd/1.0ba, $767,000\n- 1228-briarwood-road-belmar-nj \u2014 1228 BRIARWOOD RD, BELMAR, NJ 07719, 3bd/2.0ba\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000",
+      "answer_type": "browse"
+    }
+  ]
+}

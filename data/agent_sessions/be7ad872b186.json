@@ -1,0 +1,224 @@
+{
+  "session_id": "be7ad872b186",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3
+    }
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3
+    }
+  },
+  "selected_search_result": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "search_results",
+  "last_analysis_mode": "search",
+  "last_decision_view": {
+    "pid": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 767000.0,
+    "all_in_basis": 767000.0,
+    "fair_value_base": 723555.96,
+    "value_low": 640036.32,
+    "value_high": 807075.6,
+    "ask_premium_pct": 0.0566,
+    "basis_premium_pct": 0.0566,
+    "trust_flags": [
+      "incomplete_carry_inputs"
+    ],
+    "what_must_be_true": [],
+    "key_risks": [],
+    "overrides_applied": {}
+  },
+  "last_projection_view": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "ask_price": 767000.0,
+    "bull_case_value": 816046.0,
+    "base_case_value": 764343.0,
+    "bear_case_value": 722117.0,
+    "stress_case_value": 506489.0,
+    "spread": 93928.0,
+    "bull_total_adjustment_pct": 0.1278,
+    "base_total_adjustment_pct": 0.0564,
+    "bear_total_adjustment_pct": -0.002,
+    "bull_growth_rate": 0.0639,
+    "base_growth_rate": -0.0035,
+    "bear_growth_rate": -0.0585,
+    "bcv_anchor": 723555.96,
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": {
+    "town": "Belmar",
+    "state": "NJ",
+    "median_price": 867500.0,
+    "median_ppsf": 515.87,
+    "sold_count": 320,
+    "confidence_raw": 0.72,
+    "confidence_tier": "strong",
+    "doc_count": 4,
+    "bullish_signals": [
+      "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
+      "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato",
+      "601 Main Street"
+    ],
+    "bearish_signals": []
+  },
+  "last_comps_preview": {
+    "subject_pid": "1008-14th-ave-belmar-nj-07719",
+    "subject_ask": 767000.0,
+    "count": 4,
+    "median_price": 850000.0,
+    "comps": [
+      {
+        "property_id": "1302-l-street",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "l-street-2",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 1.5,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "briarwood-rd-belmar",
+        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 674200.0,
+        "premium_pct": -0.121
+      },
+      {
+        "property_id": "1600-l-street-belmar-nj-07719",
+        "address": "1600 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 899000.0,
+        "premium_pct": 0.1721
+      }
+    ]
+  },
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_verifier_report": {
+    "tier": "decision_summary",
+    "sentences_total": 4,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 1,
+    "anchors": [
+      {
+        "module": "ValuationModel",
+        "field": "fair_value_base",
+        "value": "723555.96"
+      }
+    ],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "The decision stance on 1008 14th Avenue, Belmar, NJ, is to \"buy if price improves\" per the DecisionEngine.",
+        "value": "1008",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "user": "what are the 3 bedroom homes for sale in belmar nj",
+      "assistant": "Found 2 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The decision stance on 1008 14th Avenue, Belmar, NJ, is to \"buy if price improves\" per the DecisionEngine. The current ask price is $767,000, which matches the all-in basis of $767,000. However, the fair value base is estimated at $723,555.96, indicating a basis premium of 5.66% and an ask premium of 5.66%. Trust flags highlight concerns regarding \"incomplete_carry_inputs.\"",
+      "answer_type": "decision"
+    }
+  ]
+}

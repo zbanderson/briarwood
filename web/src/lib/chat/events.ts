@@ -104,6 +104,136 @@ export type CompsPreviewEvent = {
   comps: CompsPreviewRow[];
 };
 
+export type RiskProfileEvent = {
+  type: "risk_profile";
+  address?: string | null;
+  town?: string | null;
+  state?: string | null;
+  ask_price?: number | null;
+  bear_value?: number | null;
+  stress_value?: number | null;
+  risk_flags: string[];
+  trust_flags: string[];
+  key_risks: string[];
+  total_penalty?: number | null;
+  confidence_tier?: "strong" | "moderate" | "thin" | null;
+};
+
+export type ValueThesisCompRow = {
+  property_id?: string | null;
+  address?: string | null;
+  beds?: number | null;
+  baths?: number | null;
+  ask_price?: number | null;
+  blocks_to_beach?: number | null;
+};
+export type ValueThesisEvent = {
+  type: "value_thesis";
+  address?: string | null;
+  town?: string | null;
+  state?: string | null;
+  ask_price?: number | null;
+  fair_value_base?: number | null;
+  premium_discount_pct?: number | null;
+  pricing_view?: string | null;
+  primary_value_source?: string | null;
+  value_drivers: string[];
+  key_value_drivers: string[];
+  what_must_be_true: string[];
+  comp_selection_summary?: string | null;
+  comps: ValueThesisCompRow[];
+  net_opportunity_delta_pct?: number | null;
+};
+
+export type StrategyPathEvent = {
+  type: "strategy_path";
+  address?: string | null;
+  town?: string | null;
+  state?: string | null;
+  best_path?: string | null;
+  recommendation?: string | null;
+  pricing_view?: string | null;
+  primary_value_source?: string | null;
+  rental_ease_label?: string | null;
+  rental_ease_score?: number | null;
+  rent_support_score?: number | null;
+  liquidity_score?: number | null;
+  monthly_cash_flow?: number | null;
+  cash_on_cash_return?: number | null;
+  annual_noi?: number | null;
+};
+
+export type RentOutlookEvent = {
+  type: "rent_outlook";
+  address?: string | null;
+  town?: string | null;
+  state?: string | null;
+  monthly_rent?: number | null;
+  effective_monthly_rent?: number | null;
+  rent_source_type?: string | null;
+  rental_ease_label?: string | null;
+  rental_ease_score?: number | null;
+  annual_noi?: number | null;
+  horizon_years?: number | null;
+  future_rent_low?: number | null;
+  future_rent_mid?: number | null;
+  future_rent_high?: number | null;
+  zillow_market_rent?: number | null;
+  zillow_rental_comp_count?: number | null;
+  basis_to_rent_framing?: string | null;
+  owner_occupy_then_rent?: string | null;
+};
+
+export type ResearchUpdateEvent = {
+  type: "research_update";
+  town: string;
+  state: string;
+  confidence_label?: string | null;
+  narrative_summary?: string | null;
+  bullish_signals: string[];
+  bearish_signals: string[];
+  watch_items: string[];
+  document_count?: number | null;
+  warnings: string[];
+};
+
+export type ModuleAttribution = {
+  module: string;             // canonical id, e.g. "valuation_model"
+  label: string;              // human label, e.g. "Valuation Model"
+  contributed_to: string[];   // event types this module supplied data to
+};
+export type ModulesRanEvent = {
+  type: "modules_ran";
+  items: ModuleAttribution[];
+};
+
+export type VerifierViolation = {
+  kind: "ungrounded_number" | "ungrounded_entity" | "forbidden_hedge";
+  sentence: string;
+  value: string;
+  reason: string;
+};
+export type GroundingAnchor = {
+  module: string;
+  field: string;
+  value: string;
+};
+export type VerifierReportEvent = {
+  type: "verifier_report";
+  tier?: string | null;
+  sentences_total: number;
+  sentences_with_violations: number;
+  ungrounded_declaration: boolean;
+  anchor_count: number;
+  anchors?: GroundingAnchor[];
+  violations: VerifierViolation[];
+};
+export type GroundingAnnotationsEvent = {
+  type: "grounding_annotations";
+  anchors: GroundingAnchor[];
+  ungrounded_declaration: boolean;
+};
+
 export type ChatEvent =
   | TextDeltaEvent
   | ToolCallEvent
@@ -120,7 +250,15 @@ export type ChatEvent =
   | ScenarioTableEvent
   | ComparisonTableEvent
   | TownSummaryEvent
-  | CompsPreviewEvent;
+  | CompsPreviewEvent
+  | RiskProfileEvent
+  | ValueThesisEvent
+  | StrategyPathEvent
+  | RentOutlookEvent
+  | ResearchUpdateEvent
+  | ModulesRanEvent
+  | VerifierReportEvent
+  | GroundingAnnotationsEvent;
 
 // Structured payloads.
 

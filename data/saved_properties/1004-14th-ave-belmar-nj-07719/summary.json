@@ -1,0 +1,20 @@
+{
+  "property_id": "1004-14th-ave-belmar-nj-07719",
+  "address": "1004 14TH AVE, BELMAR, NJ 07719",
+  "label": "1004 14TH AVE",
+  "town": "Belmar",
+  "state": "NJ",
+  "county": "Monmouth",
+  "beds": 2,
+  "baths": 1.0,
+  "ask_price": null,
+  "bcv": null,
+  "pricing_view": null,
+  "property_type": "SFR",
+  "source_url": null,
+  "confidence": null,
+  "comp_trust": "pending",
+  "missing_input_count": 4,
+  "is_hybrid_valuation": false,
+  "timestamp": "2026-04-18T07:30:38"
+}

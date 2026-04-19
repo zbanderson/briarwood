@@ -119,16 +119,23 @@ def _load_or_create_session(conversation_id: str | None) -> Session:
     The conversation_id (12-char hex from api.store) is used directly as the
     session_id. Returns the loaded session when one exists on disk so prior-turn
     state (current_property_id, last_*_view, turns) is available; otherwise a
-    fresh Session keyed to the same id is returned and saved on first use."""
+    fresh Session keyed to the same id is returned and saved on first use.
+
+    Clears `last_verifier_report` so stale reports from the previous turn don't
+    leak into the current one — the handler repopulates it if an LLM runs."""
     if not conversation_id:
         return Session()
     path = SESSION_DIR / f"{conversation_id}.json"
     if path.exists():
         try:
-            return Session.load(conversation_id)
+            session = Session.load(conversation_id)
         except (json.JSONDecodeError, KeyError) as exc:
             print(f"[session] load failed for {conversation_id}: {exc}; starting fresh", flush=True)
-    return Session(session_id=conversation_id)
+            session = Session(session_id=conversation_id)
+    else:
+        session = Session(session_id=conversation_id)
+    session.last_verifier_report = None
+    return session
 
 
 def _finalize_session(
@@ -320,6 +327,76 @@ async def _stream_text(text: str, *, chunk_delay: float = 0.015) -> AsyncIterato
         await asyncio.sleep(chunk_delay)
 
 
+# ---------- Module attribution ----------
+#
+# Each emitted structured event maps back to the Briarwood module that produced
+# it. The plan calls for surfacing those modules to the user as a chip row so
+# they see which machinery contributed to the response, instead of getting
+# narrated prose with no provenance.
+#
+# Step 4 attributes by emitted slot only — the LLM-emitted `[[...]]` markers
+# arrive in Step 6 and will layer in additional attribution then. A module that
+# ran but produced no emitted output is excluded by design ("ran but didn't
+# contribute" is not the same as "contributed").
+_MODULE_REGISTRY: list[tuple[str, str, str]] = [
+    (events.EVENT_VERDICT,          "valuation_model",   "Valuation Model"),
+    (events.EVENT_TOWN_SUMMARY,     "town_context",      "Town Context"),
+    (events.EVENT_COMPS_PREVIEW,    "comp_set",          "Comp Set"),
+    (events.EVENT_SCENARIO_TABLE,   "projection_engine", "Projection Engine"),
+    (events.EVENT_COMPARISON_TABLE, "comparison_runner", "Comparison Runner"),
+    (events.EVENT_VALUE_THESIS,     "value_thesis",      "Value Thesis"),
+    (events.EVENT_RISK_PROFILE,     "risk_profile",      "Risk Profile"),
+    (events.EVENT_STRATEGY_PATH,    "strategy_fit",      "Strategy Fit"),
+    (events.EVENT_RENT_OUTLOOK,     "rent_outlook",      "Rent Outlook"),
+    (events.EVENT_RESEARCH_UPDATE,  "town_research",     "Town Research"),
+    (events.EVENT_LISTINGS,         "listing_discovery", "Listing Discovery"),
+    (events.EVENT_MAP,              "geocoder",          "Geocoder"),
+    (events.EVENT_CHART,            "visualizer",        "Visualizer"),
+]
+
+
+class _ModuleTracker:
+    """Accumulates which modules contributed to a turn, ordered by first
+    contribution. Each call to `record(event_type)` looks up the module that
+    produces that event and records the contribution. Modules with no matching
+    event are silently ignored — the registry is the source of truth."""
+
+    def __init__(self) -> None:
+        self._modules: dict[str, dict[str, Any]] = {}
+
+    def record(self, event_type: str | None) -> None:
+        if not event_type:
+            return
+        for et, mid, label in _MODULE_REGISTRY:
+            if et != event_type:
+                continue
+            entry = self._modules.setdefault(
+                mid, {"module": mid, "label": label, "contributed_to": []}
+            )
+            if et not in entry["contributed_to"]:
+                entry["contributed_to"].append(et)
+            return
+
+    def items(self) -> list[dict[str, Any]]:
+        return list(self._modules.values())
+
+
+async def _track_modules(
+    stream: AsyncIterator[dict[str, Any]],
+) -> AsyncIterator[dict[str, Any]]:
+    """Wrap a streamer; pass events through unchanged and emit a `modules_ran`
+    event at the end iff at least one module contributed. Errors propagate
+    without flushing — main.py owns the error/done envelope."""
+    tracker = _ModuleTracker()
+    async for ev in stream:
+        if isinstance(ev, dict):
+            tracker.record(ev.get("type"))
+        yield ev
+    items = tracker.items()
+    if items:
+        yield events.modules_ran(items)
+
+
 def _extract_charts(response_text: str) -> tuple[str, list[dict[str, Any]]]:
     """Pull `file://...` chart URLs out of the narrative and translate them
     into chart events. Returns (cleaned_narrative, [chart_events]).
@@ -460,6 +537,102 @@ def _comparison_table_from_view(rows: list[dict[str, Any]]) -> list[dict[str, An
     return out
 
 
+def _slot_derived_chips(session: Session) -> list[str]:
+    """Build follow-up chips from populated session slots.
+
+    Each slot yields at most one chip, ordered by how "hot" the thread is:
+    risk dives first (user just saw key_risks — the top one is the most
+    likely next question), then value thesis, scenarios, comps, strategy,
+    rent, research. Duplicates are trimmed by the caller via a seen-set.
+    """
+    chips: list[str] = []
+
+    risk = session.last_risk_view if isinstance(session.last_risk_view, dict) else None
+    if risk:
+        key_risks = risk.get("key_risks")
+        if isinstance(key_risks, list) and key_risks:
+            top = key_risks[0]
+            if isinstance(top, str) and top.strip():
+                chips.append(f"Tell me more about {top.strip()}")
+
+    thesis = (
+        session.last_value_thesis_view
+        if isinstance(session.last_value_thesis_view, dict)
+        else None
+    )
+    if thesis and any(
+        thesis.get(k) for k in ("value_drivers", "key_value_drivers", "what_must_be_true")
+    ):
+        chips.append("What are the key value drivers?")
+
+    projection = (
+        session.last_projection_view
+        if isinstance(session.last_projection_view, dict)
+        else None
+    )
+    if projection and any(
+        isinstance(projection.get(k), (int, float)) and projection.get(k)
+        for k in ("bull_case_value", "base_case_value", "bear_case_value")
+    ):
+        chips.append("What would a 10% price cut do?")
+
+    comps = (
+        session.last_comps_preview
+        if isinstance(session.last_comps_preview, dict)
+        else None
+    )
+    if comps:
+        total = comps.get("count")
+        displayed = comps.get("comps")
+        displayed_n = len(displayed) if isinstance(displayed, list) else 0
+        if isinstance(total, int) and total > displayed_n:
+            remaining = total - displayed_n
+            chips.append(f"Show me the remaining {remaining} comps")
+
+    strategy = (
+        session.last_strategy_view
+        if isinstance(session.last_strategy_view, dict)
+        else None
+    )
+    if strategy and strategy.get("best_path"):
+        chips.append("Walk through the recommended path")
+
+    rent = (
+        session.last_rent_outlook_view
+        if isinstance(session.last_rent_outlook_view, dict)
+        else None
+    )
+    if rent and rent.get("monthly_rent"):
+        chips.append("What's the cash-on-cash if I rent it?")
+
+    town = (
+        session.last_town_summary
+        if isinstance(session.last_town_summary, dict)
+        else None
+    )
+    if town:
+        doc_count = town.get("doc_count")
+        if isinstance(doc_count, int) and doc_count > 0:
+            chips.append("What's driving the town outlook?")
+
+    return chips
+
+
+def _blend_chips(primary: list[str], fallback: list[str], limit: int = 4) -> list[str]:
+    """Dedup-merge slot-derived chips with tier defaults. Slot chips come
+    first because they're freshly grounded in what just rendered; defaults
+    pad the list up to `limit` for variety when slots are sparse."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for chip in (*primary, *fallback):
+        if chip and chip not in seen:
+            seen.add(chip)
+            out.append(chip)
+            if len(out) >= limit:
+                break
+    return out
+
+
 def _suggestions_for_search(session: Session) -> list[str]:
     ctx = session.current_search_context or session.search_context or {}
     town = ctx.get("town")
@@ -499,7 +672,15 @@ def _chat_text_from_search(response_text: str, listings: list[dict[str, Any]]) -
     return intro
 
 
-async def search_stream(
+def search_stream(
+    text: str,
+    decision: RouterDecision,
+    conversation_id: str | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    return _track_modules(_search_stream_impl(text, decision, conversation_id))
+
+
+async def _search_stream_impl(
     text: str,
     decision: RouterDecision,
     conversation_id: str | None = None,
@@ -532,6 +713,15 @@ async def search_stream(
             yield events.map_payload(center, pins)
 
     yield events.suggestions(_suggestions_for_search(session))
+    if isinstance(session.last_verifier_report, dict):
+        report = session.last_verifier_report
+        anchors = report.get("anchors") or []
+        if anchors or report.get("ungrounded_declaration"):
+            yield events.grounding_annotations(
+                list(anchors),
+                ungrounded_declaration=bool(report.get("ungrounded_declaration")),
+            )
+        yield events.verifier_report(report)
     _finalize_session(session, text, intro, decision.answer_type)
 
 
@@ -599,9 +789,16 @@ def _chat_text_from_browse(response_text: str, focal: dict[str, Any] | None) -> 
     return "\n".join(line for line in lines if line.strip()).strip()
 
 
-def _suggestions_for_browse(response_text: str, focal: dict[str, Any] | None) -> list[str]:
+def _suggestions_for_browse(
+    response_text: str,
+    focal: dict[str, Any] | None,
+    session: Session | None = None,
+) -> list[str]:
     """Blend the model's surfaced 'Next best question' with escalation chips
-    that mirror the Run-analysis CTA in the detail panel."""
+    that mirror the Run-analysis CTA in the detail panel. Slot-derived chips
+    (from `session.last_*`) take priority when available."""
+    slot_chips = _slot_derived_chips(session) if session else []
+
     suggestions: list[str] = []
     for line in response_text.splitlines():
         m = _NEXT_QUESTION_RE.match(line.strip())
@@ -623,16 +820,18 @@ def _suggestions_for_browse(response_text: str, focal: dict[str, Any] | None) ->
                 "Compare Belmar vs. Avon-by-the-Sea",
             ]
         )
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for s in suggestions:
-        if s and s not in seen:
-            seen.add(s)
-            deduped.append(s)
-    return deduped[:4]
+    return _blend_chips(slot_chips, suggestions)
 
 
-async def browse_stream(
+def browse_stream(
+    text: str,
+    decision: RouterDecision,
+    conversation_id: str | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    return _track_modules(_browse_stream_impl(text, decision, conversation_id))
+
+
+async def _browse_stream_impl(
     text: str,
     decision: RouterDecision,
     conversation_id: str | None = None,
@@ -649,7 +848,7 @@ async def browse_stream(
         )
     except Exception as exc:
         yield events.text_delta(f"Browse failed: {exc}")
-        yield events.suggestions(_suggestions_for_browse("", None))
+        yield events.suggestions(_suggestions_for_browse("", None, session))
         return
 
     focal = _focal_listing_from_session(session)
@@ -665,7 +864,16 @@ async def browse_stream(
             if pins:
                 yield events.map_payload(center, pins)
 
-    yield events.suggestions(_suggestions_for_browse(response_text, focal))
+    yield events.suggestions(_suggestions_for_browse(response_text, focal, session))
+    if isinstance(session.last_verifier_report, dict):
+        report = session.last_verifier_report
+        anchors = report.get("anchors") or []
+        if anchors or report.get("ungrounded_declaration"):
+            yield events.grounding_annotations(
+                list(anchors),
+                ungrounded_declaration=bool(report.get("ungrounded_declaration")),
+            )
+        yield events.verifier_report(report)
     _finalize_session(session, text, intro, decision.answer_type)
 
 
@@ -714,15 +922,24 @@ def _seed_session_for_pinned(
     return None
 
 
-def _suggestions_for_decision(focal: dict[str, Any] | None) -> list[str]:
+def _suggestions_for_decision(
+    focal: dict[str, Any] | None,
+    session: Session | None = None,
+) -> list[str]:
     """Decision-tier follow-ups: scenario what-ifs and risk dives. The user
-    has already escalated past browse, so chips lean operational."""
+    has already escalated past browse, so chips lean operational. Slot chips
+    (derived from the structured cards just rendered) come first."""
+    slot_chips = _slot_derived_chips(session) if session else []
+
     if not focal:
-        return [
-            "Compare to nearby sales",
-            "What's the biggest risk?",
-            "Show me the comp set",
-        ]
+        return _blend_chips(
+            slot_chips,
+            [
+                "Compare to nearby sales",
+                "What's the biggest risk?",
+                "Show me the comp set",
+            ],
+        )
     price = focal.get("price")
     chips: list[str] = []
     if isinstance(price, int) and price > 0:
@@ -736,10 +953,21 @@ def _suggestions_for_decision(focal: dict[str, Any] | None) -> list[str]:
             "Show me the comp set",
         ]
     )
-    return chips[:4]
+    return _blend_chips(slot_chips, chips)
 
 
-async def decision_stream(
+def decision_stream(
+    text: str,
+    decision: RouterDecision,
+    pinned_listing: dict[str, Any] | None = None,
+    conversation_id: str | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    return _track_modules(
+        _decision_stream_impl(text, decision, pinned_listing, conversation_id)
+    )
+
+
+async def _decision_stream_impl(
     text: str,
     decision: RouterDecision,
     pinned_listing: dict[str, Any] | None = None,
@@ -770,7 +998,7 @@ async def decision_stream(
         )
     except Exception as exc:
         yield events.text_delta(f"Decision analysis failed: {exc}")
-        yield events.suggestions(_suggestions_for_decision(pinned_listing))
+        yield events.suggestions(_suggestions_for_decision(pinned_listing, session))
         return
 
     # Re-emit the focal property card so the assistant turn has visual context
@@ -822,7 +1050,16 @@ async def decision_stream(
     for chart_ev in chart_events:
         yield chart_ev
 
-    yield events.suggestions(_suggestions_for_decision(focal))
+    yield events.suggestions(_suggestions_for_decision(focal, session))
+    if isinstance(session.last_verifier_report, dict):
+        report = session.last_verifier_report
+        anchors = report.get("anchors") or []
+        if anchors or report.get("ungrounded_declaration"):
+            yield events.grounding_annotations(
+                list(anchors),
+                ungrounded_declaration=bool(report.get("ungrounded_declaration")),
+            )
+        yield events.verifier_report(report)
     _finalize_session(session, text, cleaned, decision.answer_type)
 
 
@@ -830,17 +1067,25 @@ async def decision_stream(
 
 
 def _suggestions_for_tier(
-    answer_type: AnswerType, focal: dict[str, Any] | None
+    answer_type: AnswerType,
+    focal: dict[str, Any] | None,
+    session: Session | None = None,
 ) -> list[str]:
     """Tier-aware follow-up chips. Most tiers nudge toward the next reasonable
     move (decision-tier escalation, scenario projection, comp dive). When no
-    focal property is in scope, fall back to discovery-style chips."""
+    focal property is in scope, fall back to discovery-style chips. Slot
+    chips (derived from populated structured views) take priority."""
+    slot_chips = _slot_derived_chips(session) if session else []
+
     if focal is None:
-        return [
-            "Find me a starter home in Belmar",
-            "Compare Belmar vs. Avon-by-the-Sea",
-            "What's happening in the Asbury Park market?",
-        ]
+        return _blend_chips(
+            slot_chips,
+            [
+                "Find me a starter home in Belmar",
+                "Compare Belmar vs. Avon-by-the-Sea",
+                "What's happening in the Asbury Park market?",
+            ],
+        )
 
     addr = focal.get("address_line") or "this property"
     price = focal.get("price")
@@ -907,16 +1152,21 @@ def _suggestions_for_tier(
         ],
     }
     chips = [c for c in by_tier.get(answer_type, []) if c]
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for c in chips:
-        if c not in seen:
-            seen.add(c)
-            deduped.append(c)
-    return deduped[:4]
+    return _blend_chips(slot_chips, chips)
 
 
-async def dispatch_stream(
+def dispatch_stream(
+    text: str,
+    decision: RouterDecision,
+    pinned_listing: dict[str, Any] | None = None,
+    conversation_id: str | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    return _track_modules(
+        _dispatch_stream_impl(text, decision, pinned_listing, conversation_id)
+    )
+
+
+async def _dispatch_stream_impl(
     text: str,
     decision: RouterDecision,
     pinned_listing: dict[str, Any] | None = None,
@@ -940,7 +1190,7 @@ async def dispatch_stream(
         )
     except Exception as exc:
         yield events.text_delta(f"{decision.answer_type.value.title()} failed: {exc}")
-        yield events.suggestions(_suggestions_for_tier(decision.answer_type, pinned_listing))
+        yield events.suggestions(_suggestions_for_tier(decision.answer_type, pinned_listing, session))
         return
 
     focal = _focal_listing_from_session(session) or pinned_listing
@@ -963,6 +1213,24 @@ async def dispatch_stream(
             _comparison_table_from_view(session.last_comparison_view)
         )
 
+    # Tier-specific structured cards. Each handler populates at most one of
+    # these slots per turn; emit whichever is present so the UI can render
+    # the structured counterpart to the narrative it just streamed.
+    if isinstance(session.last_value_thesis_view, dict):
+        yield events.value_thesis(session.last_value_thesis_view)
+
+    if isinstance(session.last_risk_view, dict):
+        yield events.risk_profile(session.last_risk_view)
+
+    if isinstance(session.last_strategy_view, dict):
+        yield events.strategy_path(session.last_strategy_view)
+
+    if isinstance(session.last_rent_outlook_view, dict):
+        yield events.rent_outlook(session.last_rent_outlook_view)
+
+    if isinstance(session.last_research_view, dict):
+        yield events.research_update(session.last_research_view)
+
     if focal:
         yield events.listings([focal])
         if focal.get("lat") is not None and focal.get("lng") is not None:
@@ -973,5 +1241,14 @@ async def dispatch_stream(
     for chart_ev in chart_events:
         yield chart_ev
 
-    yield events.suggestions(_suggestions_for_tier(decision.answer_type, focal))
+    yield events.suggestions(_suggestions_for_tier(decision.answer_type, focal, session))
+    if isinstance(session.last_verifier_report, dict):
+        report = session.last_verifier_report
+        anchors = report.get("anchors") or []
+        if anchors or report.get("ungrounded_declaration"):
+            yield events.grounding_annotations(
+                list(anchors),
+                ungrounded_declaration=bool(report.get("ungrounded_declaration")),
+            )
+        yield events.verifier_report(report)
     _finalize_session(session, text, cleaned, decision.answer_type)

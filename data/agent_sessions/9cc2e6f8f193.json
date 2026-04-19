@@ -1,0 +1,125 @@
+{
+  "session_id": "9cc2e6f8f193",
+  "current_property_id": "1004-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "projection",
+  "last_analysis_mode": "projection",
+  "last_decision_view": {
+    "pid": "1004-14th-ave-belmar-nj-07719",
+    "address": "1004 14TH AVE, BELMAR, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "decision_stance": "pass_unless_changes",
+    "primary_value_source": "unknown",
+    "ask_price": null,
+    "all_in_basis": null,
+    "fair_value_base": null,
+    "value_low": null,
+    "value_high": null,
+    "ask_premium_pct": null,
+    "basis_premium_pct": null,
+    "trust_flags": [
+      "incomplete_carry_inputs"
+    ],
+    "what_must_be_true": [],
+    "key_risks": [],
+    "overrides_applied": {}
+  },
+  "last_projection_view": {
+    "property_id": "1004-14th-ave-belmar-nj-07719",
+    "ask_price": 0.0,
+    "bull_case_value": 0.0,
+    "base_case_value": 0.0,
+    "bear_case_value": 0.0,
+    "stress_case_value": null,
+    "spread": 0.0,
+    "bull_total_adjustment_pct": null,
+    "base_total_adjustment_pct": null,
+    "bear_total_adjustment_pct": null,
+    "bull_growth_rate": null,
+    "base_growth_rate": null,
+    "bear_growth_rate": null,
+    "bcv_anchor": null,
+    "address": "1004 14TH AVE, BELMAR, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": {
+    "town": "Belmar",
+    "state": "NJ",
+    "median_price": 867500.0,
+    "median_ppsf": 515.87,
+    "sold_count": 320,
+    "confidence_raw": 0.72,
+    "confidence_tier": "strong",
+    "doc_count": 4,
+    "bullish_signals": [
+      "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
+      "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato",
+      "601 Main Street"
+    ],
+    "bearish_signals": []
+  },
+  "last_comps_preview": null,
+  "last_risk_view": {
+    "address": "1004 14TH AVE, BELMAR, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": null,
+    "bear_value": null,
+    "stress_value": null,
+    "risk_flags": [
+      "flood_medium",
+      "older_housing_stock"
+    ],
+    "trust_flags": [
+      "incomplete_carry_inputs"
+    ],
+    "key_risks": [],
+    "total_penalty": 16.0,
+    "confidence_tier": "thin"
+  },
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "turns": [
+    {
+      "user": "what do you think of 1004 14th Ave, belmar, nj",
+      "assistant": "Briarwood sees the immediate setup as pass unless changes.\nWhat supports that view: Identify which trust_flags or conflicts most change the picture and resolve those first.\nWhat could weaken confidence: incomplete_carry_inputs.\nNext best question: Complete the carry-cost inputs (taxes, insurance, financing).\nSource coverage: Coverage is still thin; no post-promotion enrichment has been captured yet.\nNearby support in Belmar:\n- 1008-14th-ave-belmar-nj-07719 \u2014 1008 14th Avenue, Belmar, NJ 07719, 3bd/1.0ba, $767,000\n- 1228-briarwood-road-belmar-nj \u2014 1228 BRIARWOOD RD, BELMAR, NJ 07719, 3bd/2.0ba\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000",
+      "answer_type": "browse"
+    },
+    {
+      "user": "should we buy 1004 14th Ave, belmar nj",
+      "assistant": "The decision stance on 1004 14th Ave, Belmar, NJ, is to pass unless changes occur, as determined by the DecisionEngine. The analysis is flagged with incomplete carry inputs, indicating a lack of critical information. The current ask price and all-in basis are not available, limiting our ability to make a fully informed assessment.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "What's the biggest risk?",
+      "assistant": "The biggest risk identified is the medium flood potential, which could significantly impact property viability. Additionally, the older housing stock presents concerns regarding maintenance and viability over time. The total penalty associated with these risks is assessed at $16,000. Currently, there are no key risks identified that would outright break the deal.",
+      "answer_type": "risk"
+    },
+    {
+      "user": "How can I de-risk this?",
+      "assistant": "The primary risk driver identified is the medium flood hazard. Additionally, the property is part of an older housing stock, which can present various maintenance and compliance challenges. The total penalty assessed is $16,000. There are currently no key risks that would make this deal break. Addressing the flood risk through mitigation measures and ensuring the property meets modern standards could significantly de-risk the investment.",
+      "answer_type": "risk"
+    },
+    {
+      "user": "Show me the comp set",
+      "assistant": "I couldn't render that chart (value_position requires ask_price and fair_value_base.).",
+      "answer_type": "visualize"
+    },
+    {
+      "user": "Run scenarios",
+      "assistant": "We don't have a model output for that. Briarwood would need specific projections for the base, bull, and bear case values, as well as growth rates, to generate a scenario analysis.",
+      "answer_type": "projection"
+    }
+  ]
+}

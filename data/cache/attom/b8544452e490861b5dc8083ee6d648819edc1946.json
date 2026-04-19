@@ -1,0 +1,115 @@
+{
+  "fetched_at": "2026-04-18T11:30:36Z",
+  "normalized_payload": {
+    "complete_event_count": 0,
+    "first_sale_date": null,
+    "first_sale_price": null,
+    "history_confidence": 0.15,
+    "history_confidence_label": "thin",
+    "history_flags": [],
+    "history_span_years": null,
+    "last_sale_date": null,
+    "last_sale_price": null,
+    "most_recent_hold_years": null,
+    "repeat_sale_pairs": [],
+    "sale_count": 0,
+    "sale_history": [],
+    "source_surface": "snapshot"
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1004 14TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1004 14TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2809"
+        },
+        "building": {
+          "rooms": {
+            "bathstotal": 1.0,
+            "beds": 2
+          },
+          "size": {
+            "universalsize": 1363
+          }
+        },
+        "identifier": {
+          "Id": 20133266,
+          "apn": "07-00139-0000-00019",
+          "apnOrig": "07-00139-0000-00019",
+          "attomId": 20133266,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.176592",
+          "longitude": "-74.033259"
+        },
+        "lot": {
+          "lotSize1": 0.115
+        },
+        "salehistory": [
+          {
+            "amount": {
+              "saleamt": 430000,
+              "salecode": "ESTIMATED Sale price is not available due to non-disclosure counties",
+              "saledisclosuretype": 0,
+              "saledocnum": "0000071498",
+              "saledoctype": "DEED",
+              "salerecdate": "2019-08-08",
+              "saletranstype": "Resale"
+            },
+            "calculation": {
+              "priceperbed": 215000,
+              "pricepersizeunit": 315.48
+            },
+            "saleSearchDate": "2019-08-08",
+            "saleTransDate": "2019-07-31",
+            "vintage": {
+              "lastModified": "2019-09-07"
+            }
+          }
+        ],
+        "summary": {
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "vintage": {
+          "lastModified": "2019-09-07",
+          "pubDate": "2019-09-07"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 20133266,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-18T11:30:36.746Z",
+      "total": 1,
+      "transactionID": "799e3ae9e3b3bb8263b1d4a5d9d5e2ab",
+      "version": "1.0.0"
+    }
+  }
+}

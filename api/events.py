@@ -26,6 +26,14 @@ EVENT_SCENARIO_TABLE = "scenario_table"
 EVENT_COMPARISON_TABLE = "comparison_table"
 EVENT_TOWN_SUMMARY = "town_summary"
 EVENT_COMPS_PREVIEW = "comps_preview"
+EVENT_RISK_PROFILE = "risk_profile"
+EVENT_VALUE_THESIS = "value_thesis"
+EVENT_STRATEGY_PATH = "strategy_path"
+EVENT_RENT_OUTLOOK = "rent_outlook"
+EVENT_RESEARCH_UPDATE = "research_update"
+EVENT_MODULES_RAN = "modules_ran"
+EVENT_VERIFIER_REPORT = "verifier_report"
+EVENT_GROUNDING_ANNOTATIONS = "grounding_annotations"
 
 
 def text_delta(content: str) -> dict[str, Any]:
@@ -121,6 +129,79 @@ def comps_preview(payload: dict[str, Any]) -> dict[str, Any]:
     DECISION response. Each row: address, sale price, beds/baths/sqft,
     sold date. Footer carries the aggregate (count, median price, avg PPSF)."""
     return {"type": EVENT_COMPS_PREVIEW, **payload}
+
+
+def risk_profile(payload: dict[str, Any]) -> dict[str, Any]:
+    """Structured risk output (risk_flags, trust_flags, bear/stress values,
+    key_risks, total_penalty, confidence_tier). Source fields come from
+    get_risk_profile() via session.last_risk_view."""
+    return {"type": EVENT_RISK_PROFILE, **payload}
+
+
+def value_thesis(payload: dict[str, Any]) -> dict[str, Any]:
+    """Structured edge-tier output: ask vs fair value, premium/discount, pricing
+    view, primary value source, value drivers, what must be true, comp
+    selection summary + selected comp rows. From get_value_thesis() + optional
+    get_cma() via session.last_value_thesis_view."""
+    return {"type": EVENT_VALUE_THESIS, **payload}
+
+
+def strategy_path(payload: dict[str, Any]) -> dict[str, Any]:
+    """Structured strategy-fit output: best path, recommendation, rental ease,
+    cash flow, liquidity, cash-on-cash return. From get_strategy_fit() via
+    session.last_strategy_view."""
+    return {"type": EVENT_STRATEGY_PATH, **payload}
+
+
+def rent_outlook(payload: dict[str, Any]) -> dict[str, Any]:
+    """Structured rent-lookup output: monthly/effective rent, rent source,
+    rental ease, annual NOI, multi-year horizon range, Zillow market rent.
+    From get_rent_estimate() + get_rent_outlook() via session.last_rent_outlook_view."""
+    return {"type": EVENT_RENT_OUTLOOK, **payload}
+
+
+def research_update(payload: dict[str, Any]) -> dict[str, Any]:
+    """Structured town-research output: confidence, narrative, bullish/bearish
+    signals, watch items, document count, warnings. From research_town() via
+    session.last_research_view."""
+    return {"type": EVENT_RESEARCH_UPDATE, **payload}
+
+
+def modules_ran(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Module-attribution badge row. Each item is `{module, label, contributed_to}`
+    where `contributed_to` lists the structured event types this module's output
+    reached (e.g. `["verdict", "scenario_table"]`). Only modules whose output
+    actually surfaced in the response should appear — modules that ran but
+    produced nothing the user sees are excluded by design."""
+    return {"type": EVENT_MODULES_RAN, "items": items}
+
+
+def grounding_annotations(
+    anchors: list[dict[str, Any]],
+    *,
+    ungrounded_declaration: bool = False,
+) -> dict[str, Any]:
+    """Citation anchors extracted from LLM-emitted `[[Module:field:value]]`
+    markers. Each anchor is `{module, field, value}`. The UI uses these to
+    wrap cited values in hover tooltips sourced from the named module.
+
+    `ungrounded_declaration` mirrors the verifier signal — true when the LLM
+    said "we don't have a model output for that." The UI renders the message
+    bubble in a muted variant so the distinction is visually obvious without
+    the user having to read the prose closely."""
+    return {
+        "type": EVENT_GROUNDING_ANNOTATIONS,
+        "anchors": anchors,
+        "ungrounded_declaration": ungrounded_declaration,
+    }
+
+
+def verifier_report(payload: dict[str, Any]) -> dict[str, Any]:
+    """Advisory grounding-verifier report. Emitted at end-of-turn so dev tooling
+    (browser DevTools, log scrapers) can surface violation rates without the
+    user-facing UI surfacing them. Step 5 keeps this advisory-only — Step 7
+    introduces strict mode behind `BRIARWOOD_STRICT_REGEN`."""
+    return {"type": EVENT_VERIFIER_REPORT, **payload}
 
 
 def encode_sse(event: dict[str, Any]) -> str:

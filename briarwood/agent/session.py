@@ -41,6 +41,12 @@ class Session:
     last_comparison_view: list[dict[str, object]] | None = None
     last_town_summary: dict[str, object] | None = None
     last_comps_preview: dict[str, object] | None = None
+    last_risk_view: dict[str, object] | None = None
+    last_value_thesis_view: dict[str, object] | None = None
+    last_strategy_view: dict[str, object] | None = None
+    last_rent_outlook_view: dict[str, object] | None = None
+    last_research_view: dict[str, object] | None = None
+    last_verifier_report: dict[str, object] | None = None
     turns: list[Turn] = field(default_factory=list)
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
@@ -77,5 +83,11 @@ class Session:
             last_comparison_view=data.get("last_comparison_view"),
             last_town_summary=data.get("last_town_summary"),
             last_comps_preview=data.get("last_comps_preview"),
+            last_risk_view=data.get("last_risk_view"),
+            last_value_thesis_view=data.get("last_value_thesis_view"),
+            last_strategy_view=data.get("last_strategy_view"),
+            last_rent_outlook_view=data.get("last_rent_outlook_view"),
+            last_research_view=data.get("last_research_view"),
+            last_verifier_report=data.get("last_verifier_report"),
             turns=turns,
         )

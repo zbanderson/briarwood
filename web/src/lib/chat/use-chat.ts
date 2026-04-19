@@ -6,11 +6,18 @@ import type {
   ChatEvent,
   ComparisonTableEvent,
   CompsPreviewEvent,
+  GroundingAnchor,
   Listing,
   ListingsEvent,
   MapEvent,
+  ModuleAttribution,
+  RentOutlookEvent,
+  ResearchUpdateEvent,
+  RiskProfileEvent,
   ScenarioTableEvent,
+  StrategyPathEvent,
   TownSummaryEvent,
+  ValueThesisEvent,
   VerdictEvent,
 } from "./events";
 
@@ -30,6 +37,14 @@ export type ChatMessage = {
   comparisonTable?: ComparisonTableEvent;
   townSummary?: TownSummaryEvent;
   compsPreview?: CompsPreviewEvent;
+  riskProfile?: RiskProfileEvent;
+  valueThesis?: ValueThesisEvent;
+  strategyPath?: StrategyPathEvent;
+  rentOutlook?: RentOutlookEvent;
+  researchUpdate?: ResearchUpdateEvent;
+  modulesRan?: ModuleAttribution[];
+  groundingAnchors?: GroundingAnchor[];
+  ungroundedDeclaration?: boolean;
   isStreaming?: boolean;
 };
 
@@ -238,6 +253,48 @@ export function useChat({
             ),
           );
           break;
+        case "risk_profile":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, riskProfile: event } : m,
+            ),
+          );
+          break;
+        case "value_thesis":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, valueThesis: event } : m,
+            ),
+          );
+          break;
+        case "strategy_path":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, strategyPath: event } : m,
+            ),
+          );
+          break;
+        case "rent_outlook":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, rentOutlook: event } : m,
+            ),
+          );
+          break;
+        case "research_update":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, researchUpdate: event } : m,
+            ),
+          );
+          break;
+        case "modules_ran":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, modulesRan: event.items } : m,
+            ),
+          );
+          break;
         case "suggestions":
           setSuggestions(event.items);
           break;
@@ -269,6 +326,24 @@ export function useChat({
         case "tool_call":
         case "tool_result":
           // Surface in a side-panel later (Phase 3.5). No-op for now.
+          break;
+        case "verifier_report":
+          // Step 5 ships the verifier in advisory mode — payload is dev-side
+          // only (visible via DevTools network tab) so we deliberately don't
+          // surface it in the UI yet. Step 6+ may render counts inline.
+          break;
+        case "grounding_annotations":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    groundingAnchors: event.anchors,
+                    ungroundedDeclaration: event.ungrounded_declaration,
+                  }
+                : m,
+            ),
+          );
           break;
       }
     },

@@ -13,7 +13,12 @@ import logging
 import math
 import re
 
-from briarwood.agent.composer import compose_contract_response, compose_structured_response
+from api.prompts import load_prompt
+from briarwood.agent.composer import (
+    complete_and_verify,
+    compose_contract_response,
+    compose_structured_response,
+)
 from briarwood.agent.llm import LLMClient
 from briarwood.agent.router import AnswerType, RouterDecision
 from briarwood.agent.session import Session
@@ -1009,12 +1014,18 @@ def handle_lookup(
         price_s = _money(price)
         return f"{addr} — ask {price_s}, {summary.get('pricing_view', '')}.".strip()
 
-    system = (
-        "Answer a factual real-estate lookup from the provided property summary. "
-        "Be 1-2 sentences. Never invent numbers."
-    )
+    system = load_prompt("lookup")
     user = f"Question: {text}\n\nSummary JSON:\n{summary}"
-    return llm.complete(system=system, user=user, max_tokens=120).strip()
+    cleaned, report = complete_and_verify(
+        llm=llm,
+        system=system,
+        user=user,
+        structured_inputs=dict(summary),
+        tier="lookup",
+        max_tokens=120,
+    )
+    session.last_verifier_report = report
+    return cleaned
 
 
 # ---------- DECISION ----------
@@ -1197,12 +1208,19 @@ def handle_decision(
         )
         support = view.primary_value_source or "current analysis"
         caveat = ", ".join(flags) if flags else "none"
-        return _finalize(llm.complete(
-            system=(
-                "Answer a property value question in 2-4 sentences from structured fields only. "
-                "Lead with the fair value anchor, include the value range when present, "
-                "and mention confidence drag briefly. Never say value is unknown if fair_value_base is provided."
-            ),
+        value_inputs = {
+            "address": view.address,
+            "fair_value_base": view.fair_value_base,
+            "value_low": view.value_low,
+            "value_high": view.value_high,
+            "primary_value_source": support,
+            "trust_flags": list(flags),
+            "ask_price": view.ask_price,
+            "all_in_basis": view.all_in_basis,
+        }
+        cleaned, report = complete_and_verify(
+            llm=llm,
+            system=load_prompt("decision_value"),
             user=(
                 f"user_question: {text}\n"
                 f"address: {view.address}\n"
@@ -1213,15 +1231,27 @@ def handle_decision(
                 f"ask_price: {view.ask_price}\n"
                 f"all_in_basis: {view.all_in_basis}\n"
             ),
+            structured_inputs=value_inputs,
+            tier="decision_value",
             max_tokens=180,
-        ).strip())
+        )
+        session.last_verifier_report = report
+        return _finalize(cleaned)
 
-    system = (
-        "Compose a 3-5 sentence decision summary from the structured fields provided. "
-        "Lead with the stance, cite the trust flags, quote the numbers verbatim — never invent. "
-        "Distinguish ask_price (listing) from all_in_basis (post-capex commitment) when they differ. "
-        "If a research_update line is provided, include it verbatim."
-    )
+    system = load_prompt("decision_summary")
+    summary_inputs = {
+        "overrides_applied": dict(view.overrides_applied) or {},
+        "decision_stance": stance,
+        "primary_value_source": pvs,
+        "ask_price": view.ask_price,
+        "all_in_basis": view.all_in_basis,
+        "fair_value_base": view.fair_value_base,
+        "basis_premium_pct": view.basis_premium_pct,
+        "ask_premium_pct": view.ask_premium_pct,
+        "trust_flags": list(flags),
+        "what_must_be_true": list(view.what_must_be_true),
+        "research_update": research_lines,
+    }
     user = (
         f"User question: {text}\n\n"
         f"overrides_applied: {dict(view.overrides_applied) or 'none'}\n"
@@ -1236,7 +1266,16 @@ def handle_decision(
         f"what_must_be_true: {list(view.what_must_be_true)}\n"
         f"research_update: {' | '.join(research_lines) or 'none'}"
     )
-    return _finalize(llm.complete(system=system, user=user, max_tokens=260).strip())
+    cleaned, report = complete_and_verify(
+        llm=llm,
+        system=system,
+        user=user,
+        structured_inputs=summary_inputs,
+        tier="decision_summary",
+        max_tokens=260,
+    )
+    session.last_verifier_report = report
+    return _finalize(cleaned)
 
 
 # ---------- SEARCH (Phase B placeholder) ----------
@@ -1481,6 +1520,17 @@ def handle_research(
     watch_items = list(market_read.watch_items or [])
     confidence = market_read.confidence_label or "Low"
     narrative = market_read.narrative_summary or f"No clear town pulse yet for {town}, {state}."
+    session.last_research_view = {
+        "town": town,
+        "state": state,
+        "confidence_label": market_read.confidence_label,
+        "narrative_summary": market_read.narrative_summary,
+        "bullish_signals": bullish,
+        "bearish_signals": bearish,
+        "watch_items": watch_items,
+        "document_count": market_read.document_count,
+        "warnings": list(market_read.warnings or []),
+    }
     lines = [f"{town}, {state} market read ({confidence} confidence): {narrative}"]
     if bullish:
         lines.append("What looks constructive: " + "; ".join(bullish[:2]) + ".")
@@ -1630,6 +1680,25 @@ def handle_rent_lookup(
     label = rent.get("rental_ease_label")
     ease = rent.get("rental_ease_score")
     noi = rent.get("annual_noi")
+    session.last_rent_outlook_view = {
+        "address": summary.get("address"),
+        "town": summary.get("town"),
+        "state": summary.get("state"),
+        "monthly_rent": monthly,
+        "effective_monthly_rent": effective,
+        "rent_source_type": source,
+        "rental_ease_label": label,
+        "rental_ease_score": ease,
+        "annual_noi": noi,
+        "horizon_years": horizon_years,
+        "future_rent_low": rent_outlook.future_rent_low,
+        "future_rent_mid": rent_outlook.future_rent_mid,
+        "future_rent_high": rent_outlook.future_rent_high,
+        "zillow_market_rent": rent_outlook.zillow_market_rent,
+        "zillow_rental_comp_count": rent_outlook.zillow_rental_comp_count,
+        "basis_to_rent_framing": rent_outlook.basis_to_rent_framing,
+        "owner_occupy_then_rent": rent_outlook.owner_occupy_then_rent,
+    }
     lines = [
         f"Estimated monthly rent: {money(monthly)} (source: {source}).",
         f"Effective rent after vacancy/management: {money(effective)}.",
@@ -1680,11 +1749,7 @@ def handle_rent_lookup(
         except (ChartUnavailable, ToolUnavailable) as exc:
             chart_line = f"\n(chart unavailable: {exc})"
     fallback = lambda: " ".join(lines)
-    system = (
-        "You are composing a concise, human investor-style rental read from structured Briarwood outputs. "
-        "Answer the user's exact rental question first, then add one sentence on confidence or caveats. "
-        "Never invent numbers."
-    )
+    system = load_prompt("rent_lookup")
     user = (
         f"User question: {text}\n"
         f"monthly_rent: {monthly}\n"
@@ -1696,14 +1761,18 @@ def handle_rent_lookup(
         f"horizon_years: {horizon_years}\n"
         f"rendered_fallback: {' '.join(lines)}"
     )
-    narrative = compose_contract_response(
+    rent_payload = asdict(rent_outlook)
+    narrative, report = compose_contract_response(
         llm=llm,
         contract_type="rent_outlook",
-        payload=asdict(rent_outlook),
+        payload=rent_payload,
         system=system,
         fallback=fallback,
         max_tokens=220,
+        structured_inputs=rent_payload,
+        tier="rent_lookup",
     )
+    session.last_verifier_report = report
     return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
 
@@ -1780,12 +1849,7 @@ def handle_projection(
             lines.append(f"Spread (bull-bear): {money(spread)}.")
         return "\n".join(lines) + chart_line
 
-    system = (
-        "You compose a short 3-5 sentence forward-looking briefing from a real-estate "
-        "bull/base/bear scenario payload. Lead with the base case vs ask, then contrast "
-        "bull and bear as the upside/downside range. Quote all dollar figures verbatim. "
-        "Do not invent numbers."
-    )
+    system = load_prompt("projection")
     user = (
         f"User question: {text}\n\n"
         f"overrides_applied: {overrides or 'none'}\n"
@@ -1799,13 +1863,27 @@ def handle_projection(
         f"bear_growth_rate: {proj.get('bear_growth_rate')}\n"
     )
     fallback = lambda: f"Base {money(base)} ({_delta(base)})."
-    narrative = compose_structured_response(
+    projection_inputs = {
+        "overrides_applied": overrides or {},
+        "ask_price": ask,
+        "bull_case_value": bull,
+        "base_case_value": base,
+        "bear_case_value": bear,
+        "stress_case_value": stress,
+        "base_growth_rate": proj.get("base_growth_rate"),
+        "bull_growth_rate": proj.get("bull_growth_rate"),
+        "bear_growth_rate": proj.get("bear_growth_rate"),
+    }
+    narrative, report = compose_structured_response(
         llm=llm,
         system=system,
         user=user,
         fallback=fallback,
         max_tokens=300,
+        structured_inputs=projection_inputs,
+        tier="projection",
     )
+    session.last_verifier_report = report
     return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
 
@@ -2046,6 +2124,26 @@ def handle_risk(
     risk_flags = profile.get("risk_flags") or []
     trust_flags = profile.get("trust_flags") or []
 
+    facts = _load_property_facts(pid)
+    total_penalty = profile.get("total_penalty")
+    if isinstance(total_penalty, (int, float)):
+        tier = "thin" if total_penalty >= 0.5 else "moderate" if total_penalty >= 0.25 else "strong"
+    else:
+        tier = None
+    session.last_risk_view = {
+        "address": facts.get("address"),
+        "town": facts.get("town"),
+        "state": facts.get("state"),
+        "ask_price": ask,
+        "bear_value": bear,
+        "stress_value": stress,
+        "risk_flags": list(risk_flags),
+        "trust_flags": list(trust_flags),
+        "key_risks": list(profile.get("key_risks") or []),
+        "total_penalty": total_penalty,
+        "confidence_tier": tier,
+    }
+
     chart_line = ""
     try:
         path = _render("risk_bar", profile, session_id=session.session_id or "default")
@@ -2069,11 +2167,16 @@ def handle_risk(
             lines.append("- No material risk drivers cached.")
         return "\n".join(lines) + chart_line
 
-    system = (
-        "You compose a 3-5 sentence downside briefing from a risk payload. Lead with the "
-        "biggest driver, name bear/stress dollar figures verbatim, and end with what would "
-        "make this deal break. Do not invent numbers or flags."
-    )
+    system = load_prompt("risk")
+    risk_inputs = {
+        "risk_flags": list(risk_flags),
+        "trust_flags": list(trust_flags),
+        "ask_price": ask,
+        "bear_case_value": bear,
+        "stress_case_value": stress,
+        "total_penalty": profile.get("total_penalty"),
+        "key_risks": list(profile.get("key_risks") or []),
+    }
     user = (
         f"User question: {text}\n\n"
         f"risk_flags: {risk_flags}\n"
@@ -2084,7 +2187,15 @@ def handle_risk(
         f"total_penalty: {profile.get('total_penalty')}\n"
         f"key_risks: {profile.get('key_risks')}\n"
     )
-    narrative = llm.complete(system=system, user=user, max_tokens=300).strip()
+    narrative, report = complete_and_verify(
+        llm=llm,
+        system=system,
+        user=user,
+        structured_inputs=risk_inputs,
+        tier="risk",
+        max_tokens=300,
+    )
+    session.last_verifier_report = report
     return (narrative or "No material risk drivers surfaced.") + chart_line
 
 
@@ -2143,6 +2254,24 @@ def handle_edge(
         for comp in (cma_result.comps if cma_result else [])
     ]
 
+    edge_facts = _load_property_facts(pid)
+    session.last_value_thesis_view = {
+        "address": edge_facts.get("address"),
+        "town": edge_facts.get("town"),
+        "state": edge_facts.get("state"),
+        "ask_price": ask,
+        "fair_value_base": fair,
+        "premium_discount_pct": prem,
+        "pricing_view": thesis.get("pricing_view"),
+        "primary_value_source": thesis.get("primary_value_source"),
+        "net_opportunity_delta_pct": thesis.get("net_opportunity_delta_pct"),
+        "value_drivers": list(thesis.get("value_drivers") or []),
+        "key_value_drivers": list(thesis.get("key_value_drivers") or []),
+        "what_must_be_true": list(thesis.get("what_must_be_true") or []),
+        "comp_selection_summary": cma_result.comp_selection_summary if cma_result else None,
+        "comps": list(comps),
+    }
+
     if llm is None:
         lines = [f"{'CMA' if cma_mode else 'Value thesis'} for {pid}:"]
         lines.append(f"- Ask {money(ask)} vs fair {money(fair)} " +
@@ -2160,12 +2289,20 @@ def handle_edge(
         lines.extend(_format_cma_comp_lines(comps))
         return "\n".join(lines) + chart_line
 
-    system = (
-        "You compose a 3-5 sentence value-thesis read. Lead with ask vs fair value and the "
-        "premium/discount. Name the primary value source and the top anchors driving fair "
-        "value. End with what has to be true for the edge to exist. Quote dollars verbatim. "
-        "If comp lines are provided, treat this as a CMA-style read and briefly cite the comp set."
-    )
+    system = load_prompt("edge")
+    edge_inputs = {
+        "ask_price": ask,
+        "fair_value_base": fair,
+        "premium_discount_pct": prem,
+        "pricing_view": thesis.get("pricing_view"),
+        "value_drivers": list(thesis.get("value_drivers") or []),
+        "primary_value_source": thesis.get("primary_value_source"),
+        "net_opportunity_delta_pct": thesis.get("net_opportunity_delta_pct"),
+        "key_value_drivers": list(thesis.get("key_value_drivers") or []),
+        "what_must_be_true": list(thesis.get("what_must_be_true") or []),
+        "comp_selection_summary": cma_result.comp_selection_summary if cma_result else None,
+        "comps": list(comps),
+    }
     user = (
         f"User question: {text}\n\n"
         f"ask_price: {ask}\n"
@@ -2180,7 +2317,15 @@ def handle_edge(
         f"comp_selection_summary: {cma_result.comp_selection_summary if cma_result else 'none'}\n"
         f"comp_lines: {_format_cma_comp_lines(comps) if comps else 'none'}\n"
     )
-    narrative = llm.complete(system=system, user=user, max_tokens=300).strip()
+    narrative, report = complete_and_verify(
+        llm=llm,
+        system=system,
+        user=user,
+        structured_inputs=edge_inputs,
+        tier="edge",
+        max_tokens=300,
+    )
+    session.last_verifier_report = report
     fallback = f"Ask {money(ask)} vs fair {money(fair)}."
     if comps:
         fallback += "\n" + "\n".join(_format_cma_comp_lines(comps))
@@ -2209,6 +2354,24 @@ def handle_strategy(
         return f"I couldn't score strategy fit ({exc})."
     session.current_property_id = pid
 
+    strategy_facts = _load_property_facts(pid)
+    session.last_strategy_view = {
+        "address": strategy_facts.get("address"),
+        "town": strategy_facts.get("town"),
+        "state": strategy_facts.get("state"),
+        "best_path": fit.get("best_path"),
+        "recommendation": fit.get("recommendation"),
+        "pricing_view": fit.get("pricing_view"),
+        "primary_value_source": fit.get("primary_value_source"),
+        "rental_ease_label": fit.get("rental_ease_label"),
+        "rental_ease_score": fit.get("rental_ease_score"),
+        "rent_support_score": fit.get("rent_support_score"),
+        "liquidity_score": fit.get("liquidity_score"),
+        "monthly_cash_flow": fit.get("monthly_cash_flow"),
+        "cash_on_cash_return": fit.get("cash_on_cash_return"),
+        "annual_noi": fit.get("annual_noi"),
+    }
+
     money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
 
     if llm is None:
@@ -2227,11 +2390,20 @@ def handle_strategy(
             lines.append(f"- Overall: {fit['recommendation']}")
         return "\n".join(lines)
 
-    system = (
-        "You compose a 3-5 sentence 'best way to play this' briefing. Compare the viable "
-        "paths (primary / rental / flip / hold) using the payload. Recommend one. Quote all "
-        "figures verbatim. Do not invent strategies that aren't supported by the data."
-    )
+    system = load_prompt("strategy")
+    strategy_inputs = {
+        "best_path": fit.get("best_path"),
+        "recommendation": fit.get("recommendation"),
+        "pricing_view": fit.get("pricing_view"),
+        "rental_ease_label": fit.get("rental_ease_label"),
+        "rental_ease_score": fit.get("rental_ease_score"),
+        "rent_support_score": fit.get("rent_support_score"),
+        "liquidity_score": fit.get("liquidity_score"),
+        "monthly_cash_flow": fit.get("monthly_cash_flow"),
+        "cash_on_cash_return": fit.get("cash_on_cash_return"),
+        "annual_noi": fit.get("annual_noi"),
+        "primary_value_source": fit.get("primary_value_source"),
+    }
     user = (
         f"User question: {text}\n\n"
         f"best_path: {fit.get('best_path')}\n"
@@ -2246,7 +2418,15 @@ def handle_strategy(
         f"annual_noi: {fit.get('annual_noi')}\n"
         f"primary_value_source: {fit.get('primary_value_source')}\n"
     )
-    narrative = llm.complete(system=system, user=user, max_tokens=300).strip()
+    narrative, report = complete_and_verify(
+        llm=llm,
+        system=system,
+        user=user,
+        structured_inputs=strategy_inputs,
+        tier="strategy",
+        max_tokens=300,
+    )
+    session.last_verifier_report = report
     return narrative or (fit.get("best_path") or "No strategy fit cached.")
 
 

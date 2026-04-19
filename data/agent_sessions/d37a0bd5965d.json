@@ -1,0 +1,45 @@
+{
+  "session_id": "d37a0bd5965d",
+  "current_property_id": "1228-briarwood-road-belmar-nj",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": {
+    "address": "1228 BRIARWOOD RD, BELMAR, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "best_path": "Close the data gaps listed under trust_flags before making this a decision question.",
+    "recommendation": "Conditional \u2014 trust is too low to issue a directional recommendation. Resolve the flagged trust gaps before leaning in or out.",
+    "pricing_view": "unavailable",
+    "primary_value_source": "unknown",
+    "rental_ease_label": "unavailable",
+    "rental_ease_score": null,
+    "rent_support_score": null,
+    "liquidity_score": null,
+    "monthly_cash_flow": null,
+    "cash_on_cash_return": null,
+    "annual_noi": 34529.56
+  },
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "turns": [
+    {
+      "user": "should i flip or rent?",
+      "assistant": "The best way to approach your decision on whether to flip or rent is to first address the identified trust gaps under trust_flags, as they currently prevent a clear recommendation. Given the available data, such as the annual NOI of $34,529.56, it\u2019s crucial to evaluate rental potential against likely flip profits once trust is established. Without reliable figures for pricing, rental ease, liquidity, and monthly cash flow, any strategy would be speculative at best. Thus, resolving these issues is essential before leaning towards any specific course of action.",
+      "answer_type": "strategy"
+    }
+  ]
+}

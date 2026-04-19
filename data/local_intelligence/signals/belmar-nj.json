@@ -162,12 +162,14 @@
       "impact_direction": "positive",
       "impact_magnitude": 4,
       "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-18T10:28:35.134339Z",
-      "last_transition_at": "2026-04-18T10:28:35.134339Z",
+      "last_seen_at": "2026-04-18T11:06:10.328647Z",
+      "last_transition_at": "2026-04-18T11:06:10.328647Z",
       "metadata": {
         "location": "601 Main Street",
         "related_source_document_ids": [
           "doc-3533cdf048d9",
+          "doc-59fc9a3d6cd1",
+          "doc-c8ef7f7fe8b3",
           "doc-55ce5d5239ab",
           "doc-2b12a0ce7184",
           "doc-2a6bc94046e6",
@@ -182,7 +184,7 @@
           "ordinance"
         ]
       },
-      "occurrence_count": 69,
+      "occurrence_count": 75,
       "previous_status": "completed",
       "reconciliation_status": "status_transition",
       "signal_type": "infrastructure",
@@ -195,7 +197,7 @@
       "time_horizon": "near_term",
       "title": "601 Main Street",
       "town": "Belmar",
-      "updated_at": "2026-04-18T10:28:35.134339Z"
+      "updated_at": "2026-04-18T11:06:10.328647Z"
     },
     {
       "affected_dimensions": [
@@ -230,7 +232,7 @@
       },
       "occurrence_count": 22,
       "previous_status": null,
-      "reconciliation_status": "unchanged",
+      "reconciliation_status": null,
       "signal_type": "zoning_change",
       "source_date": null,
       "source_document_id": "doc-6cf55a28e43b",
@@ -306,12 +308,20 @@
       "impact_direction": "neutral",
       "impact_magnitude": 3,
       "inference": null,
-      "last_seen_at": "2026-04-17T21:05:21.173014Z",
+      "last_seen_at": "2026-04-18T11:06:10.328647Z",
       "last_transition_at": null,
-      "metadata": {},
-      "occurrence_count": 1,
+      "metadata": {
+        "related_source_document_ids": [
+          "doc-c7ef0338196e",
+          "doc-6fd5f0be6e22"
+        ],
+        "source_type_history": [
+          "ordinance"
+        ]
+      },
+      "occurrence_count": 3,
       "previous_status": null,
-      "reconciliation_status": null,
+      "reconciliation_status": "unchanged",
       "signal_type": "zoning_change",
       "source_date": null,
       "source_document_id": "doc-c7ef0338196e",
@@ -322,7 +332,7 @@
       "time_horizon": "long_term",
       "title": "BOROUGH OF BELMAR PLANNING BOARD SPECIAL",
       "town": "Belmar",
-      "updated_at": "2026-04-17T21:05:21.169628Z"
+      "updated_at": "2026-04-18T11:06:10.328647Z"
     }
   ],
   "state": "NJ",

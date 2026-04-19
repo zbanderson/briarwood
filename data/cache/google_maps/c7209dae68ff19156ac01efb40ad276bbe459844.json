@@ -1,0 +1,122 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "1223",
+            "short_name": "1223",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Ocean Avenue",
+            "short_name": "Ocean Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Flatbush",
+            "short_name": "Flatbush",
+            "types": [
+              "neighborhood",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Brooklyn",
+            "short_name": "Brooklyn",
+            "types": [
+              "political",
+              "sublocality",
+              "sublocality_level_1"
+            ]
+          },
+          {
+            "long_name": "Kings County",
+            "short_name": "Kings County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New York",
+            "short_name": "NY",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "11230",
+            "short_name": "11230",
+            "types": [
+              "postal_code"
+            ]
+          }
+        ],
+        "formatted_address": "1223 Ocean Ave, Brooklyn, NY 11230, USA",
+        "geometry": {
+          "location": {
+            "lat": 40.6323693,
+            "lng": -73.95721499999999
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.6336926302915,
+              "lng": -73.9560893697085
+            },
+            "southwest": {
+              "lat": 40.6309946697085,
+              "lng": -73.9587873302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.6323296,
+              "longitude": -73.9575059
+            },
+            "restricted_travel_modes": [
+              "WALK"
+            ]
+          }
+        ],
+        "place_id": "ChIJXbqoNrVEwokRNTe2aZzmM3c",
+        "types": [
+          "street_address",
+          "subpremise"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "1223 Ocean Ave, Brooklyn, NY 11230, USA",
+    "latitude": 40.6323693,
+    "longitude": -73.95721499999999,
+    "place_id": "ChIJXbqoNrVEwokRNTe2aZzmM3c",
+    "types": [
+      "street_address",
+      "subpremise"
+    ],
+    "town": null,
+    "state": "NY",
+    "county": "Kings",
+    "zip_code": "11230"
+  },
+  "fetched_at": "2026-04-18T11:02:54Z"
+}

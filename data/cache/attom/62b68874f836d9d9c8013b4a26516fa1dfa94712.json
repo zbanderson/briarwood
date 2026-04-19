@@ -1,0 +1,159 @@
+{
+  "fetched_at": "2026-04-18T11:30:36Z",
+  "normalized_payload": {
+    "assessed_improvement": 154500,
+    "assessed_land": 200000,
+    "assessed_total": 354500,
+    "market_value": 354500,
+    "tax_amount": 5157.98,
+    "tax_year": 2024
+  },
+  "raw_payload": {
+    "property": [
+      {
+        "address": {
+          "country": "US",
+          "countrySubd": "NJ",
+          "line1": "1004 14TH AVE",
+          "line2": "BELMAR, NJ 07719",
+          "locality": "BELMAR",
+          "matchCode": "ExaStr",
+          "oneLine": "1004 14TH AVE, BELMAR, NJ 07719",
+          "postal1": "07719",
+          "postal2": "2809"
+        },
+        "area": {
+          "blockNum": "139",
+          "countrysecsubd": "Monmouth",
+          "countyuse1": "2",
+          "muncode": "MO",
+          "munname": "MONMOUTH",
+          "taxcodearea": "7"
+        },
+        "assessment": {
+          "appraised": {},
+          "assessed": {
+            "assdimprpersizeunit": 113.35,
+            "assdimprvalue": 154500,
+            "assdlandpersizeunit": 39.99,
+            "assdlandvalue": 200000,
+            "assdttlpersizeunit": 260.09,
+            "assdttlvalue": 354500
+          },
+          "calculations": {
+            "calcimprind": "ASSESSED VALUE",
+            "calcimprpersizeunit": 113.35,
+            "calcimprvalue": 154500,
+            "calclandind": "ASSESSED VALUE",
+            "calclandpersizeunit": 39.99,
+            "calclandvalue": 200000,
+            "calcttlind": "ASSESSED VALUE",
+            "calcttlvalue": 354500,
+            "calcvaluepersizeunit": 260.09
+          },
+          "market": {
+            "mktimprvalue": 154500,
+            "mktlandvalue": 200000,
+            "mktttlvalue": 354500
+          },
+          "tax": {
+            "taxamt": 5157.98,
+            "taxpersizeunit": 3.78,
+            "taxyear": 2024
+          }
+        },
+        "building": {
+          "construction": {
+            "condition": "AVERAGE",
+            "constructiontype": "TYPE UNKNOWN",
+            "roofShape": "GABLE",
+            "roofcover": "OTHER (NOT CLASSIFIED)",
+            "wallType": "STUCCO"
+          },
+          "interior": {},
+          "parking": {},
+          "rooms": {
+            "bathsfull": 1,
+            "bathstotal": 1.0,
+            "beds": 2,
+            "roomsTotal": 5
+          },
+          "size": {
+            "bldgsize": 1363,
+            "grosssizeadjusted": 1363,
+            "livingsize": 1363,
+            "sizeInd": "LIVING SQFT",
+            "universalsize": 1363
+          },
+          "summary": {
+            "archStyle": "CAPE COD",
+            "bldgsNum": 1,
+            "levels": 1,
+            "quality": "NP",
+            "unitsCount": "1",
+            "yearbuilteffective": 1940
+          }
+        },
+        "identifier": {
+          "Id": 20133266,
+          "apn": "07-00139-0000-00019",
+          "apnOrig": "07-00139-0000-00019",
+          "attomId": 20133266,
+          "fips": "34025"
+        },
+        "location": {
+          "accuracy": "Rooftop",
+          "distance": 0.0,
+          "geoIdV4": {
+            "CO": "55b1095f659ca5ad6f1b6d3b683d5673",
+            "DB": "b1f9cf98dab5cbdbb652049626b7039c, a048e9d907305f71f3fa8493c02a7602, 1e3d1025bdcaaa58a0b29cbc7bf7e5e7",
+            "PL": "299c218927a23f7c1abf2ed990db2d64",
+            "SB": "457e6b01a4be027e5caa09602f53aaea, a16cbf0dfb7aadac47d791f6bd3fba26, 9e522c4e3e453e39b47511a6f5cc0055",
+            "ZI": "ea21a5e58f63bebaeb458035ec2ca08c"
+          },
+          "geoid": "CO34025, CS3404930, DB3401410, PL3404930, SB0000102429, ZI07719",
+          "latitude": "40.176592",
+          "longitude": "-74.033259"
+        },
+        "lot": {
+          "depth": 100,
+          "frontage": 50,
+          "lotnum": "19",
+          "lotsize1": 0.115,
+          "lotsize2": 5001
+        },
+        "summary": {
+          "absenteeInd": "OWNER OCCUPIED",
+          "propIndicator": "10",
+          "propLandUse": "SFR",
+          "propclass": "Single Family Residence / Townhouse",
+          "propertyType": "SINGLE FAMILY RESIDENCE",
+          "propsubtype": "Residential",
+          "proptype": "SFR",
+          "yearbuilt": 1940
+        },
+        "utilities": {
+          "coolingtype": "YES",
+          "heatingtype": "FORCED AIR WITH AIR CONDITIONING",
+          "sewertype": "YES",
+          "watertype": "YES - TYPE UNKNOWN"
+        },
+        "vintage": {
+          "lastModified": "2025-10-16",
+          "pubDate": "2025-10-16"
+        }
+      }
+    ],
+    "status": {
+      "attomId": 20133266,
+      "code": 0,
+      "msg": "SuccessWithResult",
+      "page": 1,
+      "pagesize": 10,
+      "responseDateTime": "2026-04-18T11:30:36.575Z",
+      "total": 1,
+      "transactionID": "5a87655441e4b05b348a27f8e5748a8b",
+      "version": "1.0.0"
+    }
+  }
+}

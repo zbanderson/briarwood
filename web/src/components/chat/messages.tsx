@@ -12,6 +12,13 @@ import { ScenarioTable } from "./scenario-table";
 import { ComparisonTable } from "./comparison-table";
 import { TownSummaryCard } from "./town-summary-card";
 import { CompsPreviewCard } from "./comps-preview-card";
+import { RiskProfileCard } from "./risk-profile-card";
+import { ValueThesisCard } from "./value-thesis-card";
+import { StrategyPathCard } from "./strategy-path-card";
+import { RentOutlookCard } from "./rent-outlook-card";
+import { ResearchUpdateCard } from "./research-update-card";
+import { ModuleBadges } from "./module-badges";
+import { GroundedText } from "./grounded-text";
 
 // Lazy-load Mapbox — keeps it out of the main bundle and avoids SSR errors
 // from window-only globals in mapbox-gl.
@@ -92,6 +99,14 @@ function AssistantMessage({
   const comparisonTable = message.comparisonTable;
   const townSummary = message.townSummary;
   const compsPreview = message.compsPreview;
+  const riskProfile = message.riskProfile;
+  const valueThesis = message.valueThesis;
+  const strategyPath = message.strategyPath;
+  const rentOutlook = message.rentOutlook;
+  const researchUpdate = message.researchUpdate;
+  const modulesRan = message.modulesRan ?? [];
+  const anchors = message.groundingAnchors ?? [];
+  const muted = message.ungroundedDeclaration === true;
 
   return (
     <div className="flex">
@@ -100,9 +115,15 @@ function AssistantMessage({
           <StreamingIndicator />
         ) : (
           message.content && (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            <GroundedText
+              content={message.content}
+              anchors={anchors}
+              muted={muted}
+            />
           )
         )}
+
+        {modulesRan.length > 0 && <ModuleBadges modules={modulesRan} />}
 
         {map && map.pins.length > 0 && (
           <InlineMap
@@ -132,6 +153,16 @@ function AssistantMessage({
         {townSummary && <TownSummaryCard summary={townSummary} />}
 
         {compsPreview && <CompsPreviewCard preview={compsPreview} />}
+
+        {valueThesis && <ValueThesisCard thesis={valueThesis} />}
+
+        {riskProfile && <RiskProfileCard profile={riskProfile} />}
+
+        {strategyPath && <StrategyPathCard strategy={strategyPath} />}
+
+        {rentOutlook && <RentOutlookCard outlook={rentOutlook} />}
+
+        {researchUpdate && <ResearchUpdateCard research={researchUpdate} />}
 
         {scenarioTable && <ScenarioTable table={scenarioTable} />}
 
