@@ -45,6 +45,28 @@ def _force_all_required(schema: Any) -> Any:
     return schema
 
 
+def _response_output_text(response: object) -> str | None:
+    """Extract response text across the Responses API's output shapes."""
+    output_text = getattr(response, "output_text", None)
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text
+
+    output = getattr(response, "output", None)
+    if not isinstance(output, list):
+        return None
+
+    fragments: list[str] = []
+    for item in output:
+        content = getattr(item, "content", None)
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            text = getattr(part, "text", None)
+            if isinstance(text, str) and text.strip():
+                fragments.append(text)
+    return "\n".join(fragments).strip() or None
+
+
 class LLMClient(Protocol):
     def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str: ...
 
@@ -149,8 +171,8 @@ class OpenAIChatClient:
                 output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
             )
 
-        output_text = getattr(response, "output_text", None)
-        if not isinstance(output_text, str) or not output_text.strip():
+        output_text = _response_output_text(response)
+        if not output_text:
             _logger.warning("structured LLM call returned empty text (%s)", schema.__name__)
             return None
 

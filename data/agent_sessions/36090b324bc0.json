@@ -1,0 +1,55 @@
+{
+  "session_id": "36090b324bc0",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "full_underwrite",
+  "last_analysis_mode": "decision",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {},
+  "last_verifier_report": {
+    "tier": "lookup",
+    "sentences_total": 2,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": true,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 0,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th ave, belmar nj",
+      "assistant": "Why: The asking price of $767,000 is about 6% higher than the fair value estimated at $720,643.75. Next move: Lock in your total costs, including closing expenses, to get a complete financial picture.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what are the comps?",
+      "assistant": "We don't have a model output for comparable properties (comps) for this listing. Briarwood would need specific details about recent sales of similar properties in the area for that information.",
+      "answer_type": "lookup"
+    }
+  ]
+}

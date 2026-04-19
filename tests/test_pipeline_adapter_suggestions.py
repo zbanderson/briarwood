@@ -32,6 +32,15 @@ class SlotDerivedChipsTests(unittest.TestCase):
     def test_empty_session_produces_no_chips(self) -> None:
         self.assertEqual(_slot_derived_chips(_session()), [])
 
+    def test_presentation_contract_next_actions_lead_chip_list(self) -> None:
+        s = _session()
+        s.last_presentation_payload = {
+            "contract_type": "property_brief",
+            "next_actions": ["should I buy this at the current ask?"],
+        }
+        chips = _slot_derived_chips(s)
+        self.assertEqual(chips[0], "should I buy this at the current ask?")
+
     def test_risk_view_surfaces_top_risk_chip(self) -> None:
         s = _session()
         s.last_risk_view = {

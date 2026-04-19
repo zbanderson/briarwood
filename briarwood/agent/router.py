@@ -122,7 +122,9 @@ _CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
         AnswerType.SEARCH,
         re.compile(
             r"\b(find me|search for|look for|"
-            r"show me (?:properties|listings|homes|options|similar|other|nearby|more))\b",
+            r"show me (?:properties|listings|homes|houses|options|similar|other|nearby|more)|"
+            r"what(?:'s| is| are)? (?:the )?(?:homes|houses|properties|listings)\s+(?:are\s+)?(?:listed\s+)?for sale|"
+            r"(?:homes|houses|properties|listings)\s+(?:are\s+)?(?:listed\s+)?for sale\s+in)\b",
             re.IGNORECASE,
         ),
         "search imperative",
@@ -141,6 +143,15 @@ _CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
 
 
 _PROPERTY_ID_RE = re.compile(r"\b([a-z0-9]+(?:-[a-z0-9]+){2,})\b", re.IGNORECASE)
+_ADDRESS_LIKE_RE = re.compile(
+    r"\b\d+\s+[A-Za-z0-9 .'-]+?\b(?:ave|avenue|st|street|rd|road|dr|drive|ln|lane|blvd|boulevard|"
+    r"pkwy|parkway|ct|court|pl|place|ter|terrace|hwy|highway|cir|circle|way)\b",
+    re.IGNORECASE,
+)
+_EXPLICIT_BROWSE_RE = re.compile(
+    r"\b(?:what do you think of|your take on|thoughts on|tell me about)\b",
+    re.IGNORECASE,
+)
 
 
 def _cache_classify(text: str) -> tuple[AnswerType, str] | None:
@@ -148,6 +159,10 @@ def _cache_classify(text: str) -> tuple[AnswerType, str] | None:
     for answer_type, pattern, reason in _CACHE_RULES:
         if pattern.search(text):
             return answer_type, reason
+    if _EXPLICIT_BROWSE_RE.search(text) and (
+        _PROPERTY_ID_RE.search(text) or _ADDRESS_LIKE_RE.search(text)
+    ):
+        return AnswerType.BROWSE, "browse phrasing"
     return None
 
 

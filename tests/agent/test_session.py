@@ -25,6 +25,8 @@ class SessionStateTests(unittest.TestCase):
         self.assertIsNone(s.promotion_error)
         self.assertIsNone(s.last_answer_contract)
         self.assertIsNone(s.last_analysis_mode)
+        self.assertIsNone(s.last_presentation_payload)
+        self.assertIsNone(s.last_surface_narrative)
         self.assertEqual(s.turns, [])
 
     def test_record_appends_turn(self) -> None:
@@ -58,6 +60,8 @@ class SessionPersistenceTests(unittest.TestCase):
                     promotion_error=None,
                     last_answer_contract="property_brief",
                     last_analysis_mode="browse",
+                    last_presentation_payload={"contract_type": "property_brief", "next_actions": ["should I buy this?"]},
+                    last_surface_narrative="Decision: buy if price improves.",
                 )
                 s.record("hi", "hello", "chitchat")
                 s.record("should i buy?", "analyzing...", "decision")
@@ -76,6 +80,8 @@ class SessionPersistenceTests(unittest.TestCase):
             self.assertIsNone(loaded.promotion_error)
             self.assertEqual(loaded.last_answer_contract, "property_brief")
             self.assertEqual(loaded.last_analysis_mode, "browse")
+            self.assertEqual(loaded.last_presentation_payload, {"contract_type": "property_brief", "next_actions": ["should I buy this?"]})
+            self.assertEqual(loaded.last_surface_narrative, "Decision: buy if price improves.")
             self.assertEqual(len(loaded.turns), 2)
             self.assertEqual(loaded.turns[0].user, "hi")
             self.assertEqual(loaded.turns[1].answer_type, "decision")

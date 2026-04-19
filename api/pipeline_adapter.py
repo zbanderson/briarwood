@@ -1072,6 +1072,20 @@ def _append_chart_once(
     return True
 
 
+def _contract_next_actions(session: Session) -> list[str]:
+    payload = (
+        session.last_presentation_payload
+        if isinstance(session.last_presentation_payload, dict)
+        else None
+    )
+    if not payload:
+        return []
+    actions = payload.get("next_actions")
+    if not isinstance(actions, list):
+        return []
+    return [str(action).strip() for action in actions if isinstance(action, str) and action.strip()]
+
+
 def _slot_derived_chips(session: Session) -> list[str]:
     """Build follow-up chips from populated session slots.
 
@@ -1080,7 +1094,7 @@ def _slot_derived_chips(session: Session) -> list[str]:
     likely next question), then value thesis, scenarios, comps, strategy,
     rent, research. Duplicates are trimmed by the caller via a seen-set.
     """
-    chips: list[str] = []
+    chips: list[str] = list(_contract_next_actions(session))
 
     risk = session.last_risk_view if isinstance(session.last_risk_view, dict) else None
     if risk:
@@ -1326,6 +1340,12 @@ def _focal_listing_from_session(session: Session) -> dict[str, Any] | None:
 _NEXT_QUESTION_RE = re.compile(r"^next best question:\s*(.+)$", re.IGNORECASE)
 
 
+def _surface_narrative(session: Session | None, fallback: str) -> str:
+    if session and isinstance(session.last_surface_narrative, str) and session.last_surface_narrative.strip():
+        return session.last_surface_narrative
+    return fallback
+
+
 def _chat_text_from_browse(response_text: str, focal: dict[str, Any] | None) -> str:
     """handle_browse leads with an identifier line ('1600 L St — 4bd/3ba — ask $899k')
     that the focal card already shows. Strip that one line; keep the rest of the
@@ -1406,7 +1426,8 @@ async def _browse_stream_impl(
         return
 
     focal = _focal_listing_from_session(session)
-    intro = _chat_text_from_browse(response_text, focal)
+    surface_text = _surface_narrative(session, response_text)
+    intro = _chat_text_from_browse(surface_text, focal)
     visual_advice = _load_visual_advice(session, llm)
 
     primary_events: list[dict[str, Any]] = []
@@ -1498,11 +1519,11 @@ async def _browse_stream_impl(
                 yield events.map_payload(center, pins)
 
     if not native_chart_emitted:
-        _, chart_events = _extract_charts(response_text)
+        _, chart_events = _extract_charts(surface_text)
         for chart_ev in chart_events:
             yield chart_ev
 
-    yield events.suggestions(_suggestions_for_browse(response_text, focal, session))
+    yield events.suggestions(_suggestions_for_browse(surface_text, focal, session))
     if isinstance(session.last_verifier_report, dict):
         report = session.last_verifier_report
         anchors = report.get("anchors") or []
@@ -1643,7 +1664,8 @@ async def _decision_stream_impl(
     # even after the detail panel closes. Prefer the live session state — it
     # may have been refined by the resolver — but fall back to the original pin.
     focal = _focal_listing_from_session(session) or pinned_listing
-    cleaned, chart_events = _extract_charts(response_text)
+    surface_text = _surface_narrative(session, response_text)
+    cleaned, chart_events = _extract_charts(surface_text)
     visual_advice = _load_visual_advice(session, llm)
 
     primary_events: list[dict[str, Any]] = []
@@ -1909,7 +1931,8 @@ async def _dispatch_stream_impl(
         return
 
     focal = _focal_listing_from_session(session) or pinned_listing
-    cleaned, chart_events = _extract_charts(response_text)
+    surface_text = _surface_narrative(session, response_text)
+    cleaned, chart_events = _extract_charts(surface_text)
     visual_advice = _load_visual_advice(session, llm)
 
     primary_events: list[dict[str, Any]] = []

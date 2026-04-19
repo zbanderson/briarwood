@@ -150,6 +150,7 @@ class DecisionHandlerTests(unittest.TestCase):
         researcher.assert_not_called()
         self.assertIn("buy_if_price_improves", response)
         self.assertEqual(session.current_property_id, REF)
+        self.assertTrue(response.startswith(session.last_surface_narrative))
 
     def test_decision_value_question_uses_fair_value_anchor(self) -> None:
         decision = RouterDecision(
@@ -183,6 +184,126 @@ class DecisionHandlerTests(unittest.TestCase):
         self.assertIn("$804,397", response)
         self.assertIn("$742,000 to $861,000", response)
         self.assertNotIn("unknown", response.lower())
+
+    def test_decision_prefers_live_cma_comps_for_preview_and_value_thesis(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        view = PropertyView(
+            pid=REF,
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            baths=1.0,
+            ask_price=767000.0,
+            bcv=None,
+            pricing_view="appears_fully_valued",
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            all_in_basis=767000.0,
+            ask_premium_pct=0.0604,
+            basis_premium_pct=0.0604,
+            decision_stance="buy_if_price_improves",
+            primary_value_source="current_value",
+            trust_flags=("thin_comp_set",),
+            trust_summary={"band": "Moderate confidence"},
+            what_must_be_true=("Thin comp set gets resolved.",),
+            key_risks=("Thin comp set",),
+            why_this_stance=("Current basis sits above fair value.",),
+            what_changes_my_view=("Price improves toward fair value.",),
+            contradiction_count=0,
+            blocked_thesis_warnings=("Thin comp set",),
+            unified={"key_value_drivers": ["Beach-adjacent location"]},
+        )
+        live_cma = CMAResult(
+            property_id=REF,
+            address=view.address,
+            town="Belmar",
+            state="NJ",
+            ask_price=767000.0,
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            pricing_view="appears_fully_valued",
+            primary_value_source="current_value",
+            comp_selection_summary="Live Zillow market comps ranked toward the subject.",
+            comps=[
+                ComparableProperty(
+                    property_id="1302-l-street",
+                    address="1302 L Street, Belmar, NJ 07719",
+                    town="Belmar",
+                    state="NJ",
+                    beds=3,
+                    baths=2.0,
+                    ask_price=850000.0,
+                    blocks_to_beach=None,
+                    source_label="Live market comp",
+                    source_summary="Live Zillow market comp",
+                )
+            ],
+            confidence_notes=[],
+            missing_fields=[],
+        )
+        with patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=view,
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=live_cma,
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={"town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value={
+                "ask_price": 767000.0,
+                "base_case_value": 737726.0,
+                "bull_case_value": 795946.0,
+                "bear_case_value": 685581.0,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": view.address, "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.build_property_brief",
+            return_value=PropertyBrief(
+                property_id=REF,
+                address=view.address,
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=1.0,
+                ask_price=767000.0,
+                pricing_view="appears_fully_valued",
+                analysis_depth_used="decision",
+                recommendation="Buy if the price improves.",
+                decision="buy",
+                decision_stance="buy_if_price_improves",
+                best_path="Proceed carefully.",
+                key_value_drivers=["Beach-adjacent location"],
+                key_risks=["Thin comp set"],
+                trust_flags=["thin_comp_set"],
+                next_questions=["What entry price works?"],
+                fair_value_base=720644.0,
+                ask_premium_pct=0.0604,
+                primary_value_source="current_value",
+                recommended_next_run="edge",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={},
+        ):
+            handle_decision("should I buy this?", decision, session, llm=None)
+
+        self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
+        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        self.assertEqual(
+            session.last_value_thesis_view["comp_selection_summary"],
+            "Live Zillow market comps ranked toward the subject.",
+        )
 
 
 class EdgeHandlerTests(unittest.TestCase):
@@ -478,6 +599,7 @@ class BrowseHandlerTests(unittest.TestCase):
         return PropertyBrief(**payload)
 
     def test_browse_uses_property_brief_contract(self) -> None:
+        session = Session()
         with patch(
             "briarwood.agent.dispatch.get_property_brief",
             return_value=self._brief(),
@@ -485,7 +607,7 @@ class BrowseHandlerTests(unittest.TestCase):
             "briarwood.agent.dispatch.search_listings", return_value=[]
         ), patch("briarwood.agent.dispatch.analyze_property") as analyzer:
             response = handle_browse(
-                "what do you think of 526?", self._decision(), Session(), llm=None
+                "what do you think of 526?", self._decision(), session, llm=None
             )
         analyzer.assert_not_called()
         brief_tool.assert_called_once_with(REF, overrides={})
@@ -493,6 +615,8 @@ class BrowseHandlerTests(unittest.TestCase):
         self.assertIn("Decision:", response)
         self.assertIn("Why:", response)
         self.assertIn("Next move:", response)
+        self.assertEqual(session.last_presentation_payload["contract_type"], "property_brief")
+        self.assertEqual(session.last_surface_narrative, response)
 
 
 class SearchHandlerTests(unittest.TestCase):
@@ -812,6 +936,90 @@ class SearchHandlerTests(unittest.TestCase):
         self.assertIn("Decision:", response)
         self.assertIn("Next move:", response)
         self.assertNotIn("Nearby support in", response)
+
+    def test_browse_prefers_live_cma_comps_for_rendered_slots(self) -> None:
+        session = Session()
+        brief = self._brief(
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            ask_price=767000.0,
+            beds=3,
+            baths=1.0,
+        )
+        live_cma = CMAResult(
+            property_id=REF,
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            ask_price=767000.0,
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            pricing_view="appears_fully_valued",
+            primary_value_source="current_value",
+            comp_selection_summary="Live Zillow market comps ranked toward the subject.",
+            comps=[
+                ComparableProperty(
+                    property_id="1302-l-street",
+                    address="1302 L Street, Belmar, NJ 07719",
+                    town="Belmar",
+                    state="NJ",
+                    beds=3,
+                    baths=2.0,
+                    ask_price=850000.0,
+                    blocks_to_beach=None,
+                    source_label="Live market comp",
+                    source_summary="Live Zillow market comp",
+                )
+            ],
+            confidence_notes=[],
+            missing_fields=[],
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=brief,
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": brief.address, "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=live_cma,
+        ), patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[
+                {
+                    "property_id": "saved-comp",
+                    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 674200.0,
+                }
+            ],
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            side_effect=ToolUnavailable("skip projection"),
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            side_effect=ToolUnavailable("skip strategy"),
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            side_effect=ToolUnavailable("skip rent"),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={"town": "Belmar", "state": "NJ"},
+        ):
+            handle_browse("what do you think of 1008 14th ave?", self._decision(), session, llm=None)
+
+        self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
+        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        self.assertEqual(
+            session.last_value_thesis_view["comp_selection_summary"],
+            "Live Zillow market comps ranked toward the subject.",
+        )
 
     def test_browse_omits_missing_fields_instead_of_rendering_question_marks(self) -> None:
         """Bug A: null beds/baths must not render as '? bedrooms'."""

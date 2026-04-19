@@ -163,6 +163,32 @@ class OpenAIChatClientTests(unittest.TestCase):
         inner = sent_schema["$defs"]["Inner"]
         self.assertEqual(sorted(inner["required"]), ["summary", "title"])
 
+    def test_complete_structured_reads_json_from_output_fragments_when_output_text_blank(self) -> None:
+        from pydantic import BaseModel
+
+        class Schema(BaseModel):
+            answer_type: str
+            reason: str
+
+        client = self._make_client()
+        part = MagicMock()
+        part.text = '{"answer_type":"browse","reason":"llm classify"}'
+        item = MagicMock()
+        item.content = [part]
+        resp = MagicMock()
+        resp.output_text = ""
+        resp.output = [item]
+        resp.usage = MagicMock(input_tokens=5, output_tokens=5)
+        client._client.responses.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=Schema)
+
+        self.assertIsNotNone(out)
+        self.assertEqual(out.answer_type, "browse")
+        self.assertEqual(out.reason, "llm classify")
+
 
 class ForceAllRequiredTests(unittest.TestCase):
     """AUDIT 1.3.6: guard the schema rewrite used by complete_structured."""
@@ -193,6 +219,17 @@ class ForceAllRequiredTests(unittest.TestCase):
         out = llm_mod._force_all_required(schema)
         self.assertEqual(out["required"], ["tags"])
         self.assertNotIn("required", out["properties"]["tags"])
+
+    def test_response_output_text_falls_back_to_output_fragments(self) -> None:
+        part = MagicMock()
+        part.text = '{"ok":true}'
+        item = MagicMock()
+        item.content = [part]
+        response = MagicMock()
+        response.output_text = ""
+        response.output = [item]
+
+        self.assertEqual(llm_mod._response_output_text(response), '{"ok":true}')
 
 
 class AnthropicChatClientTests(unittest.TestCase):

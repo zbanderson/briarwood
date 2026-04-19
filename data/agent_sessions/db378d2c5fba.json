@@ -1,0 +1,173 @@
+{
+  "session_id": "db378d2c5fba",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": {
+    "pid": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 767000.0,
+    "all_in_basis": 767000.0,
+    "fair_value_base": 720643.75,
+    "value_low": 637460.27,
+    "value_high": 803827.24,
+    "ask_premium_pct": 0.0604,
+    "basis_premium_pct": 0.0604,
+    "trust_flags": [],
+    "trust_summary": {
+      "confidence": 0.7485,
+      "band": "Moderate confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "what_must_be_true": [],
+    "key_risks": [],
+    "why_this_stance": [
+      "Current basis sits about 6.0% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 6.0% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "overrides_applied": {}
+  },
+  "last_projection_view": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "ask_price": 767000.0,
+    "bull_case_value": 795946.0,
+    "base_case_value": 737726.0,
+    "bear_case_value": 685581.0,
+    "stress_case_value": 504451.0,
+    "spread": 110365.0,
+    "bull_total_adjustment_pct": 0.1045,
+    "base_total_adjustment_pct": 0.0237,
+    "bear_total_adjustment_pct": -0.0487,
+    "bull_growth_rate": 0.0377,
+    "base_growth_rate": -0.0382,
+    "bear_growth_rate": -0.1062,
+    "bcv_anchor": 720643.75,
+    "basis_label": "ask",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": {
+    "town": "Belmar",
+    "state": "NJ",
+    "median_price": 867500.0,
+    "median_ppsf": 515.87,
+    "sold_count": 320,
+    "confidence_raw": 0.72,
+    "confidence_tier": "strong",
+    "doc_count": 4,
+    "bullish_signals": [
+      "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
+      "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato",
+      "601 Main Street"
+    ],
+    "bearish_signals": []
+  },
+  "last_comps_preview": {
+    "subject_pid": "1008-14th-ave-belmar-nj-07719",
+    "subject_ask": 767000.0,
+    "count": 4,
+    "median_price": 850000.0,
+    "comps": [
+      {
+        "property_id": "1302-l-street",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "l-street-2",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 1.5,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "briarwood-rd-belmar",
+        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 674200.0,
+        "premium_pct": -0.121
+      },
+      {
+        "property_id": "1600-l-street-belmar-nj-07719",
+        "address": "1600 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 899000.0,
+        "premium_pct": 0.1721
+      }
+    ]
+  },
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_visual_advice": {},
+  "last_verifier_report": {
+    "tier": "decision_summary",
+    "sentences_total": 3,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "I recommend considering a buy for 1008 14th Avenue in Belmar, NJ, if the price improves.",
+        "value": "1008",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 1,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th ave, belmar, nj",
+      "assistant": "This single-family residence features 3 bedrooms and 1 bathroom.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The current listing price is $767,000, which is about 6.04% higher than the calculated fair value of $720,643.75. The higher ask price indicates a premium, suggesting caution in your decision until adjustments are made.",
+      "answer_type": "decision"
+    }
+  ]
+}

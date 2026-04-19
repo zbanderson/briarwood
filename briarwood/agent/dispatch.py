@@ -104,6 +104,19 @@ def _set_workflow_state(
         session.search_context = search_context
 
 
+def _remember_surface_output(
+    session: Session,
+    *,
+    narrative: str | None = None,
+    presentation_payload: dict[str, object] | None = None,
+) -> None:
+    """Persist the shared turn contract plus the rendered first-read."""
+    if presentation_payload is not None:
+        session.last_presentation_payload = presentation_payload
+    if narrative is not None:
+        session.last_surface_narrative = narrative
+
+
 def _flag_to_focus(flag: str) -> list[str]:
     return {
         "weak_town_context": ["weak_town_context", "development"],
@@ -446,51 +459,26 @@ def _build_town_summary(town: str | None, state: str | None) -> dict[str, object
     }
 
 
-def _build_comps_preview(pid: str, view: "PropertyView") -> dict[str, object] | None:
-    """Top 3-5 saved comps used in the valuation, shaped for a preview card.
+def _cma_rows_from_result(cma_result: CMAResult | None) -> list[dict[str, object]]:
+    return [_comp_row_from_cma(comp) for comp in (cma_result.comps if cma_result else [])]
 
-    Uses the existing comp-matching helper rather than re-running CMA. Each
-    row carries address, beds/baths/sqft, price, and premium vs subject so
-    the UI can render a compact stack without another round-trip.
-    """
+
+def _build_comps_preview(
+    pid: str,
+    view: "PropertyView",
+    *,
+    cma_result: CMAResult | None = None,
+) -> dict[str, object] | None:
+    """Build the compact comps preview, preferring the shared CMA contract."""
     subject_ask = view.ask_price
-    thesis = {"ask_price": subject_ask}
-    try:
-        comps = _cma_comps_for_property(pid, thesis)
-    except Exception:
-        return None
+    comps = _cma_rows_from_result(cma_result)
     if not comps:
-        return None
-    rows: list[dict[str, object]] = []
-    prices: list[float] = []
-    for c in comps[:5]:
-        price = c.get("ask_price") or c.get("price")
-        premium_pct = None
-        if isinstance(price, (int, float)) and isinstance(subject_ask, (int, float)) and subject_ask:
-            premium_pct = round((float(price) - float(subject_ask)) / float(subject_ask), 4)
-        rows.append({
-            "property_id": c.get("property_id"),
-            "address": c.get("address"),
-            "beds": c.get("beds"),
-            "baths": c.get("baths"),
-            "sqft": c.get("sqft"),
-            "price": price,
-            "premium_pct": premium_pct,
-        })
-        if isinstance(price, (int, float)):
-            prices.append(float(price))
-    median_price = None
-    if prices:
-        prices.sort()
-        mid = len(prices) // 2
-        median_price = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
-    return {
-        "subject_pid": pid,
-        "subject_ask": subject_ask,
-        "count": len(rows),
-        "median_price": median_price,
-        "comps": rows,
-    }
+        thesis = {"ask_price": subject_ask}
+        try:
+            comps = _cma_comps_for_property(pid, thesis)
+        except Exception:
+            return None
+    return _comps_preview_from_cma(pid, subject_ask, comps)
 
 
 def _format_browse_setup(brief: PropertyBrief) -> str:
@@ -606,7 +594,12 @@ def _build_browse_comps_preview(
     pid: str,
     subject_ask: float | None,
     neighbors: list[dict[str, object]],
+    *,
+    cma_result: CMAResult | None = None,
 ) -> dict[str, object] | None:
+    cma_rows = _cma_rows_from_result(cma_result)
+    if cma_rows:
+        return _comps_preview_from_cma(pid, subject_ask, cma_rows)
     rows: list[dict[str, object]] = []
     prices: list[float] = []
     for comp in neighbors:
@@ -659,24 +652,56 @@ def _browse_what_must_be_true(brief: PropertyBrief) -> list[str]:
 def _build_browse_value_thesis(
     brief: PropertyBrief,
     neighbors: list[dict[str, object]],
+    *,
+    cma_result: CMAResult | None = None,
 ) -> dict[str, object]:
-    comps = [
-        {
-            "property_id": comp.get("property_id"),
-            "address": comp.get("address"),
-            "beds": comp.get("beds"),
-            "baths": comp.get("baths"),
-            "ask_price": comp.get("ask_price") or comp.get("price"),
-            "blocks_to_beach": comp.get("blocks_to_beach"),
-            "source_label": "Saved comp",
-            "selected_by": "briarwood",
-            "feeds_fair_value": None,
-            "inclusion_reason": "Nearby saved listing ranked toward the subject's price and layout.",
-            "source_summary": "Context comp from Briarwood's nearby saved listings.",
-        }
-        for comp in neighbors[:4]
-        if comp.get("property_id") != brief.property_id
-    ]
+    cma_rows = _cma_rows_from_result(cma_result)
+    if cma_rows:
+        comps = [
+            {
+                "property_id": comp.get("property_id"),
+                "address": comp.get("address"),
+                "beds": comp.get("beds"),
+                "baths": comp.get("baths"),
+                "ask_price": comp.get("ask_price") or comp.get("price"),
+                "blocks_to_beach": comp.get("blocks_to_beach"),
+                "source_label": comp.get("source_label") or "Live market comp",
+                "selected_by": "briarwood",
+                "feeds_fair_value": True,
+                "inclusion_reason": comp.get("selection_rationale")
+                or comp.get("inclusion_reason")
+                or "Market comp ranked toward the subject's price and layout.",
+                "source_summary": comp.get("source_summary")
+                or (cma_result.comp_selection_summary if cma_result else None)
+                or "Live market comp selected for same-town market support.",
+            }
+            for comp in cma_rows
+            if comp.get("property_id") != brief.property_id
+        ]
+        comp_selection_summary = cma_result.comp_selection_summary if cma_result else None
+    else:
+        comps = [
+            {
+                "property_id": comp.get("property_id"),
+                "address": comp.get("address"),
+                "beds": comp.get("beds"),
+                "baths": comp.get("baths"),
+                "ask_price": comp.get("ask_price") or comp.get("price"),
+                "blocks_to_beach": comp.get("blocks_to_beach"),
+                "source_label": "Saved comp",
+                "selected_by": "briarwood",
+                "feeds_fair_value": None,
+                "inclusion_reason": "Nearby saved listing ranked toward the subject's price and layout.",
+                "source_summary": "Context comp from Briarwood's nearby saved listings.",
+            }
+            for comp in neighbors[:4]
+            if comp.get("property_id") != brief.property_id
+        ]
+        comp_selection_summary = (
+            f"Nearby {brief.town or 'local'} saved listings ranked toward the subject's price and layout."
+            if comps
+            else None
+        )
     return {
         "address": brief.address,
         "town": brief.town,
@@ -705,11 +730,51 @@ def _build_browse_value_thesis(
         },
         "contradiction_count": 0,
         "blocked_thesis_warnings": list(brief.key_risks or [])[:2],
-        "comp_selection_summary": (
-            f"Nearby {brief.town or 'local'} saved listings ranked toward the subject's price and layout."
-            if comps
-            else None
-        ),
+        "comp_selection_summary": comp_selection_summary,
+        "comps": comps,
+    }
+
+
+def _build_decision_value_thesis(
+    pid: str,
+    view: "PropertyView",
+    *,
+    cma_result: CMAResult | None = None,
+) -> dict[str, object]:
+    comps = _cma_rows_from_result(cma_result)
+    comp_selection_summary = cma_result.comp_selection_summary if cma_result and comps else None
+    if not comps:
+        fallback_comps = _build_comps_preview(pid, view, cma_result=None)
+        comps = list((fallback_comps or {}).get("comps") or [])
+        if comps:
+            comp_selection_summary = "Saved Briarwood comps ranked by matching layout and price."
+    unified = dict(view.unified or {})
+    value_drivers = list(unified.get("key_value_drivers") or [])
+    net_delta_pct = -view.ask_premium_pct if isinstance(view.ask_premium_pct, (int, float)) else None
+    valuation_x_risk = dict((unified.get("valuation_x_risk") or {}).get("adjustments") or {})
+    return {
+        "address": view.address,
+        "town": view.town,
+        "state": view.state,
+        "ask_price": view.ask_price,
+        "fair_value_base": view.fair_value_base,
+        "value_low": view.value_low,
+        "value_high": view.value_high,
+        "premium_discount_pct": view.ask_premium_pct,
+        "pricing_view": unified.get("pricing_view") or view.pricing_view,
+        "primary_value_source": view.primary_value_source,
+        "net_opportunity_delta_pct": net_delta_pct,
+        "value_drivers": value_drivers,
+        "key_value_drivers": value_drivers,
+        "what_must_be_true": list(view.what_must_be_true),
+        "why_this_stance": list(view.why_this_stance),
+        "what_changes_my_view": list(view.what_changes_my_view),
+        "trust_summary": dict(view.trust_summary),
+        "contradiction_count": view.contradiction_count,
+        "blocked_thesis_warnings": list(view.blocked_thesis_warnings),
+        "risk_adjusted_fair_value": valuation_x_risk.get("risk_adjusted_fair_value"),
+        "required_discount": valuation_x_risk.get("required_discount"),
+        "comp_selection_summary": comp_selection_summary,
         "comps": comps,
     }
 
@@ -1001,6 +1066,7 @@ def _populate_browse_slots(
     brief: PropertyBrief,
     summary: dict[str, object] | None,
     neighbors: list[dict[str, object]],
+    cma_result: CMAResult | None,
     projection: dict[str, object] | None,
     strategy_fit: dict[str, object] | None,
     rent_outlook: RentOutlook | None,
@@ -1011,8 +1077,17 @@ def _populate_browse_slots(
         logger.warning("browse town summary build failed for %s: %s", pid, exc)
         session.last_town_summary = None
 
-    session.last_comps_preview = _build_browse_comps_preview(pid, brief.ask_price, neighbors)
-    session.last_value_thesis_view = _build_browse_value_thesis(brief, neighbors)
+    session.last_comps_preview = _build_browse_comps_preview(
+        pid,
+        brief.ask_price,
+        neighbors,
+        cma_result=cma_result,
+    )
+    session.last_value_thesis_view = _build_browse_value_thesis(
+        brief,
+        neighbors,
+        cma_result=cma_result,
+    )
 
     facts = summary or {}
     if projection:
@@ -1301,6 +1376,7 @@ def handle_decision(
         return f"I couldn't analyze that ({exc})."
     session.current_property_id = pid
     session.last_decision_view = _decision_view_to_dict(view)
+    cma_result: CMAResult | None = None
 
     # Spoon-feed the first DECISION response with town context + comp preview
     # so the user doesn't need two follow-ups to get the full picture. Both
@@ -1311,15 +1387,30 @@ def handle_decision(
         logger.warning("town summary build failed: %s", exc)
         session.last_town_summary = None
     try:
-        session.last_comps_preview = _build_comps_preview(pid, view)
+        cma_result = get_cma(pid, overrides=overrides)
+    except Exception as exc:
+        logger.warning("decision CMA build failed: %s", exc)
+        cma_result = None
+    try:
+        session.last_comps_preview = _build_comps_preview(pid, view, cma_result=cma_result)
     except Exception as exc:
         logger.warning("comps preview build failed: %s", exc)
         session.last_comps_preview = None
+    try:
+        session.last_value_thesis_view = _build_decision_value_thesis(
+            pid,
+            view,
+            cma_result=cma_result,
+        )
+    except Exception as exc:
+        logger.warning("decision value thesis build failed: %s", exc)
+        session.last_value_thesis_view = None
 
     # Populate the scenario view so the first DECISION response can emit a
     # bull/base/bear table + fan chart inline. Failures here must not block
     # the decision narrative — scenarios are enrichment, not the core answer.
     projection_chart_line = ""
+    presentation_payload: dict[str, object] | None = None
     try:
         proj = get_projection(pid, overrides=overrides)
         session.last_projection_view = {
@@ -1338,6 +1429,11 @@ def handle_decision(
         logger.warning("decision projection failed for %s: %s", pid, exc)
 
     def _finalize(response: str) -> str:
+        _remember_surface_output(
+            session,
+            narrative=response,
+            presentation_payload=presentation_payload,
+        )
         return response + projection_chart_line
 
     # Auto-research hook: exactly one loop, only in decision mode, only when a
@@ -1379,7 +1475,6 @@ def handle_decision(
     # capex is applied (renovation override, capex lane, etc.).
     basis = view.all_in_basis if view.all_in_basis is not None else view.ask_price
     premium = view.basis_premium_pct
-    presentation_payload: dict[str, object] | None = None
     if not overrides:
         try:
             summary = get_property_summary(pid)
@@ -1388,6 +1483,7 @@ def handle_decision(
                 pid,
                 include_town_research=False,
                 brief=derived_brief,
+                cma=cma_result,
                 contract_type="decision_summary",
                 analysis_mode="decision",
             )
@@ -3114,10 +3210,16 @@ def handle_browse(
     except ToolUnavailable as exc:
         return f"I couldn't build a property brief ({exc})."
     session.current_property_id = pid
+    cma_result: CMAResult | None = None
     try:
         summary = get_property_summary(pid)
     except ToolUnavailable:
         summary = {}
+    try:
+        cma_result = get_cma(pid, overrides=overrides)
+    except Exception as exc:
+        logger.warning("browse CMA build failed for %s: %s", pid, exc)
+        cma_result = None
     projection: dict[str, object] | None = None
     strategy_fit: dict[str, object] | None = None
     rent_outlook: RentOutlook | None = None
@@ -3159,6 +3261,7 @@ def handle_browse(
             include_risk=False,
             brief=brief,
             enrichment=enrichment,
+            cma=cma_result,
             rent_outlook=rent_outlook,
             contract_type="property_brief",
             analysis_mode="browse",
@@ -3190,6 +3293,7 @@ def handle_browse(
         brief=brief,
         summary=summary if isinstance(summary, dict) else None,
         neighbors=neighbors,
+        cma_result=cma_result,
         projection=projection,
         strategy_fit=strategy_fit,
         rent_outlook=rent_outlook,
@@ -3206,6 +3310,11 @@ def handle_browse(
         payload=browse_inputs,
         fallback=fallback,
     )
+    _remember_surface_output(
+        session,
+        narrative=response,
+        presentation_payload=presentation_payload,
+    )
     if report is not None:
         session.last_verifier_report = report
     if promotion and promotion.property_id == pid:
@@ -3214,6 +3323,7 @@ def handle_browse(
             f"as {pid} from live Zillow discovery."
         )
         response = "\n".join([intro, *_promotion_intake_lines(promotion), *_promotion_enrichment_lines(enrichment), response])
+        session.last_surface_narrative = response
     return response
 
 

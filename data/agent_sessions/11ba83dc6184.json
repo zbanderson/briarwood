@@ -1,0 +1,78 @@
+{
+  "session_id": "11ba83dc6184",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "full_underwrite",
+  "last_analysis_mode": "decision",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {},
+  "last_verifier_report": {
+    "tier": "lookup",
+    "sentences_total": 2,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "You can view more details [here](https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/).",
+        "value": "1008",
+        "reason": "number not present in structured_inputs or anchors"
+      },
+      {
+        "kind": "ungrounded_number",
+        "sentence": "You can view more details [here](https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/).",
+        "value": "07719",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 1,
+      "regen_attempted": true,
+      "threshold": 2
+    }
+  },
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th ave, belmar, nj",
+      "assistant": "Why: The asking price of $767,000 is about 6% above Briarwood's estimated fair value of $720,643.75. Next move: Consider making an offer below the asking price to align with the risk-adjusted band.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "What rent would make this deal work?",
+      "assistant": "To make this deal work, you would need the rent to reach approximately $5,898 per month. Currently, the projected rent based on market data is around $2,352, which means significant increases are necessary. The confidence around achieving these rent levels is low, given the fragile rental profile indicated by a score of 45.21.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "Compare to nearby sales",
+      "assistant": "Comparison needs two valid property ids I've seen before.",
+      "answer_type": "comparison"
+    },
+    {
+      "user": "Pick a winner",
+      "assistant": "The property is listed for $767,000 and features 3 bedrooms and 1 bathroom [[property:ask_price:767000], [property:beds:3], [property:baths:1.0]].",
+      "answer_type": "lookup"
+    }
+  ]
+}

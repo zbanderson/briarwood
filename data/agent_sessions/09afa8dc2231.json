@@ -1,0 +1,63 @@
+{
+  "session_id": "09afa8dc2231",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "full_underwrite",
+  "last_analysis_mode": "decision",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_visual_advice": {},
+  "last_verifier_report": {
+    "tier": "lookup",
+    "sentences_total": 2,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": true,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 0,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th ave, belmar nj",
+      "assistant": "The property has an asking price of $767,000 and features 3 bedrooms and 1 bathroom.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The listing price is set at $767,000, while our fair value estimate stands at $720,643.75, indicating that the current ask price is about 6.04% above the fair value. This price discrepancy suggests potential for negotiation, so consider waiting for the price to drop before making an offer.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "What would a 10% price cut do?",
+      "assistant": "A 10% price cut would reduce the asking price from $767,000 to $690,300.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "What's driving the town outlook?",
+      "assistant": "We don't have a model output for what is specifically driving the town outlook for Belmar, NJ. Briarwood would need additional data on economic factors, local developments, or demographic trends to provide insights.",
+      "answer_type": "lookup"
+    }
+  ]
+}

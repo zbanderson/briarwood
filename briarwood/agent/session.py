@@ -47,6 +47,8 @@ class Session:
     last_rent_outlook_view: dict[str, object] | None = None
     last_research_view: dict[str, object] | None = None
     last_trust_view: dict[str, object] | None = None
+    last_presentation_payload: dict[str, object] | None = None
+    last_surface_narrative: str | None = None
     last_visual_advice: dict[str, object] | None = None
     last_verifier_report: dict[str, object] | None = None
     turns: list[Turn] = field(default_factory=list)
@@ -71,6 +73,8 @@ class Session:
         self.last_rent_outlook_view = None
         self.last_research_view = None
         self.last_trust_view = None
+        self.last_presentation_payload = None
+        self.last_surface_narrative = None
         self.last_visual_advice = None
         self.last_verifier_report = None
 
@@ -114,6 +118,8 @@ class Session:
             last_rent_outlook_view=data.get("last_rent_outlook_view"),
             last_research_view=data.get("last_research_view"),
             last_trust_view=data.get("last_trust_view"),
+            last_presentation_payload=data.get("last_presentation_payload"),
+            last_surface_narrative=data.get("last_surface_narrative"),
             last_visual_advice=data.get("last_visual_advice"),
             last_verifier_report=data.get("last_verifier_report"),
             turns=turns,

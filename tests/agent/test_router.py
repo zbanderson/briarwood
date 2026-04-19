@@ -34,6 +34,12 @@ CACHE_CANNED: list[tuple[str, AnswerType]] = [
     ("Show me listings in Avon", AnswerType.SEARCH),
     ("Find me properties near the beach", AnswerType.SEARCH),
     ("Look for similar homes", AnswerType.SEARCH),
+    ("What are the homes for sale in Belmar NJ", AnswerType.SEARCH),
+    # browse (explicit opinion-solicit about a specific property)
+    ("What do you think of 1008 14th Ave, Belmar, NJ", AnswerType.BROWSE),
+    ("Tell me about 1008 14th Avenue, Belmar, NJ 07719", AnswerType.BROWSE),
+    ("What do you think of 526-west-end-ave?", AnswerType.BROWSE),
+    ("Your take on 526-west-end-ave?", AnswerType.BROWSE),
 ]
 
 
@@ -42,8 +48,6 @@ CACHE_CANNED: list[tuple[str, AnswerType]] = [
 LLM_CANNED: list[tuple[str, AnswerType]] = [
     ("What's the address of 526-west-end-ave?", AnswerType.LOOKUP),
     ("How many beds does 526-west-end-ave have?", AnswerType.LOOKUP),
-    ("What do you think of 526-west-end-ave?", AnswerType.BROWSE),
-    ("Your take on 526-west-end-ave?", AnswerType.BROWSE),
     ("What's happening in Avon-by-the-Sea?", AnswerType.RESEARCH),
     ("What could go wrong with 526?", AnswerType.RISK),
     ("Where's the value on 526?", AnswerType.EDGE),
