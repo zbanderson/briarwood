@@ -795,6 +795,89 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertEqual(payload["trust_summary"], {})
 
 
+class RiskProfileEventShapeTests(unittest.TestCase):
+    """AUDIT O.6: risk_profile is emitted by splatting `session.last_risk_view`
+    through `events.risk_profile`. The shape is not enforced by a schema, so
+    drift in the producer (dispatch.py sets the view) can silently leak or
+    drop keys. Pin the wire contract here: every key the TS `RiskProfileEvent`
+    relies on must survive the splat, and types must be preserved."""
+
+    def _session_with_risk(self) -> Session:
+        session = Session(session_id="risk-shape")
+        session.last_risk_view = {
+            "address": "526 West End Ave, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 910000,
+            "bear_value": 790000,
+            "stress_value": 730000,
+            "risk_flags": ["flood_zone", "thin_comp_set"],
+            "trust_flags": ["weak_town_context"],
+            "key_risks": ["Flood-zone exposure"],
+            "total_penalty": 0.34,
+            "confidence_tier": "moderate",
+        }
+        return session
+
+    def _emit(self, session: Session) -> dict:
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Risk narrative."),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                dispatch_stream(
+                    "what could go wrong?",
+                    _decision(AnswerType.RISK),
+                    conversation_id="risk-shape-conv",
+                )
+            )
+        return next(event for event in emitted if event["type"] == events.EVENT_RISK_PROFILE)
+
+    def test_all_documented_fields_present_on_emit(self) -> None:
+        """Every field the TS RiskProfileEvent carries must be on the wire."""
+        payload = self._emit(self._session_with_risk())
+        for key in (
+            "type",
+            "address",
+            "town",
+            "state",
+            "ask_price",
+            "bear_value",
+            "stress_value",
+            "risk_flags",
+            "trust_flags",
+            "key_risks",
+            "total_penalty",
+            "confidence_tier",
+        ):
+            self.assertIn(key, payload, f"missing field {key!r}")
+
+    def test_list_fields_preserve_type_and_content(self) -> None:
+        payload = self._emit(self._session_with_risk())
+        self.assertIsInstance(payload["risk_flags"], list)
+        self.assertIsInstance(payload["trust_flags"], list)
+        self.assertIsInstance(payload["key_risks"], list)
+        self.assertEqual(payload["risk_flags"], ["flood_zone", "thin_comp_set"])
+        self.assertEqual(payload["trust_flags"], ["weak_town_context"])
+        self.assertEqual(payload["key_risks"], ["Flood-zone exposure"])
+
+    def test_numeric_and_enum_fields_preserve_value(self) -> None:
+        payload = self._emit(self._session_with_risk())
+        self.assertEqual(payload["ask_price"], 910000)
+        self.assertEqual(payload["bear_value"], 790000)
+        self.assertEqual(payload["stress_value"], 730000)
+        self.assertAlmostEqual(payload["total_penalty"], 0.34)
+        self.assertEqual(payload["confidence_tier"], "moderate")
+
+    def test_confidence_tier_is_one_of_allowed_values(self) -> None:
+        """The TS contract pins confidence_tier to 'strong' | 'moderate' |
+        'thin' | null. If the producer ever introduces a new tier string,
+        this test catches the drift before it reaches the frontend."""
+        payload = self._emit(self._session_with_risk())
+        self.assertIn(payload["confidence_tier"], {"strong", "moderate", "thin", None})
+
+
 class ScenarioTableSpreadUnitTests(unittest.TestCase):
     """AUDIT 1.4.4: scenario_table emits `spread_unit="dollars"` so consumers
     never have to guess the unit of `spread`. Other modules produce a
