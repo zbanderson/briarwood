@@ -20,6 +20,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
+from briarwood.agent.prompt_modules import PROMPT_MODULE_LABELS
+
 # `[[Module:field:value]]` marker. Module + field are bare identifiers; value
 # can contain anything except `[]`. Mirrors the stripper in
 # briarwood/agent/composer.py — keep these patterns in sync.
@@ -79,7 +81,7 @@ class Anchor:
 class Violation:
     """A grounding rule that the LLM's draft did not satisfy."""
 
-    kind: str          # "ungrounded_number" | "ungrounded_entity" | "forbidden_hedge"
+    kind: str          # "ungrounded_number" | "ungrounded_entity" | "forbidden_hedge" | "unknown_module"
     sentence: str
     value: str
     reason: str
@@ -363,6 +365,17 @@ def verify_response(
 
     report = VerifierReport(tier=tier, anchor_count=len(anchors), anchors=anchors)
     report.sentences_total = len(sentences)
+
+    for anchor in anchors:
+        if anchor.module not in PROMPT_MODULE_LABELS:
+            report.violations.append(
+                Violation(
+                    kind="unknown_module",
+                    sentence=f"[[{anchor.module}:{anchor.field}:{anchor.value}]]",
+                    value=anchor.module,
+                    reason="module label not in PROMPT_MODULE_LABELS",
+                )
+            )
 
     text_lower = text.lower()
     if any(s in text_lower for s in _UNGROUNDED_SENTINELS):

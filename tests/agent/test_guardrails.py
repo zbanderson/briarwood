@@ -126,6 +126,28 @@ class VerifyResponseTests(unittest.TestCase):
         report = verify_response(draft, inputs, tier="decision_summary")
         self.assertEqual(report.sentences_with_violations, 0)
 
+    def test_known_module_label_does_not_flag(self) -> None:
+        draft = "Fair value [[ValuationModel:fair_value_base:820000]]$820,000."
+        report = verify_response(draft, {}, tier="decision_summary")
+        self.assertFalse(any(v.kind == "unknown_module" for v in report.violations))
+
+    def test_unknown_module_label_flags_violation(self) -> None:
+        draft = "Fair value [[FakeModule:fair_value_base:820000]]$820,000."
+        report = verify_response(draft, {"fair_value_base": 820000}, tier="decision_summary")
+        unknown = [v for v in report.violations if v.kind == "unknown_module"]
+        self.assertEqual(len(unknown), 1)
+        self.assertEqual(unknown[0].value, "FakeModule")
+        # Value is still grounded via the anchor — the unknown label doesn't
+        # break numeric verification, only flags the label itself.
+        self.assertEqual(report.sentences_with_violations, 0)
+
+    def test_unknown_module_not_stripped_by_default(self) -> None:
+        draft = "Fair value [[FakeModule:fair_value_base:820000]]$820,000."
+        report = verify_response(draft, {"fair_value_base": 820000}, tier="decision_summary")
+        cleaned, stripped = strip_violating_sentences(draft, report)
+        self.assertEqual(stripped, 0)
+        self.assertIn("$820,000", cleaned)
+
 
 class VerifySentenceTests(unittest.TestCase):
     def test_anchor_in_scope_grounds_value(self) -> None:
