@@ -23,6 +23,10 @@ from pathlib import Path
 from typing import Any, AsyncIterator
 from urllib.parse import parse_qs, urlencode, urlparse
 
+import logging
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
 import briarwood  # noqa: F401 — side-effect: loads .env so OPENAI_API_KEY is available
 from briarwood.agent.dispatch import dispatch
 from briarwood.agent.llm import LLMClient, default_client
@@ -38,6 +42,8 @@ from briarwood.data_sources.google_maps_client import GoogleMapsClient
 from briarwood.listing_intake.service import ListingIntakeService
 
 from api import events
+
+_logger = logging.getLogger(__name__)
 
 _SAVED_ROOT = Path("data/saved_properties")
 _ARTIFACTS_ROOT = Path("data/agent_artifacts").resolve()
@@ -495,32 +501,82 @@ def _extract_charts(response_text: str) -> tuple[str, list[dict[str, Any]]]:
     return cleaned, charts
 
 
+class _DecisionView(BaseModel):
+    """Typed round-trip for the decision-view dict persisted on the session.
+
+    AUDIT 1.2.4: `_verdict_from_view` used to pluck keys from an untyped dict
+    via `.get()`, which silently absorbed field renames and type drift between
+    the producer (`_decision_view_to_dict` in dispatch.py) and the consumer
+    (this projector). Validating through Pydantic surfaces that drift at
+    readtime.
+
+    `extra="ignore"` is intentional: persisted session JSON on disk may carry
+    keys that predate schema changes, and we don't want to break replay.
+    Unknown-field drift is caught on the write side via the dispatch-layer
+    snapshot shape; here we only need to guarantee the subset we project."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    address: str | None = None
+    town: str | None = None
+    state: str | None = None
+    decision_stance: str | None = None
+    primary_value_source: str | None = None
+    ask_price: float | None = None
+    all_in_basis: float | None = None
+    fair_value_base: float | None = None
+    value_low: float | None = None
+    value_high: float | None = None
+    ask_premium_pct: float | None = None
+    basis_premium_pct: float | None = None
+    trust_flags: list[str] = Field(default_factory=list)
+    trust_summary: dict[str, Any] = Field(default_factory=dict)
+    what_must_be_true: list[str] = Field(default_factory=list)
+    key_risks: list[str] = Field(default_factory=list)
+    why_this_stance: list[str] = Field(default_factory=list)
+    what_changes_my_view: list[str] = Field(default_factory=list)
+    contradiction_count: int | None = None
+    blocked_thesis_warnings: list[str] = Field(default_factory=list)
+    overrides_applied: dict[str, Any] = Field(default_factory=dict)
+
+
 def _verdict_from_view(view: dict[str, Any]) -> dict[str, Any]:
     """Project the saved decision view into the verdict event payload. UI
     consumes this to render a stance badge + price/value comparison + trust
-    flags, instead of parsing it back out of LLM-narrated prose."""
+    flags, instead of parsing it back out of LLM-narrated prose.
+
+    AUDIT 1.2.4: validate through `_DecisionView` before projecting. A shape
+    mismatch (type drift, unexpected None where a list is required, etc.) logs
+    a warning and falls back to an empty verdict so the UI still renders."""
+
+    try:
+        model = _DecisionView.model_validate(view)
+    except ValidationError as exc:
+        _logger.warning("decision view failed validation (%s): %s", type(exc).__name__, exc)
+        model = _DecisionView()
+
     return {
-        "address": view.get("address"),
-        "town": view.get("town"),
-        "state": view.get("state"),
-        "stance": view.get("decision_stance"),
-        "primary_value_source": view.get("primary_value_source"),
-        "ask_price": view.get("ask_price"),
-        "all_in_basis": view.get("all_in_basis"),
-        "fair_value_base": view.get("fair_value_base"),
-        "value_low": view.get("value_low"),
-        "value_high": view.get("value_high"),
-        "ask_premium_pct": view.get("ask_premium_pct"),
-        "basis_premium_pct": view.get("basis_premium_pct"),
-        "trust_flags": list(view.get("trust_flags") or []),
-        "what_must_be_true": list(view.get("what_must_be_true") or []),
-        "key_risks": list(view.get("key_risks") or []),
-        "trust_summary": dict(view.get("trust_summary") or {}),
-        "why_this_stance": list(view.get("why_this_stance") or []),
-        "what_changes_my_view": list(view.get("what_changes_my_view") or []),
-        "contradiction_count": view.get("contradiction_count"),
-        "blocked_thesis_warnings": list(view.get("blocked_thesis_warnings") or []),
-        "overrides_applied": dict(view.get("overrides_applied") or {}),
+        "address": model.address,
+        "town": model.town,
+        "state": model.state,
+        "stance": model.decision_stance,
+        "primary_value_source": model.primary_value_source,
+        "ask_price": model.ask_price,
+        "all_in_basis": model.all_in_basis,
+        "fair_value_base": model.fair_value_base,
+        "value_low": model.value_low,
+        "value_high": model.value_high,
+        "ask_premium_pct": model.ask_premium_pct,
+        "basis_premium_pct": model.basis_premium_pct,
+        "trust_flags": list(model.trust_flags),
+        "what_must_be_true": list(model.what_must_be_true),
+        "key_risks": list(model.key_risks),
+        "trust_summary": dict(model.trust_summary),
+        "why_this_stance": list(model.why_this_stance),
+        "what_changes_my_view": list(model.what_changes_my_view),
+        "contradiction_count": model.contradiction_count,
+        "blocked_thesis_warnings": list(model.blocked_thesis_warnings),
+        "overrides_applied": dict(model.overrides_applied),
     }
 
 

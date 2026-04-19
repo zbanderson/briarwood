@@ -7,6 +7,7 @@ from unittest.mock import patch
 from api import events
 from api.pipeline_adapter import (
     _to_listing_from_facts,
+    _verdict_from_view,
     browse_stream,
     decision_stream,
     dispatch_stream,
@@ -718,6 +719,79 @@ class PipelineAdapterContractTests(unittest.TestCase):
             event for event in emitted if event["type"] == events.EVENT_CHART and event.get("kind") == "rent_burn"
         )
         self.assertEqual(burn_chart.get("provenance"), ["Rent Outlook", "rent_x_cost"])
+
+
+class VerdictFromViewTests(unittest.TestCase):
+    """AUDIT 1.2.4: `_verdict_from_view` now round-trips the persisted
+    decision-view dict through a Pydantic model. Happy-path shape must be
+    preserved; malformed input must not crash the SSE emitter."""
+
+    def _full_view(self) -> dict:
+        return {
+            "pid": "123-main-st-belmar-nj",
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "decision_stance": "buy_if_price_improves",
+            "primary_value_source": "current_value",
+            "ask_price": 800000,
+            "all_in_basis": 820000,
+            "fair_value_base": 760000,
+            "value_low": 735000,
+            "value_high": 790000,
+            "ask_premium_pct": 0.0526,
+            "basis_premium_pct": 0.0789,
+            "trust_flags": ["thin_comp_set"],
+            "trust_summary": {"confidence": 0.72, "band": "medium"},
+            "what_must_be_true": ["comps hold"],
+            "key_risks": ["flood exposure"],
+            "why_this_stance": ["ask premium above fair range"],
+            "what_changes_my_view": ["listing drops 5%"],
+            "contradiction_count": 0,
+            "blocked_thesis_warnings": [],
+            "overrides_applied": {"renovation_capex": 25000},
+        }
+
+    def test_happy_path_preserves_wire_shape(self) -> None:
+        payload = _verdict_from_view(self._full_view())
+        self.assertEqual(payload["address"], "123 Main St, Belmar, NJ 07719")
+        self.assertEqual(payload["stance"], "buy_if_price_improves")
+        self.assertEqual(payload["ask_price"], 800000)
+        self.assertEqual(payload["trust_flags"], ["thin_comp_set"])
+        self.assertEqual(payload["trust_summary"], {"confidence": 0.72, "band": "medium"})
+        self.assertEqual(payload["overrides_applied"], {"renovation_capex": 25000})
+        # UI expects stance, not decision_stance — the projector renames.
+        self.assertNotIn("decision_stance", payload)
+
+    def test_missing_fields_default_to_none_or_empty(self) -> None:
+        payload = _verdict_from_view({})
+        self.assertIsNone(payload["address"])
+        self.assertIsNone(payload["stance"])
+        self.assertEqual(payload["trust_flags"], [])
+        self.assertEqual(payload["trust_summary"], {})
+        self.assertEqual(payload["overrides_applied"], {})
+
+    def test_extra_keys_are_ignored_not_rejected(self) -> None:
+        """Persisted sessions may carry keys that predate schema changes.
+        `_DecisionView` uses extra='ignore' so replay still works."""
+        view = self._full_view()
+        view["legacy_decision"] = "BUY"  # extra key from a prior shape
+        view["random_breadcrumb"] = {"foo": "bar"}
+        payload = _verdict_from_view(view)
+        self.assertEqual(payload["stance"], "buy_if_price_improves")
+        self.assertNotIn("legacy_decision", payload)
+
+    def test_bad_types_fall_back_to_empty_verdict(self) -> None:
+        """A type mismatch (e.g. trust_flags stored as dict instead of list)
+        should not crash the SSE emitter. The projector logs and falls back
+        to an all-default verdict."""
+        view = self._full_view()
+        view["trust_flags"] = {"not": "a list"}  # wrong type
+        payload = _verdict_from_view(view)
+        # Fallback shape is fully populated with defaults, not partial.
+        self.assertIsNone(payload["address"])
+        self.assertEqual(payload["trust_flags"], [])
+        self.assertEqual(payload["trust_summary"], {})
 
 
 if __name__ == "__main__":
