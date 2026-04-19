@@ -2,8 +2,10 @@
 
 Step 7 ships the flag-gated strip + single-retry pipeline in composer.py. The
 advisory path is already covered by test_guardrails.py; these tests focus on
-the strip/regen orchestration and confirm that default-off preserves the
-existing advisory behavior bit-for-bit.
+the strip/regen orchestration.
+
+AUDIT 1.1.10: default is now **on** — unset env → strict mode. An explicit
+`BRIARWOOD_STRICT_REGEN=0` (or `false`/`off`) reverts to the advisory path.
 """
 
 from __future__ import annotations
@@ -34,13 +36,13 @@ def _mock_llm(responses: list[str]) -> MagicMock:
 
 
 class StrictRegenFlagOffTests(unittest.TestCase):
-    """Default-off path: dirty drafts pass through unchanged aside from marker
-    stripping. The verifier still records the report, but the strip/regen
-    pipeline is a no-op."""
+    """Explicit opt-out path (AUDIT 1.1.10): with `BRIARWOOD_STRICT_REGEN=0`
+    the verifier runs in advisory mode — report is emitted, text unchanged
+    aside from marker stripping."""
 
-    def test_dirty_draft_passes_through_when_flag_unset(self) -> None:
+    def test_dirty_draft_passes_through_when_flag_explicit_off(self) -> None:
         llm = _mock_llm(["Fair value $820,000. Upside is $700,000."])
-        with patch.dict("os.environ", {}, clear=True):
+        with patch.dict("os.environ", {composer.STRICT_REGEN_FLAG: "0"}):
             text, report = composer.complete_and_verify(
                 llm=llm,
                 system="sys",
@@ -52,6 +54,43 @@ class StrictRegenFlagOffTests(unittest.TestCase):
         self.assertNotIn("strict_regen", report)
         self.assertGreaterEqual(report["sentences_with_violations"], 1)
         self.assertEqual(llm.complete.call_count, 1)
+
+    def test_explicit_false_also_disables(self) -> None:
+        """Accept `false` / `off` as opt-out synonyms in addition to `0`."""
+        for val in ("false", "off", "no", "FALSE"):
+            llm = _mock_llm(["Fair value $820,000. Upside is $700,000."])
+            with patch.dict("os.environ", {composer.STRICT_REGEN_FLAG: val}):
+                _, report = composer.complete_and_verify(
+                    llm=llm,
+                    system="sys",
+                    user="u",
+                    structured_inputs={"fair_value_base": 820000},
+                    tier="decision_summary",
+                )
+            self.assertNotIn("strict_regen", report, f"{val!r} should disable")
+
+
+class StrictRegenDefaultOnTests(unittest.TestCase):
+    """AUDIT 1.1.10: unset env must behave like the flag is on. Prior to the
+    audit, default was off and the verifier accumulated violation telemetry
+    without suppressing bad output. Regression-guard here pins default-on."""
+
+    def test_unset_env_triggers_strict_strip(self) -> None:
+        llm = _mock_llm(["Fair value $820,000. Upside is $700,000."])
+        with patch.dict("os.environ", {}, clear=True):
+            text, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        # $820,000 grounded → kept. $700,000 ungrounded → stripped.
+        self.assertIn("$820,000", text)
+        self.assertNotIn("$700,000", text)
+        strict = report["strict_regen"]
+        self.assertTrue(strict["enabled"])
+        self.assertEqual(strict["sentences_stripped"], 1)
 
 
 class StrictRegenFlagOnTests(unittest.TestCase):

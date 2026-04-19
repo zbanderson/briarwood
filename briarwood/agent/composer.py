@@ -37,9 +37,12 @@ _EMPTY_BUDGET_REPORT: dict[str, Any] = {
 # enough to catch nested `:` in values but bounded by the closing `]]`.
 _GROUNDING_MARKER_RE = re.compile(r"\[\[[^\[\]]+?\]\]")
 
-# Env flag that toggles strict-regen mode. Default off: the verifier runs in
-# advisory mode, emits a report, does not mutate output. Flipping the flag to
-# "1"/"true" enables the strip + single-retry flow below.
+# Env flag that toggles strict-regen mode. Default **on** (AUDIT 1.1.10): the
+# verifier strips flagged sentences and issues a single regen retry when the
+# strip count exceeds `STRICT_REGEN_THRESHOLD`. Explicit "0"/"false"/"off"
+# disables and reverts to the advisory path (report emitted, text unmodified).
+# Until the audit flip, this was default-off — the verifier was accumulating
+# ungrounded-hedge telemetry without ever suppressing bad output.
 STRICT_REGEN_FLAG = "BRIARWOOD_STRICT_REGEN"
 # Number of sentences that must be stripped before we bother issuing a regen.
 # One stray ungrounded number is cheaper to just drop than to pay another
@@ -64,13 +67,14 @@ def strip_grounding_markers(text: str) -> str:
 
 
 def _strict_regen_enabled() -> bool:
-    """Read the env flag at call time so tests can toggle it per-case."""
-    return os.environ.get(STRICT_REGEN_FLAG, "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    """Read the env flag at call time so tests can toggle it per-case.
+
+    AUDIT 1.1.10: default is now **on**. Unset / empty env var → strict mode.
+    An explicit opt-out requires one of `"0" | "false" | "no" | "off"`."""
+    raw = os.environ.get(STRICT_REGEN_FLAG, "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return True
 
 
 def _regen_user_prompt(original_user: str, report: VerifierReport) -> str:
