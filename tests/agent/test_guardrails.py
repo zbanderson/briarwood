@@ -137,9 +137,20 @@ class VerifyResponseTests(unittest.TestCase):
         unknown = [v for v in report.violations if v.kind == "unknown_module"]
         self.assertEqual(len(unknown), 1)
         self.assertEqual(unknown[0].value, "FakeModule")
-        # Value is still grounded via the anchor — the unknown label doesn't
-        # break numeric verification, only flags the label itself.
+        # Value is grounded via the structured_inputs (820000 is there), so the
+        # ungrounded_number check passes independently of the fake anchor.
         self.assertEqual(report.sentences_with_violations, 0)
+
+    def test_unknown_module_cannot_launder_ungrounded_number(self) -> None:
+        """AUDIT 1.1.8: a fictional module label must not make its value count
+        as grounding evidence. Prior behavior accepted any anchor's value as
+        grounded; now only whitelisted-module anchors do."""
+        draft = "Fair value [[FakeModule:fair_value_base:999999]]$999,999."
+        report = verify_response(draft, {"fair_value_base": 820000}, tier="decision_summary")
+        kinds = [v.kind for v in report.violations]
+        self.assertIn("unknown_module", kinds)
+        self.assertIn("ungrounded_number", kinds)
+        self.assertEqual(report.sentences_with_violations, 1)
 
     def test_unknown_module_not_stripped_by_default(self) -> None:
         draft = "Fair value [[FakeModule:fair_value_base:820000]]$820,000."
@@ -212,8 +223,10 @@ class StripViolatingSentencesTests(unittest.TestCase):
 
     def test_strips_markers_from_comparison(self) -> None:
         # Anchor-marked sentences should match the violation.sentence form
-        # (verifier already strips markers before recording).
-        draft = "Upside is [[Module:field:700000]]$700,000 on a good day."
+        # (verifier already strips markers before recording). The module label
+        # must be whitelisted; fictional labels no longer ground values
+        # (AUDIT 1.1.8).
+        draft = "Upside is [[ValuationModel:fair_value_base:700000]]$700,000 on a good day."
         report = verify_response(draft, {}, tier="decision_summary")
         cleaned, n = strip_violating_sentences(draft, report)
         # The anchor grounds the 700000, so no violation and nothing stripped.

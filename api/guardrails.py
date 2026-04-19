@@ -366,6 +366,12 @@ def verify_response(
     report = VerifierReport(tier=tier, anchor_count=len(anchors), anchors=anchors)
     report.sentences_total = len(sentences)
 
+    # Only anchors whose module label is in the whitelist count as grounding
+    # evidence. Anchors with fictional labels still emit `unknown_module`
+    # violations below, but their values must not launder ungrounded numbers
+    # into the verifier's "grounded" set (AUDIT 1.1.8).
+    known_anchors = [a for a in anchors if a.module in PROMPT_MODULE_LABELS]
+
     for anchor in anchors:
         if anchor.module not in PROMPT_MODULE_LABELS:
             report.violations.append(
@@ -391,7 +397,7 @@ def verify_response(
             cleaned,
             grounded_numbers=grounded_numbers,
             grounded_strings=grounded_strings,
-            anchors=anchors,
+            anchors=known_anchors,
         )
         if violations:
             report.sentences_with_violations += 1
