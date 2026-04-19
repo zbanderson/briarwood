@@ -1,0 +1,127 @@
+{
+  "session_id": "b7b69226825a",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "projection",
+  "last_analysis_mode": "projection",
+  "last_decision_view": null,
+  "last_projection_view": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "ask_price": 767000.0,
+    "bull_case_value": 816046.0,
+    "base_case_value": 764343.0,
+    "bear_case_value": 722117.0,
+    "stress_case_value": 506489.0,
+    "spread": 93928.0,
+    "bull_total_adjustment_pct": 0.1278,
+    "base_total_adjustment_pct": 0.0564,
+    "bear_total_adjustment_pct": -0.002,
+    "bull_growth_rate": 0.0639,
+    "base_growth_rate": -0.0035,
+    "bear_growth_rate": -0.0585,
+    "bcv_anchor": 723555.96,
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_verifier_report": {
+    "tier": "projection",
+    "sentences_total": 4,
+    "sentences_with_violations": 3,
+    "ungrounded_declaration": false,
+    "anchor_count": 4,
+    "anchors": [
+      {
+        "module": "ScenarioModel",
+        "field": "base_case_value",
+        "value": "764343"
+      },
+      {
+        "module": "ScenarioModel",
+        "field": "bull_case_value",
+        "value": "816046"
+      },
+      {
+        "module": "ScenarioModel",
+        "field": "bear_case_value",
+        "value": "722117"
+      },
+      {
+        "module": "ScenarioModel",
+        "field": "bull_growth_rate",
+        "value": "0.0639"
+      }
+    ],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "The most likely cash-flow projection is slightly below the asking price, with a base case value of $764,343, which reflects a small decline of 0.3% .",
+        "value": "0.3%",
+        "reason": "number not present in structured_inputs or anchors"
+      },
+      {
+        "kind": "ungrounded_number",
+        "sentence": "Conversely, in a bear scenario, the property could drop to $722,117, reflecting a decrease of 5.9% .",
+        "value": "5.9%",
+        "reason": "number not present in structured_inputs or anchors"
+      },
+      {
+        "kind": "ungrounded_number",
+        "sentence": "The dominant risk asymmetry suggests a better upside potential compared to the downside, with growth rates ranging from a decline of 5.85% in the bear case to an increase of 6.39% in the bull case .",
+        "value": "5.85%",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th Ave, in Belmar, NJ",
+      "assistant": "Quick take: this looks a little expensive at $767,000. Briarwood's current read lands closer to $723,556, so this gets more interesting if the price softens.\nWhy it stands out: the cleanest path right now looks like Make an offer inside the risk-adjusted band rather than at ask..\nWhat I'd want to tighten up next: taxes, insurance, or financing assumptions are still missing.\nData depth: Coverage is still thin; no post-promotion enrichment has been captured yet.\nBelow you'll see the nearby comp support, town backdrop, rent setup, and scenario range.\nSmart next move: I can run a live CMA using Zillow and ATTOM-backed context if you want a tighter market check.\nBest next question: Complete the carry-cost inputs (taxes, insurance, financing).",
+      "answer_type": "browse"
+    },
+    {
+      "user": "what does the CMA look like?",
+      "assistant": "The pricing analysis shows that the property appears fully valued, with an ask price of $767,000 compared to a fair value of $723,555.96, leading to a premium of 5.66%. The main factors influencing this valuation are comparable sales (44%), a market-adjusted anchor (38%), and income support (9%). For the value to hold, it must be demonstrated that the market continues to support these comparable sales and trends.",
+      "answer_type": "visualize"
+    },
+    {
+      "user": "Run scenarios",
+      "assistant": "The most likely outcome for this property is a stable value around $764,343, reflecting a slight decline of 0.3% in the base case. In the bull case, the value could rise to $816,046, an increase of 6.4%. On the downside, the bear case indicates a drop to $722,117, which represents a decline of 5.9%. The significant risk asymmetry is highlighted by the stress case value, which plummets to $506,489, showing potential for a substantial downturn.",
+      "answer_type": "projection"
+    },
+    {
+      "user": "What would a 10% price cut do?",
+      "assistant": "A 10% price cut would lower the asking price to approximately $690,300. In a base case scenario, where prices slightly decline, the value is projected at $764,343, showing a small decrease of 0.3%. In a bull case, values could rise to $816,046 with an increase of 6.4%. Conversely, in a bear case, values could fall to $722,117, reflecting a decline of 5.9%. The dominant risk is evident in the bear case, which indicates a potential drop in value of 5.9%.",
+      "answer_type": "projection"
+    },
+    {
+      "user": "What's the floor price?",
+      "assistant": "The floor price for the property at 1008 14th Avenue, Belmar, NJ is $767,000.",
+      "answer_type": "lookup"
+    },
+    {
+      "user": "What's the rental potential?",
+      "assistant": "The effective monthly rent for the property at 1008 14th Avenue, Belmar, NJ is approximately $2,234.40. This rental profile is considered fragile, with a rental ease score of 49.96, suggesting it may face some challenges in the market.",
+      "answer_type": "rent_lookup"
+    },
+    {
+      "user": "Run cash-flow projection",
+      "assistant": "The most likely cash-flow projection is slightly below the asking price, with a base case value of $764,343, which reflects a small decline of 0.3%. In a more optimistic bull scenario, the value could rise to $816,046, marking a 6.4% increase. Conversely, in a bear scenario, the property could drop to $722,117, reflecting a decrease of 5.9%. The dominant risk asymmetry suggests a better upside potential compared to the downside, with growth rates ranging from a decline of 5.85% in the bear case to an increase of 6.39% in the bull case.",
+      "answer_type": "projection"
+    }
+  ]
+}

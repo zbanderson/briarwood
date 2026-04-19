@@ -21,10 +21,12 @@ import re
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, AsyncIterator
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import briarwood  # noqa: F401 — side-effect: loads .env so OPENAI_API_KEY is available
 from briarwood.agent.dispatch import dispatch
 from briarwood.agent.llm import LLMClient, default_client
+from briarwood.agent.presentation_advisor import advise_visual_surfaces
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
 from briarwood.agent.tools import (
@@ -134,7 +136,7 @@ def _load_or_create_session(conversation_id: str | None) -> Session:
             session = Session(session_id=conversation_id)
     else:
         session = Session(session_id=conversation_id)
-    session.last_verifier_report = None
+    session.clear_response_views()
     return session
 
 
@@ -164,11 +166,64 @@ def _load_saved_facts(property_id: str) -> dict[str, Any] | None:
         return None
 
 
+def _load_saved_enrichment(property_id: str) -> dict[str, Any] | None:
+    path = _SAVED_ROOT / property_id / "enrichment.json"
+    try:
+        return json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
 def _parse_zip(address: str | None) -> str | None:
     if not address:
         return None
     m = _ZIP_RE.search(address)
     return m.group(1) if m else None
+
+
+def _street_view_image_url(
+    *,
+    latitude: float | None,
+    longitude: float | None,
+    property_id: str | None = None,
+) -> str | None:
+    def _proxy_from_location(location: str | None) -> str | None:
+        if not isinstance(location, str) or not location.strip():
+            return None
+        query = urlencode(
+            {
+                "location": location.strip(),
+                "size": "640x360",
+                "fov": 90,
+                "pitch": 0,
+            }
+        )
+        return f"/api/street-view?{query}"
+
+    if property_id:
+        enrichment = _load_saved_enrichment(property_id)
+        google = dict((enrichment or {}).get("google") or {})
+        cached = google.get("street_view_image_url")
+        if isinstance(cached, str) and cached.strip():
+            parsed = urlparse(cached)
+            location = parse_qs(parsed.query).get("location", [None])[0]
+            proxied = _proxy_from_location(location)
+            if proxied:
+                return proxied
+            if latitude is None or longitude is None:
+                return cached
+    if latitude is None or longitude is None:
+        return None
+    query = urlencode(
+        {
+            "latitude": f"{float(latitude):.6f}",
+            "longitude": f"{float(longitude):.6f}",
+            "size": "640x360",
+            "fov": 90,
+            "pitch": 0,
+        }
+    )
+    return f"/api/street-view?{query}"
 
 
 def _to_listing_from_saved(match: dict[str, Any]) -> dict[str, Any]:
@@ -184,6 +239,11 @@ def _to_listing_from_saved(match: dict[str, Any]) -> dict[str, Any]:
     address = match.get("address") or (facts or {}).get("address") or ""
     if (lat is None or lng is None) and address:
         lat, lng = _geocode(address)
+    street_view = _street_view_image_url(
+        latitude=float(lat) if lat is not None else None,
+        longitude=float(lng) if lng is not None else None,
+        property_id=pid or None,
+    )
 
     return {
         "id": pid or address or "unknown",
@@ -200,6 +260,7 @@ def _to_listing_from_saved(match: dict[str, Any]) -> dict[str, Any]:
         "status": "active",
         "lat": float(lat) if lat is not None else None,
         "lng": float(lng) if lng is not None else None,
+        "streetViewImageUrl": street_view,
     }
 
 
@@ -211,6 +272,10 @@ def _to_listing_from_live(entry: dict[str, Any]) -> dict[str, Any]:
     ext_id = entry.get("external_id") or entry.get("address") or "live"
     address = entry.get("address") or ""
     lat, lng = _geocode(address) if address else (None, None)
+    street_view = _street_view_image_url(
+        latitude=float(lat) if lat is not None else None,
+        longitude=float(lng) if lng is not None else None,
+    )
     return {
         "id": str(ext_id),
         "address_line": address,
@@ -225,6 +290,7 @@ def _to_listing_from_live(entry: dict[str, Any]) -> dict[str, Any]:
         "source_url": entry.get("listing_url"),
         "lat": lat,
         "lng": lng,
+        "streetViewImageUrl": street_view,
     }
 
 
@@ -340,8 +406,10 @@ async def _stream_text(text: str, *, chunk_delay: float = 0.015) -> AsyncIterato
 # contribute" is not the same as "contributed").
 _MODULE_REGISTRY: list[tuple[str, str, str]] = [
     (events.EVENT_VERDICT,          "valuation_model",   "Valuation Model"),
+    (events.EVENT_TRUST_SUMMARY,    "confidence",        "Confidence Engine"),
     (events.EVENT_TOWN_SUMMARY,     "town_context",      "Town Context"),
     (events.EVENT_COMPS_PREVIEW,    "comp_set",          "Comp Set"),
+    (events.EVENT_CMA_TABLE,        "cma",               "CMA"),
     (events.EVENT_SCENARIO_TABLE,   "projection_engine", "Projection Engine"),
     (events.EVENT_COMPARISON_TABLE, "comparison_runner", "Comparison Runner"),
     (events.EVENT_VALUE_THESIS,     "value_thesis",      "Value Thesis"),
@@ -447,7 +515,46 @@ def _verdict_from_view(view: dict[str, Any]) -> dict[str, Any]:
         "trust_flags": list(view.get("trust_flags") or []),
         "what_must_be_true": list(view.get("what_must_be_true") or []),
         "key_risks": list(view.get("key_risks") or []),
+        "trust_summary": dict(view.get("trust_summary") or {}),
+        "why_this_stance": list(view.get("why_this_stance") or []),
+        "what_changes_my_view": list(view.get("what_changes_my_view") or []),
+        "contradiction_count": view.get("contradiction_count"),
+        "blocked_thesis_warnings": list(view.get("blocked_thesis_warnings") or []),
         "overrides_applied": dict(view.get("overrides_applied") or {}),
+    }
+
+
+def _trust_summary_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
+    trust_summary = dict(view.get("trust_summary") or {})
+    if not trust_summary and not list(view.get("trust_flags") or []):
+        return None
+    return {
+        "confidence": trust_summary.get("confidence"),
+        "band": trust_summary.get("band"),
+        "field_completeness": trust_summary.get("field_completeness"),
+        "estimated_reliance": trust_summary.get("estimated_reliance"),
+        "contradiction_count": trust_summary.get("contradiction_count") or view.get("contradiction_count"),
+        "blocked_thesis_warnings": list(
+            trust_summary.get("blocked_thesis_warnings")
+            or view.get("blocked_thesis_warnings")
+            or []
+        ),
+        "trust_flags": list(trust_summary.get("trust_flags") or view.get("trust_flags") or []),
+        "why_this_stance": list(view.get("why_this_stance") or []),
+        "what_changes_my_view": list(view.get("what_changes_my_view") or []),
+    }
+
+
+def _cma_table_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
+    rows = list(view.get("comps") or [])
+    if not rows:
+        return None
+    return {
+        "address": view.get("address"),
+        "town": view.get("town"),
+        "state": view.get("state"),
+        "summary": view.get("comp_selection_summary"),
+        "rows": rows,
     }
 
 
@@ -499,6 +606,7 @@ def _scenario_table_from_view(view: dict[str, Any]) -> dict[str, Any]:
         "rows": rows,
         "address": address,
         "ask_price": ask,
+        "basis_label": view.get("basis_label"),
         "spread": view.get("spread"),
     }
 
@@ -537,6 +645,304 @@ def _comparison_table_from_view(rows: list[dict[str, Any]]) -> list[dict[str, An
     return out
 
 
+_RISK_FLAG_LABELS: dict[str, str] = {
+    "older_housing_stock": "Older housing stock",
+    "long_marketing_period": "Long marketing period",
+    "flood_zone": "Flood exposure",
+    "high_vacancy": "High vacancy",
+    "weak_town_context": "Weak town context",
+    "valuation_anchor_divergence": "Valuation anchors diverge",
+    "incomplete_carry_inputs": "Incomplete carry inputs",
+    "zoning_unverified": "Zoning unverified",
+    "thin_comp_set": "Thin comp set",
+}
+
+
+def _native_scenario_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    if not any(
+        isinstance(view.get(k), (int, float)) and view.get(k) is not None
+        for k in ("bull_case_value", "base_case_value", "bear_case_value")
+    ):
+        return None
+    return events.chart(
+        title="5-year value range",
+        kind="scenario_fan",
+        spec={
+            "kind": "scenario_fan",
+            "ask_price": view.get("ask_price"),
+            "basis_label": view.get("basis_label"),
+            "bull_case_value": view.get("bull_case_value"),
+            "base_case_value": view.get("base_case_value"),
+            "bear_case_value": view.get("bear_case_value"),
+            "stress_case_value": view.get("stress_case_value"),
+        },
+        provenance=["Projection Engine", "scenario_x_risk"],
+    )
+
+
+def _native_value_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    if not any(
+        isinstance(view.get(k), (int, float)) and view.get(k) is not None
+        for k in ("ask_price", "fair_value_base", "premium_discount_pct")
+    ):
+        return None
+    return events.chart(
+        title="Ask vs fair value",
+        kind="value_opportunity",
+        spec={
+            "kind": "value_opportunity",
+            "ask_price": view.get("ask_price"),
+            "fair_value_base": view.get("fair_value_base"),
+            "premium_discount_pct": view.get("premium_discount_pct"),
+            "value_drivers": list(view.get("key_value_drivers") or view.get("value_drivers") or []),
+        },
+        provenance=[
+            "Value Thesis",
+            "Valuation",
+            *([] if not list(view.get("comps") or []) else ["CMA"]),
+        ],
+    )
+
+
+def _native_cma_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    rows = [row for row in list(view.get("comps") or []) if isinstance(row, dict)]
+    priced_rows = [row for row in rows if isinstance(row.get("ask_price"), (int, float))]
+    if not priced_rows:
+        return None
+    return events.chart(
+        title="Where the comps sit",
+        kind="cma_positioning",
+        spec={
+            "kind": "cma_positioning",
+            "subject_address": view.get("address"),
+            "subject_ask": view.get("ask_price"),
+            "fair_value_base": view.get("fair_value_base"),
+            "value_low": view.get("value_low"),
+            "value_high": view.get("value_high"),
+            "comps": [
+                {
+                    "address": row.get("address"),
+                    "ask_price": row.get("ask_price"),
+                    "source_label": row.get("source_label"),
+                    "selected_by": row.get("selected_by"),
+                    "feeds_fair_value": row.get("feeds_fair_value"),
+                }
+                for row in priced_rows[:8]
+            ],
+        },
+        provenance=["CMA", "Value Thesis"],
+    )
+
+
+def _native_risk_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    risk_flags = list(view.get("risk_flags") or [])
+    trust_flags = list(view.get("trust_flags") or [])
+    if not risk_flags and not trust_flags:
+        return None
+    total_penalty = view.get("total_penalty")
+    per_risk = (
+        float(total_penalty) / len(risk_flags)
+        if isinstance(total_penalty, (int, float)) and risk_flags
+        else 0.12
+    )
+    items: list[dict[str, Any]] = []
+    for flag in risk_flags:
+        items.append(
+            {
+                "label": _RISK_FLAG_LABELS.get(flag, str(flag).replace("_", " ").title()),
+                "value": per_risk,
+                "tone": "risk",
+            }
+        )
+    trust_weight = max(per_risk * 0.6, 0.08) if risk_flags else 0.08
+    for flag in trust_flags:
+        items.append(
+            {
+                "label": _RISK_FLAG_LABELS.get(flag, str(flag).replace("_", " ").title()),
+                "value": trust_weight,
+                "tone": "trust",
+            }
+        )
+    return events.chart(
+        title="Risk drivers",
+        kind="risk_bar",
+        spec={
+            "kind": "risk_bar",
+            "ask_price": view.get("ask_price"),
+            "bear_value": view.get("bear_value"),
+            "stress_value": view.get("stress_value"),
+            "items": items,
+        },
+        provenance=["Risk Profile", "Confidence Engine"],
+    )
+
+
+def _native_rent_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    payload = dict(view.get("burn_chart_payload") or {})
+    series = list(payload.get("series") or [])
+    if not series:
+        return None
+    points: list[dict[str, Any]] = []
+    for row in series:
+        if not isinstance(row, dict):
+            continue
+        year = row.get("year")
+        if not isinstance(year, (int, float)):
+            continue
+        points.append(
+            {
+                "year": int(year),
+                "rent_base": row.get("rent_base"),
+                "rent_bull": row.get("rent_bull"),
+                "rent_bear": row.get("rent_bear"),
+                "monthly_obligation": row.get("monthly_obligation"),
+            }
+        )
+    if not points:
+        return None
+    title = "Rent vs monthly cost"
+    return events.chart(
+        title=title,
+        kind="rent_burn",
+        spec={
+            "kind": "rent_burn",
+            "title": title,
+            "working_label": "Working rent outlook",
+            "market_label": "Zillow market regime",
+            "market_context_note": view.get("market_context_note"),
+            "market_rent": view.get("zillow_market_rent"),
+            "market_rent_low": view.get("zillow_market_rent_low"),
+            "market_rent_high": view.get("zillow_market_rent_high"),
+            "points": points,
+        },
+        provenance=[
+            "Rent Outlook",
+            "rent_x_cost",
+            *([] if not view.get("rent_haircut_pct") else ["rent_x_risk"]),
+        ],
+    )
+
+
+def _native_rent_ramp_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    payload = dict(view.get("ramp_chart_payload") or {})
+    series = list(payload.get("series") or [])
+    if not series:
+        return None
+    points: list[dict[str, Any]] = []
+    for row in series:
+        if not isinstance(row, dict):
+            continue
+        year = row.get("year")
+        if not isinstance(year, (int, float)):
+            continue
+        points.append(
+            {
+                "year": int(year),
+                "net_0": row.get("net_0"),
+                "net_3": row.get("net_3"),
+                "net_5": row.get("net_5"),
+            }
+        )
+    if not points:
+        return None
+    title = "Can rent catch up?"
+    return events.chart(
+        title=title,
+        kind="rent_ramp",
+        spec={
+            "kind": "rent_ramp",
+            "title": title,
+            "current_rent": payload.get("current_rent"),
+            "monthly_obligation": payload.get("monthly_obligation"),
+            "today_cash_flow": payload.get("today_cash_flow"),
+            "break_even_years": dict(payload.get("break_even_years") or {}),
+            "points": points,
+        },
+        provenance=[
+            "Rent Outlook",
+            "rent_x_cost",
+            *([] if not view.get("rent_haircut_pct") else ["rent_x_risk"]),
+        ],
+    )
+
+
+def _visual_advice_payload(session: Session) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if isinstance(session.last_value_thesis_view, dict):
+        payload["value"] = dict(session.last_value_thesis_view)
+        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
+        if cma_payload is not None:
+            payload["cma"] = cma_payload
+    if isinstance(session.last_rent_outlook_view, dict):
+        payload["rent"] = dict(session.last_rent_outlook_view)
+    if isinstance(session.last_projection_view, dict):
+        payload["scenario"] = dict(session.last_projection_view)
+    if isinstance(session.last_risk_view, dict):
+        payload["risk"] = dict(session.last_risk_view)
+    trust_source = None
+    if isinstance(session.last_decision_view, dict):
+        trust_source = _trust_summary_from_view(session.last_decision_view)
+    elif isinstance(session.last_value_thesis_view, dict):
+        trust_source = _trust_summary_from_view(session.last_value_thesis_view)
+    elif isinstance(session.last_rent_outlook_view, dict):
+        trust_source = _trust_summary_from_view(session.last_rent_outlook_view)
+    if isinstance(trust_source, dict) and trust_source:
+        payload["trust"] = trust_source
+    return payload
+
+
+def _load_visual_advice(session: Session, llm: LLMClient | None) -> dict[str, dict[str, str]]:
+    if isinstance(getattr(session, "last_visual_advice", None), dict):
+        return dict(session.last_visual_advice or {})
+    payload = _visual_advice_payload(session)
+    advice = advise_visual_surfaces(llm=llm, payload=payload) or {}
+    session.last_visual_advice = advice
+    return advice
+
+
+def _apply_chart_advice(
+    chart_event: dict[str, Any] | None,
+    advice: dict[str, dict[str, str]],
+    section: str,
+) -> dict[str, Any] | None:
+    if chart_event is None:
+        return None
+    section_advice = advice.get(section)
+    if not section_advice:
+        return chart_event
+    patched = dict(chart_event)
+    patched["advisor"] = {
+        "title": None,
+        "summary": section_advice.get("summary"),
+        "companion": section_advice.get("companion"),
+        "preferred_surface": section_advice.get("preferred_surface"),
+    }
+    return patched
+
+
+def _append_chart_once(
+    bucket: list[dict[str, Any]],
+    chart_event: dict[str, Any] | None,
+) -> bool:
+    """Append a chart event only if its kind/url combo is not already present."""
+    if chart_event is None:
+        return False
+    kind = chart_event.get("kind")
+    url = chart_event.get("url")
+    spec = chart_event.get("spec")
+    for existing in bucket:
+        if existing.get("kind") != kind:
+            continue
+        if url and existing.get("url") == url:
+            return False
+        if spec and existing.get("spec") == spec:
+            return False
+        if not url and not spec:
+            return False
+    bucket.append(chart_event)
+    return True
+
+
 def _slot_derived_chips(session: Session) -> list[str]:
     """Build follow-up chips from populated session slots.
 
@@ -564,6 +970,8 @@ def _slot_derived_chips(session: Session) -> list[str]:
         thesis.get(k) for k in ("value_drivers", "key_value_drivers", "what_must_be_true")
     ):
         chips.append("What are the key value drivers?")
+        if thesis.get("what_changes_my_view") or thesis.get("blocked_thesis_warnings"):
+            chips.append("What would change your value view?")
 
     projection = (
         session.last_projection_view
@@ -588,6 +996,8 @@ def _slot_derived_chips(session: Session) -> list[str]:
         if isinstance(total, int) and total > displayed_n:
             remaining = total - displayed_n
             chips.append(f"Show me the remaining {remaining} comps")
+        else:
+            chips.append("Why were these comps chosen?")
 
     strategy = (
         session.last_strategy_view
@@ -604,6 +1014,8 @@ def _slot_derived_chips(session: Session) -> list[str]:
     )
     if rent and rent.get("monthly_rent"):
         chips.append("What's the cash-on-cash if I rent it?")
+        if isinstance(rent.get("break_even_rent"), (int, float)):
+            chips.append("What rent would make this work?")
 
     town = (
         session.last_town_summary
@@ -614,6 +1026,11 @@ def _slot_derived_chips(session: Session) -> list[str]:
         doc_count = town.get("doc_count")
         if isinstance(doc_count, int) and doc_count > 0:
             chips.append("What's driving the town outlook?")
+
+    raw_cma = getattr(session, "last_cma_table", None)
+    cma = raw_cma if isinstance(raw_cma, dict) else None
+    if cma and cma.get("rows"):
+        chips.append("Which comps actually fed fair value?")
 
     return chips
 
@@ -737,6 +1154,11 @@ def _to_listing_from_facts(pid: str, facts: dict[str, Any]) -> dict[str, Any]:
     lng = facts.get("longitude")
     if (lat is None or lng is None) and address:
         lat, lng = _geocode(address)
+    street_view = _street_view_image_url(
+        latitude=float(lat) if lat is not None else None,
+        longitude=float(lng) if lng is not None else None,
+        property_id=pid,
+    )
     return {
         "id": pid,
         "address_line": address,
@@ -752,6 +1174,7 @@ def _to_listing_from_facts(pid: str, facts: dict[str, Any]) -> dict[str, Any]:
         "status": "active",
         "lat": float(lat) if lat is not None else None,
         "lng": float(lng) if lng is not None else None,
+        "streetViewImageUrl": street_view,
     }
 
 
@@ -800,6 +1223,8 @@ def _suggestions_for_browse(
     slot_chips = _slot_derived_chips(session) if session else []
 
     suggestions: list[str] = []
+    if session and session.current_property_id and session.last_answer_contract != "cma":
+        suggestions.append("Run a live CMA with market comps")
     for line in response_text.splitlines():
         m = _NEXT_QUESTION_RE.match(line.strip())
         if m:
@@ -853,8 +1278,87 @@ async def _browse_stream_impl(
 
     focal = _focal_listing_from_session(session)
     intro = _chat_text_from_browse(response_text, focal)
+    visual_advice = _load_visual_advice(session, llm)
+
+    primary_events: list[dict[str, Any]] = []
+    secondary_events: list[dict[str, Any]] = []
+    native_chart_emitted = False
+
+    if isinstance(session.last_town_summary, dict):
+        primary_events.append(events.town_summary(session.last_town_summary))
+
+    if isinstance(session.last_comps_preview, dict):
+        primary_events.append(events.comps_preview(session.last_comps_preview))
+
+    if isinstance(session.last_value_thesis_view, dict):
+        primary_events.append(events.value_thesis(session.last_value_thesis_view))
+        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
+        if cma_payload is not None:
+            primary_events.append(events.cma_table(cma_payload))
+        trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
+        if trust_payload is not None:
+            primary_events.append(events.trust_summary(trust_payload))
+        native_chart = _apply_chart_advice(
+            _native_value_chart(session.last_value_thesis_view),
+            visual_advice,
+            "value",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+        cma_chart = _apply_chart_advice(
+            _native_cma_chart(session.last_value_thesis_view),
+            visual_advice,
+            "cma",
+        )
+        if _append_chart_once(secondary_events, cma_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_strategy_view, dict):
+        primary_events.append(events.strategy_path(session.last_strategy_view))
+
+    if isinstance(session.last_rent_outlook_view, dict):
+        primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
+        native_chart = _apply_chart_advice(
+            _native_rent_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+        native_ramp_chart = _apply_chart_advice(
+            _native_rent_ramp_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(secondary_events, native_ramp_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_projection_view, dict):
+        payload = _scenario_table_from_view(session.last_projection_view)
+        secondary_events.append(
+            events.scenario_table(
+                payload["rows"],
+                address=payload["address"],
+                ask_price=payload["ask_price"],
+                basis_label=payload["basis_label"],
+                spread=payload["spread"],
+            )
+        )
+        native_chart = _apply_chart_advice(
+            _native_scenario_chart(session.last_projection_view),
+            visual_advice,
+            "scenario",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+
+    for ev in primary_events:
+        yield ev
 
     async for ev in _stream_text(intro):
+        yield ev
+
+    for ev in secondary_events:
         yield ev
 
     if focal:
@@ -863,6 +1367,11 @@ async def _browse_stream_impl(
             center, pins = _pins_and_center([focal])
             if pins:
                 yield events.map_payload(center, pins)
+
+    if not native_chart_emitted:
+        _, chart_events = _extract_charts(response_text)
+        for chart_ev in chart_events:
+            yield chart_ev
 
     yield events.suggestions(_suggestions_for_browse(response_text, focal, session))
     if isinstance(session.last_verifier_report, dict):
@@ -1006,39 +1515,75 @@ async def _decision_stream_impl(
     # may have been refined by the resolver — but fall back to the original pin.
     focal = _focal_listing_from_session(session) or pinned_listing
     cleaned, chart_events = _extract_charts(response_text)
+    visual_advice = _load_visual_advice(session, llm)
 
-    async for ev in _stream_text(cleaned):
-        yield ev
-
+    primary_events: list[dict[str, Any]] = []
     if isinstance(session.last_decision_view, dict):
-        yield events.verdict(_verdict_from_view(session.last_decision_view))
+        primary_events.append(events.verdict(_verdict_from_view(session.last_decision_view)))
 
     # Town context card (median price/ppsf, confidence tier, seeded signals).
     # Built by handle_decision from town aggregates + local_intelligence files.
     if isinstance(session.last_town_summary, dict):
-        yield events.town_summary(session.last_town_summary)
+        primary_events.append(events.town_summary(session.last_town_summary))
 
     # Top comps used in the valuation, so the user sees the evidence base
     # without having to ask "show me the comp set" as a follow-up.
     if isinstance(session.last_comps_preview, dict):
-        yield events.comps_preview(session.last_comps_preview)
+        primary_events.append(events.comps_preview(session.last_comps_preview))
+
+    if isinstance(session.last_value_thesis_view, dict):
+        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
+        if cma_payload is not None:
+            primary_events.append(events.cma_table(cma_payload))
+            native_chart = _apply_chart_advice(
+                _native_cma_chart(session.last_value_thesis_view),
+                visual_advice,
+                "cma",
+            )
+            if _append_chart_once(projection_secondary, native_chart):
+                native_projection_chart_emitted = True
+    if isinstance(session.last_decision_view, dict):
+        trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_decision_view)
+        if trust_payload is not None:
+            primary_events.append(events.trust_summary(trust_payload))
+
+    for ev in primary_events:
+        yield ev
 
     # Bull/base/bear scenario table lives on session.last_projection_view,
     # populated by handle_decision when the scenario subrun succeeds. Emitted
     # inline so the first DECISION response carries the scenario story
     # alongside the verdict, not as a follow-up. Skipped if the scenario
     # values are all zero/missing — renders as an empty card otherwise.
+    projection_secondary: list[dict[str, Any]] = []
+    native_projection_chart_emitted = False
     if isinstance(session.last_projection_view, dict):
         pv = session.last_projection_view
         if any(isinstance(pv.get(k), (int, float)) and pv.get(k)
                for k in ("bull_case_value", "base_case_value", "bear_case_value")):
             payload = _scenario_table_from_view(pv)
-            yield events.scenario_table(
-                payload["rows"],
-                address=payload["address"],
-                ask_price=payload["ask_price"],
-                spread=payload["spread"],
+            projection_secondary.append(
+                events.scenario_table(
+                    payload["rows"],
+                    address=payload["address"],
+                    ask_price=payload["ask_price"],
+                    basis_label=payload["basis_label"],
+                    spread=payload["spread"],
+                )
             )
+            native_chart = _apply_chart_advice(
+                _native_scenario_chart(pv),
+                visual_advice,
+                "scenario",
+            )
+            if _append_chart_once(projection_secondary, native_chart):
+                native_projection_chart_emitted = True
+
+    async for ev in _stream_text(cleaned):
+        yield ev
+
+    for ev in projection_secondary:
+        yield ev
 
     if focal:
         yield events.listings([focal])
@@ -1047,8 +1592,9 @@ async def _decision_stream_impl(
             if pins:
                 yield events.map_payload(center, pins)
 
-    for chart_ev in chart_events:
-        yield chart_ev
+    if not native_projection_chart_emitted:
+        for chart_ev in chart_events:
+            yield chart_ev
 
     yield events.suggestions(_suggestions_for_decision(focal, session))
     if isinstance(session.last_verifier_report, dict):
@@ -1195,41 +1741,114 @@ async def _dispatch_stream_impl(
 
     focal = _focal_listing_from_session(session) or pinned_listing
     cleaned, chart_events = _extract_charts(response_text)
+    visual_advice = _load_visual_advice(session, llm)
+
+    primary_events: list[dict[str, Any]] = []
+    secondary_events: list[dict[str, Any]] = []
+    native_chart_emitted = False
+
+    # Tier-specific structured cards. Each handler populates at most one of
+    # these slots per turn; emit whichever is present before the prose so the
+    # user sees the actual model output while the narration catches up.
+    if isinstance(session.last_town_summary, dict):
+        primary_events.append(events.town_summary(session.last_town_summary))
+
+    if isinstance(session.last_comps_preview, dict):
+        primary_events.append(events.comps_preview(session.last_comps_preview))
+
+    if isinstance(session.last_value_thesis_view, dict):
+        primary_events.append(events.value_thesis(session.last_value_thesis_view))
+        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
+        if cma_payload is not None:
+            primary_events.append(events.cma_table(cma_payload))
+        trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
+        if trust_payload is not None:
+            primary_events.append(events.trust_summary(trust_payload))
+        native_chart = _apply_chart_advice(
+            _native_value_chart(session.last_value_thesis_view),
+            visual_advice,
+            "value",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+        cma_chart = _apply_chart_advice(
+            _native_cma_chart(session.last_value_thesis_view),
+            visual_advice,
+            "cma",
+        )
+        if _append_chart_once(secondary_events, cma_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_risk_view, dict):
+        primary_events.append(events.risk_profile(session.last_risk_view))
+        native_chart = _apply_chart_advice(
+            _native_risk_chart(session.last_risk_view),
+            visual_advice,
+            "risk",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_strategy_view, dict):
+        primary_events.append(events.strategy_path(session.last_strategy_view))
+
+    if isinstance(session.last_rent_outlook_view, dict):
+        primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
+        trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_rent_outlook_view)
+        if trust_payload is not None:
+            primary_events.append(events.trust_summary(trust_payload))
+        native_chart = _apply_chart_advice(
+            _native_rent_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+        native_ramp_chart = _apply_chart_advice(
+            _native_rent_ramp_chart(session.last_rent_outlook_view),
+            visual_advice,
+            "rent",
+        )
+        if _append_chart_once(secondary_events, native_ramp_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_research_view, dict):
+        primary_events.append(events.research_update(session.last_research_view))
+
+    if isinstance(session.last_projection_view, dict):
+        payload = _scenario_table_from_view(session.last_projection_view)
+        secondary_events.append(
+            events.scenario_table(
+                payload["rows"],
+                address=payload["address"],
+                ask_price=payload["ask_price"],
+                basis_label=payload["basis_label"],
+                spread=payload["spread"],
+            )
+        )
+        native_chart = _apply_chart_advice(
+            _native_scenario_chart(session.last_projection_view),
+            visual_advice,
+            "scenario",
+        )
+        if _append_chart_once(secondary_events, native_chart):
+            native_chart_emitted = True
+
+    if isinstance(session.last_comparison_view, list) and session.last_comparison_view:
+        secondary_events.append(
+            events.comparison_table(
+                _comparison_table_from_view(session.last_comparison_view)
+            )
+        )
+
+    for ev in primary_events:
+        yield ev
 
     async for ev in _stream_text(cleaned):
         yield ev
 
-    if isinstance(session.last_projection_view, dict):
-        payload = _scenario_table_from_view(session.last_projection_view)
-        yield events.scenario_table(
-            payload["rows"],
-            address=payload["address"],
-            ask_price=payload["ask_price"],
-            spread=payload["spread"],
-        )
-
-    if isinstance(session.last_comparison_view, list) and session.last_comparison_view:
-        yield events.comparison_table(
-            _comparison_table_from_view(session.last_comparison_view)
-        )
-
-    # Tier-specific structured cards. Each handler populates at most one of
-    # these slots per turn; emit whichever is present so the UI can render
-    # the structured counterpart to the narrative it just streamed.
-    if isinstance(session.last_value_thesis_view, dict):
-        yield events.value_thesis(session.last_value_thesis_view)
-
-    if isinstance(session.last_risk_view, dict):
-        yield events.risk_profile(session.last_risk_view)
-
-    if isinstance(session.last_strategy_view, dict):
-        yield events.strategy_path(session.last_strategy_view)
-
-    if isinstance(session.last_rent_outlook_view, dict):
-        yield events.rent_outlook(session.last_rent_outlook_view)
-
-    if isinstance(session.last_research_view, dict):
-        yield events.research_update(session.last_research_view)
+    for ev in secondary_events:
+        yield ev
 
     if focal:
         yield events.listings([focal])
@@ -1238,8 +1857,9 @@ async def _dispatch_stream_impl(
             if pins:
                 yield events.map_payload(center, pins)
 
-    for chart_ev in chart_events:
-        yield chart_ev
+    if not native_chart_emitted:
+        for chart_ev in chart_events:
+            yield chart_ev
 
     yield events.suggestions(_suggestions_for_tier(decision.answer_type, focal, session))
     if isinstance(session.last_verifier_report, dict):

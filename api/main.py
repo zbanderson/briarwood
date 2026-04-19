@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, AsyncIterator
-
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -31,6 +32,7 @@ from api.pipeline_adapter import (
     search_stream,
 )
 from api.store import get_store
+from briarwood.data_sources.google_maps_client import GoogleMapsClient
 
 # Kept as an import-time guard: any module that touches the agent pipeline
 # needs briarwood's .env autoload to have run first.
@@ -367,3 +369,64 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/street-view")
+def street_view(
+    latitude: float | None = Query(None),
+    longitude: float | None = Query(None),
+    location: str | None = Query(None),
+    size: str = Query("640x360"),
+    fov: int = Query(90),
+    pitch: int = Query(0),
+) -> Response:
+    client = GoogleMapsClient()
+    if not client.is_configured:
+        raise HTTPException(status_code=503, detail="GOOGLE_MAPS_API_KEY is not configured")
+
+    image_url: str | None
+    if isinstance(location, str) and location.strip():
+        image_url = client.street_view_image_url_for_location(
+            location=location,
+            size=size,
+            fov=fov,
+            pitch=pitch,
+        )
+    elif latitude is not None and longitude is not None:
+        image_url = client.street_view_image_url(
+            latitude=latitude,
+            longitude=longitude,
+            size=size,
+            fov=fov,
+            pitch=pitch,
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Either location or latitude/longitude is required")
+    if not image_url:
+        raise HTTPException(status_code=503, detail="Street View URL could not be generated")
+
+    request = Request(
+        image_url,
+        headers={
+            "User-Agent": "Briarwood/1.0",
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        },
+    )
+    try:
+        with urlopen(request, timeout=12.0) as upstream:
+            body = upstream.read()
+            content_type = upstream.headers.get("Content-Type", "image/jpeg")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else ""
+        raise HTTPException(
+            status_code=exc.code if isinstance(exc.code, int) else 502,
+            detail=detail or "Google Street View request failed",
+        ) from exc
+    except URLError as exc:
+        raise HTTPException(status_code=502, detail=f"Google Street View unavailable: {exc}") from exc
+
+    return Response(
+        content=body,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )

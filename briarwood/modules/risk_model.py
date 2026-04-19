@@ -30,6 +30,7 @@ def run_risk_model(context: ExecutionContext) -> dict[str, object]:
     legacy_confidence = result.confidence
 
     bridge = _valuation_bridge(context, property_input)
+    legal_conf = _legal_confidence(context)
 
     adjusted_confidence = legacy_confidence
     if bridge["premium_pct"] is not None and legacy_confidence is not None:
@@ -38,6 +39,8 @@ def run_risk_model(context: ExecutionContext) -> dict[str, object]:
         elif bridge["premium_pct"] <= UNDERPRICED_THRESHOLD:
             adjusted_confidence = min(1.0, legacy_confidence + CONFIDENCE_STEP)
         adjusted_confidence = round(adjusted_confidence, 4)
+    if legal_conf is not None and adjusted_confidence is not None and legal_conf < 0.5:
+        adjusted_confidence = max(0.0, round(adjusted_confidence - 0.08, 4))
 
     macro_nudge = apply_macro_nudge(
         base_confidence=adjusted_confidence,
@@ -64,13 +67,27 @@ def run_risk_model(context: ExecutionContext) -> dict[str, object]:
                 "premium_pct": bridge["premium_pct"],
                 "flag": bridge["flag"],
             },
+            "legal_confidence_signal": legal_conf,
             "macro_nudge": macro_nudge.to_meta(),
         },
-        warnings=list(bridge["warnings"]),
+        warnings=list(bridge["warnings"]) + (
+            ["Legal confidence is low, so risk confidence is dampened."] if legal_conf is not None and legal_conf < 0.5 else []
+        ),
+        required_fields=["purchase_price", "sqft", "beds", "baths"],
     )
     if adjusted_confidence is not None:
         payload = payload.model_copy(update={"confidence": adjusted_confidence})
     return payload.model_dump()
+
+
+def _legal_confidence(context: ExecutionContext) -> float | None:
+    legal_output = context.get_module_output("legal_confidence") if hasattr(context, "get_module_output") else None
+    if not isinstance(legal_output, dict):
+        return None
+    confidence = legal_output.get("confidence")
+    if isinstance(confidence, (int, float)):
+        return float(confidence)
+    return None
 
 
 def _valuation_bridge(context: ExecutionContext, property_input: Any) -> dict[str, Any]:

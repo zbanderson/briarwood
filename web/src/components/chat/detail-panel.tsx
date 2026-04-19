@@ -53,8 +53,9 @@ export function DetailPanel({ listing, onClose, onRunAnalysis }: Props) {
 
   if (!listing) return null;
 
-  const photoStyle = listing.photo_url
-    ? { backgroundImage: `url(${listing.photo_url})` }
+  const previewImage = listing.photo_url ?? listing.streetViewImageUrl;
+  const photoStyle = previewImage
+    ? { backgroundImage: `url(${previewImage})` }
     : {
         backgroundImage: `linear-gradient(135deg,
           oklch(0.42 0.07 ${listing.hue ?? 30}) 0%,
@@ -91,6 +92,11 @@ export function DetailPanel({ listing, onClose, onRunAnalysis }: Props) {
             style={photoStyle}
           >
             <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[var(--color-bg)] to-transparent" />
+            {!listing.photo_url && listing.streetViewImageUrl && (
+              <div className="absolute left-4 top-4 rounded-full border border-black/10 bg-black/55 px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/90">
+                Google Street View
+              </div>
+            )}
           </div>
 
           <div className="px-5 py-4">
@@ -124,8 +130,8 @@ export function DetailPanel({ listing, onClose, onRunAnalysis }: Props) {
                 {listing.city}, {listing.state}.
               </p>
               <p className="mt-2 text-xs text-[var(--color-text-faint)]">
-                Comp analysis, scenarios, and decision summary will render here
-                once the orchestrator bridge is wired in.
+                Run analysis to bring comps, scenarios, and a decision read into
+                the chat thread for this address.
               </p>
             </Section>
 

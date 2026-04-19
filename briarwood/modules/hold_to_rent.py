@@ -4,6 +4,7 @@ from typing import Any
 
 from briarwood.execution.context import ExecutionContext
 from briarwood.routing_schema import ModulePayload
+from briarwood.modules.scoped_common import confidence_band
 
 
 def run_hold_to_rent(context: ExecutionContext) -> dict[str, object]:
@@ -51,6 +52,18 @@ def run_hold_to_rent(context: ExecutionContext) -> dict[str, object]:
             "uses_full_engine_report": False,
         },
         warnings=_merge_warnings(carry_cost_output, rent_stabilization_output),
+        mode="partial" if _merge_warnings(carry_cost_output, rent_stabilization_output) else "full",
+        missing_inputs=[
+            field
+            for output in (carry_cost_output, rent_stabilization_output)
+            for field in list(output.get("missing_inputs") or [])
+        ],
+        estimated_inputs=[
+            field
+            for output in (carry_cost_output, rent_stabilization_output)
+            for field in list(output.get("estimated_inputs") or [])
+        ],
+        confidence_band=confidence_band(_min_confidence(carry_cost_output, rent_stabilization_output)),
     )
     return payload.model_dump()
 

@@ -1,0 +1,208 @@
+{
+  "session_id": "a1b8495c5e56",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "rent_outlook",
+  "last_analysis_mode": "rent_lookup",
+  "last_decision_view": {
+    "pid": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 767000.0,
+    "all_in_basis": 767000.0,
+    "fair_value_base": 723555.96,
+    "value_low": 640036.32,
+    "value_high": 807075.6,
+    "ask_premium_pct": 0.0566,
+    "basis_premium_pct": 0.0566,
+    "trust_flags": [
+      "incomplete_carry_inputs"
+    ],
+    "what_must_be_true": [],
+    "key_risks": [],
+    "overrides_applied": {}
+  },
+  "last_projection_view": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "ask_price": 767000.0,
+    "bull_case_value": 816046.0,
+    "base_case_value": 764343.0,
+    "bear_case_value": 722117.0,
+    "stress_case_value": 506489.0,
+    "spread": 93928.0,
+    "bull_total_adjustment_pct": 0.1278,
+    "base_total_adjustment_pct": 0.0564,
+    "bear_total_adjustment_pct": -0.002,
+    "bull_growth_rate": 0.0639,
+    "base_growth_rate": -0.0035,
+    "bear_growth_rate": -0.0585,
+    "bcv_anchor": 723555.96,
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": {
+    "town": "Belmar",
+    "state": "NJ",
+    "median_price": 867500.0,
+    "median_ppsf": 515.87,
+    "sold_count": 320,
+    "confidence_raw": 0.72,
+    "confidence_tier": "strong",
+    "doc_count": 4,
+    "bullish_signals": [
+      "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
+      "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato",
+      "601 Main Street"
+    ],
+    "bearish_signals": []
+  },
+  "last_comps_preview": {
+    "subject_pid": "1008-14th-ave-belmar-nj-07719",
+    "subject_ask": 767000.0,
+    "count": 4,
+    "median_price": 850000.0,
+    "comps": [
+      {
+        "property_id": "1302-l-street",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "l-street-2",
+        "address": "1302 L Street",
+        "beds": 3,
+        "baths": 1.5,
+        "sqft": null,
+        "price": 850000.0,
+        "premium_pct": 0.1082
+      },
+      {
+        "property_id": "briarwood-rd-belmar",
+        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 674200.0,
+        "premium_pct": -0.121
+      },
+      {
+        "property_id": "1600-l-street-belmar-nj-07719",
+        "address": "1600 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 899000.0,
+        "premium_pct": 0.1721
+      }
+    ]
+  },
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "monthly_rent": 2352.0,
+    "effective_monthly_rent": 2234.4,
+    "rent_source_type": "provided",
+    "rental_ease_label": "Seasonal / Mixed",
+    "rental_ease_score": 59.46,
+    "annual_noi": 20312.76,
+    "horizon_years": 2,
+    "future_rent_low": 4000,
+    "future_rent_mid": 8487,
+    "future_rent_high": 10474,
+    "zillow_market_rent": 8000.0,
+    "zillow_rental_comp_count": 5,
+    "basis_to_rent_framing": "Current rent annualizes to roughly 3.5% of the current basis.",
+    "owner_occupy_then_rent": null,
+    "burn_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "rent_base": 8000,
+          "rent_bull": 8000,
+          "rent_bear": 8000,
+          "monthly_obligation": null
+        },
+        {
+          "year": 1,
+          "rent_base": 8240,
+          "rent_bull": 8400,
+          "rent_bear": 8080,
+          "monthly_obligation": null
+        },
+        {
+          "year": 2,
+          "rent_base": 8487,
+          "rent_bull": 8820,
+          "rent_bear": 8161,
+          "monthly_obligation": null
+        }
+      ],
+      "title": "Rent burn chart",
+      "monthly_obligation": null
+    }
+  },
+  "last_research_view": null,
+  "last_verifier_report": {
+    "tier": "rent_lookup",
+    "sentences_total": 2,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 2,
+    "anchors": [
+      {
+        "module": "RentOutlook",
+        "field": "current_monthly_rent",
+        "value": "2352.0"
+      },
+      {
+        "module": "RentOutlook",
+        "field": "rental_ease_label",
+        "value": "Seasonal / Mixed"
+      }
+    ],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "The current monthly rent for the property at 1008 14th Avenue, Belmar, NJ is approximately $2,352, while the effective monthly rent is about $2,234 .",
+        "value": "1008",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "user": "tell me about 1008 14th Ave, belmar, nj",
+      "assistant": "Briarwood sees the immediate setup as buy if price improves. Ask is 5.7% above the fair value anchor.\nWhat supports that view: Make an offer inside the risk-adjusted band rather than at ask.\nWhat could weaken confidence: incomplete_carry_inputs.\nNext best question: Complete the carry-cost inputs (taxes, insurance, financing).\nSource coverage: Coverage is still thin; no post-promotion enrichment has been captured yet.\nNearby support in Belmar:\n- 1302-l-street \u2014 1302 L Street, 3bd/2.0ba, $850,000\n- 1600-l-street-belmar-nj-07719 \u2014 1600 L Street, Belmar, NJ 07719, 3bd/2.0ba, $899,000\n- briarwood-rd-belmar \u2014 1223 Briarwood Rd, Belmar, NJ 07719, 3bd/2.0ba, $674,200",
+      "answer_type": "browse"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The recommendation for 1008 14th Avenue, Belmar, NJ is to buy if the price improves, as stated by the DecisionEngine. The current listing price is $767,000, while the estimated fair value is $723,555.96, indicating that the property is priced about 5.66% above its fair value. The main concern stems from the basis premium, which also sits at 5.66%, suggesting caution due to incomplete carry inputs flagged in the trust assessment.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "what if we were to pay 650k and then decide to try to rent it out for the next couple years",
+      "assistant": "The current monthly rent for the property at 1008 14th Avenue, Belmar, NJ is approximately $2,352, while the effective monthly rent is about $2,234. The rental market is considered seasonal/mixed, and confidence in this estimate comes from nearby rental listings showing a market anchor around $8,000 per month.",
+      "answer_type": "decision"
+    }
+  ]
+}

@@ -303,6 +303,10 @@ class ModulePayload(BaseModel):
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     assumptions_used: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
+    mode: str = "full"
+    missing_inputs: list[str] = Field(default_factory=list)
+    estimated_inputs: list[str] = Field(default_factory=list)
+    confidence_band: str = "Moderate confidence"
 
     # ── Migration fields (optional, backward-compatible) ──────────────
     module_name: str = ""
@@ -353,6 +357,11 @@ class UnifiedIntelligenceOutput(BaseModel):
     what_must_be_true: list[str] = Field(default_factory=list)
     next_checks: list[str] = Field(default_factory=list)
     trust_flags: list[str] = Field(default_factory=list)
+    trust_summary: dict[str, Any] = Field(default_factory=dict)
+    contradiction_count: int = 0
+    blocked_thesis_warnings: list[str] = Field(default_factory=list)
+    why_this_stance: list[str] = Field(default_factory=list)
+    what_changes_my_view: list[str] = Field(default_factory=list)
     interaction_trace: dict[str, Any] = Field(default_factory=dict)
 
 

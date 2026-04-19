@@ -14,11 +14,14 @@ import { TownSummaryCard } from "./town-summary-card";
 import { CompsPreviewCard } from "./comps-preview-card";
 import { RiskProfileCard } from "./risk-profile-card";
 import { ValueThesisCard } from "./value-thesis-card";
+import { CmaTableCard } from "./cma-table-card";
 import { StrategyPathCard } from "./strategy-path-card";
 import { RentOutlookCard } from "./rent-outlook-card";
+import { TrustSummaryCard } from "./trust-summary-card";
 import { ResearchUpdateCard } from "./research-update-card";
 import { ModuleBadges } from "./module-badges";
 import { GroundedText } from "./grounded-text";
+import { EntryPointCard } from "./entry-point-card";
 
 // Lazy-load Mapbox — keeps it out of the main bundle and avoids SSR errors
 // from window-only globals in mapbox-gl.
@@ -31,7 +34,7 @@ function MapSkeleton() {
   return (
     <div
       aria-hidden
-      className="mt-3 h-[280px] w-full animate-pulse rounded-xl bg-[var(--color-bg-sunken)] border border-[var(--color-border-subtle)]"
+      className="mt-3 h-[220px] w-full animate-pulse rounded-xl bg-[var(--color-bg-sunken)] border border-[var(--color-border-subtle)]"
     />
   );
 }
@@ -39,9 +42,14 @@ function MapSkeleton() {
 type MessageListProps = {
   messages: ChatMessage[];
   onSelectListing?: (listing: Listing) => void;
+  onPrompt?: (prompt: string) => void;
 };
 
-export function MessageList({ messages, onSelectListing }: MessageListProps) {
+export function MessageList({
+  messages,
+  onSelectListing,
+  onPrompt,
+}: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +66,7 @@ export function MessageList({ messages, onSelectListing }: MessageListProps) {
             key={m.id}
             message={m}
             onSelectListing={onSelectListing}
+            onPrompt={onPrompt}
           />
         ),
       )}
@@ -85,9 +94,11 @@ function UserMessage({ content }: { content: string }) {
 function AssistantMessage({
   message,
   onSelectListing,
+  onPrompt,
 }: {
   message: ChatMessage;
   onSelectListing?: (listing: Listing) => void;
+  onPrompt?: (prompt: string) => void;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const showDots = message.isStreaming && message.content.length === 0;
@@ -101,16 +112,21 @@ function AssistantMessage({
   const compsPreview = message.compsPreview;
   const riskProfile = message.riskProfile;
   const valueThesis = message.valueThesis;
+  const cmaTable = message.cmaTable;
   const strategyPath = message.strategyPath;
   const rentOutlook = message.rentOutlook;
+  const trustSummary = message.trustSummary;
   const researchUpdate = message.researchUpdate;
   const modulesRan = message.modulesRan ?? [];
   const anchors = message.groundingAnchors ?? [];
   const muted = message.ungroundedDeclaration === true;
+  const showCompPreview = Boolean(compsPreview && !valueThesis && !cmaTable);
 
   return (
     <div className="flex">
       <div className="w-full text-[15px] leading-7 text-[var(--color-text)]">
+        {verdict && <VerdictCard verdict={verdict} />}
+
         {showDots ? (
           <StreamingIndicator />
         ) : (
@@ -123,7 +139,100 @@ function AssistantMessage({
           )
         )}
 
-        {modulesRan.length > 0 && <ModuleBadges modules={modulesRan} />}
+        {strategyPath && <StrategyPathCard strategy={strategyPath} />}
+        {strategyPath && onPrompt && (
+          <InlinePrompt
+            prompt="Walk me through the recommended path"
+            label="Drill into strategy"
+            onPick={onPrompt}
+          />
+        )}
+
+        {valueThesis && <EntryPointCard thesis={valueThesis} />}
+
+        {valueThesis && <ValueThesisCard thesis={valueThesis} hideCompStory={Boolean(cmaTable)} />}
+        {valueThesis && onPrompt && (
+          <InlinePrompt
+            prompt="What would change your value view?"
+            label="Drill into value thesis"
+            onPick={onPrompt}
+          />
+        )}
+
+        {rentOutlook && <RentOutlookCard outlook={rentOutlook} />}
+        {rentOutlook && onPrompt && (
+          <InlinePrompt
+            prompt="What rent would make this deal work?"
+            label="Drill into rent"
+            onPick={onPrompt}
+          />
+        )}
+
+        {trustSummary && <TrustSummaryCard summary={trustSummary} />}
+        {trustSummary && onPrompt && (
+          <InlinePrompt
+            prompt="What data is missing or estimated?"
+            label="Drill into confidence"
+            onPick={onPrompt}
+          />
+        )}
+
+        {riskProfile && <RiskProfileCard profile={riskProfile} />}
+        {riskProfile && onPrompt && (
+          <InlinePrompt
+            prompt="What's the biggest risk here?"
+            label="Drill into risk"
+            onPick={onPrompt}
+          />
+        )}
+
+        {cmaTable && <CmaTableCard table={cmaTable} />}
+        {cmaTable && onPrompt && (
+          <InlinePrompt
+            prompt="Which comps actually fed fair value?"
+            label="Drill into the CMA"
+            onPick={onPrompt}
+          />
+        )}
+
+        {showCompPreview && compsPreview && <CompsPreviewCard preview={compsPreview} />}
+        {showCompPreview && compsPreview && onPrompt && (
+          <InlinePrompt
+            prompt={
+              compsPreview.count > compsPreview.comps.length
+                ? "Show me the full comp set"
+                : "Why were these comps chosen?"
+            }
+            label="Drill into comps"
+            onPick={onPrompt}
+          />
+        )}
+
+        {townSummary && <TownSummaryCard summary={townSummary} />}
+        {townSummary && onPrompt && (
+          <InlinePrompt
+            prompt="What's driving the town outlook?"
+            label="Drill into town context"
+            onPick={onPrompt}
+          />
+        )}
+
+        {scenarioTable && <ScenarioTable table={scenarioTable} />}
+        {scenarioTable && onPrompt && (
+          <InlinePrompt
+            prompt="Show me the downside case in more detail"
+            label="Drill into scenarios"
+            onPick={onPrompt}
+          />
+        )}
+
+        {charts.map((c, i) => (
+          <ChartFrame key={`${c.kind ?? "chart"}-${c.url ?? "native"}-${i}`} chart={c} />
+        ))}
+
+        {researchUpdate && <ResearchUpdateCard research={researchUpdate} />}
+
+        {comparisonTable && <ComparisonTable table={comparisonTable} />}
 
         {map && map.pins.length > 0 && (
           <InlineMap
@@ -148,30 +257,35 @@ function AssistantMessage({
           />
         )}
 
-        {verdict && <VerdictCard verdict={verdict} />}
-
-        {townSummary && <TownSummaryCard summary={townSummary} />}
-
-        {compsPreview && <CompsPreviewCard preview={compsPreview} />}
-
-        {valueThesis && <ValueThesisCard thesis={valueThesis} />}
-
-        {riskProfile && <RiskProfileCard profile={riskProfile} />}
-
-        {strategyPath && <StrategyPathCard strategy={strategyPath} />}
-
-        {rentOutlook && <RentOutlookCard outlook={rentOutlook} />}
-
-        {researchUpdate && <ResearchUpdateCard research={researchUpdate} />}
-
-        {scenarioTable && <ScenarioTable table={scenarioTable} />}
-
-        {comparisonTable && <ComparisonTable table={comparisonTable} />}
-
-        {charts.map((c, i) => (
-          <ChartFrame key={`${c.url}-${i}`} chart={c} />
-        ))}
+        {modulesRan.length > 0 && <ModuleBadges modules={modulesRan} />}
       </div>
+    </div>
+  );
+}
+
+function InlinePrompt({
+  label,
+  prompt,
+  onPick,
+}: {
+  label: string;
+  prompt: string;
+  onPick: (prompt: string) => void;
+}) {
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => onPick(prompt)}
+        className={cn(
+          "rounded-full border border-[var(--color-border-subtle)] px-3 py-1.5 text-xs",
+          "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
+          "hover:border-[var(--color-border)] hover:bg-[var(--color-surface)]",
+          "transition-colors",
+        )}
+      >
+        {label}
+      </button>
     </div>
   );
 }

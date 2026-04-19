@@ -8,7 +8,27 @@ type Props = {
 };
 
 export function ModuleBadges({ modules }: Props) {
-  if (modules.length === 0) return null;
+  const substantive = modules.some((m) =>
+    [
+      "town_context",
+      "comp_set",
+      "cma",
+      "value_thesis",
+      "risk_profile",
+      "strategy_fit",
+      "rent_outlook",
+      "projection_engine",
+      "confidence",
+      "town_research",
+      "valuation_model",
+    ].includes(m.module),
+  );
+  const visible = substantive
+    ? modules.filter(
+        (m) => !["listing_discovery", "geocoder", "visualizer"].includes(m.module),
+      )
+    : modules;
+  if (visible.length === 0) return null;
   return (
     <div
       role="group"
@@ -18,7 +38,7 @@ export function ModuleBadges({ modules }: Props) {
       <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
         Modules
       </span>
-      {modules.map((m) => (
+      {visible.map((m) => (
         <span
           key={m.module}
           title={

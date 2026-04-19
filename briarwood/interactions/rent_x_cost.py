@@ -56,6 +56,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
 
     carry_offset_ratio = round(monthly_rent / monthly_cost, 3)
     monthly_gap = round(monthly_rent - monthly_cost, 2)
+    break_even_rent = round(monthly_cost, 2)
 
     # Occupancy dependency: fraction of months that must be rented to break even.
     # If rent > cost, any occupancy ≥ (cost/rent) works. If rent < cost, no
@@ -89,6 +90,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
         adjustments={
             "carry_offset_ratio": carry_offset_ratio,
             "monthly_gap": monthly_gap,
+            "break_even_rent": break_even_rent,
             "required_occupancy": round(required_occupancy, 3),
             "break_even_probability": break_even_prob,
         },

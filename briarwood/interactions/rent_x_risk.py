@@ -71,6 +71,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
         )
 
     adjusted = max(0.0, min(adjusted, 1.0))
+    rent_haircut_pct = round(max(0.0, min(raw_conf - adjusted, 0.45)), 4)
     fired = adjusted < raw_conf
 
     if not reasoning:
@@ -83,6 +84,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
             "raw_rent_confidence": round(raw_conf, 4),
             "adjusted_rent_confidence": round(adjusted, 4),
             "downgrade_amount": round(raw_conf - adjusted, 4),
+            "rent_haircut_pct": rent_haircut_pct,
         },
         reasoning=reasoning,
         confidence=round(adjusted, 4),

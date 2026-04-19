@@ -26,6 +26,9 @@ class ExecutionContext(BaseModel):
     market_context: dict[str, Any] = Field(default_factory=dict)
     comp_context: dict[str, Any] = Field(default_factory=dict)
     macro_context: dict[str, Any] = Field(default_factory=dict)
+    field_provenance: dict[str, Any] = Field(default_factory=dict)
+    missing_data_registry: dict[str, Any] = Field(default_factory=dict)
+    normalized_context: dict[str, Any] = Field(default_factory=dict)
 
     def store_module_output(self, module_name: str, output: dict[str, Any]) -> None:
         """Store one scoped module output into ``prior_outputs`` by module name."""
@@ -51,6 +54,8 @@ class ExecutionContext(BaseModel):
             "has_market_context": bool(self.market_context),
             "has_comp_context": bool(self.comp_context),
             "has_macro_context": bool(self.macro_context),
+            "field_provenance_keys": sorted(self.field_provenance.keys()),
+            "missing_fields": list(self.missing_data_registry.get("missing") or []),
         }
 
 

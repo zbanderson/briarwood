@@ -56,8 +56,13 @@ class PropertyView:
     decision_stance: str | None = None
     primary_value_source: str | None = None
     trust_flags: tuple[str, ...] = ()
+    trust_summary: Mapping[str, Any] = field(default_factory=dict)
     what_must_be_true: tuple[str, ...] = ()
     key_risks: tuple[str, ...] = ()
+    why_this_stance: tuple[str, ...] = ()
+    what_changes_my_view: tuple[str, ...] = ()
+    contradiction_count: int = 0
+    blocked_thesis_warnings: tuple[str, ...] = ()
 
     # Scenario layer.
     overrides_applied: Mapping[str, Any] = field(default_factory=dict)
@@ -142,8 +147,13 @@ class PropertyView:
             decision_stance=stance,
             primary_value_source=unified.get("primary_value_source"),
             trust_flags=tuple(unified.get("trust_flags") or ()),
+            trust_summary=dict(unified.get("trust_summary") or {}),
             what_must_be_true=tuple(unified.get("what_must_be_true") or ()),
             key_risks=tuple(unified.get("key_risks") or ()),
+            why_this_stance=tuple(unified.get("why_this_stance") or ()),
+            what_changes_my_view=tuple(unified.get("what_changes_my_view") or ()),
+            contradiction_count=int(unified.get("contradiction_count") or 0),
+            blocked_thesis_warnings=tuple(unified.get("blocked_thesis_warnings") or ()),
             overrides_applied=self.overrides_applied,
             unified=unified,
         )

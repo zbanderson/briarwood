@@ -10,6 +10,7 @@ from typing import Any, Protocol
 from briarwood.execution.context import ExecutionContext
 from briarwood.execution.executor import execute_plan
 from briarwood.execution.macro_context import resolve_macro_context
+from briarwood.execution.normalization import normalize_execution_inputs
 from briarwood.execution.planner import ExecutionPlan, build_execution_plan
 from briarwood.execution.registry import ModuleSpec, build_module_registry
 from briarwood.interactions import InteractionTrace, run_all_bridges
@@ -209,19 +210,27 @@ def _build_execution_context(
     """Build the shared scoped execution context for V2 module execution."""
 
     assumptions = _extract_execution_assumptions(property_data, parser_output)
+    normalized = normalize_execution_inputs(
+        property_data=property_data,
+        property_summary=property_summary,
+        assumptions=assumptions,
+    )
     facts = dict(property_data.get("facts") or {})
     county = facts.get("county") or property_summary.get("county")
     state = facts.get("state") or property_summary.get("state")
     macro_context = resolve_macro_context(county=county, state=state) or {}
     return ExecutionContext(
         property_id=str(property_summary.get("property_id") or property_data.get("property_id") or ""),
-        property_data=dict(property_data),
+        property_data=dict(normalized.property_data),
         property_summary=dict(property_summary),
         parser_output=parser_output.model_dump(),
-        assumptions=assumptions,
+        assumptions=dict(normalized.assumptions),
         market_context=dict(property_data.get("market_signals") or {}),
         comp_context=dict(property_data.get("comp_context") or {}),
         macro_context=macro_context,
+        field_provenance=dict(normalized.field_provenance),
+        missing_data_registry=dict(normalized.missing_data_registry),
+        normalized_context=normalized.model_dump(),
     )
 
 

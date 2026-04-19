@@ -53,6 +53,11 @@ _CAPEX_TRIGGER_RE = re.compile(
     r")\b",
     re.IGNORECASE,
 )
+_PRICE_CUT_RE = re.compile(
+    r"\b(?P<pct>\d{1,2}(?:\.\d+)?)\s*(?:%|percent)\s+"
+    r"(?:(?:price\s+)?cut|discount|off|below ask|off ask)\b",
+    re.IGNORECASE,
+)
 
 
 def _to_dollars(raw: str, trailing: str) -> float | None:
@@ -103,7 +108,7 @@ def _extract_price(text: str, start: int = 0) -> float | None:
     return unit_hit if unit_hit is not None else bare_hit
 
 
-def parse_overrides(text: str) -> dict[str, Any]:
+def parse_overrides(text: str, *, reference_price: float | None = None) -> dict[str, Any]:
     """Extract what-if overrides from a user turn.
 
     Returns an empty dict when nothing override-shaped is present.
@@ -132,7 +137,41 @@ def parse_overrides(text: str) -> dict[str, Any]:
             overrides["repair_capex_budget"] = capex_budget
             overrides.setdefault("mode", "renovated")
 
+    if "ask_price" not in overrides and isinstance(reference_price, (int, float)) and reference_price > 0:
+        pct_cut = _PRICE_CUT_RE.search(text)
+        if pct_cut:
+            pct = float(pct_cut.group("pct")) / 100.0
+            overrides["ask_price"] = round(float(reference_price) * max(0.0, 1.0 - pct), 2)
+            overrides["price_cut_pct"] = pct
+
     return overrides
+
+
+def _manual_comp_key(comp: dict[str, Any]) -> tuple[str, str, str]:
+    address = str(comp.get("address") or "").strip().lower()
+    sale_date = str(comp.get("sale_date") or "").strip().lower()
+    source_ref = str(comp.get("source_ref") or "").strip().lower()
+    return address, sale_date, source_ref
+
+
+def _merge_manual_comp_inputs(
+    existing: list[dict[str, Any]] | None,
+    incoming: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: dict[tuple[str, str, str], int] = {}
+
+    for comp in list(existing or []) + list(incoming or []):
+        if not isinstance(comp, dict):
+            continue
+        payload = dict(comp)
+        key = _manual_comp_key(payload)
+        if key in seen:
+            merged[seen[key]] = payload
+            continue
+        seen[key] = len(merged)
+        merged.append(payload)
+    return merged
 
 
 @contextmanager
@@ -161,6 +200,12 @@ def inputs_with_overrides(inputs_path: Path, overrides: dict[str, Any]):
         assumptions = data.setdefault("user_assumptions", {})
         assumptions["repair_capex_budget"] = float(overrides["repair_capex_budget"])
         assumptions["capex_confirmed"] = True
+    if "manual_comp_inputs" in overrides:
+        assumptions = data.setdefault("user_assumptions", {})
+        assumptions["manual_comp_inputs"] = _merge_manual_comp_inputs(
+            assumptions.get("manual_comp_inputs"),
+            overrides.get("manual_comp_inputs"),
+        )
     if overrides.get("mode") == "renovated":
         budget = float(overrides.get("repair_capex_budget") or 150_000.0)
         data["renovation_scenario"] = {
@@ -190,4 +235,8 @@ def summarize(overrides: dict[str, Any]) -> str:
         bits.append("full renovation")
     if "repair_capex_budget" in overrides:
         bits.append(f"renovation budget ${overrides['repair_capex_budget']:,.0f}")
+    if overrides.get("manual_comp_inputs"):
+        bits.append(f"{len(list(overrides['manual_comp_inputs']))} comp override(s)")
+    if "price_cut_pct" in overrides and isinstance(overrides["price_cut_pct"], (int, float)):
+        bits.append(f"{overrides['price_cut_pct']:.0%} price cut")
     return "overrides applied: " + ", ".join(bits)

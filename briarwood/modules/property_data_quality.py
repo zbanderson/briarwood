@@ -57,7 +57,12 @@ class PropertyDataQualityModule:
                 "comp_eligibility_score": payload.comp_eligibility_score,
             },
             score=payload.comp_eligibility_score * 100.0,
-            confidence=0.72 if payload.municipality_tax_context_flag else 0.48,
+            confidence=_coverage_confidence(
+                payload.property_tax_confirmed_flag,
+                payload.municipality_tax_context_flag,
+                payload.structural_data_quality_score,
+                payload.comp_eligibility_score,
+            ),
             summary=" | ".join(payload.notes) if payload.notes else "Property-level tax and structural quality signals are only partially populated.",
             payload=payload,
         )
@@ -74,3 +79,19 @@ def _load_default_tax_store() -> NJTaxIntelligenceStore | None:
         return NJTaxIntelligenceStore.load_csv(path)
     except OSError:
         return None
+
+
+def _coverage_confidence(
+    property_tax_confirmed: bool,
+    municipality_tax_context_flag: bool,
+    structural_data_quality_score: float,
+    comp_eligibility_score: float,
+) -> float:
+    value = 0.2
+    if property_tax_confirmed:
+        value += 0.2
+    if municipality_tax_context_flag:
+        value += 0.15
+    value += max(0.0, min(float(structural_data_quality_score), 1.0)) * 0.25
+    value += max(0.0, min(float(comp_eligibility_score), 1.0)) * 0.2
+    return round(max(0.05, min(value, 0.95)), 4)

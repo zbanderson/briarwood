@@ -13,6 +13,7 @@ from briarwood.modules.confidence import run_confidence
 
 from tests.modules._phase2_fixtures import (
     assert_payload_contract,
+    context_contradictory,
     context_normal,
     context_thin,
 )
@@ -32,7 +33,7 @@ class ConfidenceIsolationTests(unittest.TestCase):
         )
         self.assertAlmostEqual(
             payload.confidence,
-            payload.data.get("data_quality_confidence"),
+            payload.data.get("combined_confidence"),
             places=4,
         )
         self.assertTrue(payload.warnings, "should warn when anchoring on data quality alone")
@@ -48,11 +49,10 @@ class ConfidenceIsolationTests(unittest.TestCase):
         self.assertIsNotNone(aggregated)
         self.assertGreater(aggregated, 0.55)
         self.assertLess(aggregated, 0.85)
-        anchor = payload.data.get("data_quality_confidence")
         self.assertAlmostEqual(
             payload.confidence,
-            round(0.5 * aggregated + 0.5 * anchor, 4),
-            places=3,
+            payload.data.get("combined_confidence"),
+            places=4,
         )
         self.assertEqual(
             payload.assumptions_used.get("prior_confidence_modules"),
@@ -75,6 +75,8 @@ class ConfidenceIsolationTests(unittest.TestCase):
     def test_emits_confidence_on_thin_inputs(self) -> None:
         payload = assert_payload_contract(run_confidence(context_thin()))
         self.assertIsNotNone(payload.confidence)
+        self.assertLessEqual(payload.confidence, 0.5)
+        self.assertIn(payload.confidence_band, {"Low confidence", "Speculative"})
 
     def test_non_numeric_prior_confidences_are_skipped(self) -> None:
         priors = {
@@ -87,6 +89,11 @@ class ConfidenceIsolationTests(unittest.TestCase):
             payload.assumptions_used.get("prior_confidence_modules"),
             ["valuation"],
         )
+
+    def test_contradictory_inputs_reduce_confidence(self) -> None:
+        normal = run_confidence(context_normal()).get("confidence")
+        contradictory = run_confidence(context_contradictory()).get("confidence")
+        self.assertLess(contradictory, normal)
 
 
 if __name__ == "__main__":

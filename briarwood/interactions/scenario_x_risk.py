@@ -73,6 +73,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
         must_be_true.append(f"None of the {risk_count} flagged risks materialize materially.")
 
     fragility = round(min(base_fragility, 1.0), 3)
+    what_must_go_right_score = round(max(0.0, 1.0 - fragility), 3)
 
     if not reasoning:
         reasoning.append("Scenario appears low-execution-risk given current inputs.")
@@ -82,6 +83,7 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
         inputs_read=["resale_scenario/arv_model/margin_sensitivity", "risk_model"],
         adjustments={
             "fragility_score": fragility,
+            "what_must_go_right_score": what_must_go_right_score,
             "what_must_be_true": must_be_true,
             "scenario_score": _score(scenario),
         },

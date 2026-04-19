@@ -47,8 +47,9 @@ export function PropertyCard({
   className,
 }: Props) {
   const tone = STATUS_TONE[listing.status];
-  const photoStyle = listing.photo_url
-    ? { backgroundImage: `url(${listing.photo_url})` }
+  const previewImage = listing.photo_url ?? listing.streetViewImageUrl;
+  const photoStyle = previewImage
+    ? { backgroundImage: `url(${previewImage})` }
     : {
         backgroundImage: `linear-gradient(135deg,
           oklch(0.42 0.07 ${listing.hue ?? 30}) 0%,
@@ -84,6 +85,11 @@ export function PropertyCard({
         >
           {STATUS_LABEL[listing.status]}
         </span>
+        {!listing.photo_url && listing.streetViewImageUrl && (
+          <span className="absolute bottom-3 left-3 rounded-full border border-black/10 bg-black/55 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/90">
+            Street View
+          </span>
+        )}
       </button>
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">

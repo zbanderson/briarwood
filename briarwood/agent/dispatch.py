@@ -20,6 +20,10 @@ from briarwood.agent.composer import (
     compose_structured_response,
 )
 from briarwood.agent.llm import LLMClient
+from briarwood.agent.presentation_advisor import (
+    compose_browse_surface,
+    compose_section_followup,
+)
 from briarwood.agent.router import AnswerType, RouterDecision
 from briarwood.agent.session import Session
 from briarwood.agent.fuzzy_terms import translate
@@ -28,6 +32,7 @@ from briarwood.agent.overrides import parse_overrides, summarize as _override_su
 from briarwood.agent.property_view import PropertyView
 from briarwood.agent.tools import (
     CMAResult,
+    ComparableProperty,
     InvestmentScreenResult,
     LiveListingDecision,
     LiveListingCandidate,
@@ -350,8 +355,13 @@ def _decision_view_to_dict(view: "PropertyView") -> dict[str, object]:
         "ask_premium_pct": view.ask_premium_pct,
         "basis_premium_pct": view.basis_premium_pct,
         "trust_flags": list(view.trust_flags or []),
+        "trust_summary": dict(view.trust_summary or {}),
         "what_must_be_true": list(view.what_must_be_true or []),
         "key_risks": list(view.key_risks or []),
+        "why_this_stance": list(view.why_this_stance or []),
+        "what_changes_my_view": list(view.what_changes_my_view or []),
+        "contradiction_count": view.contradiction_count,
+        "blocked_thesis_warnings": list(view.blocked_thesis_warnings or []),
         "overrides_applied": dict(view.overrides_applied or {}),
     }
 
@@ -484,50 +494,99 @@ def _build_comps_preview(pid: str, view: "PropertyView") -> dict[str, object] | 
 
 
 def _format_browse_setup(brief: PropertyBrief) -> str:
-    recommendation = brief.recommendation or "No recommendation yet."
-    stance = brief.decision_stance or "conditional"
+    ask = brief.ask_price
+    fair = brief.fair_value_base
     premium = brief.ask_premium_pct
-    if isinstance(premium, (int, float)):
-        pricing = "below" if premium < 0 else "above" if premium > 0 else "at"
+    recommendation = (brief.recommendation or "").strip()
+    if isinstance(ask, (int, float)) and isinstance(fair, (int, float)):
+        if isinstance(premium, (int, float)) and premium >= 0.03:
+            return (
+                f"Quick take: this looks a little expensive at {_money(ask)}. "
+                f"Briarwood's current read lands closer to {_money(fair)}, so this gets more interesting if the price softens."
+            )
+        if isinstance(premium, (int, float)) and premium <= -0.03:
+            return (
+                f"Quick take: this looks interesting at today's ask. "
+                f"The list price of {_money(ask)} is running below Briarwood's current value read near {_money(fair)}."
+            )
         return (
-            f"Briarwood sees the immediate setup as {stance.replace('_', ' ')}: "
-            f"{recommendation} Ask is {pricing} the fair value anchor by {abs(premium):.1%}."
+            f"Quick take: this is roughly in the zone at today's price. "
+            f"The ask of {_money(ask)} sits close to Briarwood's current value read near {_money(fair)}."
         )
-    return f"Briarwood sees the immediate setup as {stance.replace('_', ' ')}: {recommendation}"
+    if recommendation:
+        return f"Quick take: {recommendation}"
+    stance = (brief.decision_stance or "conditional").replace("_", " ")
+    return f"Quick take: the current read is {stance}."
 
 
 def _format_browse_support(brief: PropertyBrief) -> str:
     drivers = list(brief.key_value_drivers or [])
     if drivers:
-        return "What supports that view: " + "; ".join(drivers[:2]) + "."
+        return "Why it stands out: " + "; ".join(drivers[:2]) + "."
     if brief.primary_value_source and str(brief.primary_value_source).strip().lower() != "unknown":
-        return f"What supports that view: primary value source is {brief.primary_value_source}."
+        return f"Why it stands out: the price read is leaning on {brief.primary_value_source.replace('_', ' ')}."
     if brief.best_path:
-        return f"What supports that view: best path currently reads as {brief.best_path}."
-    return "What supports that view: the current snapshot read is still light on explicit supporting drivers."
+        return f"Why it stands out: the cleanest path right now looks like {brief.best_path.replace('_', ' ')}."
+    return "Why it stands out: the current snapshot still points to a workable purchase read, even if the support is early."
+
+
+def _humanize_trust_flag(flag: str) -> str:
+    mapping = {
+        "incomplete_carry_inputs": "taxes, insurance, or financing assumptions are still missing",
+        "thin_comp_set": "the comparable sales support is still thin",
+        "weak_town_context": "the town backdrop is still lightly documented",
+        "zoning_unverified": "zoning still needs to be confirmed",
+        "rent_support_thin": "the rent support is still thin",
+    }
+    return mapping.get(flag, flag.replace("_", " "))
 
 
 def _format_browse_caution(brief: PropertyBrief) -> str:
     cautions = list(brief.trust_flags or [])
     if cautions:
-        return "What could weaken confidence: " + ", ".join(cautions[:3]) + "."
+        return "What I'd want to tighten up next: " + "; ".join(_humanize_trust_flag(flag) for flag in cautions[:3]) + "."
     risks = list(brief.key_risks or [])
     if risks:
-        return "What could weaken confidence: " + "; ".join(risks[:2]) + "."
-    return "What could weaken confidence: no major trust flags are surfaced in the snapshot read."
+        return "What I'd want to tighten up next: " + "; ".join(risks[:2]) + "."
+    return "What I'd want to tighten up next: nothing major is flashing red yet, but this still needs a fuller underwriting pass."
 
 
 def _format_next_step(brief: PropertyBrief) -> str:
     if brief.next_questions:
-        return f"Next best question: {brief.next_questions[0]}"
+        return f"Best next question: {brief.next_questions[0]}"
     mapping = {
         "decision": "should I buy this at the current ask?",
         "scenario": "what does the forward scenario path do to value?",
         "deep_dive": "what is the deepest unresolved risk or assumption here?",
     }
     if brief.recommended_next_run:
-        return f"Next best question: {mapping.get(brief.recommended_next_run, brief.recommended_next_run)}"
-    return "Next best question: should I buy this at the current ask?"
+        return f"Best next question: {mapping.get(brief.recommended_next_run, brief.recommended_next_run)}"
+    return "Best next question: should I buy this at the current ask?"
+
+
+def _strip_browse_label(line: str) -> str:
+    if ":" not in line:
+        return line.strip()
+    return line.split(":", 1)[1].strip()
+
+
+def _format_browse_decision_summary(brief: PropertyBrief) -> list[str]:
+    decision_line = _strip_browse_label(_format_browse_setup(brief))
+    why_parts = [
+        _strip_browse_label(_format_browse_support(brief)).rstrip("."),
+        _strip_browse_label(_format_browse_caution(brief)).rstrip("."),
+    ]
+    why_line = ". ".join(part for part in why_parts if part)
+    next_move = (
+        "Run a live CMA and pin down a realistic entry point"
+        if brief.fair_value_base is not None
+        else _strip_browse_label(_format_next_step(brief))
+    )
+    return [
+        f"Decision: {decision_line}",
+        f"Why: {why_line}.",
+        f"Next move: {next_move}.",
+    ]
 
 
 def _format_browse_brief(brief: PropertyBrief, neighbors: list[dict[str, object]]) -> str:
@@ -538,27 +597,121 @@ def _format_browse_brief(brief: PropertyBrief, neighbors: list[dict[str, object]
         parts.append(f"ask {_money(brief.ask_price)}")
     lines = [
         " — ".join(parts),
-        _format_browse_setup(brief),
-        _format_browse_support(brief),
-        _format_browse_caution(brief),
-        _format_next_step(brief),
+        *_format_browse_decision_summary(brief),
     ]
-    if neighbors:
-        similar_lines = [f"Nearby support in {brief.town or 'the area'}:"]
-        for n in neighbors[:3]:
-            bits: list[str] = []
-            if n.get("address"):
-                bits.append(str(n["address"]))
-            if n.get("beds") is not None and n.get("baths") is not None:
-                bits.append(f"{n['beds']}bd/{n['baths']}ba")
-            if n.get("ask_price") is not None:
-                bits.append(_money(n.get("ask_price")))
-            if isinstance(n.get("blocks_to_beach"), (int, float)):
-                bits.append(f"{n['blocks_to_beach']:.1f} blocks to beach")
-            tail = ", ".join(bits)
-            similar_lines.append(f"- {n['property_id']}" + (f" — {tail}" if tail else ""))
-        lines.append("\n".join(similar_lines))
     return "\n".join(lines)
+
+
+def _build_browse_comps_preview(
+    pid: str,
+    subject_ask: float | None,
+    neighbors: list[dict[str, object]],
+) -> dict[str, object] | None:
+    rows: list[dict[str, object]] = []
+    prices: list[float] = []
+    for comp in neighbors:
+        if comp.get("property_id") == pid:
+            continue
+        price = comp.get("ask_price") or comp.get("price")
+        premium_pct = None
+        if isinstance(price, (int, float)) and isinstance(subject_ask, (int, float)) and subject_ask:
+            premium_pct = round((float(price) - float(subject_ask)) / float(subject_ask), 4)
+            prices.append(float(price))
+        rows.append(
+            {
+                "property_id": comp.get("property_id"),
+                "address": comp.get("address"),
+                "beds": comp.get("beds"),
+                "baths": comp.get("baths"),
+                "sqft": comp.get("sqft"),
+                "price": price,
+                "premium_pct": premium_pct,
+            }
+        )
+        if len(rows) >= 4:
+            break
+    if not rows:
+        return None
+    median_price = None
+    if prices:
+        prices.sort()
+        mid = len(prices) // 2
+        median_price = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
+    return {
+        "subject_pid": pid,
+        "subject_ask": subject_ask,
+        "count": len(rows),
+        "median_price": median_price,
+        "comps": rows,
+    }
+
+
+def _browse_what_must_be_true(brief: PropertyBrief) -> list[str]:
+    prompts: list[str] = []
+    for flag in list(brief.trust_flags or []):
+        phrase = _humanize_trust_flag(flag)
+        prompts.append(phrase[:1].upper() + phrase[1:] + ".")
+    if not prompts and brief.key_risks:
+        prompts.extend(f"{risk}." for risk in brief.key_risks[:2])
+    return prompts[:3]
+
+
+def _build_browse_value_thesis(
+    brief: PropertyBrief,
+    neighbors: list[dict[str, object]],
+) -> dict[str, object]:
+    comps = [
+        {
+            "property_id": comp.get("property_id"),
+            "address": comp.get("address"),
+            "beds": comp.get("beds"),
+            "baths": comp.get("baths"),
+            "ask_price": comp.get("ask_price") or comp.get("price"),
+            "blocks_to_beach": comp.get("blocks_to_beach"),
+            "source_label": "Saved comp",
+            "selected_by": "briarwood",
+            "feeds_fair_value": None,
+            "inclusion_reason": "Nearby saved listing ranked toward the subject's price and layout.",
+            "source_summary": "Context comp from Briarwood's nearby saved listings.",
+        }
+        for comp in neighbors[:4]
+        if comp.get("property_id") != brief.property_id
+    ]
+    return {
+        "address": brief.address,
+        "town": brief.town,
+        "state": brief.state,
+        "ask_price": brief.ask_price,
+        "fair_value_base": brief.fair_value_base,
+        "premium_discount_pct": brief.ask_premium_pct,
+        "pricing_view": brief.pricing_view,
+        "primary_value_source": brief.primary_value_source,
+        "net_opportunity_delta_pct": (-brief.ask_premium_pct) if isinstance(brief.ask_premium_pct, (int, float)) else None,
+        "value_drivers": list(brief.key_value_drivers or []),
+        "key_value_drivers": list(brief.key_value_drivers or []),
+        "what_must_be_true": _browse_what_must_be_true(brief),
+        "why_this_stance": [
+            f"Current pricing looks {'ahead of' if isinstance(brief.ask_premium_pct, (int, float)) and brief.ask_premium_pct > 0 else 'supported by'} Briarwood's current fair-value read."
+        ] + list(brief.key_value_drivers or [])[:2],
+        "what_changes_my_view": [
+            f"Confirm {_humanize_trust_flag(flag)}."
+            for flag in list(brief.trust_flags or [])[:3]
+            if _humanize_trust_flag(flag)
+        ],
+        "trust_summary": {
+            "band": "Low confidence" if brief.trust_flags else "Moderate confidence",
+            "trust_flags": list(brief.trust_flags or []),
+            "blocked_thesis_warnings": list(brief.key_risks or [])[:2],
+        },
+        "contradiction_count": 0,
+        "blocked_thesis_warnings": list(brief.key_risks or [])[:2],
+        "comp_selection_summary": (
+            f"Nearby {brief.town or 'local'} saved listings ranked toward the subject's price and layout."
+            if comps
+            else None
+        ),
+        "comps": comps,
+    }
 
 
 def _extract_search_place(text: str) -> tuple[str | None, str | None]:
@@ -810,31 +963,113 @@ def _format_browse_from_presentation(
         return None
     lines = [
         header[0],
-        "Briarwood sees the immediate setup as " + purchase[0].removeprefix("Immediate setup: ").strip(),
-        "What supports that view: " + purchase[1].removeprefix("What supports it: ").strip(),
-        "What could weaken confidence: " + purchase[2].removeprefix("What could weaken confidence: ").strip(),
-        purchase[3],
+        *_format_browse_decision_summary(brief),
     ]
-    if coverage:
-        lines.append("Source coverage: " + " ".join(coverage[:2]))
-    if location:
-        lines.append("Location pulse: " + " ".join(location[:2]))
-    if neighbors:
-        similar_lines = [f"Nearby support in {brief.town or 'the area'}:"]
-        for n in neighbors[:3]:
-            bits: list[str] = []
-            if n.get("address"):
-                bits.append(str(n["address"]))
-            if n.get("beds") is not None and n.get("baths") is not None:
-                bits.append(f"{n['beds']}bd/{n['baths']}ba")
-            if n.get("ask_price") is not None:
-                bits.append(_money(n.get("ask_price")))
-            if isinstance(n.get("blocks_to_beach"), (int, float)):
-                bits.append(f"{n['blocks_to_beach']:.1f} blocks to beach")
-            tail = ", ".join(bits)
-            similar_lines.append(f"- {n['property_id']}" + (f" — {tail}" if tail else ""))
-        lines.append("\n".join(similar_lines))
     return "\n".join(lines)
+
+
+def _browse_surface_payload(
+    *,
+    brief: PropertyBrief,
+    session: Session,
+    neighbors: list[dict[str, object]],
+) -> dict[str, object]:
+    return {
+        "address": brief.address,
+        "town": brief.town,
+        "state": brief.state,
+        "ask_price": brief.ask_price,
+        "fair_value_base": brief.fair_value_base,
+        "ask_premium_pct": brief.ask_premium_pct,
+        "best_path": brief.best_path,
+        "trust_flags": list(brief.trust_flags or []),
+        "key_risks": list(brief.key_risks or []),
+        "next_questions": list(brief.next_questions or []),
+        "neighbor_count": len(neighbors),
+        "town_summary": dict(session.last_town_summary or {}) if isinstance(session.last_town_summary, dict) else {},
+        "value_thesis": dict(session.last_value_thesis_view or {}) if isinstance(session.last_value_thesis_view, dict) else {},
+        "strategy": dict(session.last_strategy_view or {}) if isinstance(session.last_strategy_view, dict) else {},
+        "rent_outlook": dict(session.last_rent_outlook_view or {}) if isinstance(session.last_rent_outlook_view, dict) else {},
+        "projection": dict(session.last_projection_view or {}) if isinstance(session.last_projection_view, dict) else {},
+    }
+
+
+def _populate_browse_slots(
+    session: Session,
+    *,
+    pid: str,
+    brief: PropertyBrief,
+    summary: dict[str, object] | None,
+    neighbors: list[dict[str, object]],
+    projection: dict[str, object] | None,
+    strategy_fit: dict[str, object] | None,
+    rent_outlook: RentOutlook | None,
+) -> None:
+    try:
+        session.last_town_summary = _build_town_summary(brief.town, brief.state)
+    except Exception as exc:
+        logger.warning("browse town summary build failed for %s: %s", pid, exc)
+        session.last_town_summary = None
+
+    session.last_comps_preview = _build_browse_comps_preview(pid, brief.ask_price, neighbors)
+    session.last_value_thesis_view = _build_browse_value_thesis(brief, neighbors)
+
+    facts = summary or {}
+    if projection:
+        session.last_projection_view = {
+            **projection,
+            "address": facts.get("address") or brief.address,
+            "town": facts.get("town") or brief.town,
+            "state": facts.get("state") or brief.state,
+        }
+
+    if strategy_fit:
+        session.last_strategy_view = {
+            "address": facts.get("address") or brief.address,
+            "town": facts.get("town") or brief.town,
+            "state": facts.get("state") or brief.state,
+            "best_path": strategy_fit.get("best_path"),
+            "recommendation": strategy_fit.get("recommendation"),
+            "pricing_view": strategy_fit.get("pricing_view"),
+            "primary_value_source": strategy_fit.get("primary_value_source"),
+            "rental_ease_label": strategy_fit.get("rental_ease_label"),
+            "rental_ease_score": strategy_fit.get("rental_ease_score"),
+            "rent_support_score": strategy_fit.get("rent_support_score"),
+            "liquidity_score": strategy_fit.get("liquidity_score"),
+            "monthly_cash_flow": strategy_fit.get("monthly_cash_flow"),
+            "cash_on_cash_return": strategy_fit.get("cash_on_cash_return"),
+            "annual_noi": strategy_fit.get("annual_noi"),
+        }
+
+    if rent_outlook:
+        session.last_rent_outlook_view = {
+            "address": facts.get("address") or brief.address,
+            "town": facts.get("town") or brief.town,
+            "state": facts.get("state") or brief.state,
+            "entry_basis": rent_outlook.entry_basis,
+            "monthly_rent": rent_outlook.current_monthly_rent,
+            "effective_monthly_rent": rent_outlook.effective_monthly_rent,
+            "rent_source_type": rent_outlook.rent_source_type,
+            "rental_ease_label": rent_outlook.rental_ease_label,
+            "rental_ease_score": rent_outlook.rental_ease_score,
+            "annual_noi": rent_outlook.annual_noi,
+            "horizon_years": rent_outlook.horizon_years,
+            "future_rent_low": rent_outlook.future_rent_low,
+            "future_rent_mid": rent_outlook.future_rent_mid,
+            "future_rent_high": rent_outlook.future_rent_high,
+            "zillow_market_rent": rent_outlook.zillow_market_rent,
+            "zillow_rental_comp_count": rent_outlook.zillow_rental_comp_count,
+            "market_context_note": rent_outlook.market_context_note,
+            "basis_to_rent_framing": rent_outlook.basis_to_rent_framing,
+            "owner_occupy_then_rent": rent_outlook.owner_occupy_then_rent,
+            "carry_offset_ratio": rent_outlook.carry_offset_ratio,
+            "break_even_rent": rent_outlook.break_even_rent,
+            "break_even_probability": rent_outlook.break_even_probability,
+            "adjusted_rent_confidence": rent_outlook.adjusted_rent_confidence,
+            "rent_haircut_pct": rent_outlook.rent_haircut_pct,
+            "burn_chart_payload": dict(rent_outlook.burn_chart_payload or {}),
+            "ramp_chart_payload": dict(rent_outlook.ramp_chart_payload or {}),
+        }
 
 
 def _format_decision_from_presentation(
@@ -1012,7 +1247,10 @@ def handle_lookup(
         addr = summary.get("address", pid)
         price = summary.get("ask_price")
         price_s = _money(price)
-        return f"{addr} — ask {price_s}, {summary.get('pricing_view', '')}.".strip()
+        pricing_view = summary.get("pricing_view")
+        if pricing_view:
+            return f"{addr} is listed at {price_s}. Briarwood currently reads that price as {pricing_view.replace('_', ' ')}."
+        return f"{addr} is listed at {price_s}. That's the latest price Briarwood has for it."
 
     system = load_prompt("lookup")
     user = f"Question: {text}\n\nSummary JSON:\n{summary}"
@@ -1056,7 +1294,7 @@ def handle_decision(
                 session.current_property_id = None
                 return _format_live_listing_decision(result)
             return "Which property should I underwrite?"
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     try:
         view = PropertyView.load(pid, overrides=overrides, depth="decision")
     except ToolUnavailable as exc:
@@ -1191,10 +1429,11 @@ def handle_decision(
         pct = f"{premium:+.1%}" if isinstance(premium, (int, float)) else "n/a"
         flags_s = ", ".join(flags) if flags else "none"
         base = (
-            f"Stance: {stance}. Primary value source: {pvs}. "
-            f"Fair value {money(view.fair_value_base)} vs all-in {money(basis)} "
-            f"(ask {money(view.ask_price)}, {pct}). "
-            f"Trust flags: {flags_s}."
+            f"My plain-English read: {stance.replace('_', ' ')}. "
+            f"Briarwood's main value anchor is {pvs.replace('_', ' ')} and it puts fair value near {money(view.fair_value_base)} "
+            f"against an all-in cost of {money(basis)} "
+            f"(list price {money(view.ask_price)}, {pct} versus that anchor). "
+            f"Confidence watchouts: {flags_s}."
         )
         if research_lines:
             base += "\n" + "\n".join(research_lines)
@@ -1559,6 +1798,89 @@ _CMA_RE = re.compile(
     r"\b(?:cma|comparative market analysis|comparative market assessment|market analysis)\b",
     re.IGNORECASE,
 )
+_FLOOR_PRICE_RE = re.compile(r"\b(?:floor price|price floor|downside floor)\b", re.IGNORECASE)
+_CASH_FLOW_RE = re.compile(
+    r"\b(?:cash[ -]?flow(?: projection)?|run cash[ -]?flow|rental potential|rent potential)\b",
+    re.IGNORECASE,
+)
+_COMP_SET_RE = re.compile(
+    r"\b(?:full )?comp set\b|\bwhich comps\b|\bwhy were these comps chosen\b|\bdrill into (?:the )?cma\b",
+    re.IGNORECASE,
+)
+_ENTRY_POINT_RE = re.compile(
+    r"\b(?:good|best|right|ideal)\s+entry point\b|\bwhat should i offer\b|\boffer price\b|\bwhere (?:should|would) (?:i|we) (?:buy|come in)\b",
+    re.IGNORECASE,
+)
+_TRUST_GAPS_RE = re.compile(
+    r"\bwhat data is missing\b|\bmissing or estimated\b|\bwhat(?:'| i)?s estimated\b|\bwhat(?:'| i)?s missing\b",
+    re.IGNORECASE,
+)
+_DOWNSIDE_DETAIL_RE = re.compile(
+    r"\bdownside case\b|\bbear case\b|\bstress case\b|\bworst case\b|\bdownside\b",
+    re.IGNORECASE,
+)
+_RENT_WORKABILITY_RE = re.compile(
+    r"\bwhat rent would make this (?:deal )?work\b|\bwhat rent makes this work\b|\bwhat would it need to rent for\b|\bbreak[- ]even rent\b",
+    re.IGNORECASE,
+)
+_VALUE_CHANGE_RE = re.compile(
+    r"\bwhat would change (?:your|the) value view\b|\bwhat changes your view\b",
+    re.IGNORECASE,
+)
+
+
+def _reference_ask_price(pid: str | None, session: Session) -> float | None:
+    if pid:
+        try:
+            summary = get_property_summary(pid)
+        except ToolUnavailable:
+            summary = {}
+        ask_price = summary.get("ask_price")
+        if isinstance(ask_price, (int, float)):
+            return float(ask_price)
+    live = session.current_live_listing or session.selected_search_result or {}
+    ask_price = live.get("ask_price") if isinstance(live, dict) else None
+    if isinstance(ask_price, (int, float)):
+        return float(ask_price)
+    return None
+
+
+def _normalize_penalty(value: object) -> float | None:
+    if not isinstance(value, (int, float)):
+        return None
+    numeric = float(value)
+    if numeric > 1.0:
+        numeric /= 100.0
+    return max(numeric, 0.0)
+
+
+def _trust_payload_from_thesis(
+    thesis: dict[str, object],
+    facts: dict[str, object],
+) -> dict[str, object]:
+    trust_summary = dict(thesis.get("trust_summary") or {})
+    return {
+        "address": facts.get("address"),
+        "town": facts.get("town"),
+        "state": facts.get("state"),
+        "confidence": trust_summary.get("confidence"),
+        "band": trust_summary.get("band"),
+        "field_completeness": trust_summary.get("field_completeness"),
+        "estimated_reliance": trust_summary.get("estimated_reliance"),
+        "contradiction_count": trust_summary.get("contradiction_count") or thesis.get("contradiction_count"),
+        "blocked_thesis_warnings": list(
+            trust_summary.get("blocked_thesis_warnings")
+            or thesis.get("blocked_thesis_warnings")
+            or []
+        ),
+        "trust_flags": list(trust_summary.get("trust_flags") or []),
+        "why_this_stance": list(thesis.get("why_this_stance") or []),
+        "what_changes_my_view": list(thesis.get("what_changes_my_view") or []),
+    }
+
+
+def _parse_turn_overrides(text: str, *, pid: str | None, session: Session) -> dict[str, object]:
+    return parse_overrides(text, reference_price=_reference_ask_price(pid, session))
 
 
 def _infer_chart_kind(text: str) -> str:
@@ -1606,6 +1928,8 @@ def _format_cma_comp_lines(comps: list[dict[str, object]]) -> list[str]:
         bits: list[str] = []
         if comp.get("address"):
             bits.append(str(comp["address"]))
+        if comp.get("source_label"):
+            bits.append(str(comp["source_label"]))
         if comp.get("beds") is not None and comp.get("baths") is not None:
             bits.append(f"{comp['beds']}bd/{comp['baths']}ba")
         if comp.get("ask_price") is not None:
@@ -1615,6 +1939,61 @@ def _format_cma_comp_lines(comps: list[dict[str, object]]) -> list[str]:
         tail = ", ".join(bits)
         lines.append(f"- {comp.get('property_id')}" + (f" — {tail}" if tail else ""))
     return lines
+
+
+def _comp_row_from_cma(comp: ComparableProperty) -> dict[str, object]:
+    return {
+        "property_id": comp.property_id,
+        "address": comp.address,
+        "beds": comp.beds,
+        "baths": comp.baths,
+        "ask_price": comp.ask_price,
+        "blocks_to_beach": comp.blocks_to_beach,
+        "source_label": comp.source_label,
+        "source_summary": comp.source_summary,
+    }
+
+
+def _comps_preview_from_cma(
+    pid: str,
+    subject_ask: float | None,
+    comps: list[dict[str, object]],
+) -> dict[str, object] | None:
+    rows: list[dict[str, object]] = []
+    prices: list[float] = []
+    for comp in comps:
+        if comp.get("property_id") == pid:
+            continue
+        price = comp.get("ask_price") or comp.get("price")
+        premium_pct = None
+        if isinstance(price, (int, float)) and isinstance(subject_ask, (int, float)) and subject_ask:
+            premium_pct = round((float(price) - float(subject_ask)) / float(subject_ask), 4)
+            prices.append(float(price))
+        rows.append(
+            {
+                "property_id": comp.get("property_id"),
+                "address": comp.get("address"),
+                "beds": comp.get("beds"),
+                "baths": comp.get("baths"),
+                "sqft": comp.get("sqft"),
+                "price": price,
+                "premium_pct": premium_pct,
+            }
+        )
+    if not rows:
+        return None
+    median_price = None
+    if prices:
+        prices.sort()
+        mid = len(prices) // 2
+        median_price = prices[mid] if len(prices) % 2 else (prices[mid - 1] + prices[mid]) / 2
+    return {
+        "subject_pid": pid,
+        "subject_ask": subject_ask,
+        "count": len(rows),
+        "median_price": median_price,
+        "comps": rows,
+    }
 
 
 def handle_visualize(
@@ -1655,7 +2034,7 @@ def handle_rent_lookup(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id to estimate rent on."
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     horizon_years = _future_rent_horizon_years(text)
     try:
         rent = get_rent_estimate(pid, overrides=overrides)
@@ -1684,6 +2063,7 @@ def handle_rent_lookup(
         "address": summary.get("address"),
         "town": summary.get("town"),
         "state": summary.get("state"),
+        "entry_basis": rent_outlook.entry_basis,
         "monthly_rent": monthly,
         "effective_monthly_rent": effective,
         "rent_source_type": source,
@@ -1696,18 +2076,50 @@ def handle_rent_lookup(
         "future_rent_high": rent_outlook.future_rent_high,
         "zillow_market_rent": rent_outlook.zillow_market_rent,
         "zillow_rental_comp_count": rent_outlook.zillow_rental_comp_count,
+        "market_context_note": rent_outlook.market_context_note,
         "basis_to_rent_framing": rent_outlook.basis_to_rent_framing,
         "owner_occupy_then_rent": rent_outlook.owner_occupy_then_rent,
+        "carry_offset_ratio": rent_outlook.carry_offset_ratio,
+        "break_even_rent": rent_outlook.break_even_rent,
+        "break_even_probability": rent_outlook.break_even_probability,
+        "adjusted_rent_confidence": rent_outlook.adjusted_rent_confidence,
+        "rent_haircut_pct": rent_outlook.rent_haircut_pct,
+        "burn_chart_payload": dict(rent_outlook.burn_chart_payload or {}),
+        "ramp_chart_payload": dict(rent_outlook.ramp_chart_payload or {}),
     }
+
+    if overrides or horizon_years is not None or _mentions_owner_occupy_then_rent(text):
+        try:
+            fit = get_strategy_fit(pid, overrides=overrides)
+        except ToolUnavailable:
+            fit = {}
+        if fit:
+            session.last_strategy_view = {
+                "address": summary.get("address"),
+                "town": summary.get("town"),
+                "state": summary.get("state"),
+                "best_path": fit.get("best_path"),
+                "recommendation": fit.get("recommendation"),
+                "pricing_view": fit.get("pricing_view"),
+                "primary_value_source": fit.get("primary_value_source"),
+                "rental_ease_label": fit.get("rental_ease_label"),
+                "rental_ease_score": fit.get("rental_ease_score"),
+                "rent_support_score": fit.get("rent_support_score"),
+                "liquidity_score": fit.get("liquidity_score"),
+                "monthly_cash_flow": fit.get("monthly_cash_flow"),
+                "cash_on_cash_return": fit.get("cash_on_cash_return"),
+                "annual_noi": fit.get("annual_noi"),
+            }
+    rent_workability_mode = bool(_RENT_WORKABILITY_RE.search(text))
     lines = [
-        f"Estimated monthly rent: {money(monthly)} (source: {source}).",
-        f"Effective rent after vacancy/management: {money(effective)}.",
+        f"Plain-English rent read: this place looks closer to {money(monthly)} a month in rent (source: {source}).",
+        f"After vacancy and management drag, the working monthly income is closer to {money(effective)}.",
     ]
     if label or isinstance(ease, (int, float)):
         ease_s = f"{ease:.0f}/100" if isinstance(ease, (int, float)) else "n/a"
-        lines.append(f"Rental profile: {label or 'n/a'} (ease {ease_s}).")
+        lines.append(f"Renting it out looks {label or 'unclear'} right now (ease score {ease_s}).")
     if isinstance(noi, (int, float)):
-        lines.append(f"Annual NOI: {money(noi)}.")
+        lines.append(f"That works out to about {money(noi)} a year after operating costs.")
     if horizon_years:
         if isinstance(rent_outlook.future_rent_low, (int, float)):
             lines.append(
@@ -1748,6 +2160,45 @@ def handle_rent_lookup(
             chart_line = f"\nChart: file://{path.resolve()}"
         except (ChartUnavailable, ToolUnavailable) as exc:
             chart_line = f"\n(chart unavailable: {exc})"
+    if rent_workability_mode:
+        break_even = rent_outlook.break_even_rent
+        gap = (
+            float(break_even) - float(effective)
+            if isinstance(break_even, (int, float)) and isinstance(effective, (int, float))
+            else None
+        )
+        targeted_lines: list[str] = []
+        if gap is not None and gap > 0:
+            targeted_lines.append(
+                f"On the current assumptions, this does not work as a rental yet. Briarwood would want closer to {money(break_even)}/mo to break even versus an effective rent nearer {money(effective)}/mo."
+            )
+        elif isinstance(break_even, (int, float)):
+            targeted_lines.append(
+                f"On the current assumptions, the rental story works around {money(break_even)}/mo, which is roughly where Briarwood's break-even line sits."
+            )
+        else:
+            targeted_lines.append(
+                f"Briarwood can see the current rent around {money(effective)}, but it does not have a clean break-even threshold yet."
+            )
+        if isinstance(rent_outlook.break_even_probability, (int, float)):
+            targeted_lines.append(
+                f"The odds of actually reaching break-even inside the modeled hold are only about {rent_outlook.break_even_probability:.0%}."
+            )
+        if isinstance(rent_outlook.carry_offset_ratio, (int, float)):
+            targeted_lines.append(
+                f"Right now rent is only covering about {rent_outlook.carry_offset_ratio:.2f}x of monthly cost."
+            )
+        if rent_outlook.market_context_note:
+            targeted_lines.append(rent_outlook.market_context_note)
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="rent_workability",
+            question=text,
+            payload=asdict(rent_outlook),
+            fallback=" ".join(targeted_lines),
+        )
+        session.last_verifier_report = report
+        return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
     fallback = lambda: " ".join(lines)
     system = load_prompt("rent_lookup")
     user = (
@@ -1791,7 +2242,7 @@ def handle_projection(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property should I project forward?"
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     if _is_renovation_resale_question(text):
         try:
             outlook = get_renovation_resale_outlook(pid, overrides=overrides)
@@ -1821,6 +2272,7 @@ def handle_projection(
     base = proj.get("base_case_value")
     bear = proj.get("bear_case_value")
     stress = proj.get("stress_case_value")
+    basis_label = str(proj.get("basis_label") or "ask")
 
     money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
     def _delta(v):
@@ -1835,24 +2287,40 @@ def handle_projection(
     except ChartUnavailable as exc:
         chart_line = f"\n(chart unavailable: {exc})"
 
+    if _FLOOR_PRICE_RE.search(text):
+        lines = []
+        if isinstance(bear, (int, float)):
+            lines.append(
+                f"Working floor: around {money(bear)} based on the bear case versus today's {basis_label} of {money(ask)}."
+            )
+        if isinstance(stress, (int, float)):
+            lines.append(
+                f"Hard-pullback floor: closer to {money(stress)} if the market really breaks against you."
+            )
+        if not lines:
+            lines.append(
+                f"Briarwood doesn't have a downside floor yet beyond the current {basis_label} of {money(ask)}."
+            )
+        return "\n".join(lines) + chart_line
+
     if llm is None:
         lines = [
-            f"5-year projection vs ask {money(ask)}:",
-            f"- Bull {money(bull)} ({_delta(bull)})",
-            f"- Base {money(base)} ({_delta(base)})",
-            f"- Bear {money(bear)} ({_delta(bear)})",
+            f"Most likely outcome: Briarwood's base case lands near {money(base)} over the next five years versus today's {basis_label} of {money(ask)}.",
+            f"Upside case: {money(bull)} ({_delta(bull)}).",
+            f"Downside case: {money(bear)} ({_delta(bear)}).",
         ]
         if isinstance(stress, (int, float)):
-            lines.append(f"- Stress {money(stress)} ({_delta(stress)}) — historical peak-to-trough overlay")
+            lines.append(f"Hard-pullback case: {money(stress)} ({_delta(stress)}) using a historical drawdown overlay.")
         spread = proj.get("spread")
         if isinstance(spread, (int, float)):
-            lines.append(f"Spread (bull-bear): {money(spread)}.")
+            lines.append(f"The gap between upside and downside is about {money(spread)}.")
         return "\n".join(lines) + chart_line
 
     system = load_prompt("projection")
     user = (
         f"User question: {text}\n\n"
         f"overrides_applied: {overrides or 'none'}\n"
+        f"basis_label: {basis_label}\n"
         f"ask_price: {ask}\n"
         f"bull_case_value: {bull} ({_delta(bull)})\n"
         f"base_case_value: {base} ({_delta(base)})\n"
@@ -1862,9 +2330,10 @@ def handle_projection(
         f"bull_growth_rate: {proj.get('bull_growth_rate')}\n"
         f"bear_growth_rate: {proj.get('bear_growth_rate')}\n"
     )
-    fallback = lambda: f"Base {money(base)} ({_delta(base)})."
+    fallback = lambda: f"Most likely outcome: about {money(base)} over five years versus today's {basis_label} of {money(ask)}."
     projection_inputs = {
         "overrides_applied": overrides or {},
+        "basis_label": basis_label,
         "ask_price": ask,
         "bull_case_value": bull,
         "base_case_value": base,
@@ -2109,7 +2578,45 @@ def handle_risk(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    trust_mode = bool(_TRUST_GAPS_RE.search(text))
+    downside_mode = bool(_DOWNSIDE_DETAIL_RE.search(text))
+    if trust_mode:
+        try:
+            thesis = get_value_thesis(pid, overrides=overrides)
+        except ToolUnavailable as exc:
+            return f"I couldn't pull the trust summary ({exc})."
+        session.current_property_id = pid
+        facts = _load_property_facts(pid)
+        session.last_trust_view = _trust_payload_from_thesis(thesis, facts)
+        flags = list(session.last_trust_view.get("trust_flags") or [])
+        blocked = list(session.last_trust_view.get("blocked_thesis_warnings") or [])
+        field_completeness = session.last_trust_view.get("field_completeness")
+        estimated_reliance = session.last_trust_view.get("estimated_reliance")
+        lines: list[str] = []
+        if flags:
+            lines.append(
+                "The main things still weakening confidence are "
+                + ", ".join(str(flag).replace("_", " ") for flag in flags[:3])
+                + "."
+            )
+        if isinstance(field_completeness, (int, float)):
+            lines.append(f"Field completeness is sitting around {field_completeness:.0%}.")
+        if isinstance(estimated_reliance, (int, float)):
+            lines.append(f"Estimated/defaulted inputs make up about {estimated_reliance:.0%} of the current read.")
+        if blocked:
+            lines.append("The biggest unresolved caution is " + str(blocked[0]) + ".")
+        if not lines:
+            lines.append("Nothing major is missing enough to materially weaken the read right now, but this still deserves normal underwriting discipline.")
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="trust",
+            question=text,
+            payload=session.last_trust_view,
+            fallback=" ".join(lines),
+        )
+        session.last_verifier_report = report
+        return narrative
     try:
         profile = get_risk_profile(pid, overrides=overrides)
     except ToolUnavailable as exc:
@@ -2121,11 +2628,18 @@ def handle_risk(
     ask = profile.get("ask_price")
     bear = profile.get("bear_case_value")
     stress = profile.get("stress_case_value")
+    if downside_mode and (bear is None or stress is None):
+        try:
+            projection = get_projection(pid, overrides=overrides)
+        except ToolUnavailable:
+            projection = {}
+        bear = bear if isinstance(bear, (int, float)) else projection.get("bear_case_value")
+        stress = stress if isinstance(stress, (int, float)) else projection.get("stress_case_value")
     risk_flags = profile.get("risk_flags") or []
     trust_flags = profile.get("trust_flags") or []
 
     facts = _load_property_facts(pid)
-    total_penalty = profile.get("total_penalty")
+    total_penalty = _normalize_penalty(profile.get("total_penalty"))
     if isinstance(total_penalty, (int, float)):
         tier = "thin" if total_penalty >= 0.5 else "moderate" if total_penalty >= 0.25 else "strong"
     else:
@@ -2153,18 +2667,42 @@ def handle_risk(
 
     money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
 
-    if llm is None:
-        lines = [f"Risk read for {pid}:"]
-        if risk_flags:
-            lines.append(f"- Drivers: {', '.join(risk_flags)}")
-        if trust_flags:
-            lines.append(f"- Trust flags: {', '.join(trust_flags)}")
+    if downside_mode:
+        lines = []
         if isinstance(bear, (int, float)) and isinstance(ask, (int, float)):
-            lines.append(f"- Bear case {money(bear)} vs ask {money(ask)}.")
+            lines.append(
+                f"In Briarwood's downside case, value drifts closer to {money(bear)} versus today's reference price of {money(ask)}."
+            )
         if isinstance(stress, (int, float)):
-            lines.append(f"- Stress (historical peak-to-trough overlay): {money(stress)}.")
+            lines.append(f"If the setup really breaks against you, the harder-pullback case is closer to {money(stress)}.")
+        if risk_flags:
+            lines.append(f"The main drivers behind that downside are {', '.join(risk_flags[:3])}.")
+        if trust_flags:
+            lines.append(f"Confidence is also being capped by {', '.join(trust_flags[:2])}.")
+        if not lines:
+            lines.append("Briarwood does not see a well-defined downside case yet beyond the current risk flags.")
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="downside",
+            question=text,
+            payload=session.last_risk_view,
+            fallback=" ".join(lines),
+        )
+        session.last_verifier_report = report
+        return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
+
+    if llm is None:
+        lines = [f"Biggest downside check for {pid}:"]
+        if risk_flags:
+            lines.append(f"The main risk drivers are {', '.join(risk_flags)}.")
+        if trust_flags:
+            lines.append(f"Confidence is also limited by {', '.join(trust_flags)}.")
+        if isinstance(bear, (int, float)) and isinstance(ask, (int, float)):
+            lines.append(f"In a downside case, value falls closer to {money(bear)} versus the current ask of {money(ask)}.")
+        if isinstance(stress, (int, float)):
+            lines.append(f"In a deeper stress case, it compresses toward {money(stress)}.")
         if len(lines) == 1:
-            lines.append("- No material risk drivers cached.")
+            lines.append("No major cached risk drivers are surfacing yet.")
         return "\n".join(lines) + chart_line
 
     system = load_prompt("risk")
@@ -2174,7 +2712,7 @@ def handle_risk(
         "ask_price": ask,
         "bear_case_value": bear,
         "stress_case_value": stress,
-        "total_penalty": profile.get("total_penalty"),
+        "total_penalty": total_penalty,
         "key_risks": list(profile.get("key_risks") or []),
     }
     user = (
@@ -2184,7 +2722,7 @@ def handle_risk(
         f"ask_price: {ask}\n"
         f"bear_case_value: {bear}\n"
         f"stress_case_value: {stress}\n"
-        f"total_penalty: {profile.get('total_penalty')}\n"
+        f"total_penalty: {total_penalty}\n"
         f"key_risks: {profile.get('key_risks')}\n"
     )
     narrative, report = complete_and_verify(
@@ -2214,11 +2752,14 @@ def handle_edge(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     cma_mode = bool(_CMA_RE.search(text))
+    comp_set_mode = bool(_COMP_SET_RE.search(text))
+    entry_point_mode = bool(_ENTRY_POINT_RE.search(text))
+    value_change_mode = bool(_VALUE_CHANGE_RE.search(text))
     try:
         thesis = get_value_thesis(pid, overrides=overrides)
-        cma_result = get_cma(pid, overrides=overrides) if cma_mode else None
+        cma_result = get_cma(pid, overrides=overrides) if (cma_mode or comp_set_mode or entry_point_mode) else None
     except ToolUnavailable as exc:
         return f"I couldn't build a value thesis ({exc})."
     session.current_property_id = pid
@@ -2242,17 +2783,9 @@ def handle_edge(
     ask = thesis.get("ask_price")
     fair = thesis.get("fair_value_base")
     prem = thesis.get("premium_discount_pct")
-    comps = [
-        {
-            "property_id": comp.property_id,
-            "address": comp.address,
-            "beds": comp.beds,
-            "baths": comp.baths,
-            "ask_price": comp.ask_price,
-            "blocks_to_beach": comp.blocks_to_beach,
-        }
-        for comp in (cma_result.comps if cma_result else [])
-    ]
+    thesis_comps = list(thesis.get("comps") or [])
+    cma_comps = [_comp_row_from_cma(comp) for comp in (cma_result.comps if cma_result else [])]
+    comps = thesis_comps or cma_comps
 
     edge_facts = _load_property_facts(pid)
     session.last_value_thesis_view = {
@@ -2268,24 +2801,138 @@ def handle_edge(
         "value_drivers": list(thesis.get("value_drivers") or []),
         "key_value_drivers": list(thesis.get("key_value_drivers") or []),
         "what_must_be_true": list(thesis.get("what_must_be_true") or []),
-        "comp_selection_summary": cma_result.comp_selection_summary if cma_result else None,
+        "why_this_stance": list(thesis.get("why_this_stance") or []),
+        "what_changes_my_view": list(thesis.get("what_changes_my_view") or []),
+        "trust_summary": dict(thesis.get("trust_summary") or {}),
+        "contradiction_count": thesis.get("contradiction_count"),
+        "blocked_thesis_warnings": list(thesis.get("blocked_thesis_warnings") or []),
+        "risk_adjusted_fair_value": thesis.get("risk_adjusted_fair_value"),
+        "required_discount": thesis.get("required_discount"),
+        "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
         "comps": list(comps),
     }
+    if (cma_mode or comp_set_mode or entry_point_mode) and cma_result is not None:
+        session.last_comps_preview = _comps_preview_from_cma(pid, ask, comps)
+
+    if comp_set_mode:
+        fallback_lines = [
+            (thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None) or "These are the comps Briarwood is leaning on for this read.")
+        ]
+        if comps:
+            chosen = [comp for comp in comps if comp.get("feeds_fair_value") is True]
+            contextual = [comp for comp in comps if comp.get("feeds_fair_value") is False]
+            if chosen:
+                fallback_lines.append(
+                    "The fair-value set is led by "
+                    + "; ".join(
+                        f"{comp.get('address')} ({comp.get('source_label') or 'comp'})"
+                        for comp in chosen[:3]
+                        if comp.get("address")
+                    )
+                    + "."
+                )
+            elif contextual:
+                fallback_lines.append(
+                    "Right now the visible comp table is still more contextual than fully selected into fair value."
+                )
+            reasons = [
+                str(comp.get("inclusion_reason") or comp.get("source_summary") or "")
+                for comp in comps[:2]
+                if comp.get("inclusion_reason") or comp.get("source_summary")
+            ]
+            if reasons:
+                fallback_lines.append("Why they are here: " + " ".join(reasons[:2]))
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="comp_set",
+            question=text,
+            payload={
+                "ask_price": ask,
+                "fair_value_base": fair,
+                "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
+                "comps": list(comps),
+            },
+            fallback=" ".join(line for line in fallback_lines if line),
+        )
+        session.last_verifier_report = report
+        return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
+
+    if entry_point_mode:
+        target = thesis.get("risk_adjusted_fair_value") or fair
+        required_discount = thesis.get("required_discount")
+        fallback_lines = []
+        if isinstance(target, (int, float)) and isinstance(ask, (int, float)):
+            fallback_lines.append(
+                f"The cleanest entry point is closer to {money(target)}, not the current ask of {money(ask)}."
+            )
+        elif isinstance(fair, (int, float)):
+            fallback_lines.append(
+                f"The deal gets more interesting closer to Briarwood's fair-value read around {money(fair)}."
+            )
+        if isinstance(required_discount, (int, float)):
+            fallback_lines.append(
+                f"That implies demanding roughly {required_discount:.0%} off today's pricing before getting more constructive."
+            )
+        if thesis.get("what_changes_my_view"):
+            fallback_lines.append(str(list(thesis.get("what_changes_my_view") or [])[0]))
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="entry_point",
+            question=text,
+            payload={
+                "ask_price": ask,
+                "fair_value_base": fair,
+                "risk_adjusted_fair_value": thesis.get("risk_adjusted_fair_value"),
+                "required_discount": required_discount,
+                "what_changes_my_view": list(thesis.get("what_changes_my_view") or []),
+            },
+            fallback=" ".join(fallback_lines),
+        )
+        session.last_verifier_report = report
+        return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
+
+    if value_change_mode:
+        change_lines = list(thesis.get("what_changes_my_view") or [])
+        if not change_lines:
+            change_lines = list(thesis.get("what_must_be_true") or [])
+        fallback = (
+            "The fastest way to improve Briarwood's view is "
+            + "; ".join(change_lines[:3])
+            if change_lines
+            else "There is not a single dominant change-driver yet beyond tightening the underwriting inputs."
+        )
+        narrative, report = compose_section_followup(
+            llm=llm,
+            section="value_change",
+            question=text,
+            payload={
+                "what_changes_my_view": list(thesis.get("what_changes_my_view") or []),
+                "what_must_be_true": list(thesis.get("what_must_be_true") or []),
+                "trust_summary": dict(thesis.get("trust_summary") or {}),
+            },
+            fallback=fallback,
+        )
+        session.last_verifier_report = report
+        return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
     if llm is None:
-        lines = [f"{'CMA' if cma_mode else 'Value thesis'} for {pid}:"]
-        lines.append(f"- Ask {money(ask)} vs fair {money(fair)} " +
-                     (f"({prem:+.1%})." if isinstance(prem, (int, float)) else "."))
+        lines = [f"Plain-English value read for {pid}:"]
+        lines.append(
+            f"The asking price is {money(ask)} versus a fair-value anchor around {money(fair)}"
+            + (f" ({prem:+.1%})." if isinstance(prem, (int, float)) else ".")
+        )
         if thesis.get("pricing_view"):
-            lines.append(f"- Pricing view: {thesis['pricing_view']}.")
+            lines.append(f"That leaves the deal looking {str(thesis['pricing_view']).replace('_', ' ')}.")
         if thesis.get("value_drivers"):
-            lines.append(f"- Anchors: {thesis['value_drivers']}")
+            drivers = thesis.get("value_drivers") or []
+            lines.append(f"Main support for that view: {'; '.join(str(item) for item in drivers)}")
         if thesis.get("key_value_drivers"):
-            lines.append(f"- Drivers: {'; '.join(thesis['key_value_drivers'])}")
+            lines.append(f"Value drivers: {'; '.join(thesis['key_value_drivers'])}")
         if thesis.get("what_must_be_true"):
-            lines.append(f"- What must be true: {'; '.join(thesis['what_must_be_true'])}")
-        if cma_result and cma_result.comp_selection_summary:
-            lines.append(f"- Comp selection: {cma_result.comp_selection_summary}")
+            lines.append(f"What has to go right: {'; '.join(thesis['what_must_be_true'])}")
+        comp_summary = thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None)
+        if comp_summary:
+            lines.append(f"Comp context: {comp_summary}")
         lines.extend(_format_cma_comp_lines(comps))
         return "\n".join(lines) + chart_line
 
@@ -2300,7 +2947,7 @@ def handle_edge(
         "net_opportunity_delta_pct": thesis.get("net_opportunity_delta_pct"),
         "key_value_drivers": list(thesis.get("key_value_drivers") or []),
         "what_must_be_true": list(thesis.get("what_must_be_true") or []),
-        "comp_selection_summary": cma_result.comp_selection_summary if cma_result else None,
+        "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
         "comps": list(comps),
     }
     user = (
@@ -2314,7 +2961,7 @@ def handle_edge(
         f"net_opportunity_delta_pct: {thesis.get('net_opportunity_delta_pct')}\n"
         f"key_value_drivers: {thesis.get('key_value_drivers')}\n"
         f"what_must_be_true: {thesis.get('what_must_be_true')}\n"
-        f"comp_selection_summary: {cma_result.comp_selection_summary if cma_result else 'none'}\n"
+        f"comp_selection_summary: {thesis.get('comp_selection_summary') or (cma_result.comp_selection_summary if cma_result else 'none')}\n"
         f"comp_lines: {_format_cma_comp_lines(comps) if comps else 'none'}\n"
     )
     narrative, report = complete_and_verify(
@@ -2326,7 +2973,7 @@ def handle_edge(
         max_tokens=300,
     )
     session.last_verifier_report = report
-    fallback = f"Ask {money(ask)} vs fair {money(fair)}."
+    fallback = f"The asking price is {money(ask)} versus a fair-value anchor around {money(fair)}."
     if comps:
         fallback += "\n" + "\n".join(_format_cma_comp_lines(comps))
     return (narrative or fallback) + chart_line
@@ -2347,7 +2994,7 @@ def handle_strategy(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     try:
         fit = get_strategy_fit(pid, overrides=overrides)
     except ToolUnavailable as exc:
@@ -2375,19 +3022,21 @@ def handle_strategy(
     money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
 
     if llm is None:
-        lines = [f"Best play for {pid}:"]
+        lines = [f"Best way to play {pid} right now:"]
         if fit.get("best_path"):
-            lines.append(f"- Path: {fit['best_path']}")
+            lines.append(f"The strongest path is {fit['best_path']}.")
         if fit.get("rental_ease_label"):
+            coc = fit.get("cash_on_cash_return")
+            coc_s = f"{coc:.1%}" if isinstance(coc, (int, float)) else "n/a"
             lines.append(
-                f"- Rental: {fit['rental_ease_label']} (ease {fit.get('rental_ease_score')}, "
-                f"cash flow {money(fit.get('monthly_cash_flow'))}/mo, "
-                f"CoC {fit.get('cash_on_cash_return')})"
+                f"If you rent it, the outlook is {fit['rental_ease_label']} "
+                f"(ease {fit.get('rental_ease_score')}, monthly cash flow {money(fit.get('monthly_cash_flow'))}, "
+                f"cash-on-cash {coc_s})."
             )
         if fit.get("pricing_view"):
-            lines.append(f"- Valuation: {fit['pricing_view']}.")
+            lines.append(f"On price alone, it looks {fit['pricing_view']}.")
         if fit.get("recommendation"):
-            lines.append(f"- Overall: {fit['recommendation']}")
+            lines.append(str(fit["recommendation"]))
         return "\n".join(lines)
 
     system = load_prompt("strategy")
@@ -2459,12 +3108,38 @@ def handle_browse(
                     session.current_property_id = None
                     return _format_live_listing_brief(live_listing)
                 return _browse_missing_property_message(match)
-    overrides = parse_overrides(text)
+    overrides = _parse_turn_overrides(text, pid=pid, session=session)
     try:
         brief = get_property_brief(pid, overrides=overrides)
     except ToolUnavailable as exc:
         return f"I couldn't build a property brief ({exc})."
     session.current_property_id = pid
+    try:
+        summary = get_property_summary(pid)
+    except ToolUnavailable:
+        summary = {}
+    projection: dict[str, object] | None = None
+    strategy_fit: dict[str, object] | None = None
+    rent_outlook: RentOutlook | None = None
+    try:
+        projection = get_projection(pid, overrides=overrides)
+    except Exception as exc:
+        logger.warning("browse projection failed for %s: %s", pid, exc)
+    try:
+        strategy_fit = get_strategy_fit(pid, overrides=overrides)
+    except Exception as exc:
+        logger.warning("browse strategy fit failed for %s: %s", pid, exc)
+    try:
+        rent_payload = get_rent_estimate(pid, overrides=overrides)
+        rent_outlook = get_rent_outlook(
+            pid,
+            years=3,
+            overrides=overrides,
+            rent_payload=rent_payload,
+            property_summary=summary,
+        )
+    except Exception as exc:
+        logger.warning("browse rent outlook failed for %s: %s", pid, exc)
     presentation_payload: dict[str, object] | None = None
     enrichment: dict[str, object] | None = None
     if promotion and promotion.property_id == pid:
@@ -2484,6 +3159,7 @@ def handle_browse(
             include_risk=False,
             brief=brief,
             enrichment=enrichment,
+            rent_outlook=rent_outlook,
             contract_type="property_brief",
             analysis_mode="browse",
         )
@@ -2508,12 +3184,30 @@ def handle_browse(
     except Exception:
         neighbors = []
     neighbors = [n for n in neighbors if n.get("property_id") != pid][:5]
+    _populate_browse_slots(
+        session,
+        pid=pid,
+        brief=brief,
+        summary=summary if isinstance(summary, dict) else None,
+        neighbors=neighbors,
+        projection=projection,
+        strategy_fit=strategy_fit,
+        rent_outlook=rent_outlook,
+    )
     _set_workflow_state(session, contract_type="property_brief", analysis_mode="browse")
-    response = _format_browse_from_presentation(
+    fallback = _format_browse_from_presentation(
         presentation_payload,
         brief,
         neighbors,
     ) or _format_browse_brief(brief, neighbors)
+    browse_inputs = _browse_surface_payload(brief=brief, session=session, neighbors=neighbors)
+    response, report = compose_browse_surface(
+        llm=llm,
+        payload=browse_inputs,
+        fallback=fallback,
+    )
+    if report is not None:
+        session.last_verifier_report = report
     if promotion and promotion.property_id == pid:
         intro = (
             f"Briarwood {'saved' if promotion.created_new else 'reused'} {brief.address or pid} "
@@ -2640,6 +3334,66 @@ def _contextualize_followup_turn(
 ) -> RouterDecision:
     """Rewrite low-context browse repeats into the follow-up mode the user actually meant."""
     if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.SEARCH, AnswerType.DECISION}
+        and session.current_property_id
+        and _COMP_SET_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.EDGE,
+            confidence=max(decision.confidence, 0.76),
+            target_refs=[session.current_property_id],
+            reason="comp-set rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION}
+        and session.current_property_id
+        and (_ENTRY_POINT_RE.search(text) or _VALUE_CHANGE_RE.search(text))
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.EDGE,
+            confidence=max(decision.confidence, 0.76),
+            target_refs=[session.current_property_id],
+            reason="entry-point rewrite" if _ENTRY_POINT_RE.search(text) else "value-change rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION, AnswerType.RISK}
+        and session.current_property_id
+        and _TRUST_GAPS_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.RISK,
+            confidence=max(decision.confidence, 0.76),
+            target_refs=[session.current_property_id],
+            reason="trust rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION, AnswerType.PROJECTION}
+        and session.current_property_id
+        and _DOWNSIDE_DETAIL_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.RISK,
+            confidence=max(decision.confidence, 0.76),
+            target_refs=[session.current_property_id],
+            reason="downside-detail rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION, AnswerType.PROJECTION}
+        and session.current_property_id
+        and _RENT_WORKABILITY_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.RENT_LOOKUP,
+            confidence=max(decision.confidence, 0.76),
+            target_refs=[session.current_property_id],
+            reason="rent-workability rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
         decision.answer_type in {AnswerType.SEARCH, AnswerType.BROWSE, AnswerType.LOOKUP}
         and session.current_property_id
         and _CMA_RE.search(text)
@@ -2673,6 +3427,30 @@ def _contextualize_followup_turn(
             confidence=max(decision.confidence, 0.72),
             target_refs=[session.current_property_id],
             reason="future rent rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION}
+        and session.current_property_id
+        and _FLOOR_PRICE_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.PROJECTION,
+            confidence=max(decision.confidence, 0.72),
+            target_refs=[session.current_property_id],
+            reason="floor-price rewrite",
+            llm_suggestion=decision.llm_suggestion,
+        )
+    if (
+        decision.answer_type in {AnswerType.BROWSE, AnswerType.LOOKUP, AnswerType.DECISION, AnswerType.PROJECTION}
+        and session.current_property_id
+        and _CASH_FLOW_RE.search(text)
+    ):
+        return RouterDecision(
+            answer_type=AnswerType.RENT_LOOKUP,
+            confidence=max(decision.confidence, 0.72),
+            target_refs=[session.current_property_id],
+            reason="cash-flow rewrite",
             llm_suggestion=decision.llm_suggestion,
         )
     if (
@@ -2788,7 +3566,7 @@ def dispatch(
     # Echo what-if overrides at the top so the user sees the underwrite
     # reflects their scenario, not the canonical listing.
     if decision.answer_type in _OVERRIDE_AWARE_TYPES:
-        overrides = parse_overrides(text)
+        overrides = _parse_turn_overrides(text, pid=session.current_property_id, session=session)
         if overrides:
             response = _override_summary(overrides) + "\n" + response
     try:

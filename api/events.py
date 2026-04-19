@@ -28,8 +28,10 @@ EVENT_TOWN_SUMMARY = "town_summary"
 EVENT_COMPS_PREVIEW = "comps_preview"
 EVENT_RISK_PROFILE = "risk_profile"
 EVENT_VALUE_THESIS = "value_thesis"
+EVENT_CMA_TABLE = "cma_table"
 EVENT_STRATEGY_PATH = "strategy_path"
 EVENT_RENT_OUTLOOK = "rent_outlook"
+EVENT_TRUST_SUMMARY = "trust_summary"
 EVENT_RESEARCH_UPDATE = "research_update"
 EVENT_MODULES_RAN = "modules_ran"
 EVENT_VERIFIER_REPORT = "verifier_report"
@@ -76,11 +78,34 @@ def error(message: str) -> dict[str, Any]:
     return {"type": EVENT_ERROR, "message": message}
 
 
-def chart(url: str, *, title: str | None = None, kind: str | None = None) -> dict[str, Any]:
-    """Visual artifact emitted by handlers (PROJECTION/RISK/EDGE/RENT_LOOKUP/
-    VISUALIZE all generate Plotly HTML files). `url` should be a path the
-    browser can load; FastAPI serves these via /artifacts/."""
-    return {"type": EVENT_CHART, "url": url, "title": title, "kind": kind}
+def chart(
+    url: str | None = None,
+    *,
+    title: str | None = None,
+    kind: str | None = None,
+    spec: dict[str, Any] | None = None,
+    provenance: list[str] | None = None,
+    advisor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Visual artifact or native chart spec emitted by handlers.
+
+    `url` remains the backward-compatible HTML artifact path for visualize/debug
+    flows. `spec` carries typed data for native chat charts in core workflows.
+    """
+    payload: dict[str, Any] = {"type": EVENT_CHART}
+    if url is not None:
+        payload["url"] = url
+    if title is not None:
+        payload["title"] = title
+    if kind is not None:
+        payload["kind"] = kind
+    if spec is not None:
+        payload["spec"] = spec
+    if provenance is not None:
+        payload["provenance"] = provenance
+    if advisor is not None:
+        payload["advisor"] = advisor
+    return payload
 
 
 def scenario_table(
@@ -88,6 +113,7 @@ def scenario_table(
     *,
     address: str | None = None,
     ask_price: float | None = None,
+    basis_label: str | None = None,
     spread: float | None = None,
 ) -> dict[str, Any]:
     """Bull/base/bear projection rows for the UI to render as a table.
@@ -99,6 +125,7 @@ def scenario_table(
         "type": EVENT_SCENARIO_TABLE,
         "address": address,
         "ask_price": ask_price,
+        "basis_label": basis_label,
         "spread": spread,
         "rows": rows,
     }
@@ -146,6 +173,11 @@ def value_thesis(payload: dict[str, Any]) -> dict[str, Any]:
     return {"type": EVENT_VALUE_THESIS, **payload}
 
 
+def cma_table(payload: dict[str, Any]) -> dict[str, Any]:
+    """Dedicated comp table showing which comps fed fair value and why."""
+    return {"type": EVENT_CMA_TABLE, **payload}
+
+
 def strategy_path(payload: dict[str, Any]) -> dict[str, Any]:
     """Structured strategy-fit output: best path, recommendation, rental ease,
     cash flow, liquidity, cash-on-cash return. From get_strategy_fit() via
@@ -158,6 +190,11 @@ def rent_outlook(payload: dict[str, Any]) -> dict[str, Any]:
     rental ease, annual NOI, multi-year horizon range, Zillow market rent.
     From get_rent_estimate() + get_rent_outlook() via session.last_rent_outlook_view."""
     return {"type": EVENT_RENT_OUTLOOK, **payload}
+
+
+def trust_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """User-facing trust / truthfulness card."""
+    return {"type": EVENT_TRUST_SUMMARY, **payload}
 
 
 def research_update(payload: dict[str, Any]) -> dict[str, Any]:

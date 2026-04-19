@@ -32,7 +32,11 @@ def build_property_input_from_context(context: ExecutionContext) -> PropertyInpu
     depending on the full-engine report blob.
     """
 
-    property_data = dict(context.property_data or {})
+    property_data = dict(
+        (context.normalized_context or {}).get("property_data")
+        or context.property_data
+        or {}
+    )
     if not property_data:
         raise ValueError("ExecutionContext.property_data is required to build PropertyInput.")
 
@@ -44,9 +48,12 @@ def build_property_input_from_context(context: ExecutionContext) -> PropertyInpu
 def module_payload_from_legacy_result(
     *,
     result: Any,
+    context: ExecutionContext | None = None,
     assumptions_used: dict[str, Any] | None = None,
     warnings: list[str] | None = None,
     extra_data: dict[str, Any] | None = None,
+    required_fields: list[str] | None = None,
+    mode: str | None = None,
 ) -> ModulePayload:
     """Normalize a legacy ``ModuleResult`` into Briarwood's routed payload shape."""
 
@@ -80,15 +87,112 @@ def module_payload_from_legacy_result(
     if extra_data:
         data.update(extra_data)
 
+    missing_inputs, estimated_inputs = _module_input_flags(
+        context=context,
+        required_fields=required_fields,
+    )
+    payload_mode = mode or _infer_payload_mode(
+        confidence=getattr(result, "confidence", None),
+        missing_inputs=missing_inputs,
+    )
+
     return ModulePayload(
         data=data,
         confidence=getattr(result, "confidence", None),
         assumptions_used=dict(assumptions_used or {}),
         warnings=list(warnings or []),
+        mode=payload_mode,
+        missing_inputs=missing_inputs,
+        estimated_inputs=estimated_inputs,
+        confidence_band=confidence_band(getattr(result, "confidence", None)),
         module_name=str(getattr(result, "module_name", "") or ""),
         score=getattr(result, "score", None),
         summary=str(getattr(result, "summary", "") or ""),
     )
+
+
+def module_payload_from_error(
+    *,
+    module_name: str,
+    context: ExecutionContext | None = None,
+    summary: str,
+    warnings: list[str] | None = None,
+    assumptions_used: dict[str, Any] | None = None,
+    extra_data: dict[str, Any] | None = None,
+    required_fields: list[str] | None = None,
+    confidence: float = 0.08,
+) -> ModulePayload:
+    """Return a typed fallback payload instead of throwing on sparse inputs."""
+
+    missing_inputs, estimated_inputs = _module_input_flags(
+        context=context,
+        required_fields=required_fields,
+    )
+    return ModulePayload(
+        data={
+            "module_name": module_name,
+            "summary": summary,
+            "score": None,
+            "metrics": {},
+            **dict(extra_data or {}),
+        },
+        confidence=confidence,
+        assumptions_used=dict(assumptions_used or {}),
+        warnings=list(warnings or []),
+        mode="fallback",
+        missing_inputs=missing_inputs,
+        estimated_inputs=estimated_inputs,
+        confidence_band=confidence_band(confidence),
+        module_name=module_name,
+        score=None,
+        summary=summary,
+    )
+
+
+def confidence_band(value: float | None) -> str:
+    if value is None:
+        return "Speculative"
+    if value >= 0.75:
+        return "High confidence"
+    if value >= 0.55:
+        return "Moderate confidence"
+    if value >= 0.3:
+        return "Low confidence"
+    return "Speculative"
+
+
+def _module_input_flags(
+    *,
+    context: ExecutionContext | None,
+    required_fields: list[str] | None,
+) -> tuple[list[str], list[str]]:
+    registry = dict((context.missing_data_registry if context else {}) or {})
+    fields = dict(registry.get("fields") or {})
+    required = list(required_fields or [])
+    if required:
+        missing = [field for field in required if (fields.get(field) or {}).get("status") == "missing"]
+        estimated = [
+            field
+            for field in required
+            if (fields.get(field) or {}).get("status") in {"estimated", "defaulted"}
+        ]
+        return missing, estimated
+    return (
+        list(registry.get("missing") or []),
+        list(registry.get("estimated") or []) + list(registry.get("defaulted") or []),
+    )
+
+
+def _infer_payload_mode(
+    *,
+    confidence: float | None,
+    missing_inputs: list[str],
+) -> str:
+    if confidence is not None and confidence < 0.2:
+        return "fallback"
+    if missing_inputs:
+        return "partial"
+    return "full"
 
 
 def _build_from_canonical_dict(

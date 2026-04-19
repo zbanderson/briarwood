@@ -26,4 +26,10 @@ def main(*args, **kwargs):
     return _main(*args, **kwargs)
 
 
-__all__ = ["run_eval", "score_model", "main"]
+def run_backtest_program(*args, **kwargs):
+    from briarwood.eval.backtest_program import run_backtest_program as _run_backtest_program
+
+    return _run_backtest_program(*args, **kwargs)
+
+
+__all__ = ["run_eval", "score_model", "main", "run_backtest_program"]

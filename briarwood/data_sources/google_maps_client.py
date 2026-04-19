@@ -144,6 +144,29 @@ class GoogleMapsClient:
             "location": f"{latitude},{longitude}",
             "fov": str(fov),
             "pitch": str(pitch),
+            "source": "outdoor",
+            "return_error_code": "true",
+            "key": self.api_key,
+        }
+        return f"{STREET_VIEW_URL}?{urlencode(params)}"
+
+    def street_view_image_url_for_location(
+        self,
+        *,
+        location: str,
+        size: str = "640x360",
+        fov: int = 90,
+        pitch: int = 0,
+    ) -> str | None:
+        if not self.api_key or not location.strip():
+            return None
+        params = {
+            "size": size,
+            "location": location.strip(),
+            "fov": str(fov),
+            "pitch": str(pitch),
+            "source": "outdoor",
+            "return_error_code": "true",
             "key": self.api_key,
         }
         return f"{STREET_VIEW_URL}?{urlencode(params)}"

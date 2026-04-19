@@ -179,11 +179,22 @@ def normalize_module_result(module_name: str, result: Any) -> dict[str, Any]:
         confidence = result.get("confidence")
         assumptions_used = result.get("assumptions_used") or {}
         warnings = result.get("warnings") or []
+        mode = str(result.get("mode") or "full")
+        missing_inputs = list(result.get("missing_inputs") or [])
+        estimated_inputs = list(result.get("estimated_inputs") or [])
+        confidence_band = str(result.get("confidence_band") or "Moderate confidence")
         return ModulePayload(
             data=data,
             confidence=confidence,
             assumptions_used=dict(assumptions_used),
             warnings=list(warnings),
+            mode=mode,
+            missing_inputs=missing_inputs,
+            estimated_inputs=estimated_inputs,
+            confidence_band=confidence_band,
+            module_name=str(result.get("module_name") or data.get("module_name") or module_name),
+            score=result.get("score"),
+            summary=str(result.get("summary") or data.get("summary") or ""),
         ).model_dump()
 
     raise TypeError(

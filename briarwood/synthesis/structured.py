@@ -56,6 +56,9 @@ def build_unified_output(
     next_checks = _next_checks(parser, outputs, bridges)
 
     aggregate_confidence = _aggregate_confidence(outputs, bridges)
+    contradiction_count = _contradiction_count(bridges)
+    blocked_thesis_warnings = _blocked_thesis_warnings(bridges)
+    trust_summary = _trust_summary(outputs, bridges, aggregate_confidence)
 
     stance, decision, recommendation, best_path = classify_decision_stance(
         value_position=value_position,
@@ -66,6 +69,19 @@ def build_unified_output(
 
     key_value_drivers = _key_value_drivers(outputs, bridges, primary_value_source)
     key_risks = _key_risks(outputs, bridges)
+    why_this_stance = _why_this_stance(
+        value_position=value_position,
+        key_value_drivers=key_value_drivers,
+        key_risks=key_risks,
+        trust_flags=trust_flags,
+        bridges=bridges,
+    )
+    what_changes_my_view = _what_changes_my_view(
+        value_position=value_position,
+        trust_flags=trust_flags,
+        next_checks=next_checks,
+        bridges=bridges,
+    )
 
     return {
         "recommendation": recommendation,
@@ -88,6 +104,11 @@ def build_unified_output(
         "what_must_be_true": what_must_be_true,
         "next_checks": next_checks,
         "trust_flags": trust_flags,
+        "trust_summary": trust_summary,
+        "contradiction_count": contradiction_count,
+        "blocked_thesis_warnings": blocked_thesis_warnings,
+        "why_this_stance": why_this_stance,
+        "what_changes_my_view": what_changes_my_view,
         "interaction_trace": interaction_trace,
     }
 
@@ -277,6 +298,18 @@ def collect_trust_flags(
     if legal_conf is not None and legal_conf < 0.5:
         flags.append("zoning_unverified")
 
+    confidence_payload = outputs.get("confidence") or {}
+    confidence_data = (confidence_payload.get("data") or {})
+    contradiction_count = int(confidence_data.get("contradiction_count") or 0)
+    if contradiction_count > 0:
+        flags.append("contradictory_inputs")
+    estimated_reliance = _float(confidence_data.get("estimated_reliance"))
+    if estimated_reliance is not None and estimated_reliance >= 0.5:
+        flags.append("estimated_inputs_heavy")
+    field_completeness = _float(confidence_data.get("field_completeness"))
+    if field_completeness is not None and field_completeness < 0.55:
+        flags.append("sparse_property_inputs")
+
     # Fragility / execution
     fragility = _float(
         (bridges.get("scenario_x_risk") or {}).get("adjustments", {}).get("fragility_score")
@@ -305,7 +338,7 @@ def collect_trust_flags(
     if carry_metrics.get("carrying_cost_complete") is False:
         flags.append("incomplete_carry_inputs")
 
-    return flags
+    return list(dict.fromkeys(flags))
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -368,6 +401,9 @@ def _flag_to_check(flag: str) -> str:
         "weak_town_context": "Pull town-level scarcity/absorption data before anchoring on town priors.",
         "valuation_anchor_divergence": "Reconcile comps vs. ZHVI — the two anchors disagree by more than the acceptable band.",
         "incomplete_carry_inputs": "Complete the carry-cost inputs (taxes, insurance, financing).",
+        "contradictory_inputs": "Resolve the contradictory property facts before trusting the recommendation.",
+        "estimated_inputs_heavy": "Replace estimated/defaulted inputs with source-backed property facts.",
+        "sparse_property_inputs": "Fill in the missing core property details so the models have a stable baseline.",
     }
     return mapping.get(flag, f"Resolve the {flag} trust gap before deciding.")
 
@@ -448,7 +484,102 @@ def _aggregate_confidence(
         # Only apply a partial shrink so a single fragile signal doesn't crater everything.
         module_avg *= 0.85 + 0.15 * ratio
 
+    contradiction_penalty = min(_contradiction_count(bridges) * 0.06, 0.18)
+    blocked_penalty = min(len(_blocked_thesis_warnings(bridges)) * 0.04, 0.12)
+    module_avg -= contradiction_penalty + blocked_penalty
+
     return max(0.0, min(module_avg, 1.0))
+
+
+def _contradiction_count(bridges: dict[str, dict[str, Any]]) -> int:
+    conflicts = (bridges.get("conflict_detector") or {}).get("adjustments", {}).get("conflicts") or []
+    return len([conflict for conflict in conflicts if isinstance(conflict, dict)])
+
+
+def _blocked_thesis_warnings(bridges: dict[str, dict[str, Any]]) -> list[str]:
+    warnings: list[str] = []
+    conflicts = (bridges.get("conflict_detector") or {}).get("adjustments", {}).get("conflicts") or []
+    for conflict in conflicts:
+        if isinstance(conflict, dict) and conflict.get("message"):
+            warnings.append(str(conflict["message"]))
+    scenario = bridges.get("scenario_x_risk") or {}
+    fragility = _float((scenario.get("adjustments") or {}).get("fragility_score"))
+    if fragility is not None and fragility >= 0.65:
+        warnings.append("The thesis is blocked until the execution burden is reduced or better supported.")
+    return list(dict.fromkeys(warnings))
+
+
+def _trust_summary(
+    outputs: dict[str, dict[str, Any]],
+    bridges: dict[str, dict[str, Any]],
+    aggregate_confidence: float,
+) -> dict[str, Any]:
+    confidence_payload = outputs.get("confidence") or {}
+    data = dict((confidence_payload.get("data") or {}))
+    return {
+        "confidence": round(aggregate_confidence, 4),
+        "band": _confidence_band(aggregate_confidence),
+        "field_completeness": _float(data.get("field_completeness")),
+        "estimated_reliance": _float(data.get("estimated_reliance")),
+        "contradiction_count": int(data.get("contradiction_count") or _contradiction_count(bridges)),
+        "blocked_thesis_warnings": _blocked_thesis_warnings(bridges),
+        "trust_flags": collect_trust_flags(outputs, bridges),
+    }
+
+
+def _why_this_stance(
+    *,
+    value_position: dict[str, Any],
+    key_value_drivers: list[str],
+    key_risks: list[str],
+    trust_flags: list[str],
+    bridges: dict[str, dict[str, Any]],
+) -> list[str]:
+    lines: list[str] = []
+    premium = _float(value_position.get("premium_discount_pct"))
+    if premium is not None:
+        if premium > 0:
+            lines.append(f"Current basis sits about {premium*100:.1f}% above Briarwood's fair-value anchor.")
+        else:
+            lines.append(f"Current basis sits about {abs(premium)*100:.1f}% below Briarwood's fair-value anchor.")
+    lines.extend(key_value_drivers[:2])
+    lines.extend(key_risks[:2])
+    if trust_flags:
+        lines.append("Trust is limited by " + ", ".join(trust_flags[:3]) + ".")
+    return list(dict.fromkeys(lines))[:4]
+
+
+def _what_changes_my_view(
+    *,
+    value_position: dict[str, Any],
+    trust_flags: list[str],
+    next_checks: list[str],
+    bridges: dict[str, dict[str, Any]],
+) -> list[str]:
+    items: list[str] = []
+    premium = _float(value_position.get("premium_discount_pct"))
+    extra_discount = _float(
+        (bridges.get("valuation_x_risk") or {}).get("adjustments", {}).get("extra_discount_demanded_pct")
+    )
+    if premium is not None and premium > 0:
+        required = premium + (extra_discount or 0.0)
+        items.append(f"A price improvement of about {required*100:.1f}% would materially improve the setup.")
+    if "incomplete_carry_inputs" in trust_flags:
+        items.append("Confirmed taxes, insurance, and financing could tighten the carry picture.")
+    if "zoning_unverified" in trust_flags:
+        items.append("A clean legal/zoning confirmation would improve rent confidence and reduce risk.")
+    items.extend(next_checks[:3])
+    return list(dict.fromkeys(items))[:4]
+
+
+def _confidence_band(value: float) -> str:
+    if value >= 0.75:
+        return "High confidence"
+    if value >= 0.55:
+        return "Moderate confidence"
+    if value >= 0.3:
+        return "Low confidence"
+    return "Speculative"
 
 
 def _recommended_next_run(parser: ParserOutput) -> str | None:

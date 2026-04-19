@@ -5,6 +5,7 @@ import type { ValueThesisEvent } from "@/lib/chat/events";
 
 type Props = {
   thesis: ValueThesisEvent;
+  hideCompStory?: boolean;
 };
 
 function money(n: number | null | undefined) {
@@ -25,9 +26,14 @@ function dims(comp: { beds?: number | null; baths?: number | null }) {
   return parts.join(" · ");
 }
 
-export function ValueThesisCard({ thesis }: Props) {
+export function ValueThesisCard({ thesis, hideCompStory = false }: Props) {
   const location = [thesis.town, thesis.state].filter(Boolean).join(", ");
   const premium = pct(thesis.premium_discount_pct);
+  const primarySource =
+    thesis.primary_value_source &&
+    thesis.primary_value_source.toLowerCase() !== "unknown"
+      ? thesis.primary_value_source.replace(/_/g, " ")
+      : null;
   const premiumTone =
     thesis.premium_discount_pct == null
       ? "text-[var(--color-text-faint)]"
@@ -72,9 +78,21 @@ export function ValueThesisCard({ thesis }: Props) {
           </span>
         )}
       </div>
-      {thesis.primary_value_source && (
+      {primarySource && (
         <div className="mt-1 text-[11px] text-[var(--color-text-faint)]">
-          Primary source: {thesis.primary_value_source}
+          Primary source: {primarySource}
+        </div>
+      )}
+      {(thesis.risk_adjusted_fair_value != null || thesis.required_discount != null) && (
+        <div className="mt-3 grid grid-cols-2 gap-3 text-[12px] text-[var(--color-text-muted)]">
+          <MiniStat
+            label="Risk-adjusted fair value"
+            value={money(thesis.risk_adjusted_fair_value)}
+          />
+          <MiniStat
+            label="Required discount"
+            value={pct(thesis.required_discount) ?? "—"}
+          />
         </div>
       )}
 
@@ -88,16 +106,33 @@ export function ValueThesisCard({ thesis }: Props) {
           tone="amber"
         />
       )}
-      {thesis.comp_selection_summary && (
+      {thesis.why_this_stance && thesis.why_this_stance.length > 0 && (
+        <ListBlock label="Why this stance" items={thesis.why_this_stance} />
+      )}
+      {thesis.what_changes_my_view && thesis.what_changes_my_view.length > 0 && (
+        <ListBlock
+          label="What changes my view"
+          items={thesis.what_changes_my_view}
+          tone="amber"
+        />
+      )}
+      {thesis.blocked_thesis_warnings && thesis.blocked_thesis_warnings.length > 0 && (
+        <ListBlock
+          label="Blocked thesis warnings"
+          items={thesis.blocked_thesis_warnings}
+          tone="amber"
+        />
+      )}
+      {!hideCompStory && thesis.comp_selection_summary && (
         <div className="mt-4 text-[12px] text-[var(--color-text-muted)]">
           <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
-            Comp selection
+            Comps Behind Fair Value
           </span>
           <div className="mt-1">{thesis.comp_selection_summary}</div>
         </div>
       )}
 
-      {thesis.comps.length > 0 && (
+      {!hideCompStory && thesis.comps.length > 0 && (
         <ul className="mt-3 divide-y divide-[var(--color-border-subtle)]">
           {thesis.comps.map((comp, i) => (
             <li
@@ -113,6 +148,20 @@ export function ValueThesisCard({ thesis }: Props) {
                   {comp.blocks_to_beach != null &&
                     ` · ${comp.blocks_to_beach} blk to beach`}
                 </div>
+                {(comp.source_label || comp.source_summary) && (
+                  <div className="mt-1 flex items-center gap-2 text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]">
+                    {comp.source_label && (
+                      <span className="rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] px-2 py-0.5">
+                        {comp.source_label}
+                      </span>
+                    )}
+                    {comp.source_summary && (
+                      <span className="truncate normal-case tracking-normal">
+                        {comp.source_summary}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="shrink-0 text-right font-medium text-[var(--color-text)]">
                 {money(comp.ask_price)}
@@ -121,6 +170,17 @@ export function ValueThesisCard({ thesis }: Props) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
+        {label}
+      </div>
+      <div className="mt-0.5 font-medium text-[var(--color-text)]">{value}</div>
     </div>
   );
 }

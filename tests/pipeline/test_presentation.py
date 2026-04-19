@@ -66,6 +66,10 @@ class PresentationPayloadTests(unittest.TestCase):
         self.assertTrue(any(table.key == "sale_history" for table in payload.tables))
         self.assertTrue(any(chart.kind == "verdict_gauge" for chart in payload.charts))
         self.assertTrue(any(chart.kind == "risk_bar" for chart in payload.charts))
+        self.assertEqual(
+            payload.evidence["street_view_image_url"],
+            "https://maps.googleapis.com/maps/api/streetview?...",
+        )
 
     def test_build_property_presentation_omits_risk_chart_when_not_provided(self) -> None:
         brief = PropertyBrief(
@@ -156,6 +160,7 @@ class PresentationPayloadTests(unittest.TestCase):
         rent_outlook = RentOutlook(
             property_id="1600-l-street-belmar-nj-07719",
             address="1600 L Street, Belmar, NJ 07719",
+            entry_basis=899000.0,
             current_monthly_rent=3500.0,
             effective_monthly_rent=3300.0,
             annual_noi=22000.0,
@@ -172,7 +177,9 @@ class PresentationPayloadTests(unittest.TestCase):
             zillow_market_rent_low=3400.0,
             zillow_market_rent_high=3900.0,
             zillow_rental_comp_count=4,
+            market_context_note=None,
             burn_chart_payload={"series": [{"year": 0, "rent_base": 3600, "rent_bull": 3800, "rent_bear": 3400, "monthly_obligation": 4100}]},
+            ramp_chart_payload={"series": [{"year": 0, "net_0": -500, "net_3": -500, "net_5": -500}]},
             confidence_notes=[],
         )
         town_read = TownMarketRead(

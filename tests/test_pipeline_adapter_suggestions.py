@@ -86,6 +86,12 @@ class SlotDerivedChipsTests(unittest.TestCase):
         chips = _slot_derived_chips(s)
         self.assertIn("What's the cash-on-cash if I rent it?", chips)
 
+    def test_rent_outlook_with_break_even_adds_workability_chip(self) -> None:
+        s = _session()
+        s.last_rent_outlook_view = {"monthly_rent": 3200, "break_even_rent": 5900}
+        chips = _slot_derived_chips(s)
+        self.assertIn("What rent would make this work?", chips)
+
     def test_strategy_path_with_best_path_adds_chip(self) -> None:
         s = _session()
         s.last_strategy_view = {"best_path": "long_hold_rent"}
@@ -97,6 +103,12 @@ class SlotDerivedChipsTests(unittest.TestCase):
         s.last_value_thesis_view = {"value_drivers": ["beach proximity"]}
         chips = _slot_derived_chips(s)
         self.assertIn("What are the key value drivers?", chips)
+
+    def test_cma_rows_add_fair_value_chip(self) -> None:
+        s = _session()
+        s.last_cma_table = {"rows": [{"address": "1302 L Street"}]}
+        chips = _slot_derived_chips(s)
+        self.assertIn("Which comps actually fed fair value?", chips)
 
     def test_multiple_slots_produce_multiple_chips(self) -> None:
         s = _session()
@@ -134,6 +146,14 @@ class TierHelperIntegrationTests(unittest.TestCase):
         s.last_risk_view = {"key_risks": ["Zoning change"]}
         chips = _suggestions_for_browse("", None, session=s)
         self.assertEqual(chips[0], "Tell me more about Zoning change")
+
+    def test_browse_with_property_suggests_live_cma_first_when_not_already_run(self) -> None:
+        s = _session()
+        s.current_property_id = "1008-14th-ave"
+        s.last_answer_contract = "property_brief"
+        focal = {"address_line": "1008 14th Avenue", "price": 767000}
+        chips = _suggestions_for_browse("", focal, session=s)
+        self.assertEqual(chips[0], "Run a live CMA with market comps")
 
     def test_decision_without_focal_uses_slot_chip_first(self) -> None:
         s = _session()

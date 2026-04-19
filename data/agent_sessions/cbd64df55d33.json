@@ -1,0 +1,44 @@
+{
+  "session_id": "cbd64df55d33",
+  "current_property_id": null,
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": null,
+    "filters": {}
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": null,
+    "filters": {}
+  },
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_verifier_report": null,
+  "turns": [
+    {
+      "user": "what do you think of Belmar NJ",
+      "assistant": "I found a few close matches:\n- 1004-14th-ave-belmar-nj-07719 \u2014 1004 14TH AVE, BELMAR, NJ 07719, Belmar\n- 1008-14th-ave-belmar-nj-07719 \u2014 1008 14th Avenue, Belmar, NJ 07719, Belmar\n- 11-test-ave-belmar-nj-07719 \u2014 11 Test Ave",
+      "answer_type": "browse"
+    },
+    {
+      "user": "Search homes in Belmar",
+      "assistant": "I can run live listing discovery for Belmar, but I need the state too. Please provide the town and state, like 'Belmar, NJ'.",
+      "answer_type": "search"
+    }
+  ]
+}

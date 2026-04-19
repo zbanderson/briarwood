@@ -12,8 +12,9 @@ Primary seams:
 
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime
+from collections import Counter
+from dataclasses import asdict, field
+from datetime import UTC, datetime
 from enum import Enum
 import json
 from dataclasses import dataclass
@@ -164,6 +165,8 @@ class ComparableProperty:
     ask_price: float | None
     blocks_to_beach: float | None
     selection_rationale: str | None = None
+    source_label: str | None = None
+    source_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -184,10 +187,226 @@ class CMAResult:
     missing_fields: list[str]
 
 
+def _merge_manual_comp_overrides(
+    base: list[dict[str, Any]] | None,
+    incoming: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: dict[tuple[str, str, str], int] = {}
+    for comp in list(base or []) + list(incoming or []):
+        if not isinstance(comp, dict):
+            continue
+        payload = dict(comp)
+        key = (
+            str(payload.get("address") or "").strip().lower(),
+            str(payload.get("sale_date") or "").strip().lower(),
+            str(payload.get("source_ref") or "").strip().lower(),
+        )
+        if key in seen:
+            merged[seen[key]] = payload
+            continue
+        seen[key] = len(merged)
+        merged.append(payload)
+    return merged
+
+
+def _numeric_or_none(value: Any) -> float | None:
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _comp_origin_from_row(row: dict[str, Any]) -> str:
+    source_kind = str(row.get("source_kind") or "").strip().lower()
+    if source_kind:
+        return source_kind
+    if row.get("source_name") == "User input comp":
+        return "user_input_comp"
+    if row.get("source_name") == "Live market comp":
+        return "live_market_comp"
+    return "saved_comp"
+
+
+def _comp_source_label(origin: str | None) -> str:
+    normalized = str(origin or "").strip().lower()
+    if normalized == "user_input_comp":
+        return "User input comp"
+    if normalized == "live_market_comp":
+        return "Live market comp"
+    return "Saved comp"
+
+
+def _manual_comp_input_from_row(row: dict[str, Any]) -> dict[str, Any] | None:
+    address = row.get("address")
+    town = row.get("town")
+    state = row.get("state")
+    price = _numeric_or_none(row.get("ask_price") or row.get("sale_price") or row.get("price"))
+    if not isinstance(address, str) or not address.strip() or price is None:
+        return None
+    origin = _comp_origin_from_row(row)
+    source_label = _comp_source_label(origin)
+    return {
+        "address": address,
+        "town": town,
+        "state": state,
+        "sale_price": price,
+        "sale_date": str(row.get("sale_date") or datetime.now(UTC).date().isoformat()),
+        "beds": row.get("beds"),
+        "baths": row.get("baths"),
+        "sqft": row.get("sqft"),
+        "property_type": row.get("property_type"),
+        "verification_status": "estimated" if origin == "live_market_comp" else "manual",
+        "source_name": source_label,
+        "source_quality": "user_input" if origin == "user_input_comp" else origin,
+        "source_ref": str(row.get("source_ref") or row.get("property_id") or address),
+        "source_notes": str(
+            row.get("selection_rationale")
+            or row.get("source_summary")
+            or (
+                "User selected this comp for the valuation."
+                if origin == "user_input_comp"
+                else "Auto-generated CMA comp carried into the valuation."
+            )
+        ),
+        "comp_status": "approved" if origin == "user_input_comp" else "seeded",
+        "address_verification_status": "verified",
+        "sale_verification_status": "seeded",
+        "verification_source_type": "manual_review",
+        "source_provenance": {
+            "comp_origin": origin,
+            "comp_origin_label": source_label,
+            "selected_by": "user" if origin == "user_input_comp" else "briarwood",
+            "feeds_fair_value": True,
+        },
+    }
+
+
+def _auto_cma_manual_comp_inputs(
+    property_id: str,
+    summary: dict[str, Any],
+    subject_ask: float | None,
+) -> list[dict[str, Any]]:
+    live_source = _live_zillow_cma_candidates(property_id, summary, subject_ask)
+    rows = list(live_source.get("rows") or [])
+    manual_inputs: list[dict[str, Any]] = []
+    source_summary = str(live_source.get("summary") or "").strip()
+    for row in rows:
+        payload = dict(row)
+        payload.setdefault("source_kind", "live_market_comp" if "zillow" in source_summary.lower() else "saved_comp")
+        payload.setdefault("source_summary", source_summary)
+        manual = _manual_comp_input_from_row(payload)
+        if manual is not None:
+            manual_inputs.append(manual)
+    return manual_inputs
+
+
+def _analysis_overrides(property_id: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    applied = dict(overrides or {})
+    summary = get_property_summary(property_id)
+    subject_ask = _numeric_or_none(applied.get("ask_price"))
+    if subject_ask is None:
+        subject_ask = _numeric_or_none(summary.get("ask_price"))
+    auto_cma_inputs = _auto_cma_manual_comp_inputs(property_id, summary, subject_ask)
+    manual_inputs = _merge_manual_comp_overrides(
+        applied.get("manual_comp_inputs"),
+        auto_cma_inputs,
+    )
+    if manual_inputs:
+        applied["manual_comp_inputs"] = manual_inputs
+    return applied
+
+
+def _module_payload(outputs: dict[str, Any], mod: str) -> Any:
+    entry = outputs.get(mod)
+    if entry is None:
+        return None
+    payload = getattr(entry, "payload", None)
+    if payload is None and isinstance(entry, dict):
+        payload = entry.get("payload")
+    return payload
+
+
+def _comp_source_summary(comp: Any) -> str | None:
+    source_summary = getattr(comp, "source_summary", None)
+    if isinstance(source_summary, str) and source_summary.strip():
+        return source_summary
+    source_name = getattr(comp, "source_name", None)
+    source_quality = getattr(comp, "source_quality", None)
+    if isinstance(source_name, str) and source_name.strip():
+        if isinstance(source_quality, str) and source_quality.strip():
+            return f"{source_name} · {source_quality}"
+        return source_name
+    return None
+
+
+def _selected_comp_rows(comp_payload: Any) -> list[dict[str, Any]]:
+    comps = list(getattr(comp_payload, "comps_used", None) or [])
+    rows: list[dict[str, Any]] = []
+    for comp in comps:
+        provenance = dict(getattr(comp, "source_provenance", {}) or {})
+        origin = provenance.get("comp_origin")
+        if not isinstance(origin, str) or not origin.strip():
+            source_name = str(getattr(comp, "source_name", "") or "").lower()
+            if "user input" in source_name or "manual" in source_name:
+                origin = "user_input_comp"
+            elif "live market" in source_name or "zillow" in source_name:
+                origin = "live_market_comp"
+            else:
+                origin = "saved_comp"
+        rows.append(
+            {
+                "property_id": str(getattr(comp, "source_ref", None) or getattr(comp, "address", "") or ""),
+                "address": getattr(comp, "address", None),
+                "beds": getattr(comp, "bedrooms", None),
+                "baths": getattr(comp, "bathrooms", None),
+                "ask_price": getattr(comp, "sale_price", None),
+                "blocks_to_beach": None,
+                "source_label": _comp_source_label(origin),
+                "source_summary": _comp_source_summary(comp),
+                "inclusion_reason": getattr(comp, "selection_rationale", None) or getattr(comp, "source_notes", None),
+                "selected_by": provenance.get("selected_by"),
+                "feeds_fair_value": provenance.get("feeds_fair_value", True),
+            }
+        )
+    return rows
+
+
+def _bridge_adjustments(unified: dict[str, Any], bridge_name: str) -> dict[str, Any]:
+    trace = dict(unified.get("interaction_trace") or {})
+    for record in list(trace.get("records") or []):
+        if isinstance(record, dict) and record.get("name") == bridge_name:
+            return dict(record.get("adjustments") or {})
+    return {}
+
+
+def _comp_selection_summary(comp_payload: Any) -> str | None:
+    selection = getattr(comp_payload, "base_comp_selection", None)
+    support = getattr(selection, "support_summary", None) if selection is not None else None
+    support_quality = getattr(support, "support_quality", None)
+    comp_count = int(getattr(support, "comp_count", 0) or 0)
+    source_counts = Counter(
+        row.get("source_label")
+        for row in _selected_comp_rows(comp_payload)
+        if isinstance(row.get("source_label"), str) and row.get("source_label")
+    )
+    summary = f"Briarwood chose {comp_count or len(getattr(comp_payload, 'comps_used', []) or [])} comps for fair value"
+    if source_counts:
+        detail = ", ".join(
+            f"{count} {label.lower()}{'' if count == 1 else 's'}"
+            for label, count in source_counts.items()
+        )
+        summary += f": {detail}"
+    if isinstance(support_quality, str) and support_quality:
+        summary += f". Support looks {support_quality}."
+    notes = list(getattr(support, "notes", None) or [])
+    if notes:
+        summary += f" {notes[0]}"
+    return summary
+
+
 @dataclass(frozen=True)
 class RentOutlook:
     property_id: str
     address: str | None
+    entry_basis: float | None
     current_monthly_rent: float | None
     effective_monthly_rent: float | None
     annual_noi: float | None
@@ -204,8 +423,15 @@ class RentOutlook:
     zillow_market_rent_low: float | None
     zillow_market_rent_high: float | None
     zillow_rental_comp_count: int
-    burn_chart_payload: dict[str, Any]
-    confidence_notes: list[str]
+    market_context_note: str | None
+    carry_offset_ratio: float | None = None
+    break_even_rent: float | None = None
+    break_even_probability: float | None = None
+    adjusted_rent_confidence: float | None = None
+    rent_haircut_pct: float | None = None
+    burn_chart_payload: dict[str, Any] = field(default_factory=dict)
+    ramp_chart_payload: dict[str, Any] = field(default_factory=dict)
+    confidence_notes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -261,7 +487,7 @@ def analyze_property(
     if not inputs_path.exists():
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(effective_path)
     return result.unified_output.model_dump()
 
@@ -312,7 +538,7 @@ def get_property_brief(
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
     summary = get_property_summary(property_id)
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(
             effective_path,
             user_input="Give me a first purchase read on this property.",
@@ -334,7 +560,7 @@ def get_renovation_resale_outlook(
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
     summary = get_property_summary(property_id)
-    applied_overrides = overrides or {}
+    applied_overrides = _analysis_overrides(property_id, overrides)
     with inputs_with_overrides(inputs_path, applied_overrides) as effective_path:
         result = run_routed_report(
             effective_path,
@@ -1192,7 +1418,7 @@ def get_projection(property_id: str, *, overrides: dict[str, Any] | None = None)
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
     # The internal router keys on these words to select depth=SCENARIO.
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(
             effective_path,
             user_input="project forward 5 years bull base bear scenarios",
@@ -1210,7 +1436,14 @@ def get_projection(property_id: str, *, overrides: dict[str, Any] | None = None)
         "bull_growth_rate", "base_growth_rate", "bear_growth_rate",
         "bcv_anchor",
     )
-    return {"property_id": property_id, **{k: m.get(k) for k in keys}}
+    payload = {"property_id": property_id, **{k: m.get(k) for k in keys}}
+    if isinstance((overrides or {}).get("ask_price"), (int, float)):
+        payload["listing_ask_price"] = m.get("ask_price")
+        payload["ask_price"] = float(overrides["ask_price"])
+        payload["basis_label"] = "entry basis"
+    else:
+        payload["basis_label"] = "ask"
+    return payload
 
 
 # ---------- get_rent_estimate ----------
@@ -1225,7 +1458,7 @@ def get_rent_estimate(property_id: str, *, overrides: dict[str, Any] | None = No
     if not inputs_path.exists():
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(
             effective_path,
             user_input="estimate rent, rental profile, and carry support for this property",
@@ -1270,6 +1503,9 @@ def get_rent_outlook(
     """Return a structured rent outlook contract with optional simple horizon framing."""
     from briarwood.settings import DEFAULT_TEARDOWN_SCENARIO_SETTINGS
 
+    def _format_money(value: float | int | None) -> str:
+        return f"${value:,.0f}" if isinstance(value, (int, float)) else "n/a"
+
     rent = rent_payload or get_rent_estimate(property_id, overrides=overrides)
     summary = property_summary or get_property_summary(property_id)
     current = (
@@ -1288,21 +1524,53 @@ def get_rent_outlook(
     market_anchor = zillow_market.get("market_rent") if zillow_market else None
     low_anchor = zillow_market.get("rent_low") if zillow_market else None
     high_anchor = zillow_market.get("rent_high") if zillow_market else None
+    market_context_note = None
     if zillow_market:
         notes.append(
             f"SearchAPI Zillow found {zillow_market['rental_comp_count']} nearby rental listing(s), with a market rent anchor near ${zillow_market['market_rent']:,.0f}/mo."
         )
+    use_market_anchor = isinstance(market_anchor, (int, float))
+    if (
+        isinstance(current, (int, float))
+        and isinstance(market_anchor, (int, float))
+        and current > 0
+        and str(rent.get("rent_source_type") or "").lower() in {"provided", "manual_input", "seasonal_mixed"}
+    ):
+        market_ratio = float(market_anchor) / float(current)
+        if market_ratio >= 1.75 or market_ratio <= 0.6:
+            use_market_anchor = False
+            market_context_note = (
+                f"Zillow's market rent signal around {_format_money(market_anchor)}/mo looks like a different rental regime, "
+                f"so Briarwood kept the working rent anchored to the current "
+                f"{str(rent.get('rent_source_type') or 'property')} estimate."
+            )
     if years is not None and isinstance(current, (int, float)):
-        current_anchor = float(market_anchor) if isinstance(market_anchor, (int, float)) else float(current)
-        floor_anchor = float(low_anchor) if isinstance(low_anchor, (int, float)) else float(current_anchor)
-        ceiling_anchor = float(high_anchor) if isinstance(high_anchor, (int, float)) else float(current_anchor)
+        current_anchor = (
+            float(market_anchor)
+            if use_market_anchor and isinstance(market_anchor, (int, float))
+            else float(current)
+        )
+        floor_anchor = (
+            float(low_anchor)
+            if use_market_anchor and isinstance(low_anchor, (int, float))
+            else float(current_anchor)
+        )
+        ceiling_anchor = (
+            float(high_anchor)
+            if use_market_anchor and isinstance(high_anchor, (int, float))
+            else float(current_anchor)
+        )
         future_low = round(floor_anchor)
         future_mid = round(current_anchor * ((1.0 + growth) ** years))
         future_high = round(ceiling_anchor * ((1.0 + (growth + 0.02)) ** years))
         notes.append(
             "Future rent uses a flat-to-moderate annual growth assumption, not a dedicated year-by-year rent curve."
         )
-    basis = summary.get("ask_price")
+    basis = (
+        float(overrides["ask_price"])
+        if isinstance((overrides or {}).get("ask_price"), (int, float))
+        else summary.get("ask_price")
+    )
     basis_framing = None
     if isinstance(basis, (int, float)) and isinstance(current, (int, float)) and basis > 0:
         annualized = float(current) * 12.0
@@ -1313,8 +1581,31 @@ def get_rent_outlook(
     monthly_obligation = None
     if isinstance(rent.get("effective_monthly_rent"), (int, float)) and isinstance(rent.get("monthly_cash_flow"), (int, float)):
         monthly_obligation = float(rent["effective_monthly_rent"]) - float(rent["monthly_cash_flow"])
+    carry_offset_ratio = None
+    break_even_probability = None
+    adjusted_rent_confidence = None
+    rent_haircut_pct = None
+    if isinstance(current, (int, float)) and isinstance(monthly_obligation, (int, float)) and monthly_obligation > 0:
+        carry_offset_ratio = round(float(current) / float(monthly_obligation), 3)
+        if carry_offset_ratio >= 1.2:
+            break_even_probability = 0.90
+        elif carry_offset_ratio >= 1.0:
+            break_even_probability = 0.70
+        elif carry_offset_ratio >= 0.85:
+            break_even_probability = 0.45
+        else:
+            break_even_probability = 0.20
+        if market_context_note:
+            adjusted_rent_confidence = 0.45
+            rent_haircut_pct = 0.2
+        elif isinstance(rent.get("rental_ease_score"), (int, float)):
+            adjusted_rent_confidence = max(0.15, min(float(rent["rental_ease_score"]) / 100.0, 0.9))
     burn_years = years or 5
-    burn_anchor = float(market_anchor) if isinstance(market_anchor, (int, float)) else float(current) if isinstance(current, (int, float)) else None
+    burn_anchor = (
+        float(market_anchor)
+        if use_market_anchor and isinstance(market_anchor, (int, float))
+        else float(current) if isinstance(current, (int, float)) else None
+    )
     burn_points: list[dict[str, float | int]] = []
     if burn_anchor is not None:
         for year in range(burn_years + 1):
@@ -1327,9 +1618,40 @@ def get_rent_outlook(
                     "monthly_obligation": round(monthly_obligation) if isinstance(monthly_obligation, (int, float)) else None,
                 }
             )
+    ramp_points: list[dict[str, float | int]] = []
+    break_even_years: dict[str, int | None] = {}
+    ramp_anchor = float(current) if isinstance(current, (int, float)) else burn_anchor
+    if (
+        ramp_anchor is not None
+        and isinstance(monthly_obligation, (int, float))
+        and monthly_obligation > 0
+    ):
+        ramp_horizon = list(range(0, 11))
+        for year in ramp_horizon:
+            net_0 = (ramp_anchor * ((1.0 + 0.00) ** year)) - float(monthly_obligation)
+            net_3 = (ramp_anchor * ((1.0 + 0.03) ** year)) - float(monthly_obligation)
+            net_5 = (ramp_anchor * ((1.0 + 0.05) ** year)) - float(monthly_obligation)
+            ramp_points.append(
+                {
+                    "year": year,
+                    "net_0": round(net_0),
+                    "net_3": round(net_3),
+                    "net_5": round(net_5),
+                }
+            )
+        for label, key in (("0", "net_0"), ("3", "net_3"), ("5", "net_5")):
+            break_even_years[label] = next(
+                (
+                    int(point["year"])
+                    for point in ramp_points
+                    if isinstance(point.get(key), (int, float)) and float(point[key]) >= 0
+                ),
+                None,
+            )
     return RentOutlook(
         property_id=property_id,
         address=summary.get("address"),
+        entry_basis=float(basis) if isinstance(basis, (int, float)) else None,
         current_monthly_rent=rent.get("monthly_rent") if isinstance(rent.get("monthly_rent"), (int, float)) else None,
         effective_monthly_rent=rent.get("effective_monthly_rent") if isinstance(rent.get("effective_monthly_rent"), (int, float)) else None,
         annual_noi=rent.get("annual_noi") if isinstance(rent.get("annual_noi"), (int, float)) else None,
@@ -1346,10 +1668,26 @@ def get_rent_outlook(
         zillow_market_rent_low=float(low_anchor) if isinstance(low_anchor, (int, float)) else None,
         zillow_market_rent_high=float(high_anchor) if isinstance(high_anchor, (int, float)) else None,
         zillow_rental_comp_count=int(zillow_market.get("rental_comp_count")) if zillow_market else 0,
+        market_context_note=market_context_note,
+        carry_offset_ratio=carry_offset_ratio,
+        break_even_rent=round(monthly_obligation) if isinstance(monthly_obligation, (int, float)) else None,
+        break_even_probability=break_even_probability,
+        adjusted_rent_confidence=adjusted_rent_confidence,
+        rent_haircut_pct=rent_haircut_pct,
         burn_chart_payload={
             "series": burn_points,
             "title": "Rent burn chart",
             "monthly_obligation": round(monthly_obligation) if isinstance(monthly_obligation, (int, float)) else None,
+        },
+        ramp_chart_payload={
+            "series": ramp_points,
+            "title": "Rent ramp and break-even",
+            "current_rent": round(ramp_anchor) if isinstance(ramp_anchor, (int, float)) else None,
+            "monthly_obligation": round(monthly_obligation) if isinstance(monthly_obligation, (int, float)) else None,
+            "today_cash_flow": round(ramp_anchor - float(monthly_obligation))
+            if isinstance(ramp_anchor, (int, float)) and isinstance(monthly_obligation, (int, float))
+            else None,
+            "break_even_years": break_even_years,
         },
         confidence_notes=notes,
     )
@@ -1367,7 +1705,7 @@ def get_risk_profile(property_id: str, *, overrides: dict[str, Any] | None = Non
     if not inputs_path.exists():
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(effective_path, user_input="deep dive stress test full analysis risk")
     outputs = getattr(result.engine_output, "outputs", {}) or {}
     unified = result.unified_output.model_dump()
@@ -1415,7 +1753,7 @@ def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = Non
     if not inputs_path.exists():
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(effective_path)
     outputs = getattr(result.engine_output, "outputs", {}) or {}
     unified = result.unified_output.model_dump()
@@ -1430,6 +1768,8 @@ def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = Non
         return (data or {}).get("metrics") or {}
 
     val = _metrics("valuation")
+    comp_payload = _module_payload(outputs, "comparable_sales")
+    selected_comp_rows = _selected_comp_rows(comp_payload) if comp_payload is not None else []
     vp = unified.get("value_position") or {}
     return {
         "property_id": property_id,
@@ -1447,34 +1787,25 @@ def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = Non
         "primary_value_source": unified.get("primary_value_source"),
         "key_value_drivers": unified.get("key_value_drivers") or [],
         "what_must_be_true": unified.get("what_must_be_true") or [],
+        "why_this_stance": unified.get("why_this_stance") or [],
+        "what_changes_my_view": unified.get("what_changes_my_view") or [],
+        "trust_summary": unified.get("trust_summary") or {},
+        "contradiction_count": unified.get("contradiction_count") or 0,
+        "blocked_thesis_warnings": unified.get("blocked_thesis_warnings") or [],
+        "comp_selection_summary": _comp_selection_summary(comp_payload) if comp_payload is not None else None,
+        "comps": selected_comp_rows,
+        "risk_adjusted_fair_value": _bridge_adjustments(unified, "valuation_x_risk").get("risk_adjusted_fair_value"),
+        "required_discount": _bridge_adjustments(unified, "valuation_x_risk").get("required_discount"),
     }
 
 
 def get_cma(property_id: str, *, overrides: dict[str, Any] | None = None) -> CMAResult:
-    """Return a first-class CMA contract built from subject value plus nearby saved comps."""
+    """Return a CMA contract that prefers live market support before saved comps."""
     summary = get_property_summary(property_id)
     thesis = get_value_thesis(property_id, overrides=overrides)
-    filters: dict[str, Any] = {}
-    if summary.get("town"):
-        filters["town"] = summary.get("town")
-    if summary.get("state"):
-        filters["state"] = summary.get("state")
-    if isinstance(summary.get("beds"), int):
-        filters["beds"] = summary.get("beds")
-    nearby = [row for row in search_listings(filters) if row.get("property_id") != property_id] if filters else []
     subject_ask = thesis.get("ask_price")
-
-    def _rank_key(row: dict[str, Any]) -> tuple[int, float]:
-        same_baths = 0
-        if summary.get("baths") is not None and row.get("baths") == summary.get("baths"):
-            same_baths = -1
-        ask = row.get("ask_price")
-        if isinstance(subject_ask, (int, float)) and isinstance(ask, (int, float)):
-            return (same_baths, abs(float(ask) - float(subject_ask)))
-        return (same_baths, float("inf"))
-
-    nearby.sort(key=_rank_key)
-    selected = nearby[:4]
+    live_source = _live_zillow_cma_candidates(property_id, summary, subject_ask)
+    live_rows = live_source["rows"]
     comps = [
         ComparableProperty(
             property_id=str(row.get("property_id") or ""),
@@ -1485,14 +1816,17 @@ def get_cma(property_id: str, *, overrides: dict[str, Any] | None = None) -> CMA
             baths=row.get("baths") if isinstance(row.get("baths"), (int, float)) else None,
             ask_price=row.get("ask_price") if isinstance(row.get("ask_price"), (int, float)) else None,
             blocks_to_beach=row.get("blocks_to_beach") if isinstance(row.get("blocks_to_beach"), (int, float)) else None,
-            selection_rationale="same town and bedroom count, ranked toward the subject's pricing and layout",
+            selection_rationale=str(row.get("selection_rationale") or "same town and bedroom count, ranked toward the subject's pricing and layout"),
+            source_label=_comp_source_label(_comp_origin_from_row(row)),
+            source_summary=str(row.get("source_summary") or live_source["summary"]),
         )
-        for row in selected
+        for row in live_rows
     ]
     confidence_notes = []
     missing_fields = []
     if not comps:
-        confidence_notes.append("No nearby saved-property comps matched the current CMA filters.")
+        confidence_notes.append("No nearby live or saved comps matched the current CMA filters.")
+    confidence_notes.extend(_attom_subject_cma_notes(property_id, summary))
     if thesis.get("fair_value_base") is None:
         missing_fields.append("fair_value_base")
     if thesis.get("ask_price") is None:
@@ -1508,11 +1842,171 @@ def get_cma(property_id: str, *, overrides: dict[str, Any] | None = None) -> CMA
         value_high=thesis.get("value_high") if isinstance(thesis.get("value_high"), (int, float)) else None,
         pricing_view=thesis.get("pricing_view"),
         primary_value_source=thesis.get("primary_value_source"),
-        comp_selection_summary="Same-town saved comps, filtered by bedroom count and ranked toward subject pricing.",
+        comp_selection_summary=live_source["summary"],
         comps=comps,
         confidence_notes=confidence_notes,
         missing_fields=missing_fields,
     )
+
+
+def _rank_cma_candidates(
+    rows: list[dict[str, Any]],
+    *,
+    summary: dict[str, Any],
+    subject_ask: float | None,
+) -> list[dict[str, Any]]:
+    def _rank_key(row: dict[str, Any]) -> tuple[int, float]:
+        same_baths = 0
+        if summary.get("baths") is not None and row.get("baths") == summary.get("baths"):
+            same_baths = -1
+        ask = row.get("ask_price")
+        if isinstance(subject_ask, (int, float)) and isinstance(ask, (int, float)):
+            return (same_baths, abs(float(ask) - float(subject_ask)))
+        return (same_baths, float("inf"))
+
+    return sorted(rows, key=_rank_key)
+
+
+def _fallback_saved_cma_candidates(
+    property_id: str,
+    summary: dict[str, Any],
+    subject_ask: float | None,
+) -> tuple[list[dict[str, Any]], str]:
+    filters: dict[str, Any] = {}
+    if summary.get("town"):
+        filters["town"] = summary.get("town")
+    if summary.get("state"):
+        filters["state"] = summary.get("state")
+    if isinstance(summary.get("beds"), int):
+        filters["beds"] = summary.get("beds")
+    nearby = [row for row in search_listings(filters) if row.get("property_id") != property_id] if filters else []
+    ranked = _rank_cma_candidates(nearby, summary=summary, subject_ask=subject_ask)
+    selected = ranked[:4]
+    for row in selected:
+        row["selection_rationale"] = "same town and bedroom count, ranked toward the subject's pricing and layout"
+        row["source_kind"] = "saved_comp"
+        row["source_summary"] = "Saved Briarwood comp selected for same-town market support."
+    return selected, "Saved Briarwood comps ranked by matching layout and price."
+
+
+def _live_zillow_cma_candidates(
+    property_id: str,
+    summary: dict[str, Any],
+    subject_ask: float | None,
+) -> dict[str, Any]:
+    town = summary.get("town") if isinstance(summary.get("town"), str) else None
+    state = summary.get("state") if isinstance(summary.get("state"), str) else None
+    address = summary.get("address") if isinstance(summary.get("address"), str) else None
+    beds = summary.get("beds") if isinstance(summary.get("beds"), int) else None
+    client = SearchApiZillowClient()
+    if not town or not state or not client.is_configured:
+        rows, summary_line = _fallback_saved_cma_candidates(
+            property_id,
+            summary,
+            subject_ask,
+        )
+        return {"rows": rows, "summary": summary_line}
+
+    response = client.search_listings(
+        query=f"{town}, {state}",
+        max_results=12,
+        beds_min=max(1, beds - 1) if isinstance(beds, int) else None,
+    )
+    if not response.ok:
+        rows, summary_line = _fallback_saved_cma_candidates(
+            property_id,
+            summary,
+            subject_ask,
+        )
+        return {"rows": rows, "summary": summary_line}
+
+    normalized_subject = _norm_address_text(address)
+    live_rows: list[dict[str, Any]] = []
+    for candidate in client.to_listing_candidates(response.normalized_payload):
+        if normalized_subject and _norm_address_text(candidate.address) == normalized_subject:
+            continue
+        if town and _norm_place(candidate.town) != _norm_place(town):
+            continue
+        if state and _norm_place(candidate.state) != _norm_place(state):
+            continue
+        if beds is not None and isinstance(candidate.beds, int) and abs(candidate.beds - beds) > 1:
+            continue
+        if isinstance(subject_ask, (int, float)) and isinstance(candidate.price, (int, float)):
+            if float(candidate.price) < float(subject_ask) * 0.65 or float(candidate.price) > float(subject_ask) * 1.35:
+                continue
+        live_rows.append(
+            {
+                "property_id": candidate.zpid or _existing_or_slugified_property_id(candidate.address or ""),
+                "address": candidate.address,
+                "town": candidate.town,
+                "state": candidate.state,
+                "beds": candidate.beds,
+                "baths": candidate.baths,
+                "ask_price": candidate.price,
+                "blocks_to_beach": None,
+                "selection_rationale": "live Zillow listing in the same market, filtered toward the subject's layout and price",
+                "source_kind": "live_market_comp",
+                "source_summary": "Live Zillow market comp used as a real-time pricing anchor.",
+            }
+        )
+    ranked = _rank_cma_candidates(live_rows, summary=summary, subject_ask=subject_ask)[:4]
+    if ranked:
+        return {
+            "rows": ranked,
+            "summary": "Live Zillow market comps ranked toward the subject's layout and price.",
+        }
+    rows, summary_line = _fallback_saved_cma_candidates(
+        property_id,
+        summary,
+        subject_ask,
+    )
+    return {"rows": rows, "summary": summary_line}
+
+
+def _attom_subject_cma_notes(property_id: str, summary: dict[str, Any]) -> list[str]:
+    client = AttomClient()
+    if not client.api_key:
+        return []
+    address = summary.get("address") if isinstance(summary.get("address"), str) else None
+    town = summary.get("town") if isinstance(summary.get("town"), str) else None
+    state = summary.get("state") if isinstance(summary.get("state"), str) else None
+    address1, address2 = _attom_query_parts(address=address, town=town, state=state)
+    if not address1 or not address2:
+        return []
+    notes: list[str] = []
+    try:
+        sale_history = client.sale_history_snapshot(property_id, address1=address1, address2=address2)
+        if sale_history.ok and isinstance(sale_history.normalized_payload, dict):
+            sale_count = sale_history.normalized_payload.get("sale_count")
+            last_sale_date = sale_history.normalized_payload.get("last_sale_date")
+            if isinstance(sale_count, int) and sale_count > 0:
+                notes.append(
+                    "ATTOM sale history confirmed "
+                    + (f"{sale_count} recorded transfer(s)" if sale_count else "subject history")
+                    + (f", most recently on {last_sale_date}." if isinstance(last_sale_date, str) and last_sale_date else ".")
+                )
+        assessment = client.assessment_detail(property_id, address1=address1, address2=address2)
+        if assessment.ok and isinstance(assessment.normalized_payload, dict):
+            tax_amount = assessment.normalized_payload.get("tax_amount")
+            if isinstance(tax_amount, (int, float)):
+                notes.append(f"ATTOM tax and assessment context shows annual taxes near ${tax_amount:,.0f}.")
+    except Exception:
+        return notes
+    return notes
+
+
+def _attom_query_parts(*, address: str | None, town: str | None, state: str | None) -> tuple[str | None, str | None]:
+    if not address:
+        return None, None
+    street = address.split(",", 1)[0].strip() if "," in address else address.strip()
+    locality = ", ".join(part for part in [town, state] if isinstance(part, str) and part.strip())
+    return street or None, locality or None
+
+
+def _norm_address_text(value: str | None) -> str:
+    if not value:
+        return ""
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
 # ---------- get_strategy_fit ----------
@@ -1527,7 +2021,7 @@ def get_strategy_fit(property_id: str, *, overrides: dict[str, Any] | None = Non
     if not inputs_path.exists():
         raise ToolUnavailable(f"no inputs.json for property '{property_id}'")
 
-    with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+    with inputs_with_overrides(inputs_path, _analysis_overrides(property_id, overrides)) as effective_path:
         result = run_routed_report(effective_path, user_input="best strategy flip rent hold primary")
     outputs = getattr(result.engine_output, "outputs", {}) or {}
     unified = result.unified_output.model_dump()

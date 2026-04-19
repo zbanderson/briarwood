@@ -87,6 +87,7 @@ class GoogleMapsClientTests(unittest.TestCase):
         self.assertIn("streetview", url)
         self.assertIn("40.1815%2C-74.0212", url)
         self.assertIn("key=test-key", url)
+        self.assertIn("return_error_code=true", url)
 
 
 if __name__ == "__main__":

@@ -11,11 +11,13 @@ import type {
   ListingsEvent,
   MapEvent,
   ModuleAttribution,
+  CmaTableEvent,
   RentOutlookEvent,
   ResearchUpdateEvent,
   RiskProfileEvent,
   ScenarioTableEvent,
   StrategyPathEvent,
+  TrustSummaryEvent,
   TownSummaryEvent,
   ValueThesisEvent,
   VerdictEvent,
@@ -39,8 +41,10 @@ export type ChatMessage = {
   compsPreview?: CompsPreviewEvent;
   riskProfile?: RiskProfileEvent;
   valueThesis?: ValueThesisEvent;
+  cmaTable?: CmaTableEvent;
   strategyPath?: StrategyPathEvent;
   rentOutlook?: RentOutlookEvent;
+  trustSummary?: TrustSummaryEvent;
   researchUpdate?: ResearchUpdateEvent;
   modulesRan?: ModuleAttribution[];
   groundingAnchors?: GroundingAnchor[];
@@ -267,6 +271,13 @@ export function useChat({
             ),
           );
           break;
+        case "cma_table":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, cmaTable: event } : m,
+            ),
+          );
+          break;
         case "strategy_path":
           setMessages((prev) =>
             prev.map((m) =>
@@ -278,6 +289,13 @@ export function useChat({
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId ? { ...m, rentOutlook: event } : m,
+            ),
+          );
+          break;
+        case "trust_summary":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, trustSummary: event } : m,
             ),
           );
           break;

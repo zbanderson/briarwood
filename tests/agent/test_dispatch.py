@@ -33,7 +33,10 @@ from briarwood.agent.tools import LiveListingCandidate
 from briarwood.agent.tools import LiveListingDecision
 from briarwood.agent.tools import PromotedPropertyRecord
 from briarwood.agent.tools import PropertyBrief
+from briarwood.agent.tools import RentOutlook
 from briarwood.agent.tools import RenovationResaleOutlook
+from briarwood.agent.tools import CMAResult
+from briarwood.agent.tools import ComparableProperty
 from briarwood.agent.tools import ToolUnavailable
 from briarwood.agent.tools import _clean_address_query
 
@@ -487,6 +490,9 @@ class BrowseHandlerTests(unittest.TestCase):
         analyzer.assert_not_called()
         brief_tool.assert_called_once_with(REF, overrides={})
         self.assertIn("526 West End Ave", response)
+        self.assertIn("Decision:", response)
+        self.assertIn("Why:", response)
+        self.assertIn("Next move:", response)
 
 
 class SearchHandlerTests(unittest.TestCase):
@@ -803,9 +809,9 @@ class SearchHandlerTests(unittest.TestCase):
         self.assertEqual(call_filters["town"], "Avon By The Sea")
         self.assertAlmostEqual(call_filters["min_price"], 1_500_000 * 0.75)
         self.assertAlmostEqual(call_filters["max_price"], 1_500_000 * 1.25)
-        self.assertIn("Briarwood sees the immediate setup", response)
-        self.assertIn("304-14th-ave", response)
-        self.assertNotIn("- 526-west-end-ave", response)
+        self.assertIn("Decision:", response)
+        self.assertIn("Next move:", response)
+        self.assertNotIn("Nearby support in", response)
 
     def test_browse_omits_missing_fields_instead_of_rendering_question_marks(self) -> None:
         """Bug A: null beds/baths must not render as '? bedrooms'."""
@@ -835,9 +841,9 @@ class SearchHandlerTests(unittest.TestCase):
             response = handle_browse(
                 "tell me about 526", self._decision(), Session(), llm=None
             )
-        self.assertIn("fair value anchor", response.lower())
-        self.assertIn("weak_town_context", response)
-        self.assertIn("Next best question", response)
+        self.assertIn("Decision:", response)
+        self.assertIn("town backdrop is still lightly documented", response.lower())
+        self.assertIn("Next move:", response)
 
     def test_browse_does_not_surface_unknown_primary_value_source(self) -> None:
         with patch(
@@ -871,6 +877,9 @@ class SearchHandlerTests(unittest.TestCase):
         )
         with patch(
             "briarwood.agent.resolver.resolve_property_id", return_value=(None, [])
+        ), patch(
+            "briarwood.agent.dispatch.promote_unsaved_address",
+            side_effect=ToolUnavailable("no live listing context"),
         ):
             response = handle_browse(
                 "tell me about 1223 ocean ave", decision, Session(), llm=None
@@ -921,10 +930,163 @@ class SearchHandlerTests(unittest.TestCase):
                 llm=None,
             )
         self.assertIn("1223 Briarwood Rd", response)
-        self.assertIn("Briarwood sees the immediate setup", response)
-        self.assertIn("What supports that view", response)
-        self.assertIn("What could weaken confidence", response)
-        self.assertIn("Next best question", response)
+        self.assertIn("Decision:", response)
+        self.assertIn("Why:", response)
+        self.assertIn("Next move:", response)
+
+    def test_browse_populates_briefing_slots_for_first_impression(self) -> None:
+        decision = RouterDecision(
+            AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.resolver.resolve_property_id",
+            return_value=("briarwood-rd-belmar", ["briarwood-rd-belmar"]),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_brief",
+            return_value=self._brief(
+                property_id="briarwood-rd-belmar",
+                address="1223 Briarwood Rd",
+                town="Belmar",
+                state="NJ",
+                ask_price=767000,
+                fair_value_base=723556,
+                ask_premium_pct=0.057,
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={
+                "address": "1223 Briarwood Rd",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2.0,
+                "ask_price": 767000,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value={
+                "ask_price": 767000,
+                "bull_case_value": 816046,
+                "base_case_value": 764343,
+                "bear_case_value": 722117,
+                "stress_case_value": 506489,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={
+                "best_path": "buy_if_price_improves",
+                "recommendation": "Interesting if you can buy below ask.",
+                "pricing_view": "above_fair_value",
+                "primary_value_source": "current_value",
+                "rental_ease_label": "seasonal/mixed",
+                "rental_ease_score": 57.0,
+                "rent_support_score": 52.0,
+                "liquidity_score": 61.0,
+                "monthly_cash_flow": -866,
+                "cash_on_cash_return": 0.021,
+                "annual_noi": 18500,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={
+                "monthly_rent": 2352,
+                "effective_monthly_rent": 2234,
+                "annual_noi": 18500,
+                "rent_source_type": "seasonal_mixed",
+                "rental_ease_label": "seasonal/mixed",
+                "rental_ease_score": 57.0,
+                "monthly_cash_flow": -866,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_outlook",
+            return_value=RentOutlook(
+                property_id="briarwood-rd-belmar",
+                address="1223 Briarwood Rd",
+                entry_basis=767000,
+                current_monthly_rent=2352,
+                effective_monthly_rent=2234,
+                annual_noi=18500,
+                rent_source_type="seasonal_mixed",
+                rental_ease_label="seasonal/mixed",
+                rental_ease_score=57.0,
+                horizon_years=3,
+                future_rent_low=2300,
+                future_rent_mid=2410,
+                future_rent_high=2600,
+                basis_to_rent_framing="Current rent annualizes to roughly 3.5% of the current basis.",
+                owner_occupy_then_rent=None,
+                zillow_market_rent=2500,
+                zillow_market_rent_low=2200,
+                zillow_market_rent_high=2900,
+                zillow_rental_comp_count=3,
+                market_context_note=None,
+                burn_chart_payload={"series": [{"year": 0, "rent_base": 2234, "rent_bull": 2400, "rent_bear": 2100, "monthly_obligation": 3100}]},
+                ramp_chart_payload={"series": [{"year": 0, "net_0": -866, "net_3": -866, "net_5": -866}]},
+                confidence_notes=[],
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={
+                "cards": [
+                    {"key": "property_header", "body": ["1223 Briarwood Rd"]},
+                    {"key": "purchase_brief", "body": ["Immediate setup: buy if price improves.", "What supports it: near fair value.", "What could weaken confidence: weak_town_context.", "Next best question: should I buy this at the current ask?"]},
+                    {"key": "data_coverage", "body": ["ATTOM added structured sale history and ownership timing context."]},
+                    {"key": "location_pulse", "body": ["Belmar has constructive beach-town demand."]},
+                ]
+            },
+        ), patch(
+            "briarwood.agent.dispatch.search_listings",
+            return_value=[
+                {
+                    "property_id": "1302-l-street",
+                    "address": "1302 L Street",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 850000,
+                    "sqft": 1320,
+                    "blocks_to_beach": 4.0,
+                },
+                {
+                    "property_id": "1600-l-street",
+                    "address": "1600 L Street",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 899000,
+                    "sqft": 1468,
+                    "blocks_to_beach": 5.0,
+                },
+            ],
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={
+                "town": "Belmar",
+                "state": "NJ",
+                "confidence_tier": "strong",
+                "confidence_raw": 0.72,
+                "median_price": 867500,
+                "median_ppsf": 516,
+                "sold_count": 320,
+                "doc_count": 4,
+                "bullish_signals": ["Main Street redevelopment"],
+                "bearish_signals": [],
+            },
+        ):
+            response = handle_browse(
+                "tell me about 1223 Briarwood Rd, Belmar",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("Decision:", response)
+        self.assertIn("Why:", response)
+        self.assertIn("Next move:", response)
+        self.assertIsNotNone(session.last_town_summary)
+        self.assertIsNotNone(session.last_comps_preview)
+        self.assertIsNotNone(session.last_value_thesis_view)
+        self.assertIsNotNone(session.last_strategy_view)
+        self.assertIsNotNone(session.last_rent_outlook_view)
+        self.assertIsNotNone(session.last_projection_view)
 
     def test_unsaved_address_can_auto_promote_into_browse(self) -> None:
         decision = RouterDecision(
@@ -987,7 +1149,7 @@ class SearchHandlerTests(unittest.TestCase):
                 llm=None,
             )
         self.assertIn("25 Main Street, Belmar, NJ 07719", response)
-        self.assertIn("buy if price improves", response)
+        self.assertIn("price improves", response.lower())
 
     def test_browse_ignores_poisoned_saved_record_and_repromotes_address(self) -> None:
         decision = RouterDecision(
@@ -1245,6 +1407,65 @@ class EdgeHandlerTests(unittest.TestCase):
         thesis.assert_called_once_with(REF, overrides={"ask_price": 1_300_000.0})
         analyzer.assert_called_once_with(REF, overrides={"ask_price": 1_300_000.0})
 
+    def test_cma_turn_uses_cma_comps_when_thesis_has_none(self) -> None:
+        decision = RouterDecision(
+            AnswerType.EDGE, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.get_value_thesis",
+            return_value={
+                "ask_price": 767000.0,
+                "fair_value_base": 723556.0,
+                "premium_discount_pct": 0.057,
+                "pricing_view": "appears_fully_valued",
+                "value_drivers": [],
+                "key_value_drivers": [],
+                "what_must_be_true": [],
+                "primary_value_source": "current_value",
+                "comps": [],
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=CMAResult(
+                property_id=REF,
+                address="1008 14th Avenue, Belmar, NJ 07719",
+                town="Belmar",
+                state="NJ",
+                ask_price=767000.0,
+                fair_value_base=723556.0,
+                value_low=690000.0,
+                value_high=760000.0,
+                pricing_view="appears_fully_valued",
+                primary_value_source="current_value",
+                comp_selection_summary="Live Zillow market comps ranked toward the subject.",
+                comps=[
+                    ComparableProperty(
+                        property_id="1302-l-street",
+                        address="1302 L Street, Belmar, NJ 07719",
+                        town="Belmar",
+                        state="NJ",
+                        beds=3,
+                        baths=2.0,
+                        ask_price=850000.0,
+                        blocks_to_beach=None,
+                        source_label="Live market comp",
+                        source_summary="Live Zillow market comp",
+                    )
+                ],
+                confidence_notes=[],
+                missing_fields=[],
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.analyze_property",
+            side_effect=ToolUnavailable("skip chart"),
+        ):
+            response = handle_edge("what does the CMA look like?", decision, session, llm=None)
+
+        self.assertIn("1302-l-street", response)
+        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
+
 
 class ResearchHandlerTests(unittest.TestCase):
     def test_research_uses_loaded_property_town_context(self) -> None:
@@ -1385,8 +1606,8 @@ class RentLookupHandlerTests(unittest.TestCase):
                 llm=None,
             )
         rent_tool.assert_called_once_with(REF, overrides={"mode": "renovated"})
-        fit_tool.assert_called_once_with(REF, overrides={"mode": "renovated"})
-        self.assertIn("Estimated monthly rent", response)
+        self.assertEqual(fit_tool.call_count, 2)
+        self.assertIn("Plain-English rent read", response)
         self.assertIn("Likely path", response)
 
     def test_future_rent_question_gets_year_horizon_range(self) -> None:
@@ -1403,6 +1624,9 @@ class RentLookupHandlerTests(unittest.TestCase):
                 "rental_ease_score": 68.0,
                 "annual_noi": 22000,
             },
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={},
         ):
             response = handle_rent_lookup(
                 "what do you think i could rent the house for in 2 years?",
@@ -1412,6 +1636,96 @@ class RentLookupHandlerTests(unittest.TestCase):
             )
         self.assertIn("Working 2-year rent range", response)
         self.assertIn("3% annually", response)
+
+    def test_rent_workability_followup_answers_with_break_even(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RENT_LOOKUP, confidence=0.75, target_refs=[REF], reason="rent-workability rewrite"
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={
+                "monthly_rent": 2352,
+                "effective_monthly_rent": 2211,
+                "rent_source_type": "provided",
+                "rental_ease_label": "Fragile Rental Profile",
+                "rental_ease_score": 45.21,
+                "annual_noi": 1681,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": "1008 14th Avenue", "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_outlook",
+            return_value=RentOutlook(
+                property_id=REF,
+                address="1008 14th Avenue",
+                entry_basis=767000,
+                current_monthly_rent=2352,
+                effective_monthly_rent=2211,
+                annual_noi=1681,
+                rent_source_type="provided",
+                rental_ease_label="Fragile Rental Profile",
+                rental_ease_score=45.21,
+                horizon_years=None,
+                future_rent_low=None,
+                future_rent_mid=None,
+                future_rent_high=None,
+                basis_to_rent_framing="Current rent annualizes to roughly 3.5% of the current basis.",
+                owner_occupy_then_rent=None,
+                zillow_market_rent=8000,
+                zillow_market_rent_low=None,
+                zillow_market_rent_high=None,
+                zillow_rental_comp_count=5,
+                market_context_note="Zillow looks like a different rental regime.",
+                carry_offset_ratio=0.38,
+                break_even_rent=5898,
+                break_even_probability=0.2,
+                adjusted_rent_confidence=0.45,
+                rent_haircut_pct=0.2,
+            ),
+        ):
+            response = handle_rent_lookup(
+                "What rent would make this deal work?",
+                decision,
+                Session(),
+                llm=None,
+            )
+        self.assertIn("$5,898", response)
+        self.assertIn("$2,211", response)
+
+
+class RiskFollowupHandlerTests(unittest.TestCase):
+    def test_missing_data_followup_uses_trust_view(self) -> None:
+        decision = RouterDecision(
+            AnswerType.RISK, confidence=0.7, target_refs=[REF], reason="trust rewrite"
+        )
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch.get_value_thesis",
+            return_value={
+                "trust_summary": {
+                    "band": "Moderate confidence",
+                    "field_completeness": 0.61,
+                    "estimated_reliance": 0.34,
+                    "trust_flags": ["incomplete_carry_inputs"],
+                },
+                "why_this_stance": ["Current pricing looks ahead of Briarwood's current fair-value read."],
+                "what_changes_my_view": ["Complete the carry-cost inputs (taxes, insurance, financing)."],
+                "blocked_thesis_warnings": ["Incomplete carry inputs are still limiting conviction."],
+            },
+        ), patch(
+            "briarwood.agent.dispatch._load_property_facts",
+            return_value={"address": "1008 14th Avenue", "town": "Belmar", "state": "NJ"},
+        ):
+            response = dispatch(
+                "What data is missing or estimated?",
+                decision,
+                session,
+                llm=None,
+            )
+        self.assertIn("incomplete carry inputs", response.lower())
+        self.assertIsNotNone(session.last_trust_view)
+        self.assertIsNone(session.last_risk_view)
 
 
 class BrowseAffirmativeEscalationTests(unittest.TestCase):
@@ -1668,6 +1982,66 @@ class BrowseContextFollowupTests(unittest.TestCase):
         self.assertEqual(out.answer_type, AnswerType.EDGE)
         self.assertEqual(out.reason, "cma rewrite")
         self.assertEqual(out.target_refs, ["1600-l-street-belmar-nj-07719"])
+
+    def test_comp_set_followup_rewrites_to_edge(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "Show me the comp set",
+            RouterDecision(
+                AnswerType.SEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.EDGE)
+        self.assertEqual(out.reason, "comp-set rewrite")
+
+    def test_entry_point_followup_rewrites_to_edge(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "What's a good entry point?",
+            RouterDecision(
+                AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.EDGE)
+        self.assertEqual(out.reason, "entry-point rewrite")
+
+    def test_missing_data_followup_rewrites_to_risk(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "What data is missing or estimated?",
+            RouterDecision(
+                AnswerType.RISK, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.RISK)
+        self.assertEqual(out.reason, "trust rewrite")
+
+    def test_rent_workability_followup_rewrites_to_rent_lookup(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "What rent would make this deal work?",
+            RouterDecision(
+                AnswerType.PROJECTION, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.RENT_LOOKUP)
+        self.assertEqual(out.reason, "rent-workability rewrite")
+
+    def test_downside_detail_followup_rewrites_to_risk(self) -> None:
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "Show me the downside case in more detail",
+            RouterDecision(
+                AnswerType.PROJECTION, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.RISK)
+        self.assertEqual(out.reason, "downside-detail rewrite")
 
     def test_research_uses_live_listing_context(self) -> None:
         decision = RouterDecision(

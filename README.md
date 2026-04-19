@@ -2,6 +2,22 @@
 
 Briarwood is a lightweight real estate decision intelligence prototype focused on single-property analysis.
 
+## Chat UI Dev
+
+Start the FastAPI bridge and the Next.js chat UI together with one command:
+
+```bash
+make dev
+```
+
+That boots:
+
+- `http://127.0.0.1:8000` for the API
+- `http://127.0.0.1:3000` for the chat UI
+
+The launcher prefers the repo's `venv` automatically when it exists, prefixes
+logs by service, and shuts both processes down together when you press `Ctrl+C`.
+
 ## v1 Modules
 
 - Property Snapshot

@@ -36,10 +36,11 @@ export function InlineMap({
   onSelect,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
+  const tokenState = getMapboxTokenState(TOKEN);
 
   // Fit bounds whenever the pin set changes.
   useEffect(() => {
-    if (!TOKEN) return;
+    if (!tokenState.ok) return;
     const map = mapRef.current;
     if (!map || pins.length === 0) return;
 
@@ -57,22 +58,22 @@ export function InlineMap({
         maxZoom: 14,
       });
     }
-  }, [pins]);
+  }, [pins, tokenState.ok]);
 
   // Pan to the active pin when the user hovers a card off-screen.
   useEffect(() => {
-    if (!TOKEN || !activeId) return;
+    if (!tokenState.ok || !activeId) return;
     const pin = pins.find((p) => p.id === activeId);
     if (!pin) return;
     mapRef.current?.panTo([pin.lng, pin.lat], { duration: 300 });
-  }, [activeId, pins]);
+  }, [activeId, pins, tokenState.ok]);
 
-  if (!TOKEN) {
-    return <MissingTokenFallback pinCount={pins.length} />;
+  if (!tokenState.ok) {
+    return <MissingTokenFallback pinCount={pins.length} reason={tokenState.reason} />;
   }
 
   return (
-    <div className="relative mt-3 h-[280px] w-full overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
+    <div className="relative mt-3 h-[220px] w-full overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
       <MapboxMap
         ref={mapRef}
         mapboxAccessToken={TOKEN}
@@ -127,6 +128,31 @@ export function InlineMap({
   );
 }
 
+function getMapboxTokenState(token: string | undefined) {
+  if (!token) {
+    return {
+      ok: false,
+      reason:
+        "Map needs a public Mapbox token in web/.env.local as NEXT_PUBLIC_MAPBOX_TOKEN.",
+    };
+  }
+  if (token.startsWith("sk.")) {
+    return {
+      ok: false,
+      reason:
+        "Mapbox secret tokens (`sk.`) cannot be used in the browser. Put a public `pk.` token in web/.env.local.",
+    };
+  }
+  if (!token.startsWith("pk.")) {
+    return {
+      ok: false,
+      reason:
+        "Mapbox token looks invalid for client-side use. Use a public token that starts with `pk.` in web/.env.local.",
+    };
+  }
+  return { ok: true, reason: "" };
+}
+
 function PinMarker({
   label,
   active,
@@ -162,7 +188,13 @@ function PinMarker({
   );
 }
 
-function MissingTokenFallback({ pinCount }: { pinCount: number }) {
+function MissingTokenFallback({
+  pinCount,
+  reason,
+}: {
+  pinCount: number;
+  reason: string;
+}) {
   return (
     <div
       role="note"
@@ -170,7 +202,7 @@ function MissingTokenFallback({ pinCount }: { pinCount: number }) {
     >
       <MapPinIcon className="h-4 w-4 text-[var(--color-text-faint)]" aria-hidden />
       <p className="text-xs text-[var(--color-text-muted)]">
-        Map needs a Mapbox token.{" "}
+        {reason}{" "}
         <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-[10px] text-[var(--color-text)]">
           NEXT_PUBLIC_MAPBOX_TOKEN
         </code>{" "}

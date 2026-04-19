@@ -274,6 +274,7 @@ def build_property_presentation(
         "enrichment": enrichment,
         "risk": risk,
         "contract_type": contract_type,
+        "street_view_image_url": google.get("street_view_image_url"),
     }
     return PropertyPresentationPayload(
         property_id=property_id,

@@ -73,15 +73,19 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
                 "message": "Valuation upside leans on estimated (not verified) rent — thesis depends on rent assumption holding.",
             })
 
+    blocked_thesis_warnings = [c["message"] for c in conflicts]
+
     return BridgeRecord(
         name=NAME,
         inputs_read=["valuation", "town_county_outlook", "risk_model", "legal_confidence", "rental_option", "carry_cost"],
         adjustments={
             "conflicts": conflicts,
             "conflict_count": len(conflicts),
+            "contradiction_count": len(conflicts),
+            "blocked_thesis_warnings": blocked_thesis_warnings,
         },
         reasoning=(
-            [c["message"] for c in conflicts]
+            blocked_thesis_warnings
             if conflicts
             else ["No explicit conflicts detected."]
         ),

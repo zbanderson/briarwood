@@ -68,6 +68,12 @@ class PricePhrasingTests(unittest.TestCase):
             {"repair_capex_budget": 100_000.0, "mode": "renovated"},
         )
 
+    def test_percentage_price_cut_uses_reference_price(self) -> None:
+        self.assertEqual(
+            parse_overrides("What would a 10% price cut do?", reference_price=767000.0),
+            {"ask_price": 690300.0, "price_cut_pct": 0.10},
+        )
+
 
 class InputsWithOverridesTests(unittest.TestCase):
     def test_passthrough_when_empty(self) -> None:
@@ -119,6 +125,47 @@ class InputsWithOverridesTests(unittest.TestCase):
                         "target_condition": "renovated",
                     },
                 )
+        finally:
+            original.unlink(missing_ok=True)
+
+    def test_merges_manual_comp_inputs_with_existing_assumptions(self) -> None:
+        with NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump(
+                {
+                    "facts": {"purchase_price": 1_000_000},
+                    "user_assumptions": {
+                        "manual_comp_inputs": [
+                            {
+                                "address": "10 A St",
+                                "sale_date": "2025-01-01",
+                                "source_ref": "saved-10-a",
+                                "sale_price": 700000,
+                            }
+                        ]
+                    },
+                },
+                f,
+            )
+            original = Path(f.name)
+        try:
+            with inputs_with_overrides(
+                original,
+                {
+                    "manual_comp_inputs": [
+                        {
+                            "address": "12 A St",
+                            "sale_date": "2025-02-01",
+                            "source_ref": "user-12-a",
+                            "sale_price": 720000,
+                        }
+                    ]
+                },
+            ) as path:
+                data = json.loads(path.read_text())
+                manual_comps = data["user_assumptions"]["manual_comp_inputs"]
+                self.assertEqual(len(manual_comps), 2)
+                self.assertEqual(manual_comps[0]["address"], "10 A St")
+                self.assertEqual(manual_comps[1]["address"], "12 A St")
         finally:
             original.unlink(missing_ok=True)
 

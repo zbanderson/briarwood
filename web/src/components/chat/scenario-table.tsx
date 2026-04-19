@@ -33,8 +33,11 @@ function deltaTone(n: number | null | undefined) {
 }
 
 export function ScenarioTable({ table }: Props) {
-  const { rows, address, ask_price, spread } = table;
+  const { rows, address, ask_price, basis_label, spread } = table;
   if (!rows || rows.length === 0) return null;
+  const basisName = (basis_label ?? "ask")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 
   return (
     <div
@@ -51,12 +54,12 @@ export function ScenarioTable({ table }: Props) {
             </div>
           )}
           <div className="mt-0.5 text-base font-semibold text-[var(--color-text)]">
-            5-year scenarios
+            5-year value range
           </div>
         </div>
         {ask_price != null && (
           <div className="text-right text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
-            Ask
+            {basisName}
             <div className="mt-0.5 text-[13px] font-medium text-[var(--color-text)] normal-case tracking-normal">
               {money(ask_price)}
             </div>
@@ -70,7 +73,7 @@ export function ScenarioTable({ table }: Props) {
             <tr className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]">
               <th className="px-3 py-2 font-medium">Scenario</th>
               <th className="px-3 py-2 font-medium text-right">Value</th>
-              <th className="px-3 py-2 font-medium text-right">vs ask</th>
+              <th className="px-3 py-2 font-medium text-right">{`vs ${basisName.toLowerCase()}`}</th>
               <th className="px-3 py-2 font-medium text-right">Growth</th>
               <th className="px-3 py-2 font-medium text-right">Adj.</th>
             </tr>
@@ -85,7 +88,7 @@ export function ScenarioTable({ table }: Props) {
 
       {spread != null && Number.isFinite(spread) && (
         <div className="mt-3 text-[11px] text-[var(--color-text-faint)]">
-          Bull–bear spread: {money(spread)}
+          Bull–bear spread: {money(spread)}. Use this with the scenario chart to see how wide the realistic range really is.
         </div>
       )}
     </div>

@@ -48,6 +48,7 @@ export function RentOutlookCard({ outlook }: Props) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
+        <Stat label="Entry basis" value={money(outlook.entry_basis)} />
         <Stat label="Monthly rent" value={money(outlook.monthly_rent)} />
         <Stat
           label="Effective monthly"
@@ -57,6 +58,31 @@ export function RentOutlookCard({ outlook }: Props) {
         <Stat
           label="Source"
           value={outlook.rent_source_type ?? "—"}
+        />
+        <Stat
+          label="Carry offset"
+          value={
+            outlook.carry_offset_ratio != null
+              ? `${outlook.carry_offset_ratio.toFixed(2)}x`
+              : "—"
+          }
+        />
+        <Stat label="Break-even rent" value={money(outlook.break_even_rent)} />
+        <Stat
+          label="Break-even probability"
+          value={
+            outlook.break_even_probability != null
+              ? `${Math.round(outlook.break_even_probability * 100)}%`
+              : "—"
+          }
+        />
+        <Stat
+          label="Adjusted rent confidence"
+          value={
+            outlook.adjusted_rent_confidence != null
+              ? `${Math.round(outlook.adjusted_rent_confidence * 100)}%`
+              : "—"
+          }
         />
       </div>
 
@@ -74,6 +100,19 @@ export function RentOutlookCard({ outlook }: Props) {
               · {outlook.zillow_rental_comp_count} comps
             </span>
           )}
+        </div>
+      )}
+
+      {outlook.market_context_note && (
+        <div className="mt-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] px-3 py-2 text-[12px] text-[var(--color-text-muted)]">
+          {outlook.market_context_note}
+        </div>
+      )}
+      {outlook.rent_haircut_pct != null && outlook.rent_haircut_pct > 0 && (
+        <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[12px] text-[var(--color-text-muted)]">
+          Briarwood is haircutting rent confidence by{" "}
+          {Math.round(outlook.rent_haircut_pct * 100)}% because the income story
+          is legally or operationally fragile.
         </div>
       )}
 

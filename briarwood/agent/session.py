@@ -46,8 +46,33 @@ class Session:
     last_strategy_view: dict[str, object] | None = None
     last_rent_outlook_view: dict[str, object] | None = None
     last_research_view: dict[str, object] | None = None
+    last_trust_view: dict[str, object] | None = None
+    last_visual_advice: dict[str, object] | None = None
     last_verifier_report: dict[str, object] | None = None
     turns: list[Turn] = field(default_factory=list)
+
+    def clear_response_views(self) -> None:
+        """Clear per-turn structured render state before running a new turn.
+
+        This prevents stale cards and charts from a previous response leaking
+        into the next streamed assistant message. Conversation continuity still
+        lives on `current_property_id`, search context, and prior turns.
+        """
+        self.last_answer_contract = None
+        self.last_analysis_mode = None
+        self.last_decision_view = None
+        self.last_projection_view = None
+        self.last_comparison_view = None
+        self.last_town_summary = None
+        self.last_comps_preview = None
+        self.last_risk_view = None
+        self.last_value_thesis_view = None
+        self.last_strategy_view = None
+        self.last_rent_outlook_view = None
+        self.last_research_view = None
+        self.last_trust_view = None
+        self.last_visual_advice = None
+        self.last_verifier_report = None
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
         self.turns.append(Turn(user=user, assistant=assistant, answer_type=answer_type))
@@ -88,6 +113,8 @@ class Session:
             last_strategy_view=data.get("last_strategy_view"),
             last_rent_outlook_view=data.get("last_rent_outlook_view"),
             last_research_view=data.get("last_research_view"),
+            last_trust_view=data.get("last_trust_view"),
+            last_visual_advice=data.get("last_visual_advice"),
             last_verifier_report=data.get("last_verifier_report"),
             turns=turns,
         )

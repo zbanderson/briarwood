@@ -1,0 +1,2299 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-19T11:18:36.672522+00:00",
+    "sample_properties": [
+      "1008-14th-ave-belmar-nj-07719",
+      "1600-l-street-belmar-nj-07719",
+      "1228-briarwood-road-belmar-nj",
+      "526-west-end-ave",
+      "briarwood-rd-belmar",
+      "1223-ocean-rd-bridgehampton-ny-11932"
+    ],
+    "sample_prompts": [
+      "what do you think of [property]",
+      "should I buy this",
+      "what does the CMA look like",
+      "what would a 10% price cut do",
+      "what's the rental potential",
+      "what could go wrong"
+    ],
+    "score_scale": "0-100",
+    "weights": {
+      "property_read": 0.25,
+      "determination": 0.25,
+      "forward_to_user": 0.25,
+      "unified_relativity": 0.2,
+      "contract_test": 0.05
+    }
+  },
+  "rows": [
+    {
+      "row_type": "module",
+      "name": "rent_stabilization",
+      "purpose": "How durable is rent income?",
+      "declared_inputs": [
+        "property_data",
+        "assumptions",
+        "market_context"
+      ],
+      "actual_inputs_used": [
+        "none"
+      ],
+      "downstream_consumers": [
+        "hold_to_rent"
+      ],
+      "user_surface_targets": [
+        "RentOutlookCard"
+      ],
+      "property_read_score": 40,
+      "determination_score": 70,
+      "forward_to_user_score": 35,
+      "unified_relativity_score": 40,
+      "contract_test_score": 75,
+      "overall_health_score": 48,
+      "improvement_priority": 62,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/rent_stabilization.py",
+        "docs/model_audits/rent_stabilization.md"
+      ],
+      "key_gaps": [
+        "**Hard crash on thin inputs.** [test_thin_inputs_crash_today](../../tests/modules/test_rent_stabilization_isolated.py#L30) locks in a `TypeError: income_support module payload is not an IncomeAgentOutput` when property_data lacks `purchase_price`. This is the worst failure mode in the Phase 2 sweep \u2014 a production data edge case will crash the whole analysis."
+      ],
+      "recommended_fix": "**Phase 3 (highest priority):** Make `IncomeSupportModule` robust to missing `purchase_price`. Either normalize in intake or guard in the scoped runner."
+    },
+    {
+      "row_type": "module",
+      "name": "confidence",
+      "purpose": "How much should we trust this?",
+      "declared_inputs": [
+        "property_data",
+        "prior_outputs"
+      ],
+      "actual_inputs_used": [
+        "property_data",
+        "prior_outputs"
+      ],
+      "downstream_consumers": [
+        "synthesis"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 40,
+      "determination_score": 90,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 40,
+      "contract_test_score": 80,
+      "overall_health_score": 50,
+      "improvement_priority": 60,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/confidence.py",
+        "tests/agent/test_dispatch.py",
+        "tests/agent/test_tools.py",
+        "tests/modules/test_resale_scenario_isolated.py",
+        "tests/modules/test_risk_model_isolated.py",
+        "tests/modules/test_valuation_isolated.py",
+        "tests/synthesis/test_structured_synthesizer.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Fix \u2014 replace with real trust-calibration rollup in Phase 5"
+    },
+    {
+      "row_type": "module",
+      "name": "legal_confidence",
+      "purpose": "Is the intended use legal?",
+      "declared_inputs": [
+        "property_data",
+        "market_context"
+      ],
+      "actual_inputs_used": [
+        "none"
+      ],
+      "downstream_consumers": [
+        "(synthesis) \u2014 **not consumed by rent_stabilization**"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 40,
+      "determination_score": 90,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 20,
+      "contract_test_score": 75,
+      "overall_health_score": 45,
+      "improvement_priority": 55,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/legal_confidence.py",
+        "docs/model_audits/legal_confidence.md"
+      ],
+      "key_gaps": [
+        "**Output is stranded.** No rent, risk, or valuation module consumes `legality_evidence`. The module produces a meaningful signal (2 warnings fire on the unique-property fixture) but nothing acts on it."
+      ],
+      "recommended_fix": "**Phase 3:** Replace hardcoded 0.72 / 0.48 in `PropertyDataQualityModule` with field-coverage scoring."
+    },
+    {
+      "row_type": "module",
+      "name": "hold_to_rent",
+      "purpose": "Can rent offset carry?",
+      "declared_inputs": [
+        "prior outputs"
+      ],
+      "actual_inputs_used": [
+        "prior outputs"
+      ],
+      "downstream_consumers": [
+        "(synthesis)"
+      ],
+      "user_surface_targets": [
+        "StrategyPathCard",
+        "ChartFrame"
+      ],
+      "property_read_score": 60,
+      "determination_score": 70,
+      "forward_to_user_score": 35,
+      "unified_relativity_score": 60,
+      "contract_test_score": 80,
+      "overall_health_score": 57,
+      "improvement_priority": 53,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/hold_to_rent.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Fix \u2014 promote to a real `rent_x_cost` bridge (carry_offset_ratio, break-even probability)"
+    },
+    {
+      "row_type": "module",
+      "name": "renovation_impact",
+      "purpose": "What value does reno create?",
+      "declared_inputs": [
+        "property_data",
+        "assumptions"
+      ],
+      "actual_inputs_used": [
+        "property_data",
+        "assumptions"
+      ],
+      "downstream_consumers": [
+        "arv_model",
+        "margin_sensitivity"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 60,
+      "determination_score": 85,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 20,
+      "contract_test_score": 55,
+      "overall_health_score": 48,
+      "improvement_priority": 52,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/renovation_impact_scoped.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Keep \u2014 solid standalone; needs bridge to risk for execution-dependence"
+    },
+    {
+      "row_type": "module",
+      "name": "resale_scenario",
+      "purpose": "How does value evolve?",
+      "declared_inputs": [
+        "property_data",
+        "assumptions",
+        "market_context"
+      ],
+      "actual_inputs_used": [
+        "none (silo)",
+        "the internal `BullBaseBearModule` runs its own sub-modules rather than reading scoped prior_outputs."
+      ],
+      "downstream_consumers": [
+        "(consumed by synthesis only)"
+      ],
+      "user_surface_targets": [
+        "ScenarioTable",
+        "ChartFrame"
+      ],
+      "property_read_score": 30,
+      "determination_score": 70,
+      "forward_to_user_score": 100,
+      "unified_relativity_score": 20,
+      "contract_test_score": 100,
+      "overall_health_score": 59,
+      "improvement_priority": 51,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/resale_scenario_scoped.py",
+        "docs/model_audits/resale_scenario.md",
+        "tests/agent/test_tools.py",
+        "tests/modules/test_resale_scenario_isolated.py"
+      ],
+      "key_gaps": [
+        "**Confidence is insensitive to fragile financing.** Normal and fragile fixtures produce identical ~0.6 confidence."
+      ],
+      "recommended_fix": "**Phase 4:** `town_x_scenario` bridge \u2014 adjust bull/bear spread using town liquidity + scarcity signal."
+    },
+    {
+      "row_type": "module",
+      "name": "rental_option",
+      "purpose": "What can it earn as a rental?",
+      "declared_inputs": [
+        "property_data",
+        "assumptions",
+        "comp_context"
+      ],
+      "actual_inputs_used": [
+        "property_data",
+        "assumptions",
+        "comp_context"
+      ],
+      "downstream_consumers": [
+        "(end-of-chain for rental path)"
+      ],
+      "user_surface_targets": [
+        "RentOutlookCard",
+        "StrategyPathCard"
+      ],
+      "property_read_score": 50,
+      "determination_score": 70,
+      "forward_to_user_score": 100,
+      "unified_relativity_score": 20,
+      "contract_test_score": 55,
+      "overall_health_score": 62,
+      "improvement_priority": 48,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/rental_option_scoped.py"
+      ],
+      "key_gaps": [
+        "Declared dependency chain is not being meaningfully consumed: valuation / **not used**."
+      ],
+      "recommended_fix": "Fix \u2014 actually use valuation output or drop dep"
+    },
+    {
+      "row_type": "module",
+      "name": "risk_model",
+      "purpose": "What could go wrong?",
+      "declared_inputs": [
+        "property_data"
+      ],
+      "actual_inputs_used": [
+        "`property_data` only. The module self-documents this:"
+      ],
+      "downstream_consumers": [
+        "(consumed by synthesis only)"
+      ],
+      "user_surface_targets": [
+        "RiskProfileCard",
+        "VerdictCard"
+      ],
+      "property_read_score": 30,
+      "determination_score": 90,
+      "forward_to_user_score": 100,
+      "unified_relativity_score": 20,
+      "contract_test_score": 100,
+      "overall_health_score": 64,
+      "improvement_priority": 46,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/risk_model.py",
+        "docs/model_audits/risk_model.md",
+        "tests/interactions/test_bridges.py",
+        "tests/modules/test_risk_model_isolated.py",
+        "tests/synthesis/test_structured_synthesizer.py"
+      ],
+      "key_gaps": [
+        "**Confidence is constant (~0.72) across normal / contradictory / fragile inputs.** This is *the* silo signature. The harness locks it in with `assertEqual(normal, contradictory)` so the moment Phase 4 wires real inputs, the test goes red."
+      ],
+      "recommended_fix": "**Phase 4 (highest priority):** Implement `valuation_x_risk` bridge. Risk must read valuation's premium_vs_comps, liquidity_signal, comp_coverage."
+    },
+    {
+      "row_type": "module",
+      "name": "arv_model",
+      "purpose": "What's the post-reno value?",
+      "declared_inputs": [
+        "prior outputs"
+      ],
+      "actual_inputs_used": [
+        "prior outputs"
+      ],
+      "downstream_consumers": [
+        "margin_sensitivity"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 60,
+      "determination_score": 85,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 60,
+      "contract_test_score": 55,
+      "overall_health_score": 56,
+      "improvement_priority": 44,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/arv_model_scoped.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Keep \u2014 mostly fine; add comp-coverage trust flag"
+    },
+    {
+      "row_type": "module",
+      "name": "carry_cost",
+      "purpose": "What does it cost to own?",
+      "declared_inputs": [
+        "property_data",
+        "assumptions"
+      ],
+      "actual_inputs_used": [
+        "property_data",
+        "assumptions"
+      ],
+      "downstream_consumers": [
+        "hold_to_rent",
+        "margin_sensitivity",
+        "unit_income_offset"
+      ],
+      "user_surface_targets": [
+        "StrategyPathCard",
+        "RentOutlookCard"
+      ],
+      "property_read_score": 80,
+      "determination_score": 70,
+      "forward_to_user_score": 65,
+      "unified_relativity_score": 40,
+      "contract_test_score": 80,
+      "overall_health_score": 66,
+      "improvement_priority": 44,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/carry_cost.py",
+        "tests/interactions/test_bridges.py",
+        "tests/synthesis/test_structured_synthesizer.py"
+      ],
+      "key_gaps": [
+        "None"
+      ],
+      "recommended_fix": "Fix \u2014 expose break-even rent + owner-occ vs investor cases as first-class"
+    },
+    {
+      "row_type": "module",
+      "name": "unit_income_offset",
+      "purpose": "How much does an extra unit offset carry?",
+      "declared_inputs": [
+        "prior outputs",
+        "assumptions"
+      ],
+      "actual_inputs_used": [
+        "prior outputs",
+        "assumptions"
+      ],
+      "downstream_consumers": [
+        "(synthesis)"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 80,
+      "determination_score": 85,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 60,
+      "contract_test_score": 55,
+      "overall_health_score": 61,
+      "improvement_priority": 39,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/unit_income_offset.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Keep"
+    },
+    {
+      "row_type": "module",
+      "name": "valuation",
+      "purpose": "What is fair value?",
+      "declared_inputs": [
+        "property_data",
+        "comp_context",
+        "market_context"
+      ],
+      "actual_inputs_used": [
+        "none"
+      ],
+      "downstream_consumers": [
+        "risk_model",
+        "rental_option",
+        "resale_scenario",
+        "arv_model"
+      ],
+      "user_surface_targets": [
+        "VerdictCard",
+        "ValueThesisCard",
+        "ScenarioTable",
+        "ChartFrame"
+      ],
+      "property_read_score": 60,
+      "determination_score": 90,
+      "forward_to_user_score": 100,
+      "unified_relativity_score": 20,
+      "contract_test_score": 100,
+      "overall_health_score": 72,
+      "improvement_priority": 38,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/valuation.py",
+        "docs/model_audits/valuation.md",
+        "tests/agent/test_tools.py",
+        "tests/interactions/test_bridges.py",
+        "tests/modules/test_risk_model_isolated.py",
+        "tests/modules/test_valuation_isolated.py",
+        "tests/synthesis/test_structured_synthesizer.py",
+        "tests/test_operational_sweep.py"
+      ],
+      "key_gaps": [
+        "**Contradictory inputs do not degrade confidence or warn.** A $2.4M ask on 700 sqft / 6 beds / 1 bath (contradictory fixture) produces `confidence \u2248 0.62` with zero warnings. There is no sanity check against sqft\u00d7$/sqft ballpark."
+      ],
+      "recommended_fix": "**Phase 3:** Surface explicit `key_value_drivers` and `key_risks` lists in the top-level payload data (currently only in legacy_payload)."
+    },
+    {
+      "row_type": "module",
+      "name": "margin_sensitivity",
+      "purpose": "How fragile is the reno margin?",
+      "declared_inputs": [
+        "prior outputs"
+      ],
+      "actual_inputs_used": [
+        "prior outputs"
+      ],
+      "downstream_consumers": [
+        "(synthesis)"
+      ],
+      "user_surface_targets": [],
+      "property_read_score": 80,
+      "determination_score": 100,
+      "forward_to_user_score": 20,
+      "unified_relativity_score": 60,
+      "contract_test_score": 55,
+      "overall_health_score": 65,
+      "improvement_priority": 35,
+      "evidence": [
+        "docs/model_inventory.md",
+        "../briarwood/modules/margin_sensitivity_scoped.py"
+      ],
+      "key_gaps": [
+        "Module output is weakly represented or invisible in current user-facing surfaces."
+      ],
+      "recommended_fix": "Keep \u2014 already behaves like a bridge; generalize pattern to other domains"
+    },
+    {
+      "row_type": "bridge",
+      "name": "town_x_scenario",
+      "purpose": "Cross-check scenario appreciation assumptions against town strength and regime.",
+      "declared_inputs": [
+        "resale_scenario/arv_model",
+        "town_county_outlook/valuation"
+      ],
+      "actual_inputs_used": [
+        "scenario module output",
+        "valuation scarcity/town priors when direct town output absent"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "ScenarioTable"
+      ],
+      "property_read_score": 68,
+      "determination_score": 72,
+      "forward_to_user_score": 50,
+      "unified_relativity_score": 82,
+      "contract_test_score": 82,
+      "overall_health_score": 68,
+      "improvement_priority": 32,
+      "evidence": [
+        "briarwood/interactions/town_x_scenario.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Realism checks are present in bridge logic but not rendered as a dedicated scenario realism indicator for the user."
+      ],
+      "recommended_fix": "Expose appreciation realism directly in scenario cards and narration."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "session_slot_population",
+      "purpose": "Persist model-derived render state in session slots before SSE translation.",
+      "declared_inputs": [
+        "agent dispatch contracts",
+        "Session last_*_view fields"
+      ],
+      "actual_inputs_used": [
+        "briarwood/agent/dispatch.py",
+        "briarwood/agent/session.py"
+      ],
+      "downstream_consumers": [
+        "api/pipeline_adapter.py"
+      ],
+      "user_surface_targets": [
+        "all structured cards and charts"
+      ],
+      "property_read_score": 72,
+      "determination_score": 68,
+      "forward_to_user_score": 88,
+      "unified_relativity_score": 76,
+      "contract_test_score": 86,
+      "overall_health_score": 76,
+      "improvement_priority": 29,
+      "evidence": [
+        "briarwood/agent/dispatch.py",
+        "briarwood/agent/session.py",
+        "tests/agent/test_dispatch.py"
+      ],
+      "key_gaps": [
+        "Every feature depends on slot completeness, so missing slot population silently strands good model output."
+      ],
+      "recommended_fix": "Keep expanding regression tests around slot population for every routed tier and follow-up path."
+    },
+    {
+      "row_type": "module",
+      "name": "town_development_index",
+      "purpose": "Registry-defined scoped module.",
+      "declared_inputs": [
+        "property_data",
+        "property_summary"
+      ],
+      "actual_inputs_used": [
+        "property_data",
+        "property_summary"
+      ],
+      "downstream_consumers": [
+        "resale_scenario",
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "TownSummaryCard",
+        "ChartFrame"
+      ],
+      "property_read_score": 60,
+      "determination_score": 85,
+      "forward_to_user_score": 65,
+      "unified_relativity_score": 80,
+      "contract_test_score": 55,
+      "overall_health_score": 71,
+      "improvement_priority": 29,
+      "evidence": [
+        "docs/model_inventory.md",
+        "briarwood/execution/registry.py::run_town_development_index"
+      ],
+      "key_gaps": [
+        "Registry-present, inventory doc missing."
+      ],
+      "recommended_fix": "Keep \u2014 registry-backed but missing from inventory documentation."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_comps_preview",
+      "purpose": "Show the comp evidence backing the current pricing stance.",
+      "declared_inputs": [
+        "comps_preview SSE event"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "CompsPreviewCard"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "CompsPreviewCard"
+      ],
+      "property_read_score": 78,
+      "determination_score": 74,
+      "forward_to_user_score": 88,
+      "unified_relativity_score": 66,
+      "contract_test_score": 88,
+      "overall_health_score": 78,
+      "improvement_priority": 27,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Comp evidence is now present, but dedicated CMA visualization is still thinner than the underlying comp logic."
+      ],
+      "recommended_fix": "Add a stronger CMA-style comp table/visual treatment when the user explicitly asks for a CMA."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_module_attribution",
+      "purpose": "Show which model layers materially contributed to the response.",
+      "declared_inputs": [
+        "modules_ran SSE event"
+      ],
+      "actual_inputs_used": [
+        "pipeline adapter module tracker",
+        "chat UI module badges"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "Module badge row"
+      ],
+      "property_read_score": 64,
+      "determination_score": 70,
+      "forward_to_user_score": 78,
+      "unified_relativity_score": 78,
+      "contract_test_score": 84,
+      "overall_health_score": 73,
+      "improvement_priority": 27,
+      "evidence": [
+        "api/pipeline_adapter.py",
+        "web/src/lib/chat/use-chat.ts",
+        "docs/chat_workflow_audit_matrix.md"
+      ],
+      "key_gaps": [
+        "Module attribution exists, but it still reflects surfaced events more than true causal contribution strength."
+      ],
+      "recommended_fix": "Enrich module attribution with stronger mapping from bridge/unified influence to visible explanation."
+    },
+    {
+      "row_type": "bridge",
+      "name": "conflict_detector",
+      "purpose": "Enumerate cross-model contradictions that should block a clean recommendation.",
+      "declared_inputs": [
+        "valuation",
+        "town_county_outlook",
+        "risk_model",
+        "legal_confidence",
+        "rental_option",
+        "carry_cost"
+      ],
+      "actual_inputs_used": [
+        "valuation",
+        "risk_model",
+        "legal_confidence",
+        "rental_option/hold_to_rent",
+        "carry_cost"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "key_risks"
+      ],
+      "property_read_score": 74,
+      "determination_score": 78,
+      "forward_to_user_score": 58,
+      "unified_relativity_score": 84,
+      "contract_test_score": 84,
+      "overall_health_score": 74,
+      "improvement_priority": 26,
+      "evidence": [
+        "briarwood/interactions/conflict_detector.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Conflicts are synthesized into risks but do not appear as a dedicated contradiction section in the UI."
+      ],
+      "recommended_fix": "Expose explicit contradiction callouts whenever conflict count is non-zero."
+    },
+    {
+      "row_type": "bridge",
+      "name": "rent_x_risk",
+      "purpose": "Downgrade rent confidence when legal, stabilization, or risk signals weaken rental realism.",
+      "declared_inputs": [
+        "rental_option/hold_to_rent",
+        "legal_confidence",
+        "rent_stabilization",
+        "risk_model"
+      ],
+      "actual_inputs_used": [
+        "rental_option/hold_to_rent",
+        "legal_confidence",
+        "rent_stabilization",
+        "risk_model"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "RentOutlookCard",
+        "recommendation"
+      ],
+      "property_read_score": 75,
+      "determination_score": 80,
+      "forward_to_user_score": 52,
+      "unified_relativity_score": 90,
+      "contract_test_score": 86,
+      "overall_health_score": 74,
+      "improvement_priority": 26,
+      "evidence": [
+        "briarwood/interactions/rent_x_risk.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Adjusted rent confidence influences synthesis but is still mostly hidden from the user beyond narrative caution."
+      ],
+      "recommended_fix": "Expose adjusted rent confidence and downgrade reasons in the rent outlook card and recommendation narrative."
+    },
+    {
+      "row_type": "bridge",
+      "name": "valuation_x_town",
+      "purpose": "Adjust acceptable premium band using town scarcity and desirability.",
+      "declared_inputs": [
+        "valuation",
+        "town_county_outlook/scarcity"
+      ],
+      "actual_inputs_used": [
+        "valuation",
+        "valuation town priors or scarcity/town score"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "best_path",
+        "trust gating"
+      ],
+      "property_read_score": 72,
+      "determination_score": 78,
+      "forward_to_user_score": 55,
+      "unified_relativity_score": 90,
+      "contract_test_score": 85,
+      "overall_health_score": 74,
+      "improvement_priority": 26,
+      "evidence": [
+        "briarwood/interactions/valuation_x_town.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Town modulation is consumed indirectly through synthesis, not exposed as a first-class user-facing explanation."
+      ],
+      "recommended_fix": "Surface the adjusted premium band and town-strength rationale in value thesis cards and recommendation support text."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "sse_event_translation",
+      "purpose": "Translate session slots into ordered SSE events with typed payloads.",
+      "declared_inputs": [
+        "Session last_*_view fields",
+        "api/events.py payload contracts"
+      ],
+      "actual_inputs_used": [
+        "api/pipeline_adapter.py",
+        "api/events.py"
+      ],
+      "downstream_consumers": [
+        "web chat reducer",
+        "rehydration"
+      ],
+      "user_surface_targets": [
+        "all structured cards and charts"
+      ],
+      "property_read_score": 74,
+      "determination_score": 72,
+      "forward_to_user_score": 92,
+      "unified_relativity_score": 78,
+      "contract_test_score": 90,
+      "overall_health_score": 80,
+      "improvement_priority": 25,
+      "evidence": [
+        "api/pipeline_adapter.py",
+        "api/events.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Ordering and omission bugs here can make valid backend output look missing in the UI."
+      ],
+      "recommended_fix": "Continue tier-by-tier contract tests that assert emitted event order and payload presence."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_native_charts",
+      "purpose": "Render native chart specs for scenario, risk, value gap, and rent visuals.",
+      "declared_inputs": [
+        "chart.spec SSE payloads"
+      ],
+      "actual_inputs_used": [
+        "ChartFrame",
+        "native chart specs"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "ChartFrame"
+      ],
+      "property_read_score": 78,
+      "determination_score": 82,
+      "forward_to_user_score": 92,
+      "unified_relativity_score": 70,
+      "contract_test_score": 86,
+      "overall_health_score": 81,
+      "improvement_priority": 24,
+      "evidence": [
+        "web/src/components/chat/chart-frame.tsx",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Charts are now native, but bridge-derived annotations and explicit interpretive labels still lag behind the math."
+      ],
+      "recommended_fix": "Add more labeled chart context tied to the exact claim the chart is supporting."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_value_thesis",
+      "purpose": "Render ask vs fair value plus the comps and thesis behind it.",
+      "declared_inputs": [
+        "value_thesis SSE event"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "ValueThesisCard"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "ValueThesisCard"
+      ],
+      "property_read_score": 80,
+      "determination_score": 84,
+      "forward_to_user_score": 88,
+      "unified_relativity_score": 70,
+      "contract_test_score": 88,
+      "overall_health_score": 81,
+      "improvement_priority": 24,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Value thesis is strong, but bridge-derived rationale like premium band adjustment still gets compressed into prose."
+      ],
+      "recommended_fix": "Add explicit bridge-adjusted value-band and primary-value-source sublabels."
+    },
+    {
+      "row_type": "unified",
+      "name": "unified_intelligence",
+      "purpose": "Synthesize structured module and bridge evidence into the decision-first answer.",
+      "declared_inputs": [
+        "property_summary",
+        "parser_output",
+        "module_results",
+        "interaction_trace"
+      ],
+      "actual_inputs_used": [
+        "briarwood/synthesis/structured.py bounded inputs",
+        "bridge trace",
+        "value_position",
+        "trust_flags"
+      ],
+      "downstream_consumers": [
+        "agent tools",
+        "chat narratives",
+        "decision/presentation flows"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "best_path",
+        "trust flags",
+        "supporting facts"
+      ],
+      "property_read_score": 82,
+      "determination_score": 88,
+      "forward_to_user_score": 82,
+      "unified_relativity_score": 94,
+      "contract_test_score": 92,
+      "overall_health_score": 86,
+      "improvement_priority": 24,
+      "evidence": [
+        "unified_intelligence.md",
+        "briarwood/synthesis/structured.py",
+        "tests/synthesis/test_structured_synthesizer.py"
+      ],
+      "key_gaps": [
+        "Unified Intelligence is strong structurally, but bridge-derived nuances are still more legible in code than in the user-facing UI."
+      ],
+      "recommended_fix": "Expose more bridge and trust-gate rationale directly in decision-facing cards and narration."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_strategy_path",
+      "purpose": "Show the recommended path and strategic posture clearly.",
+      "declared_inputs": [
+        "strategy_path SSE event"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "StrategyPathCard"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "StrategyPathCard"
+      ],
+      "property_read_score": 74,
+      "determination_score": 78,
+      "forward_to_user_score": 82,
+      "unified_relativity_score": 70,
+      "contract_test_score": 86,
+      "overall_health_score": 77,
+      "improvement_priority": 23,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Strategy path is present, but some turns still surface it as a secondary detail instead of an action-first card."
+      ],
+      "recommended_fix": "Make strategy path a stronger companion to verdict and browse summaries."
+    },
+    {
+      "row_type": "bridge",
+      "name": "valuation_x_risk",
+      "purpose": "Demand extra discount when risk flags weaken price acceptability.",
+      "declared_inputs": [
+        "valuation",
+        "risk_model"
+      ],
+      "actual_inputs_used": [
+        "valuation",
+        "risk_model"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "decision stance",
+        "trust gating"
+      ],
+      "property_read_score": 74,
+      "determination_score": 82,
+      "forward_to_user_score": 60,
+      "unified_relativity_score": 92,
+      "contract_test_score": 85,
+      "overall_health_score": 77,
+      "improvement_priority": 23,
+      "evidence": [
+        "briarwood/interactions/valuation_x_risk.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "The bridge adjusts decision logic but the extra discount demand is still not legible as its own visible UI element."
+      ],
+      "recommended_fix": "Expose risk-adjusted discount demand inside verdict and value-thesis support copy."
+    },
+    {
+      "row_type": "bridge",
+      "name": "rent_x_cost",
+      "purpose": "Translate rent and carry into carry-offset and break-even logic.",
+      "declared_inputs": [
+        "carry_cost",
+        "rental_option/hold_to_rent/unit_income_offset"
+      ],
+      "actual_inputs_used": [
+        "carry_cost",
+        "carry monthly rent",
+        "rent-producing module if available"
+      ],
+      "downstream_consumers": [
+        "primary_value_source",
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "RentOutlookCard",
+        "ChartFrame",
+        "StrategyPathCard"
+      ],
+      "property_read_score": 78,
+      "determination_score": 84,
+      "forward_to_user_score": 68,
+      "unified_relativity_score": 88,
+      "contract_test_score": 86,
+      "overall_health_score": 79,
+      "improvement_priority": 21,
+      "evidence": [
+        "briarwood/interactions/rent_x_cost.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Bridge output affects path logic but the carry-offset ratio is not shown as a named metric in the current rent UI."
+      ],
+      "recommended_fix": "Promote carry-offset ratio and break-even probability into the rent card and rent ramp chart labels."
+    },
+    {
+      "row_type": "bridge",
+      "name": "scenario_x_risk",
+      "purpose": "Turn scenario assumptions into fragility and what-must-be-true conditions.",
+      "declared_inputs": [
+        "resale_scenario/arv_model/margin_sensitivity",
+        "risk_model"
+      ],
+      "actual_inputs_used": [
+        "scenario module output",
+        "risk_model"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "what_must_be_true",
+        "ScenarioTable"
+      ],
+      "property_read_score": 77,
+      "determination_score": 84,
+      "forward_to_user_score": 66,
+      "unified_relativity_score": 92,
+      "contract_test_score": 86,
+      "overall_health_score": 79,
+      "improvement_priority": 21,
+      "evidence": [
+        "briarwood/interactions/scenario_x_risk.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Fragility is used by Unified Intelligence, but scenario visuals still do not explicitly annotate the what-must-be-true burden."
+      ],
+      "recommended_fix": "Add fragility and what-must-be-true callouts adjacent to scenario table and scenario fan."
+    },
+    {
+      "row_type": "bridge",
+      "name": "primary_value_source",
+      "purpose": "Classify which value story dominates the property thesis.",
+      "declared_inputs": [
+        "strategy_classifier",
+        "valuation",
+        "carry_cost",
+        "resale_scenario/arv_model"
+      ],
+      "actual_inputs_used": [
+        "strategy_classifier",
+        "valuation",
+        "carry_cost",
+        "scenario outputs",
+        "__bridge__rent_x_cost"
+      ],
+      "downstream_consumers": [
+        "Unified Intelligence"
+      ],
+      "user_surface_targets": [
+        "recommendation",
+        "ValueThesisCard"
+      ],
+      "property_read_score": 80,
+      "determination_score": 82,
+      "forward_to_user_score": 72,
+      "unified_relativity_score": 88,
+      "contract_test_score": 86,
+      "overall_health_score": 80,
+      "improvement_priority": 20,
+      "evidence": [
+        "briarwood/interactions/primary_value_source.py",
+        "tests/interactions/test_bridges.py",
+        "briarwood/synthesis/structured.py"
+      ],
+      "key_gaps": [
+        "Primary value source is attached to synthesis but still under-explained in the UI outside terse labels."
+      ],
+      "recommended_fix": "Use primary value source to drive visible card framing and recommendation headers."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_risk_profile",
+      "purpose": "Render structured risk outputs and downside visuals.",
+      "declared_inputs": [
+        "risk_profile SSE event",
+        "risk_bar chart spec"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "RiskProfileCard",
+        "ChartFrame"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "RiskProfileCard",
+        "ChartFrame"
+      ],
+      "property_read_score": 78,
+      "determination_score": 82,
+      "forward_to_user_score": 86,
+      "unified_relativity_score": 72,
+      "contract_test_score": 88,
+      "overall_health_score": 80,
+      "improvement_priority": 20,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Risk is visible on risk turns but still underrepresented in browse/decision first impressions."
+      ],
+      "recommended_fix": "Pull at least one concrete risk callout into the first property read and decision summary."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_scenario_table",
+      "purpose": "Render bull/base/bear scenario values against the working basis.",
+      "declared_inputs": [
+        "scenario_table SSE event"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "ScenarioTable"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "ScenarioTable"
+      ],
+      "property_read_score": 84,
+      "determination_score": 88,
+      "forward_to_user_score": 92,
+      "unified_relativity_score": 74,
+      "contract_test_score": 90,
+      "overall_health_score": 85,
+      "improvement_priority": 20,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Scenario math now flows through, but scenario realism and fragility are still not visually annotated enough."
+      ],
+      "recommended_fix": "Add realism and fragility chips directly to the scenario table header."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_verdict",
+      "purpose": "Render the decision verdict in a clear user-facing card.",
+      "declared_inputs": [
+        "verdict SSE event"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "VerdictCard"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "VerdictCard"
+      ],
+      "property_read_score": 82,
+      "determination_score": 86,
+      "forward_to_user_score": 96,
+      "unified_relativity_score": 74,
+      "contract_test_score": 90,
+      "overall_health_score": 85,
+      "improvement_priority": 20,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Verdict is strong in decision turns but not reused as a strong framing primitive in browse-like first impressions."
+      ],
+      "recommended_fix": "Keep browse and decision framing consistent so the first read feels like a verdict, not a data dump."
+    },
+    {
+      "row_type": "ui_surface",
+      "name": "ui_surface_rent_outlook",
+      "purpose": "Render rent setup, rent regime context, and rental support.",
+      "declared_inputs": [
+        "rent_outlook SSE event",
+        "rent_burn/rent_ramp chart specs"
+      ],
+      "actual_inputs_used": [
+        "use-chat reducer",
+        "RentOutlookCard",
+        "ChartFrame"
+      ],
+      "downstream_consumers": [
+        "chat UI"
+      ],
+      "user_surface_targets": [
+        "RentOutlookCard",
+        "ChartFrame"
+      ],
+      "property_read_score": 82,
+      "determination_score": 84,
+      "forward_to_user_score": 88,
+      "unified_relativity_score": 74,
+      "contract_test_score": 88,
+      "overall_health_score": 83,
+      "improvement_priority": 17,
+      "evidence": [
+        "web/src/lib/chat/use-chat.ts",
+        "api/pipeline_adapter.py",
+        "tests/test_pipeline_adapter_contracts.py"
+      ],
+      "key_gaps": [
+        "Rent is now clearer, but carry-offset and adjusted rent confidence still remain implicit."
+      ],
+      "recommended_fix": "Promote rent-vs-carry and confidence downgrade signals into visible labeled metrics."
+    }
+  ],
+  "forwarding_matrix": [
+    {
+      "source_component": "valuation",
+      "session_slot": "last_decision_view",
+      "sse_event": "verdict",
+      "ui_component": "VerdictCard",
+      "narrative_mention": "decision recommendation",
+      "status": "full"
+    },
+    {
+      "source_component": "town_development_index",
+      "session_slot": "last_town_summary",
+      "sse_event": "town_summary",
+      "ui_component": "TownSummaryCard",
+      "narrative_mention": "town backdrop",
+      "status": "partial"
+    },
+    {
+      "source_component": "valuation",
+      "session_slot": "last_comps_preview",
+      "sse_event": "comps_preview",
+      "ui_component": "CompsPreviewCard",
+      "narrative_mention": "comp support",
+      "status": "full"
+    },
+    {
+      "source_component": "valuation",
+      "session_slot": "last_value_thesis_view",
+      "sse_event": "value_thesis",
+      "ui_component": "ValueThesisCard",
+      "narrative_mention": "value gap explanation",
+      "status": "full"
+    },
+    {
+      "source_component": "risk_model",
+      "session_slot": "last_risk_view",
+      "sse_event": "risk_profile",
+      "ui_component": "RiskProfileCard",
+      "narrative_mention": "risk narrative",
+      "status": "full"
+    },
+    {
+      "source_component": "carry_cost",
+      "session_slot": "last_strategy_view",
+      "sse_event": "strategy_path",
+      "ui_component": "StrategyPathCard",
+      "narrative_mention": "best path",
+      "status": "partial"
+    },
+    {
+      "source_component": "rental_option",
+      "session_slot": "last_rent_outlook_view",
+      "sse_event": "rent_outlook",
+      "ui_component": "RentOutlookCard",
+      "narrative_mention": "rent setup",
+      "status": "full"
+    },
+    {
+      "source_component": "resale_scenario",
+      "session_slot": "last_projection_view",
+      "sse_event": "scenario_table",
+      "ui_component": "ScenarioTable",
+      "narrative_mention": "scenario range",
+      "status": "full"
+    },
+    {
+      "source_component": "valuation",
+      "session_slot": "last_value_thesis_view",
+      "sse_event": "chart",
+      "ui_component": "ChartFrame",
+      "narrative_mention": "value gap chart",
+      "status": "full"
+    },
+    {
+      "source_component": "risk_model",
+      "session_slot": "last_risk_view",
+      "sse_event": "chart",
+      "ui_component": "ChartFrame",
+      "narrative_mention": "risk chart",
+      "status": "full"
+    },
+    {
+      "source_component": "rental_option",
+      "session_slot": "last_rent_outlook_view",
+      "sse_event": "chart",
+      "ui_component": "ChartFrame",
+      "narrative_mention": "rent burn / ramp chart",
+      "status": "full"
+    },
+    {
+      "source_component": "resale_scenario",
+      "session_slot": "last_projection_view",
+      "sse_event": "chart",
+      "ui_component": "ChartFrame",
+      "narrative_mention": "scenario fan",
+      "status": "full"
+    },
+    {
+      "source_component": "pipeline_adapter",
+      "session_slot": "tracked event order",
+      "sse_event": "modules_ran",
+      "ui_component": "Module badge row",
+      "narrative_mention": "module attribution",
+      "status": "partial"
+    },
+    {
+      "source_component": "listing_discovery",
+      "session_slot": "last_live_listing_results",
+      "sse_event": "listings",
+      "ui_component": "PropertyCarousel",
+      "narrative_mention": "focal property card",
+      "status": "full"
+    },
+    {
+      "source_component": "geocoder",
+      "session_slot": "n/a",
+      "sse_event": "map",
+      "ui_component": "InlineMap",
+      "narrative_mention": "map context",
+      "status": "full"
+    }
+  ],
+  "coherence_table": [
+    {
+      "bridge_or_unified_rule": "valuation_x_town",
+      "upstream_components": [
+        "valuation",
+        "town_development_index / scarcity priors"
+      ],
+      "expected_adjustment_or_gate": "Widen or tighten acceptable premium band by town strength.",
+      "current_behavior": "Feeds synthesis premium tolerance, not a dedicated UI band display.",
+      "coherence_score": 82,
+      "main_failure_mode": "Adjustment is real but under-explained to the user."
+    },
+    {
+      "bridge_or_unified_rule": "valuation_x_risk",
+      "upstream_components": [
+        "valuation",
+        "risk_model"
+      ],
+      "expected_adjustment_or_gate": "Demand extra discount when risk flags accumulate.",
+      "current_behavior": "Used in decision stance and recommendation wording.",
+      "coherence_score": 88,
+      "main_failure_mode": "Risk-adjusted discount is not surfaced as an explicit metric."
+    },
+    {
+      "bridge_or_unified_rule": "rent_x_cost",
+      "upstream_components": [
+        "carry_cost",
+        "rental_option / hold_to_rent"
+      ],
+      "expected_adjustment_or_gate": "Expose carry-offset ratio and break-even probability.",
+      "current_behavior": "Influences strategy classification and synthesis.",
+      "coherence_score": 84,
+      "main_failure_mode": "Named bridge outputs are still mostly hidden from the UI."
+    },
+    {
+      "bridge_or_unified_rule": "rent_x_risk",
+      "upstream_components": [
+        "rental_option / hold_to_rent",
+        "legal_confidence",
+        "rent_stabilization",
+        "risk_model"
+      ],
+      "expected_adjustment_or_gate": "Downgrade rent confidence when legal or regulatory risks weaken realism.",
+      "current_behavior": "Feeds synthesis caution but not a strong visible rent-confidence indicator.",
+      "coherence_score": 80,
+      "main_failure_mode": "Bridge value is trapped in synthesis rather than shown directly."
+    },
+    {
+      "bridge_or_unified_rule": "scenario_x_risk",
+      "upstream_components": [
+        "resale_scenario / arv_model / margin_sensitivity",
+        "risk_model"
+      ],
+      "expected_adjustment_or_gate": "Translate scenario assumptions into fragility and what-must-be-true conditions.",
+      "current_behavior": "Drives fragility inside Unified Intelligence.",
+      "coherence_score": 90,
+      "main_failure_mode": "Scenario visuals do not yet label fragility explicitly enough."
+    },
+    {
+      "bridge_or_unified_rule": "town_x_scenario",
+      "upstream_components": [
+        "resale_scenario / arv_model",
+        "town priors"
+      ],
+      "expected_adjustment_or_gate": "Mark appreciation assumptions as realistic, optimistic, or aggressive.",
+      "current_behavior": "Available to synthesis, not shown as a named chart/table attribute.",
+      "coherence_score": 76,
+      "main_failure_mode": "Scenario realism is under-surfaced."
+    },
+    {
+      "bridge_or_unified_rule": "primary_value_source",
+      "upstream_components": [
+        "strategy_classifier",
+        "valuation",
+        "carry_cost",
+        "scenario outputs"
+      ],
+      "expected_adjustment_or_gate": "Pick the dominant value story for recommendation framing.",
+      "current_behavior": "Attached to unified output and some value-thesis surfaces.",
+      "coherence_score": 86,
+      "main_failure_mode": "Source classification is visible but not yet a strong UI framing primitive."
+    },
+    {
+      "bridge_or_unified_rule": "conflict_detector",
+      "upstream_components": [
+        "valuation",
+        "risk_model",
+        "legal_confidence",
+        "rental_option",
+        "carry_cost"
+      ],
+      "expected_adjustment_or_gate": "Surface contradictions that should block a clean stance.",
+      "current_behavior": "Feeds trust/risk framing inside synthesis.",
+      "coherence_score": 78,
+      "main_failure_mode": "Conflicts are not exposed as their own first-class user section."
+    },
+    {
+      "bridge_or_unified_rule": "Unified Intelligence trust gate",
+      "upstream_components": [
+        "module outputs",
+        "bridge trace"
+      ],
+      "expected_adjustment_or_gate": "Collapse strong stances when trust is too low.",
+      "current_behavior": "Implemented deterministically in structured synthesis.",
+      "coherence_score": 92,
+      "main_failure_mode": "Trust logic is strong but still difficult to inspect in UI terms."
+    }
+  ],
+  "sample_case_results": [
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1008-14th-ave-belmar-nj-07719",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1600-l-street-belmar-nj-07719",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1228-briarwood-road-belmar-nj",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "526-west-end-ave",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "briarwood-rd-belmar",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "what do you think of [property]",
+      "expected_core_components": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "town_summary",
+        "comps_preview",
+        "value_thesis",
+        "strategy_path",
+        "rent_outlook",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "should I buy this",
+      "expected_core_components": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "verdict",
+        "town_summary",
+        "comps_preview",
+        "scenario_table",
+        "native_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "what does the CMA look like",
+      "expected_core_components": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "comps_preview",
+        "value_thesis",
+        "value_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [
+        "dedicated_cma_table"
+      ],
+      "status": "partial"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "what would a 10% price cut do",
+      "expected_core_components": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "scenario_table",
+        "scenario_fan",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "what's the rental potential",
+      "expected_core_components": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "rent_outlook",
+        "rent_burn",
+        "rent_ramp",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    },
+    {
+      "property_id": "1223-ocean-rd-bridgehampton-ny-11932",
+      "prompt": "what could go wrong",
+      "expected_core_components": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "actual_components_surfaced": [
+        "risk_profile",
+        "risk_chart",
+        "modules_ran"
+      ],
+      "missing_user_evidence": [],
+      "status": "pass"
+    }
+  ],
+  "aggregate_summaries": {
+    "row_counts": {
+      "module": 14,
+      "bridge": 8,
+      "ui_surface": 11,
+      "unified": 1
+    },
+    "average_health_by_row_type": {
+      "module": 59,
+      "bridge": 76,
+      "ui_surface": 80,
+      "unified": 86
+    },
+    "sample_case_status_counts": {
+      "pass": 30,
+      "partial": 6,
+      "fail": 0
+    }
+  },
+  "top_priority_fixes": [
+    {
+      "component": "rent_stabilization",
+      "row_type": "module",
+      "improvement_priority": 62,
+      "top_gap": "**Hard crash on thin inputs.** [test_thin_inputs_crash_today](../../tests/modules/test_rent_stabilization_isolated.py#L30) locks in a `TypeError: income_support module payload is not an IncomeAgentOutput` when property_data lacks `purchase_price`. This is the worst failure mode in the Phase 2 sweep \u2014 a production data edge case will crash the whole analysis.",
+      "recommended_fix": "**Phase 3 (highest priority):** Make `IncomeSupportModule` robust to missing `purchase_price`. Either normalize in intake or guard in the scoped runner."
+    },
+    {
+      "component": "confidence",
+      "row_type": "module",
+      "improvement_priority": 60,
+      "top_gap": "Module output is weakly represented or invisible in current user-facing surfaces.",
+      "recommended_fix": "Fix \u2014 replace with real trust-calibration rollup in Phase 5"
+    },
+    {
+      "component": "legal_confidence",
+      "row_type": "module",
+      "improvement_priority": 55,
+      "top_gap": "**Output is stranded.** No rent, risk, or valuation module consumes `legality_evidence`. The module produces a meaningful signal (2 warnings fire on the unique-property fixture) but nothing acts on it.",
+      "recommended_fix": "**Phase 3:** Replace hardcoded 0.72 / 0.48 in `PropertyDataQualityModule` with field-coverage scoring."
+    },
+    {
+      "component": "hold_to_rent",
+      "row_type": "module",
+      "improvement_priority": 53,
+      "top_gap": "Module output is weakly represented or invisible in current user-facing surfaces.",
+      "recommended_fix": "Fix \u2014 promote to a real `rent_x_cost` bridge (carry_offset_ratio, break-even probability)"
+    },
+    {
+      "component": "renovation_impact",
+      "row_type": "module",
+      "improvement_priority": 52,
+      "top_gap": "Module output is weakly represented or invisible in current user-facing surfaces.",
+      "recommended_fix": "Keep \u2014 solid standalone; needs bridge to risk for execution-dependence"
+    },
+    {
+      "component": "resale_scenario",
+      "row_type": "module",
+      "improvement_priority": 51,
+      "top_gap": "**Confidence is insensitive to fragile financing.** Normal and fragile fixtures produce identical ~0.6 confidence.",
+      "recommended_fix": "**Phase 4:** `town_x_scenario` bridge \u2014 adjust bull/bear spread using town liquidity + scarcity signal."
+    },
+    {
+      "component": "rental_option",
+      "row_type": "module",
+      "improvement_priority": 48,
+      "top_gap": "Declared dependency chain is not being meaningfully consumed: valuation / **not used**.",
+      "recommended_fix": "Fix \u2014 actually use valuation output or drop dep"
+    },
+    {
+      "component": "risk_model",
+      "row_type": "module",
+      "improvement_priority": 46,
+      "top_gap": "**Confidence is constant (~0.72) across normal / contradictory / fragile inputs.** This is *the* silo signature. The harness locks it in with `assertEqual(normal, contradictory)` so the moment Phase 4 wires real inputs, the test goes red.",
+      "recommended_fix": "**Phase 4 (highest priority):** Implement `valuation_x_risk` bridge. Risk must read valuation's premium_vs_comps, liquidity_signal, comp_coverage."
+    },
+    {
+      "component": "arv_model",
+      "row_type": "module",
+      "improvement_priority": 44,
+      "top_gap": "Module output is weakly represented or invisible in current user-facing surfaces.",
+      "recommended_fix": "Keep \u2014 mostly fine; add comp-coverage trust flag"
+    },
+    {
+      "component": "carry_cost",
+      "row_type": "module",
+      "improvement_priority": 44,
+      "top_gap": "None",
+      "recommended_fix": "Fix \u2014 expose break-even rent + owner-occ vs investor cases as first-class"
+    }
+  ]
+}

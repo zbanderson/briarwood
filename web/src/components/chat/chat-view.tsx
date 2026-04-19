@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MapPin, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Composer } from "./composer";
@@ -26,6 +26,7 @@ export function ChatView({
   const router = useRouter();
   const [draft, setDraft] = useState("");
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const pendingNavigationIdRef = useRef<string | null>(null);
   // Separate from selectedListing: the panel can close while the pin persists,
   // and the pin carries across subsequent typed turns until the user dismisses.
   const [pinnedListing, setPinnedListing] = useState<Listing | null>(null);
@@ -34,10 +35,16 @@ export function ChatView({
     initialMessages,
     conversationId,
     onConversationCreated: (id) => {
-      if (navigateOnCreate) {
-        // Replace so the URL reflects the new conversation without back-button noise.
-        router.replace(`/c/${id}`);
-      }
+      pendingNavigationIdRef.current = id;
+    },
+    onDone: () => {
+      if (!navigateOnCreate || conversationId) return;
+      const targetId = pendingNavigationIdRef.current;
+      if (!targetId) return;
+      pendingNavigationIdRef.current = null;
+      // Wait until the assistant message has been persisted before changing
+      // routes, or the new /c/[id] page can rehydrate with an empty turn.
+      router.replace(`/c/${targetId}`);
     },
   });
 
@@ -76,6 +83,7 @@ export function ChatView({
                 <MessageList
                   messages={messages}
                   onSelectListing={setSelectedListing}
+                  onPrompt={submitImmediate}
                 />
                 {!isStreaming && (
                   <SuggestionChips
