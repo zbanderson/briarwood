@@ -149,11 +149,14 @@ class AnthropicChatClient:
     """Anthropic Claude client implementing the ``LLMClient`` protocol.
 
     AUDIT 1.3.4: a parallel provider so narrative/critique prompts can be
-    routed to Claude without touching call sites. ``complete()`` is the
-    supported surface — the targeted migrations (decision_summary, edge,
-    risk) are all prose. ``complete_structured()`` returns ``None`` here so
-    consumers fall back deterministically; wiring Anthropic's tool-use
-    JSON mode is deferred until a structured prompt actually needs it.
+    routed to Claude without touching call sites.
+
+    AUDIT 1.3.3: ``complete_structured()`` is now wired via Anthropic's
+    tool-use JSON mode — the model is forced to emit the schema through a
+    single synthetic tool. Refusals (no tool_use block, or a tool_use block
+    with an empty ``input``) are treated as validation failures and return
+    ``None`` so callers fall back deterministically. Same contract as the
+    OpenAI path — transport, parse, and schema failures all return ``None``.
     """
 
     def __init__(self, model: str | None = None, timeout: float = 30.0) -> None:
@@ -205,17 +208,96 @@ class AnthropicChatClient:
         model: str | None = None,
         max_tokens: int = 600,
     ) -> T | None:
-        """Deferred: Anthropic tool-use JSON mode isn't wired yet. Return
-        ``None`` so callers fall back deterministically — same contract as
-        the OpenAI path returning ``None`` on validation/transport failure.
-        Do NOT fall through to OpenAI here; provider selection is the
-        caller's concern."""
-        _logger.warning(
-            "AnthropicChatClient.complete_structured not implemented for %s; "
-            "caller must fall back or route to OpenAI.",
-            schema.__name__,
-        )
-        return None
+        """Strict-schema call via Anthropic tool-use JSON mode.
+
+        AUDIT 1.3.3: the model is forced to emit ``schema`` through a
+        synthetic ``emit_<SchemaName>`` tool. We parse the single tool_use
+        block's ``input`` dict and pass it through ``schema.model_validate``.
+
+        Failure modes that return ``None`` (deterministic fallback):
+        - Transport failure (SDK raised)
+        - No ``tool_use`` block in response (model returned prose instead
+          of calling the tool — treat as refusal)
+        - ``tool_use.input`` is empty or non-dict (model called the tool
+          but declined to fill it — also a refusal)
+        - Pydantic validation failure
+        - Budget-exceeded propagates (same convention as ``complete``)
+        """
+        from briarwood.cost_guard import get_guard
+        guard = get_guard()
+        guard.check_anthropic()
+
+        use_model = model or self._model
+        tool_name = f"emit_{schema.__name__}"
+        try:
+            response = self._client.messages.create(
+                model=use_model,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                max_tokens=max_tokens,
+                tools=[
+                    {
+                        "name": tool_name,
+                        "description": (
+                            f"Emit a {schema.__name__} payload. Call this tool "
+                            "exactly once with all required fields populated."
+                        ),
+                        "input_schema": schema.model_json_schema(),
+                    }
+                ],
+                tool_choice={"type": "tool", "name": tool_name},
+            )
+        except Exception as exc:
+            _logger.warning(
+                "Anthropic structured call transport failed (%s): %s",
+                schema.__name__,
+                exc,
+            )
+            return None
+
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            guard.record_anthropic(
+                model=use_model,
+                input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+            )
+
+        # Find the tool_use block. Anthropic returns a list of content blocks;
+        # for tool_choice={"type":"tool",...} the model is supposed to emit
+        # exactly one tool_use. Walk the list defensively — the SDK may also
+        # return text blocks alongside (explanations) that we ignore.
+        blocks = getattr(response, "content", None) or []
+        payload: dict[str, Any] | None = None
+        for block in blocks:
+            if getattr(block, "type", None) != "tool_use":
+                continue
+            if getattr(block, "name", None) != tool_name:
+                continue
+            candidate = getattr(block, "input", None)
+            if isinstance(candidate, dict) and candidate:
+                payload = candidate
+                break
+
+        if payload is None:
+            # No tool_use block, or the model called the tool with an empty
+            # input dict. Anthropic surfaces schema refusals this way — the
+            # model is declining mid-generation. Treat as validation failure.
+            _logger.warning(
+                "Anthropic structured call refused schema (%s)",
+                schema.__name__,
+            )
+            return None
+
+        try:
+            return schema.model_validate(payload)
+        except ValidationError as exc:
+            _logger.warning(
+                "Anthropic structured call failed schema (%s): %s",
+                schema.__name__,
+                exc,
+            )
+            return None
 
 
 def default_client() -> LLMClient | None:

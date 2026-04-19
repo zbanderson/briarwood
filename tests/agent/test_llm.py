@@ -174,17 +174,145 @@ class AnthropicChatClientTests(unittest.TestCase):
 
         self.assertEqual(out, "")
 
-    def test_complete_structured_returns_none_unimplemented(self) -> None:
-        """Deferred path returns ``None`` — same deterministic-fallback
-        contract as the OpenAI path on failure. Callers must not assume
-        the return is populated."""
+    def _structured_schema(self):
         from pydantic import BaseModel
 
         class _S(BaseModel):
-            x: int
+            verdict: str
+            count: int
 
+        return _S
+
+    def _tool_use_block(self, name: str, input_payload: dict) -> MagicMock:
+        block = MagicMock()
+        block.type = "tool_use"
+        block.name = name
+        block.input = input_payload
+        return block
+
+    def _text_block(self, text: str) -> MagicMock:
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        # Explicitly make `name`/`input` absent so the structured-parser
+        # doesn't accidentally treat a text block as tool_use.
+        del block.name
+        del block.input
+        return block
+
+    def test_complete_structured_happy_path_validates_payload(self) -> None:
+        """AUDIT 1.3.3: tool_use block → Pydantic-validated model instance."""
+        schema = self._structured_schema()
         client = self._make_client()
-        self.assertIsNone(client.complete_structured(system="s", user="u", schema=_S))
+        resp = MagicMock()
+        resp.content = [
+            self._tool_use_block("emit__S", {"verdict": "keep", "count": 3})
+        ]
+        resp.usage = MagicMock(input_tokens=42, output_tokens=17)
+        client._client.messages.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=schema)
+
+        self.assertIsNotNone(out)
+        self.assertEqual(out.verdict, "keep")
+        self.assertEqual(out.count, 3)
+        guard.record_anthropic.assert_called_once()
+
+    def test_complete_structured_returns_none_on_refusal_no_tool_use(self) -> None:
+        """AUDIT 1.3.3: the model responded with prose only (no tool_use).
+        Treat as refusal — do not raise, return ``None`` so caller falls back."""
+        schema = self._structured_schema()
+        client = self._make_client()
+        resp = MagicMock()
+        resp.content = [self._text_block("I can't answer that.")]
+        resp.usage = MagicMock(input_tokens=10, output_tokens=4)
+        client._client.messages.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=schema)
+
+        self.assertIsNone(out)
+
+    def test_complete_structured_returns_none_on_empty_tool_input(self) -> None:
+        """AUDIT 1.3.3: tool_use with empty input dict is Anthropic's
+        in-schema refusal signal. Must be treated the same as no tool_use —
+        validation failure, not an exception."""
+        schema = self._structured_schema()
+        client = self._make_client()
+        resp = MagicMock()
+        resp.content = [self._tool_use_block("emit__S", {})]
+        resp.usage = MagicMock(input_tokens=10, output_tokens=2)
+        client._client.messages.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=schema)
+
+        self.assertIsNone(out)
+
+    def test_complete_structured_returns_none_on_schema_failure(self) -> None:
+        """Missing required field → Pydantic ValidationError → ``None``."""
+        schema = self._structured_schema()
+        client = self._make_client()
+        resp = MagicMock()
+        resp.content = [self._tool_use_block("emit__S", {"verdict": "keep"})]
+        resp.usage = MagicMock(input_tokens=10, output_tokens=4)
+        client._client.messages.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=schema)
+
+        self.assertIsNone(out)
+
+    def test_complete_structured_returns_none_on_transport_failure(self) -> None:
+        schema = self._structured_schema()
+        client = self._make_client()
+        client._client.messages.create.side_effect = RuntimeError("network")
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            out = client.complete_structured(system="s", user="u", schema=schema)
+
+        self.assertIsNone(out)
+
+    def test_complete_structured_raises_on_budget_exceeded(self) -> None:
+        schema = self._structured_schema()
+        client = self._make_client()
+        from briarwood.cost_guard import BudgetExceeded
+
+        guard = MagicMock()
+        guard.check_anthropic.side_effect = BudgetExceeded("cap")
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            with self.assertRaises(BudgetExceeded):
+                client.complete_structured(system="s", user="u", schema=schema)
+
+        client._client.messages.create.assert_not_called()
+
+    def test_complete_structured_honors_model_override(self) -> None:
+        """The ``model`` kwarg overrides the client's default for this call."""
+        schema = self._structured_schema()
+        client = self._make_client()
+        resp = MagicMock()
+        resp.content = [self._tool_use_block("emit__S", {"verdict": "keep", "count": 1})]
+        resp.usage = MagicMock(input_tokens=5, output_tokens=2)
+        client._client.messages.create.return_value = resp
+
+        guard = MagicMock()
+        with patch("briarwood.cost_guard.get_guard", return_value=guard):
+            client.complete_structured(
+                system="s", user="u", schema=schema, model="claude-opus-4-7"
+            )
+
+        kwargs = client._client.messages.create.call_args.kwargs
+        self.assertEqual(kwargs["model"], "claude-opus-4-7")
+        guard.record_anthropic.assert_called_once()
+        self.assertEqual(
+            guard.record_anthropic.call_args.kwargs["model"], "claude-opus-4-7"
+        )
 
 
 class CostGuardAnthropicTests(unittest.TestCase):
