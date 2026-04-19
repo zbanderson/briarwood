@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import logging
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 import briarwood  # noqa: F401 — side-effect: loads .env so OPENAI_API_KEY is available
 from briarwood.agent.dispatch import dispatch
@@ -33,6 +33,7 @@ from briarwood.agent.llm import LLMClient, default_client
 from briarwood.agent.presentation_advisor import advise_visual_surfaces
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
+from briarwood.routing_schema import DecisionStance
 from briarwood.agent.tools import (
     _existing_or_slugified_property_id,
     _json_ready,
@@ -522,6 +523,21 @@ class _DecisionView(BaseModel):
     state: str | None = None
     decision_stance: str | None = None
     primary_value_source: str | None = None
+
+    @field_validator("decision_stance")
+    @classmethod
+    def _stance_must_be_known(cls, value: str | None) -> str | None:
+        """AUDIT O.7: reject legacy decision-engine labels (BUY / LEAN BUY /
+        NEUTRAL / LEAN PASS / AVOID from briarwood.decision_engine, used only
+        by the Dash + reports stack). If one ever appears on the session view,
+        surface it as a validation error so the projector falls back to an
+        empty verdict rather than letting an unknown vocabulary reach the UI."""
+        if value is None:
+            return None
+        allowed = {s.value for s in DecisionStance}
+        if value not in allowed:
+            raise ValueError(f"unknown decision_stance: {value!r}")
+        return value
     ask_price: float | None = None
     all_in_basis: float | None = None
     fair_value_base: float | None = None

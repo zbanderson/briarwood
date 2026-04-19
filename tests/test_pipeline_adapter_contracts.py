@@ -794,6 +794,31 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertEqual(payload["trust_flags"], [])
         self.assertEqual(payload["trust_summary"], {})
 
+    def test_legacy_decision_engine_labels_are_rejected(self) -> None:
+        """AUDIT O.7: briarwood.decision_engine emits BUY / LEAN BUY / NEUTRAL
+        / LEAN PASS / AVOID — a separate vocabulary used only by the Dash and
+        reports stack. The new SSE pipeline must never render those as a
+        stance. Any such label triggers the validation fallback, same path
+        as any other shape drift."""
+        for legacy_label in ("BUY", "LEAN BUY", "NEUTRAL", "LEAN PASS", "AVOID"):
+            view = self._full_view()
+            view["decision_stance"] = legacy_label
+            payload = _verdict_from_view(view)
+            # Fallback path — no partial pollution of the verdict.
+            self.assertIsNone(payload["stance"], f"{legacy_label!r} should be rejected")
+            self.assertIsNone(payload["address"])
+
+    def test_known_stance_values_round_trip(self) -> None:
+        """Every DecisionStance value must survive validation — otherwise the
+        allowlist is drifting from the enum."""
+        from briarwood.routing_schema import DecisionStance
+
+        for stance in DecisionStance:
+            view = self._full_view()
+            view["decision_stance"] = stance.value
+            payload = _verdict_from_view(view)
+            self.assertEqual(payload["stance"], stance.value)
+
 
 class RiskProfileEventShapeTests(unittest.TestCase):
     """AUDIT O.6: risk_profile is emitted by splatting `session.last_risk_view`
