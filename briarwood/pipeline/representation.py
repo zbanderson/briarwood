@@ -29,11 +29,37 @@ import json
 import re
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from briarwood.agent.llm import LLMClient
 from briarwood.pipeline.session import PipelineSession
 
 
 _NUMBER_PATTERN = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+class RepresentationClaim(BaseModel):
+    """One validated claim. `confidence` is clamped to [0, 1] downstream."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    supported: bool
+    evidence_refs: list[str] = Field(default_factory=list)
+    confidence: float = 0.5
+
+
+class RepresentationResponse(BaseModel):
+    """Strict schema for claim validation against evidence.
+
+    AUDIT 1.2.2: replaces hand-rolled JSON parsing + normalization with a
+    declared Pydantic shape. Fence-wrapped JSON no longer needs string
+    surgery — the strict API mode returns a clean object."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    claims: list[RepresentationClaim] = Field(default_factory=list)
+    summary: str = ""
 
 
 class RepresentationAgent:
@@ -66,25 +92,23 @@ class RepresentationAgent:
 
         payload = {"claims": claims, "evidence": evidence}
         try:
-            raw = self._llm.complete(
+            result = self._llm.complete_structured(
                 system=(
                     "You validate factual claims against specialist model "
                     "evidence. For each claim, decide whether any evidence "
-                    "entry supports it. Respond with JSON only: "
-                    '{"claims":[{"text":str,"supported":bool,'
-                    '"evidence_refs":[model_name,...],'
-                    '"confidence":0..1}],"summary":str}.'
+                    "entry supports it and list the owning model names as "
+                    "evidence_refs. confidence is a float in [0, 1]."
                 ),
                 user=json.dumps(payload, default=str),
-                max_tokens=400,
+                schema=RepresentationResponse,
+                max_tokens=500,
             )
         except Exception:
             return None
 
-        parsed = _parse_llm_json(raw)
-        if parsed is None:
+        if result is None:
             return None
-        return _normalize_representation(parsed, claims)
+        return _normalize_representation(result, claims)
 
 
 def _extract_claims(session: PipelineSession) -> list[str]:
@@ -200,56 +224,31 @@ def _format_number(value: int | float) -> str:
     return str(value)
 
 
-def _parse_llm_json(raw: str) -> dict[str, Any] | None:
-    if not isinstance(raw, str) or not raw.strip():
-        return None
-    candidate = raw.strip()
-    # Strip common fenced-code wrappers the model sometimes emits.
-    if candidate.startswith("```"):
-        candidate = candidate.strip("`")
-        if candidate.lower().startswith("json"):
-            candidate = candidate[4:]
-    try:
-        parsed = json.loads(candidate)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(parsed, dict):
-        return None
-    return parsed
-
-
 def _normalize_representation(
-    parsed: dict[str, Any],
+    result: RepresentationResponse,
     fallback_claims: list[str],
 ) -> dict[str, Any]:
-    raw_claims = parsed.get("claims")
-    normalized: list[dict[str, Any]] = []
-    if isinstance(raw_claims, list):
-        for entry in raw_claims:
-            if not isinstance(entry, dict):
-                continue
-            text = entry.get("text")
-            if not isinstance(text, str) or not text.strip():
-                continue
-            refs_raw = entry.get("evidence_refs") or []
-            refs = [r for r in refs_raw if isinstance(r, str)] if isinstance(refs_raw, list) else []
-            confidence_raw = entry.get("confidence")
-            confidence = (
-                float(confidence_raw)
-                if isinstance(confidence_raw, (int, float))
-                else 0.5
-            )
-            normalized.append(
-                {
-                    "text": text.strip(),
-                    "supported": bool(entry.get("supported")),
-                    "evidence_refs": refs,
-                    "confidence": max(0.0, min(1.0, confidence)),
-                }
-            )
+    """Apply post-validation invariants the schema alone can't express:
+    trim text, clamp confidence, drop empty-text entries, backfill summary
+    from counts, and synthesize an unsupported-claims payload when the LLM
+    returned an empty list (so callers can detect 'nothing usable' and
+    route to the deterministic fallback upstream)."""
 
-    summary_raw = parsed.get("summary")
-    summary = summary_raw.strip() if isinstance(summary_raw, str) else ""
+    normalized: list[dict[str, Any]] = []
+    for claim in result.claims:
+        text = claim.text.strip()
+        if not text:
+            continue
+        normalized.append(
+            {
+                "text": text,
+                "supported": claim.supported,
+                "evidence_refs": list(claim.evidence_refs),
+                "confidence": max(0.0, min(1.0, float(claim.confidence))),
+            }
+        )
+
+    summary = result.summary.strip()
     if not summary:
         supported = sum(1 for c in normalized if c["supported"])
         summary = (

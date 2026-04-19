@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import unittest
 
-from briarwood.agent.router import AnswerType, classify
+from briarwood.agent.router import AnswerType, RouterClassification, classify
 
 
 # Only patterns that should hit the CACHE (no LLM needed).
@@ -55,18 +55,22 @@ LLM_CANNED: list[tuple[str, AnswerType]] = [
 
 
 class ScriptedLLM:
-    """Fake LLM that returns a pre-computed JSON classification per input."""
+    """Fake LLM that returns a pre-computed classification per input.
+
+    After AUDIT 1.2.2 the router uses `complete_structured` with a Pydantic
+    schema, so the fake returns `RouterClassification` instances directly."""
 
     def __init__(self, routing: dict[str, AnswerType]):
         self.routing = routing
         self.calls: list[str] = []
 
     def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+        raise AssertionError("router should use complete_structured, not complete")
+
+    def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
         self.calls.append(user)
-        answer = self.routing.get(user)
-        if answer is None:
-            return '{"answer_type": "lookup", "reason": "unmatched"}'
-        return f'{{"answer_type": "{answer.value}", "reason": "scripted"}}'
+        answer = self.routing.get(user, AnswerType.LOOKUP)
+        return schema(answer_type=answer, reason="scripted")
 
 
 class CacheRuleTests(unittest.TestCase):
@@ -75,6 +79,9 @@ class CacheRuleTests(unittest.TestCase):
 
         class UnusedLLM:
             def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+                raise AssertionError("LLM must not be called for cache hits")
+
+            def complete_structured(self, **_kwargs) -> None:
                 raise AssertionError("LLM must not be called for cache hits")
 
         misses: list[tuple[str, AnswerType, AnswerType]] = []
@@ -111,15 +118,24 @@ class LLMClassifyTests(unittest.TestCase):
 
         class ChitChatLLM:
             def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
-                return '{"answer_type": "chitchat", "reason": "unclear"}'
+                raise AssertionError("router should use complete_structured")
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                return schema(answer_type=AnswerType.CHITCHAT, reason="unclear")
 
         decision = classify("ruminate on this property", client=ChitChatLLM())
         self.assertIs(decision.answer_type, AnswerType.BROWSE)
 
     def test_absurd_llm_response_falls_back_to_default(self) -> None:
+        """AUDIT 1.2.2: the structured path returns `None` on schema /
+        transport failure, and the router defaults to LOOKUP."""
+
         class BadLLM:
             def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
-                return "totally not json"
+                raise AssertionError("router should use complete_structured")
+
+            def complete_structured(self, **_kwargs) -> None:
+                return None
 
         decision = classify("ruminate on this property", client=BadLLM())
         self.assertIs(decision.answer_type, AnswerType.LOOKUP)

@@ -1,14 +1,44 @@
 from __future__ import annotations
 
-import json
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict
 
 from api.prompts import load_prompt
 from briarwood.agent.composer import compose_contract_response
 from briarwood.agent.llm import LLMClient
 
-_VISUAL_SECTIONS = {"value", "cma", "rent", "scenario", "risk", "trust"}
-_SURFACE_CHOICES = {"chart_first", "table_first", "card_first"}
+
+class SectionAdvice(BaseModel):
+    """Bounded presentation guidance for one visual section.
+
+    All fields are optional — advisor may skip sections it has nothing to add
+    for. `preferred_surface` is a closed enum; the strict JSON-schema call
+    rejects anything outside the choices at the API level."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = None
+    summary: str | None = None
+    companion: str | None = None
+    preferred_surface: Literal["chart_first", "table_first", "card_first"] | None = None
+
+
+class VisualAdvice(BaseModel):
+    """Strict schema for `advise_visual_surfaces`.
+
+    AUDIT 1.2.2: replaces hand-rolled `_parse_visual_advice` (strip fences,
+    whitelist keys, whitelist enum values). The schema bakes those invariants
+    into the JSON contract itself."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: SectionAdvice | None = None
+    cma: SectionAdvice | None = None
+    rent: SectionAdvice | None = None
+    scenario: SectionAdvice | None = None
+    risk: SectionAdvice | None = None
+    trust: SectionAdvice | None = None
 
 
 def compose_browse_surface(
@@ -50,14 +80,34 @@ def advise_visual_surfaces(
     if llm is None or not payload:
         return None
     try:
-        raw = llm.complete(
+        advice = llm.complete_structured(
             system=load_prompt("visual_advisor"),
-            user=f"payload_json: {json.dumps(payload, sort_keys=True, default=str)}",
+            user=f"payload_json: {payload!r}",
+            schema=VisualAdvice,
             max_tokens=600,
-        ).strip()
+        )
     except Exception:
         return None
-    return _parse_visual_advice(raw)
+    if advice is None:
+        return None
+    return _flatten_advice(advice)
+
+
+def _flatten_advice(advice: VisualAdvice) -> dict[str, dict[str, str]] | None:
+    """Convert the Pydantic instance into the `{section: {field: str}}` shape
+    callers expect. Sections with no populated fields are dropped."""
+    out: dict[str, dict[str, str]] = {}
+    for section_name, section in advice.model_dump(exclude_none=True).items():
+        if not isinstance(section, dict):
+            continue
+        cleaned = {
+            key: value.strip()
+            for key, value in section.items()
+            if isinstance(value, str) and value.strip()
+        }
+        if cleaned:
+            out[section_name] = cleaned
+    return out or None
 
 
 def compose_section_followup(
@@ -91,40 +141,9 @@ def compose_section_followup(
     )
 
 
-def _parse_visual_advice(raw: str) -> dict[str, dict[str, str]] | None:
-    if not raw:
-        return None
-    candidate = raw.strip()
-    if candidate.startswith("```"):
-        candidate = candidate.strip("`")
-        if candidate.lower().startswith("json"):
-            candidate = candidate[4:]
-        candidate = candidate.strip()
-    try:
-        parsed = json.loads(candidate)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(parsed, dict):
-        return None
-    out: dict[str, dict[str, str]] = {}
-    for key, value in parsed.items():
-        if key not in _VISUAL_SECTIONS or not isinstance(value, dict):
-            continue
-        normalized: dict[str, str] = {}
-        for field in ("title", "summary", "companion", "preferred_surface"):
-            field_value = value.get(field)
-            if not isinstance(field_value, str) or not field_value.strip():
-                continue
-            cleaned = field_value.strip()
-            if field == "preferred_surface" and cleaned not in _SURFACE_CHOICES:
-                continue
-            normalized[field] = cleaned
-        if normalized:
-            out[key] = normalized
-    return out or None
-
-
 __all__ = [
+    "SectionAdvice",
+    "VisualAdvice",
     "advise_visual_surfaces",
     "compose_browse_surface",
     "compose_section_followup",

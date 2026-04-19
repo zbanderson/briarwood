@@ -24,10 +24,11 @@ decisive.
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict
 
 from briarwood.agent.llm import LLMClient
 
@@ -212,16 +213,33 @@ _PROJECTION_OVERRIDE_HINT_RE = re.compile(
 )
 
 
+class RouterClassification(BaseModel):
+    """Strict JSON schema for the router's intent classification.
+
+    AUDIT 1.2.2: replaces a `json.loads` + manual enum coercion with a
+    declared Pydantic shape. OpenAI's `strict: true` JSON-schema mode
+    enforces the contract at the API level; model_validate catches any
+    residual drift (e.g., older model rolled back to permissive mode)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    answer_type: AnswerType
+    reason: str = ""
+
+
 def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
     try:
-        raw = client.complete(system=_LLM_SYSTEM, user=text, max_tokens=80)
+        result = client.complete_structured(
+            system=_LLM_SYSTEM,
+            user=text,
+            schema=RouterClassification,
+            max_tokens=80,
+        )
     except Exception:
         return None
-    try:
-        payload = json.loads(raw.strip())
-        guess = AnswerType(payload["answer_type"])
-    except (ValueError, KeyError, json.JSONDecodeError):
+    if result is None:
         return None
+    guess = result.answer_type
     # Sanity guard: LLMs sometimes return CHITCHAT for real questions they
     # don't have a better bucket for. Default to BROWSE (quick read) unless
     # the text really is a greeting — safer than DECISION (full cascade).

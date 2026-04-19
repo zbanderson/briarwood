@@ -3,32 +3,64 @@ from __future__ import annotations
 import unittest
 
 from briarwood.agent.presentation_advisor import (
-    _parse_visual_advice,
+    SectionAdvice,
+    VisualAdvice,
+    advise_visual_surfaces,
     compose_browse_surface,
     compose_section_followup,
 )
 
 
+class _ScriptedStructuredLLM:
+    """Fake client for the AUDIT 1.2.2 structured path. Returns a pre-baked
+    `VisualAdvice` instance to the advisor."""
+
+    def __init__(self, advice: VisualAdvice | None) -> None:
+        self._advice = advice
+        self.calls: list[str] = []
+
+    def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+        raise AssertionError("advise_visual_surfaces must go through complete_structured")
+
+    def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+        self.calls.append(user)
+        return self._advice
+
+
 class PresentationAdvisorTests(unittest.TestCase):
-    def test_parse_visual_advice_accepts_bounded_json(self) -> None:
-        parsed = _parse_visual_advice(
-            """
-            {
-              "value": {
-                "title": "Ask vs fair value",
-                "summary": "The ask is running ahead of the current fair value read.",
-                "companion": "Pair this with the comp set.",
-                "preferred_surface": "chart_first"
-              },
-              "bogus": {
-                "title": "Ignore me"
-              }
-            }
-            """
+    def test_advise_visual_surfaces_returns_bounded_sections(self) -> None:
+        """The advisor should flatten a Pydantic `VisualAdvice` into the
+        `{section: {field: str}}` shape callers expect."""
+        advice = VisualAdvice(
+            value=SectionAdvice(
+                title="Ask vs fair value",
+                summary="The ask is running ahead of the current fair value read.",
+                companion="Pair this with the comp set.",
+                preferred_surface="chart_first",
+            )
         )
-        assert parsed is not None
-        self.assertEqual(parsed["value"]["title"], "Ask vs fair value")
-        self.assertNotIn("bogus", parsed)
+        llm = _ScriptedStructuredLLM(advice)
+        out = advise_visual_surfaces(llm=llm, payload={"anything": 1})
+        self.assertIsNotNone(out)
+        assert out is not None
+        self.assertEqual(out["value"]["title"], "Ask vs fair value")
+        self.assertEqual(out["value"]["preferred_surface"], "chart_first")
+        # Sections the advisor skipped must not appear.
+        self.assertNotIn("cma", out)
+
+    def test_advise_visual_surfaces_returns_none_on_validation_failure(self) -> None:
+        """Strict-mode failure surfaces as `None` from complete_structured;
+        the advisor propagates that so callers can skip visual advice."""
+        llm = _ScriptedStructuredLLM(advice=None)
+        out = advise_visual_surfaces(llm=llm, payload={"anything": 1})
+        self.assertIsNone(out)
+
+    def test_advise_visual_surfaces_drops_empty_sections(self) -> None:
+        """A section with only whitespace fields shouldn't reach callers."""
+        advice = VisualAdvice(value=SectionAdvice(title="   ", summary=""))
+        llm = _ScriptedStructuredLLM(advice)
+        out = advise_visual_surfaces(llm=llm, payload={"anything": 1})
+        self.assertIsNone(out)
 
     def test_compose_browse_surface_falls_back_without_llm(self) -> None:
         text, report = compose_browse_surface(

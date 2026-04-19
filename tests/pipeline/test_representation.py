@@ -1,15 +1,20 @@
 """Tests for the Representation Agent (claims validation).
 
 Covers both the deterministic fallback path (no LLM wired) and the
-LLM-backed path with a stub client, including malformed-JSON handling.
+LLM-backed path with a stub client. After AUDIT 1.2.2 the LLM path goes
+through `complete_structured` + Pydantic, so fakes return either a
+validated `RepresentationResponse` or `None` to simulate strict-mode failure.
 """
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-from briarwood.pipeline.representation import RepresentationAgent
+from briarwood.pipeline.representation import (
+    RepresentationAgent,
+    RepresentationClaim,
+    RepresentationResponse,
+)
 from briarwood.pipeline.session import PipelineSession
 
 
@@ -66,34 +71,40 @@ def test_no_claims_when_decision_empty() -> None:
 
 
 class _ScriptedLLM:
-    def __init__(self, response: str) -> None:
-        self.response = response
-        self.calls: list[dict[str, str]] = []
+    """AUDIT 1.2.2: structured path. Returns a pre-baked `RepresentationResponse`
+    (or `None` to simulate strict-mode / transport failure)."""
+
+    def __init__(self, response: RepresentationResponse | None) -> None:
+        self._response = response
+        self.calls: list[dict[str, Any]] = []
 
     def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
-        self.calls.append({"system": system, "user": user})
-        return self.response
+        raise AssertionError("representation agent must go through complete_structured")
+
+    def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+        self.calls.append({"system": system, "user": user, "schema": schema.__name__})
+        return self._response
 
 
 def test_llm_happy_path_returns_structured_claims() -> None:
-    payload = {
-        "claims": [
-            {
-                "text": "Cap rate projected at 0.065; cash flow 842.",
-                "supported": True,
-                "evidence_refs": ["income_model"],
-                "confidence": 0.91,
-            },
-            {
-                "text": "Base path holds.",
-                "supported": False,
-                "evidence_refs": [],
-                "confidence": 0.4,
-            },
+    response = RepresentationResponse(
+        claims=[
+            RepresentationClaim(
+                text="Cap rate projected at 0.065; cash flow 842.",
+                supported=True,
+                evidence_refs=["income_model"],
+                confidence=0.91,
+            ),
+            RepresentationClaim(
+                text="Base path holds.",
+                supported=False,
+                evidence_refs=[],
+                confidence=0.4,
+            ),
         ],
-        "summary": "1/2 claims backed.",
-    }
-    llm = _ScriptedLLM(json.dumps(payload))
+        summary="1/2 claims backed.",
+    )
+    llm = _ScriptedLLM(response)
     session = _session_with_decision(
         model_outputs={"income_model": {"cap_rate": 0.065}},
     )
@@ -108,8 +119,11 @@ def test_llm_happy_path_returns_structured_claims() -> None:
     assert result["summary"] == "1/2 claims backed."
 
 
-def test_llm_malformed_json_falls_back_to_deterministic() -> None:
-    llm = _ScriptedLLM("not json at all {{")
+def test_llm_failure_falls_back_to_deterministic() -> None:
+    """Strict-mode failure (schema violation, transport error, empty output)
+    surfaces as `None` from complete_structured. Agent must route to the
+    deterministic fallback."""
+    llm = _ScriptedLLM(response=None)
     session = _session_with_decision(
         rationale="Cap rate 0.065 on 500000 purchase.",
         model_outputs={"income_model": {"cap_rate": 0.065, "purchase_price": 500000}},
@@ -125,23 +139,34 @@ def test_llm_malformed_json_falls_back_to_deterministic() -> None:
     assert any(c["supported"] for c in result["claims"])
 
 
-def test_llm_fenced_json_is_unwrapped() -> None:
-    payload = {
-        "claims": [
-            {
-                "text": "Base path holds.",
-                "supported": False,
-                "evidence_refs": [],
-                "confidence": 0.3,
-            }
+def test_confidence_is_clamped_to_unit_interval() -> None:
+    """Pydantic allows `confidence` through as a float; downstream clamp
+    guarantees [0, 1] even if the LLM reports an out-of-range value."""
+    response = RepresentationResponse(
+        claims=[
+            RepresentationClaim(
+                text="Cap rate 0.065.",
+                supported=True,
+                evidence_refs=["income_model"],
+                confidence=1.7,
+            )
         ],
-        "summary": "0/1",
-    }
-    llm = _ScriptedLLM("```json\n" + json.dumps(payload) + "\n```")
+        summary="",
+    )
+    llm = _ScriptedLLM(response)
+    session = _session_with_decision(
+        model_outputs={"income_model": {"cap_rate": 0.065}},
+    )
+    result = RepresentationAgent(llm_client=llm).validate(session)
+    assert result["claims"][0]["confidence"] == 1.0
+
+
+def test_empty_claims_synthesizes_unsupported_fallback() -> None:
+    """If the LLM returns a well-formed but empty claim list, we backfill
+    with the original rationale marked unsupported — upstream can then
+    detect 'nothing usable' and escalate."""
+    llm = _ScriptedLLM(RepresentationResponse(claims=[], summary=""))
     session = _session_with_decision()
-
-    agent = RepresentationAgent(llm_client=llm)
-    result = agent.validate(session)
-
-    assert len(result["claims"]) == 1
-    assert result["claims"][0]["supported"] is False
+    result = RepresentationAgent(llm_client=llm).validate(session)
+    assert result["claims"], "fallback claims should be synthesized"
+    assert all(c["supported"] is False for c in result["claims"])
