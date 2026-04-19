@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any, Callable
@@ -11,6 +12,24 @@ from api.guardrails import (
     verify_response,
 )
 from briarwood.agent.llm import LLMClient
+from briarwood.cost_guard import BudgetExceeded
+
+_logger = logging.getLogger(__name__)
+
+# Minimal verifier-report shape used when the LLM is skipped due to budget
+# exhaustion AND no structured_inputs were supplied (so no real verifier ran).
+# Keeps the SSE `verifier_report` payload contract intact — the frontend can
+# detect the fallback via `budget_exceeded: True` without a new event type.
+_EMPTY_BUDGET_REPORT: dict[str, Any] = {
+    "tier": None,
+    "sentences_total": 0,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": False,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [],
+    "budget_exceeded": True,
+}
 
 # Stopgap for grounding markers emitted by the LLM (`[[Module:field:value]]`).
 # Step 6 parses these into structured anchor records upstream; we also strip
@@ -92,11 +111,21 @@ def _run_llm_with_verify(
     would empty the text entirely, the un-stripped draft is returned instead
     so the user still sees a rendered response.
     """
+    budget_exceeded = False
     try:
         raw = llm.complete(system=system, user=user, max_tokens=max_tokens).strip()
+    except BudgetExceeded as exc:
+        _logger.warning(
+            "OpenAI budget cap reached in composer — falling back to deterministic text: %s",
+            exc,
+        )
+        budget_exceeded = True
+        raw = ""
     except Exception:
         raw = ""
     if structured_inputs is None:
+        if budget_exceeded:
+            return "", dict(_EMPTY_BUDGET_REPORT)
         return (strip_grounding_markers(raw) if raw else ""), None
 
     report = verify_response(raw, structured_inputs, tier=tier)
@@ -116,6 +145,13 @@ def _run_llm_with_verify(
                     user=_regen_user_prompt(user, report),
                     max_tokens=max_tokens,
                 ).strip()
+            except BudgetExceeded as exc:
+                _logger.warning(
+                    "OpenAI budget cap reached during composer regen — keeping original draft: %s",
+                    exc,
+                )
+                budget_exceeded = True
+                raw2 = ""
             except Exception:
                 raw2 = ""
             if raw2:
@@ -138,6 +174,7 @@ def _run_llm_with_verify(
         cleaned = strip_grounding_markers(raw) if raw else ""
 
     report_dict = report.to_dict()
+    report_dict["budget_exceeded"] = budget_exceeded
     if strict:
         report_dict["strict_regen"] = {
             "enabled": True,

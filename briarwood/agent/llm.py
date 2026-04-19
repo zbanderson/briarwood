@@ -23,12 +23,14 @@ class OpenAIChatClient:
         self._model = model or os.environ.get("BRIARWOOD_AGENT_MODEL", "gpt-4o-mini")
 
     def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
-        from briarwood.cost_guard import BudgetExceeded, get_guard
+        from briarwood.cost_guard import get_guard
         guard = get_guard()
-        try:
-            guard.check_openai()
-        except BudgetExceeded:
-            return ""  # graceful degrade — dispatch has deterministic fallback
+        # Propagate BudgetExceeded to callers so they can distinguish
+        # "budget cap hit → fall back" from "LLM returned empty text".
+        # See AUDIT 1.2.3. The composer catches this explicitly and flags
+        # the verifier report; other call sites treat it as a generic
+        # failure via their existing broad except.
+        guard.check_openai()
 
         response = self._client.responses.create(
             model=self._model,

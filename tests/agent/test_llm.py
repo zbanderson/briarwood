@@ -50,16 +50,18 @@ class OpenAIChatClientTests(unittest.TestCase):
         guard.check_openai.assert_called_once()
         guard.record_openai.assert_called_once()
 
-    def test_complete_returns_empty_on_budget_exceeded(self) -> None:
+    def test_complete_raises_on_budget_exceeded(self) -> None:
+        """AUDIT 1.2.3: let BudgetExceeded propagate so the composer can
+        distinguish a budget-exhausted fallback from a blank LLM response."""
         client = self._make_client()
         from briarwood.cost_guard import BudgetExceeded
 
         guard = MagicMock()
         guard.check_openai.side_effect = BudgetExceeded("cap")
         with patch("briarwood.cost_guard.get_guard", return_value=guard):
-            out = client.complete(system="s", user="u")
+            with self.assertRaises(BudgetExceeded):
+                client.complete(system="s", user="u")
 
-        self.assertEqual(out, "")
         client._client.responses.create.assert_not_called()
 
     def test_complete_returns_empty_when_output_text_missing(self) -> None:
