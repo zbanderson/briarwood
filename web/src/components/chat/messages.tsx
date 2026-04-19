@@ -258,8 +258,69 @@ function AssistantMessage({
         )}
 
         {modulesRan.length > 0 && <ModuleBadges modules={modulesRan} />}
+
+        {message.critic && (
+          <CriticPanel critic={message.critic} shipped={message.content} />
+        )}
       </div>
     </div>
+  );
+}
+
+function CriticPanel({
+  critic,
+  shipped,
+}: {
+  critic: NonNullable<ChatMessage["critic"]>;
+  shipped: string;
+}) {
+  const a = critic.original_draft ?? "(no draft captured)";
+  const b = shipped;
+  const diverged = Boolean(critic.rewritten_text) && critic.rewritten_text !== a;
+  return (
+    <details className="mt-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] p-2 text-xs text-[var(--color-text-muted)]">
+      <summary className="cursor-pointer select-none font-mono">
+        critic: {critic.mode} · ran={String(critic.ran)}
+        {critic.verdict ? ` · ${critic.verdict}` : ""}
+        {critic.applied_rewrite ? " · applied" : ""}
+        {diverged ? " · diverged" : ""}
+      </summary>
+      <div className="mt-2 space-y-2 font-mono">
+        {critic.notes && (
+          <div>
+            <div className="text-[var(--color-text-faint)]">notes</div>
+            <div>{critic.notes}</div>
+          </div>
+        )}
+        {critic.numeric_check && (
+          <div>
+            <div className="text-[var(--color-text-faint)]">numeric_check</div>
+            <div>
+              ok={String(critic.numeric_check.ok)}
+              {critic.numeric_check.missing.length > 0
+                ? ` · missing=[${critic.numeric_check.missing.join(", ")}]`
+                : ""}
+            </div>
+          </div>
+        )}
+        <div>
+          <div className="text-[var(--color-text-faint)]">a) draft (without critic)</div>
+          <pre className="whitespace-pre-wrap">{a}</pre>
+        </div>
+        <div>
+          <div className="text-[var(--color-text-faint)]">
+            b) shipped {critic.applied_rewrite ? "(critic rewrite)" : "(draft)"}
+          </div>
+          <pre className="whitespace-pre-wrap">{b}</pre>
+        </div>
+        {critic.rewritten_text && !critic.applied_rewrite && (
+          <div>
+            <div className="text-[var(--color-text-faint)]">proposed rewrite (not applied)</div>
+            <pre className="whitespace-pre-wrap">{critic.rewritten_text}</pre>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

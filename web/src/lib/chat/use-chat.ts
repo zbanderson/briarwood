@@ -6,6 +6,7 @@ import type {
   ChatEvent,
   ComparisonTableEvent,
   CompsPreviewEvent,
+  CriticTelemetry,
   GroundingAnchor,
   Listing,
   ListingsEvent,
@@ -49,6 +50,7 @@ export type ChatMessage = {
   modulesRan?: ModuleAttribution[];
   groundingAnchors?: GroundingAnchor[];
   ungroundedDeclaration?: boolean;
+  critic?: CriticTelemetry;
   isStreaming?: boolean;
 };
 
@@ -346,9 +348,14 @@ export function useChat({
           // Surface in a side-panel later (Phase 3.5). No-op for now.
           break;
         case "verifier_report":
-          // Step 5 ships the verifier in advisory mode — payload is dev-side
-          // only (visible via DevTools network tab) so we deliberately don't
-          // surface it in the UI yet. Step 6+ may render counts inline.
+          if (event.critic) {
+            const criticPayload = event.critic;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsgId ? { ...m, critic: criticPayload } : m,
+              ),
+            );
+          }
           break;
         case "grounding_annotations":
           setMessages((prev) =>

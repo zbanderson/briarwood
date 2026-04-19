@@ -359,6 +359,21 @@ export type GroundingAnchor = {
   field: string;
   value: string;
 };
+export type CriticNumericCheck = {
+  ok: boolean;
+  missing: string[];
+};
+export type CriticTelemetry = {
+  enabled: boolean;
+  mode: "off" | "shadow" | "on";
+  ran: boolean;
+  original_draft?: string;
+  verdict?: "keep" | "revise" | "flag_only";
+  notes?: string;
+  rewritten_text?: string;
+  applied_rewrite?: boolean;
+  numeric_check?: CriticNumericCheck;
+};
 export type VerifierReportEvent = {
   type: "verifier_report";
   tier?: string | null;
@@ -368,6 +383,7 @@ export type VerifierReportEvent = {
   anchor_count: number;
   anchors?: GroundingAnchor[];
   violations: VerifierViolation[];
+  critic?: CriticTelemetry;
 };
 export type GroundingAnnotationsEvent = {
   type: "grounding_annotations";
