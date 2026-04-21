@@ -1,3 +1,16 @@
+"""DEPRECATED — scheduled for deletion 2026-04-22 (Wednesday).
+
+This module is the legacy verdict path. All remaining callers
+(`dash_app/quick_decision.py`, `dash_app/view_models.py`,
+`reports/sections/thesis_section.py`, `reports/sections/conclusion_section.py`)
+will migrate to `briarwood/projections/legacy_verdict.py` via the
+`AnalysisReport -> routed` adapter that lands Wednesday AM.
+
+DO NOT add new callers. DO NOT extend.
+The canonical verdict is `briarwood/synthesis/structured.py::build_unified_output()`.
+Display-layer projections live in `briarwood/projections/`.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict

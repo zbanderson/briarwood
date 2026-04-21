@@ -17,17 +17,10 @@ from briarwood.agents.income.finance import (
     calculate_loan_amount,
     calculate_monthly_principal_interest,
 )
-from briarwood.decision_engine import (
-    _carry_band,
-    _conviction,
-    _recommendation_from_bands,
-    _valuation_band,
-)
 from briarwood.risk_bar import (
     _carry_ratio_risk_score,
     _clamp_score,
     _monthly_shortfall_risk_score,
-    _risk_level,
 )
 from briarwood.schemas import AnalysisReport
 
@@ -108,17 +101,16 @@ def _recompute_at_price(
             else None
         )
 
-    # ── Recommendation (decision engine) ─────────────────────────────────
-    v_band = _valuation_band(fv_gap)
-    c_band = _carry_band(monthly_carry, income_support_ratio)
-    recommendation = _recommendation_from_bands(
+    v_band = _deal_curve_valuation_band(fv_gap)
+    c_band = _deal_curve_carry_band(monthly_carry, income_support_ratio)
+    recommendation = _deal_curve_recommendation_from_bands(
         valuation_band=v_band,
         carry_band=c_band,
         fair_value_gap=fv_gap,
         monthly_carry=monthly_carry,
         income_support_ratio=income_support_ratio,
     )
-    conviction = _conviction(
+    conviction = _deal_curve_conviction(
         recommendation=recommendation,
         valuation_band=v_band,
         carry_band=c_band,
@@ -192,13 +184,10 @@ def build_deal_curve(report: AnalysisReport) -> list[DealCurvePoint]:
     monthly_hoa = pi.monthly_hoa or 0.0
     maintenance_pct = 0.0  # mirrors IncomeAgent default when not provided
 
-    # Evidence quality (held constant)
-    from briarwood.decision_engine import _evidence_quality
-
     comp_mod = report.module_results.get("comparable_sales")
     pdq_mod = report.module_results.get("property_data_quality")
     town_mod = report.module_results.get("town_county_outlook")
-    evidence_quality = _evidence_quality(
+    evidence_quality = _deal_curve_evidence_quality(
         current_confidence=_as_float(getattr(cv, "confidence", None)) or 0.0,
         income_confidence=_as_float(getattr(income, "confidence", None)) or 0.0,
         comp_confidence=_as_float(
@@ -291,3 +280,156 @@ def extract_thresholds(curve: list[DealCurvePoint]) -> DealCurveThresholds:
         interesting=interesting,
         buy_below=buy_below,
     )
+
+
+# ── Price-point recomputation helpers ───────────────────────────────────────
+#
+# These helpers recompute a legacy-vocabulary verdict (BUY / LEAN BUY / NEUTRAL
+# / LEAN PASS / AVOID) at a candidate entry price. They were inlined here on
+# 2026-04-20 from the deleted ``briarwood.decision_engine`` module and renamed
+# with a ``_deal_curve_`` prefix to signal they are scoped to this module's
+# price-sensitivity analysis only.
+#
+# DO NOT import these from anywhere else. The canonical verdict system is
+# ``briarwood/synthesis/structured.py`` (``DecisionStance`` vocabulary); legacy
+# display labels come from ``briarwood/projections/legacy_verdict.py``.
+
+
+def _deal_curve_valuation_band(fair_value_gap: float | None) -> str:
+    if fair_value_gap is None:
+        return "unknown"
+    if fair_value_gap >= 0.12:
+        return "strong"
+    if fair_value_gap >= 0.05:
+        return "good"
+    if fair_value_gap > -0.08:
+        return "neutral"
+    if fair_value_gap > -0.15:
+        return "weak"
+    return "bad"
+
+
+def _deal_curve_carry_band(
+    monthly_carry: float | None, income_support_ratio: float | None
+) -> str:
+    if monthly_carry is None and income_support_ratio is None:
+        return "unknown"
+    if (
+        monthly_carry is not None
+        and monthly_carry >= 250
+    ) or (
+        income_support_ratio is not None and income_support_ratio >= 1.0
+    ):
+        return "strong"
+    if (
+        monthly_carry is not None
+        and monthly_carry >= -500
+    ) or (
+        income_support_ratio is not None and income_support_ratio >= 0.8
+    ):
+        return "ok"
+    if (
+        monthly_carry is not None
+        and monthly_carry <= -3000
+    ) or (
+        income_support_ratio is not None and income_support_ratio < 0.45
+    ):
+        return "bad"
+    if (
+        monthly_carry is not None
+        and monthly_carry <= -1500
+    ) or (
+        income_support_ratio is not None and income_support_ratio < 0.55
+    ):
+        return "weak"
+    return "mixed"
+
+
+def _deal_curve_recommendation_from_bands(
+    *,
+    valuation_band: str,
+    carry_band: str,
+    fair_value_gap: float | None,
+    monthly_carry: float | None,
+    income_support_ratio: float | None,
+) -> str:
+    if valuation_band in {"bad", "weak"} and carry_band in {"bad", "weak"}:
+        return "AVOID" if valuation_band == "bad" or carry_band == "bad" else "LEAN PASS"
+    if carry_band == "bad" and (fair_value_gap is None or fair_value_gap <= 0.05):
+        return "AVOID"
+    if valuation_band == "bad":
+        return "LEAN PASS"
+    if valuation_band == "strong" and carry_band in {"strong", "ok", "mixed"}:
+        return "BUY"
+    if valuation_band == "good" and carry_band in {"strong", "ok", "mixed"}:
+        return "LEAN BUY"
+    if valuation_band in {"strong", "good"} and carry_band in {"weak", "bad"}:
+        return "NEUTRAL"
+    if valuation_band == "neutral" and carry_band in {"strong", "ok"}:
+        return "NEUTRAL"
+    if valuation_band == "weak" and carry_band in {"strong", "ok"}:
+        return "NEUTRAL"
+    if (fair_value_gap is not None and fair_value_gap <= 0.0) and (
+        (monthly_carry is not None and monthly_carry < 0)
+        or (income_support_ratio is not None and income_support_ratio < 0.7)
+    ):
+        return "LEAN PASS"
+    return "NEUTRAL"
+
+
+def _deal_curve_conviction(
+    *,
+    recommendation: str,
+    valuation_band: str,
+    carry_band: str,
+    evidence_quality: float,
+) -> float:
+    anchor = {
+        "BUY": 0.82,
+        "LEAN BUY": 0.68,
+        "NEUTRAL": 0.50,
+        "LEAN PASS": 0.36,
+        "AVOID": 0.24,
+    }[recommendation]
+    strength = (
+        _deal_curve_band_strength(valuation_band) * 0.55
+        + _deal_curve_band_strength(carry_band) * 0.45
+    )
+    conviction = anchor * 0.65 + evidence_quality * 0.25 + abs(strength - 0.5) * 0.10
+    if evidence_quality < 0.35:
+        conviction = min(conviction, 0.58)
+    return _deal_curve_clamp(conviction)
+
+
+def _deal_curve_band_strength(band: str) -> float:
+    return {
+        "strong": 0.95,
+        "good": 0.78,
+        "neutral": 0.50,
+        "ok": 0.62,
+        "mixed": 0.42,
+        "weak": 0.24,
+        "bad": 0.08,
+        "unknown": 0.35,
+    }.get(band, 0.35)
+
+
+def _deal_curve_evidence_quality(
+    *,
+    current_confidence: float,
+    income_confidence: float,
+    comp_confidence: float,
+    property_quality_confidence: float,
+    town_confidence: float,
+) -> float:
+    return _deal_curve_clamp(
+        current_confidence * 0.32
+        + income_confidence * 0.23
+        + comp_confidence * 0.23
+        + property_quality_confidence * 0.12
+        + town_confidence * 0.10
+    )
+
+
+def _deal_curve_clamp(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    return max(minimum, min(maximum, value))

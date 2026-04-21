@@ -1,21 +1,41 @@
-"""Pipeline reconciliation layer.
+"""Pipeline shared infrastructure.
 
-Additive adapters that wire the existing briarwood modules into the
-8-layer architecture (Intent, Parser, Triage, Specialist Models, Unified
-Intelligence, Decision, Feedback, Eval). Nothing here replaces existing
-code — all adapters wrap existing implementations.
+This package formerly housed a parallel verdict stack (`Pipeline`,
+`UnifiedIntelligenceAgent`, `DecisionAgent`, `FeedbackLogger`,
+`ScenarioModelAdapter`). Those modules were deleted 2026-04-20 as part of
+the verdict-path consolidation; the canonical verdict now lives in
+``briarwood/synthesis/structured.py`` and projects to legacy display
+shapes via ``briarwood/projections/legacy_verdict.py``.
+
+What remains here is shared infrastructure used by the routed stack and
+other active code paths:
+
+- ``session``: ``PipelineSession`` / ``ModelResult`` — state container used
+  by routed runner, charts, and triage.
+- ``triage``: ``TriageAgent`` + ``load_model_weights`` — imported by
+  ``runner_routed`` and ``modules/confidence``.
+- ``feedback_mixin``: ``FeedbackReceiverMixin`` + ``attach_feedback_interface``
+  — imported by ``modules/security_model``.
+- ``enrichment``: ``enrich_property`` + ``load_saved_enrichment`` — imported
+  by ``agent/tools``.
+- ``presentation``: ``build_property_presentation`` — imported by
+  ``agent/tools``.
+- ``representation``: flagged for review (currently test-only).
 """
 
-from briarwood.pipeline.decision import DecisionAgent
-from briarwood.pipeline.enrichment import PropertyEnrichmentBundle, enrich_property, load_saved_enrichment
-from briarwood.pipeline.feedback import FeedbackLogger
+from briarwood.pipeline.enrichment import (
+    PropertyEnrichmentBundle,
+    enrich_property,
+    load_saved_enrichment,
+)
 from briarwood.pipeline.feedback_mixin import (
     FeedbackReceiverMixin,
     attach_feedback_interface,
 )
-from briarwood.pipeline.runner import Pipeline
-from briarwood.pipeline.scenario_adapter import ScenarioModelAdapter
-from briarwood.pipeline.presentation import PropertyPresentationPayload, build_property_presentation
+from briarwood.pipeline.presentation import (
+    PropertyPresentationPayload,
+    build_property_presentation,
+)
 from briarwood.pipeline.session import (
     ModelResult,
     PipelineSession,
@@ -23,20 +43,14 @@ from briarwood.pipeline.session import (
     session_to_execution_context,
 )
 from briarwood.pipeline.triage import TriageAgent
-from briarwood.pipeline.unified import UnifiedIntelligenceAgent
 
 __all__ = [
-    "DecisionAgent",
-    "FeedbackLogger",
     "FeedbackReceiverMixin",
     "ModelResult",
-    "Pipeline",
     "PipelineSession",
     "PropertyEnrichmentBundle",
     "PropertyPresentationPayload",
-    "ScenarioModelAdapter",
     "TriageAgent",
-    "UnifiedIntelligenceAgent",
     "attach_feedback_interface",
     "build_property_presentation",
     "enrich_property",
