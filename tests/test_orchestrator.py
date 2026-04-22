@@ -50,8 +50,8 @@ class OrchestratorTests(unittest.TestCase):
 
         property_data = {"property_id": "prop-1"}
         self.assertEqual(
-            build_cache_key(property_data, parser_output),
-            build_cache_key(property_data, parser_output),
+            build_cache_key(property_data, parser_output, execution_mode="scoped"),
+            build_cache_key(property_data, parser_output, execution_mode="scoped"),
         )
 
     def _fact_parser(self) -> ParserOutput:
@@ -83,7 +83,7 @@ class OrchestratorTests(unittest.TestCase):
             "purchase_price": 750_000,
         }
 
-        baseline_key = build_cache_key(base, parser_output)
+        baseline_key = build_cache_key(base, parser_output, execution_mode="scoped")
 
         mutations = [
             ("beds", 4),
@@ -99,7 +99,7 @@ class OrchestratorTests(unittest.TestCase):
         for field, new_value in mutations:
             mutated = dict(base)
             mutated[field] = new_value
-            mutated_key = build_cache_key(mutated, parser_output)
+            mutated_key = build_cache_key(mutated, parser_output, execution_mode="scoped")
             self.assertNotEqual(
                 mutated_key,
                 baseline_key,
@@ -111,7 +111,7 @@ class OrchestratorTests(unittest.TestCase):
         bumps invalidate every cached entry mass-wise without needing to clear
         the dicts by hand."""
         parser_output = self._fact_parser()
-        key = build_cache_key({"property_id": "prop-1", "beds": 3}, parser_output)
+        key = build_cache_key({"property_id": "prop-1", "beds": 3}, parser_output, execution_mode="scoped")
         # Shape: "<version>:<40-char sha1 hex>" — verify the prefix and that
         # the tail is a full hex digest.
         self.assertTrue(key.startswith("v2:"), key)
@@ -128,8 +128,8 @@ class OrchestratorTests(unittest.TestCase):
         with_noise["listing_description"] = "Charming two-story with updated kitchen"
         with_noise["source_url"] = "https://example.com/listings/prop-1"
         self.assertEqual(
-            build_cache_key(base, parser_output),
-            build_cache_key(with_noise, parser_output),
+            build_cache_key(base, parser_output, execution_mode="scoped"),
+            build_cache_key(with_noise, parser_output, execution_mode="scoped"),
         )
 
     def test_run_briarwood_analysis_requires_synthesizer(self) -> None:

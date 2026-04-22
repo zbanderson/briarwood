@@ -168,9 +168,14 @@ def _normalize_fact_fingerprint(property_data: Mapping[str, Any]) -> dict[str, A
     return {field: _coerce(property_data.get(field)) for field in _CACHE_KEY_PROPERTY_FACTS}
 
 
+_VALID_EXECUTION_MODES: frozenset[str] = frozenset({"scoped", "legacy_fallback"})
+
+
 def build_cache_key(
     property_data: dict[str, Any],
     parser_output: ParserOutput,
+    *,
+    execution_mode: str,
 ) -> str:
     """Build a lightweight cache key from stable routing and assumption inputs.
 
@@ -179,7 +184,19 @@ def build_cache_key(
     or to the cache shape itself invalidate cleanly. Previously the key was
     property_id + parser assumptions only, which meant two different fact sets
     for the same property_id would collide and return stale results.
+
+    NEW-V-001: ``execution_mode`` (``"scoped"`` or ``"legacy_fallback"``) is a
+    required keyword-only component of the hash. The scoped and legacy paths
+    produce materially different ``UnifiedIntelligenceOutput`` for the same
+    property (see VERIFICATION_REPORT appendix A). Without this component,
+    whichever path runs first wins the shared cache entry until TTL expiry.
     """
+
+    if execution_mode not in _VALID_EXECUTION_MODES:
+        raise ValueError(
+            f"execution_mode must be one of {sorted(_VALID_EXECUTION_MODES)!r}, "
+            f"got {execution_mode!r}."
+        )
 
     property_id = str(property_data.get("property_id") or property_data.get("address") or "unknown-property")
     assumptions = _extract_execution_assumptions(property_data, parser_output)
@@ -197,6 +214,7 @@ def build_cache_key(
         "renovation_plan": parser_output.renovation_plan,
         "assumptions": assumptions,
         "property_facts": fact_fingerprint,
+        "execution_mode": execution_mode,
     }
     digest = hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
     return f"{_CACHE_KEY_VERSION}:{digest}"
@@ -510,7 +528,12 @@ def run_briarwood_analysis_with_artifacts(
         selected_modules,
         registry=scoped_registry,
     )
-    analysis_cache_key = build_cache_key(property_summary, routing_decision.parser_output)
+    execution_mode = "scoped" if scoped_supported and execution_plan is not None else "legacy_fallback"
+    analysis_cache_key = build_cache_key(
+        property_summary,
+        routing_decision.parser_output,
+        execution_mode=execution_mode,
+    )
 
     cached_output = _SYNTHESIS_OUTPUT_CACHE.get(analysis_cache_key)
     if cached_output is not None:
@@ -519,15 +542,10 @@ def run_briarwood_analysis_with_artifacts(
             "property_summary": property_summary,
             "module_results": _MODULE_RESULTS_CACHE.get(analysis_cache_key, {}),
             "unified_output": cached_output,
-            "execution_mode": (
-                "scoped"
-                if scoped_supported and execution_plan is not None
-                else "legacy_fallback"
-            ),
+            "execution_mode": execution_mode,
         }
 
     module_results = _MODULE_RESULTS_CACHE.get(analysis_cache_key)
-    execution_mode = "scoped" if scoped_supported and execution_plan is not None else "legacy_fallback"
     if module_results is None:
         if scoped_supported and execution_plan is not None:
             logger.info(

@@ -279,8 +279,8 @@ class Wave1SupportTests(unittest.TestCase):
         }
 
         self.assertNotEqual(
-            build_cache_key(property_data_a, parser_output),
-            build_cache_key(property_data_b, parser_output),
+            build_cache_key(property_data_a, parser_output, execution_mode="scoped"),
+            build_cache_key(property_data_b, parser_output, execution_mode="scoped"),
         )
 
 
