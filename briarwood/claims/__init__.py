@@ -10,12 +10,24 @@ from briarwood.claims.base import (
     Provenance,
     SurfacedInsight,
 )
+from briarwood.claims.verdict_with_comparison import (
+    Comparison,
+    ComparisonScenario,
+    Subject,
+    Verdict,
+    VerdictWithComparisonClaim,
+)
 
 __all__ = [
     "Archetype",
     "Caveat",
+    "Comparison",
+    "ComparisonScenario",
     "Confidence",
     "NextQuestion",
     "Provenance",
+    "Subject",
     "SurfacedInsight",
+    "Verdict",
+    "VerdictWithComparisonClaim",
 ]
