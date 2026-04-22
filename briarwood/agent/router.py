@@ -31,6 +31,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict
 
 from briarwood.agent.llm import LLMClient
+from briarwood.intent_contract import IntentContract, build_contract_from_answer_type
 
 
 class AnswerType(str, Enum):
@@ -57,6 +58,19 @@ class RouterDecision:
     target_refs: list[str] = field(default_factory=list)
     reason: str = ""
     llm_suggestion: AnswerType | None = None  # set when LLM participated
+    # F9: shared shape with the analysis router. Auto-populated from
+    # ``answer_type`` + ``confidence`` in ``__post_init__`` unless the caller
+    # supplies one (e.g. when rehydrating from a persisted decision).
+    intent_contract: IntentContract | None = None
+
+    def __post_init__(self) -> None:
+        if self.intent_contract is None:
+            contract = build_contract_from_answer_type(
+                self.answer_type.value, self.confidence
+            )
+            # Frozen dataclass: bypass __setattr__ via object.__setattr__,
+            # same pattern as stdlib's post-init immutable defaults.
+            object.__setattr__(self, "intent_contract", contract)
 
 
 # ─── Cache rules ──────────────────────────────────────────────────────────────

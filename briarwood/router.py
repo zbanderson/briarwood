@@ -6,6 +6,10 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
+from briarwood.intent_contract import (
+    IntentContract,
+    align_question_focus_with_contract,
+)
 from briarwood.routing_schema import (
     CORE_QUESTIONS,
     DEPTH_BASELINE_MODULES,
@@ -566,6 +570,7 @@ def route_user_input(
     llm_parser: Callable[[str], ParserOutput] | None = None,
     confidence_threshold: float = 0.70,
     prior_context: list[dict[str, object]] | None = None,
+    intent_contract: IntentContract | None = None,
 ) -> RoutingDecision:
     """Route one user question into parsed intent, depth, and selected modules.
 
@@ -574,6 +579,13 @@ def route_user_input(
     uses it to upgrade depth and refine focus.  For example, after a SNAPSHOT
     BUY_DECISION the user asks "tell me more about the risk" — the router
     promotes depth to DECISION and adds WHAT_COULD_GO_WRONG focus.
+
+    When *intent_contract* is supplied (produced by the chat-tier router in
+    ``briarwood.agent.router.classify``), the contract's ``core_questions``
+    are merged into the parsed ``question_focus`` before the routing
+    decision is built. This is the F9 alignment layer — it ensures the
+    analysis tier's ``RoutingDecision.core_questions`` covers every question
+    the chat tier declared the user wanted answered.
     """
 
     parser_output = parse_intent_and_depth(
@@ -583,7 +595,29 @@ def route_user_input(
     )
     if prior_context:
         parser_output = _apply_prior_context(parser_output, prior_context)
+    if intent_contract is not None:
+        parser_output = _align_parser_with_intent_contract(parser_output, intent_contract)
     return build_routing_decision(parser_output)
+
+
+def _align_parser_with_intent_contract(
+    parser_output: ParserOutput,
+    contract: IntentContract,
+) -> ParserOutput:
+    """F9: thread the chat-tier contract's questions into parser_output.
+
+    Replaces ``question_focus`` with the contract's core questions followed
+    by any rules-inferred focus items the analysis tier already had. The
+    rest of ``parser_output`` is untouched — the analysis router still owns
+    intent, depth, occupancy, exit options, and missing-inputs.
+    """
+
+    aligned_focus = align_question_focus_with_contract(
+        list(parser_output.question_focus), contract,
+    )
+    if aligned_focus == list(parser_output.question_focus):
+        return parser_output
+    return parser_output.model_copy(update={"question_focus": aligned_focus})
 
 
 def _apply_prior_context(

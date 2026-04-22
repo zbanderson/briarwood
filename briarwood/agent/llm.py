@@ -141,7 +141,11 @@ class OpenAIChatClient:
         guard = get_guard()
         guard.check_openai()
 
-        use_model = model or os.environ.get("BRIARWOOD_STRUCTURED_MODEL", "gpt-5")
+        # AUDIT F12: the structured router classifier has a tiny two-field
+        # schema; ``gpt-5`` is over-tiered for it. Default to the cheapest
+        # structured-capable OpenAI tier. Env override preserves the prior
+        # default for callers that still need it.
+        use_model = model or os.environ.get("BRIARWOOD_STRUCTURED_MODEL", "gpt-4o-mini")
         try:
             response = self._client.responses.create(
                 model=use_model,
