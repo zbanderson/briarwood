@@ -168,14 +168,9 @@ def _normalize_fact_fingerprint(property_data: Mapping[str, Any]) -> dict[str, A
     return {field: _coerce(property_data.get(field)) for field in _CACHE_KEY_PROPERTY_FACTS}
 
 
-_VALID_EXECUTION_MODES: frozenset[str] = frozenset({"scoped", "legacy_fallback"})
-
-
 def build_cache_key(
     property_data: dict[str, Any],
     parser_output: ParserOutput,
-    *,
-    execution_mode: str,
 ) -> str:
     """Build a lightweight cache key from stable routing and assumption inputs.
 
@@ -184,19 +179,7 @@ def build_cache_key(
     or to the cache shape itself invalidate cleanly. Previously the key was
     property_id + parser assumptions only, which meant two different fact sets
     for the same property_id would collide and return stale results.
-
-    NEW-V-001: ``execution_mode`` (``"scoped"`` or ``"legacy_fallback"``) is a
-    required keyword-only component of the hash. The scoped and legacy paths
-    produce materially different ``UnifiedIntelligenceOutput`` for the same
-    property (see VERIFICATION_REPORT appendix A). Without this component,
-    whichever path runs first wins the shared cache entry until TTL expiry.
     """
-
-    if execution_mode not in _VALID_EXECUTION_MODES:
-        raise ValueError(
-            f"execution_mode must be one of {sorted(_VALID_EXECUTION_MODES)!r}, "
-            f"got {execution_mode!r}."
-        )
 
     property_id = str(property_data.get("property_id") or property_data.get("address") or "unknown-property")
     assumptions = _extract_execution_assumptions(property_data, parser_output)
@@ -214,7 +197,6 @@ def build_cache_key(
         "renovation_plan": parser_output.renovation_plan,
         "assumptions": assumptions,
         "property_facts": fact_fingerprint,
-        "execution_mode": execution_mode,
     }
     digest = hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
     return f"{_CACHE_KEY_VERSION}:{digest}"
@@ -459,7 +441,6 @@ def run_briarwood_analysis(
     user_input: str,
     llm_parser: Callable[[str], ParserOutput] | None = None,
     synthesizer: Synthesizer | None = None,
-    module_runner: ModuleRunner | None = None,
     scoped_registry: dict[str, ModuleSpec] | None = None,
     prior_context: list[dict[str, object]] | None = None,
 ) -> UnifiedIntelligenceOutput:
@@ -470,7 +451,6 @@ def run_briarwood_analysis(
         user_input=user_input,
         llm_parser=llm_parser,
         synthesizer=synthesizer,
-        module_runner=module_runner,
         scoped_registry=scoped_registry,
         prior_context=prior_context,
     )
@@ -482,20 +462,18 @@ def run_briarwood_analysis_with_artifacts(
     user_input: str,
     llm_parser: Callable[[str], ParserOutput] | None = None,
     synthesizer: Synthesizer | None = None,
-    module_runner: ModuleRunner | None = None,
     scoped_registry: dict[str, ModuleSpec] | None = None,
     prior_context: list[dict[str, object]] | None = None,
 ) -> dict[str, Any]:
-    """Run Briarwood's routed analysis flow with scoped execution when possible.
+    """Run Briarwood's routed analysis flow through scoped execution.
 
     Flow:
     1. Route the user question into a structured routing decision
     2. Validate selected native modules
-    3. Prefer scoped execution through planner + executor when fully supported
-    4. Otherwise fall back to the legacy module runner path
-    5. Build a compact property summary for synthesis
-    6. Call the injected synthesizer
-    7. Return canonical unified intelligence output
+    3. Execute scoped plan through planner + executor
+    4. Build a compact property summary for synthesis
+    5. Call the injected synthesizer
+    6. Return canonical unified intelligence output
 
     *prior_context* is an optional list of conversation history entries passed
     through to the router for smarter depth and focus decisions on follow-ups.
@@ -528,11 +506,16 @@ def run_briarwood_analysis_with_artifacts(
         selected_modules,
         registry=scoped_registry,
     )
-    execution_mode = "scoped" if scoped_supported and execution_plan is not None else "legacy_fallback"
+    if not scoped_supported or execution_plan is None:
+        raise RoutingError(
+            "Scoped execution registry does not cover the selected module set: "
+            f"{[module.value for module in selected_modules]!r}. "
+            "Every routable module must have a scoped runner."
+        )
+
     analysis_cache_key = build_cache_key(
         property_summary,
         routing_decision.parser_output,
-        execution_mode=execution_mode,
     )
 
     cached_output = _SYNTHESIS_OUTPUT_CACHE.get(analysis_cache_key)
@@ -542,44 +525,26 @@ def run_briarwood_analysis_with_artifacts(
             "property_summary": property_summary,
             "module_results": _MODULE_RESULTS_CACHE.get(analysis_cache_key, {}),
             "unified_output": cached_output,
-            "execution_mode": execution_mode,
         }
 
     module_results = _MODULE_RESULTS_CACHE.get(analysis_cache_key)
     if module_results is None:
-        if scoped_supported and execution_plan is not None:
-            logger.info(
-                "Running scoped execution path for property_id=%s modules=%s",
-                property_summary.get("property_id") or property_summary.get("address"),
-                execution_plan.ordered_modules,
-            )
-            execution_context = _build_execution_context(
-                property_data,
-                property_summary,
-                routing_decision.parser_output,
-            )
-            module_results_raw = execute_plan(
-                execution_plan,
-                execution_context,
-                scoped_registry or _get_default_scoped_registry(),
-                module_output_cache=_SCOPED_MODULE_OUTPUT_CACHE,
-            )
-        else:
-            logger.info(
-                "Falling back to legacy execution path for property_id=%s selected_modules=%s",
-                property_summary.get("property_id") or property_summary.get("address"),
-                [module.value for module in selected_modules],
-            )
-            if module_runner is None:
-                raise ValueError(
-                    "module_runner is required when scoped execution is not fully supported. "
-                    "Pass a callable that executes Briarwood-native modules for the selected module list."
-                )
-            module_results_raw = module_runner(
-                selected_modules,
-                property_data,
-                routing_decision.parser_output,
-            )
+        logger.info(
+            "Running scoped execution path for property_id=%s modules=%s",
+            property_summary.get("property_id") or property_summary.get("address"),
+            execution_plan.ordered_modules,
+        )
+        execution_context = _build_execution_context(
+            property_data,
+            property_summary,
+            routing_decision.parser_output,
+        )
+        module_results_raw = execute_plan(
+            execution_plan,
+            execution_context,
+            scoped_registry or _get_default_scoped_registry(),
+            module_output_cache=_SCOPED_MODULE_OUTPUT_CACHE,
+        )
         module_results = _compact_module_results_for_synthesis(
             _normalize_module_results(module_results_raw)
         )
@@ -610,7 +575,6 @@ def run_briarwood_analysis_with_artifacts(
         "module_results": module_results,
         "interaction_trace": interaction_trace_dict,
         "unified_output": synthesis_output,
-        "execution_mode": execution_mode,
     }
 
 

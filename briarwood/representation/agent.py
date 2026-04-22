@@ -217,6 +217,8 @@ class RepresentationAgent:
             event = render_chart(selection.chart_id, inputs)
             if event is None:
                 continue
+            event["supports_claim"] = selection.claim_type.value
+            event["why_this_chart"] = selection.claim
             out.append(event)
             seen.add(selection.chart_id)
         return out
@@ -530,7 +532,7 @@ class RepresentationAgent:
         cleaned: list[RepresentationSelection] = []
         seen: set[tuple[str, str | None]] = set()
         for selection in plan.selections:
-            s = selection.model_copy(deep=True)
+            s = _backfill_selection(selection, module_views)
             spec = get_spec(s.chart_id) if s.chart_id else None
 
             if s.chart_id and spec is None:
@@ -651,6 +653,134 @@ def _merge_reason(existing: str | None, incoming: str) -> str:
     if not existing:
         return incoming
     return f"{existing}; {incoming}"
+
+
+def _contains_required_inputs(
+    spec: ChartSpec | None,
+    view: Mapping[str, Any] | None,
+) -> bool:
+    if spec is None or not isinstance(view, Mapping):
+        return False
+    return all(_has_input(view, field) for field in spec.required_inputs)
+
+
+def _candidate_sources(
+    chart_id: str | None,
+    claim_type: ClaimType,
+    module_views: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    if chart_id == "value_opportunity" or claim_type in (
+        ClaimType.PRICE_POSITION,
+        ClaimType.VALUE_DRIVERS,
+    ):
+        return [
+            key
+            for key in ("last_value_thesis_view", "last_decision_view")
+            if isinstance(module_views.get(key), Mapping)
+        ]
+    if chart_id == "risk_bar" or claim_type in (
+        ClaimType.RISK_COMPOSITION,
+        ClaimType.DOWNSIDE_RISK,
+    ):
+        return [
+            key
+            for key in ("last_risk_view", "last_projection_view")
+            if isinstance(module_views.get(key), Mapping)
+        ]
+    if chart_id == "scenario_fan" or claim_type == ClaimType.SCENARIO_RANGE:
+        return [
+            key for key in ("last_projection_view",) if isinstance(module_views.get(key), Mapping)
+        ]
+    if chart_id == "cma_positioning" or claim_type == ClaimType.COMP_EVIDENCE:
+        return [
+            key
+            for key in ("last_market_support_view", "last_value_thesis_view")
+            if isinstance(module_views.get(key), Mapping)
+        ]
+    if chart_id in {"rent_burn", "rent_ramp"} or claim_type in (
+        ClaimType.RENT_COVERAGE,
+        ClaimType.RENT_RAMP,
+    ):
+        return [
+            key
+            for key in ("last_rent_outlook_view",)
+            if isinstance(module_views.get(key), Mapping)
+        ]
+    return []
+
+
+def _supporting_evidence_for(
+    chart_id: str | None,
+    source_view: str | None,
+    module_views: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    if not source_view or source_view not in module_views:
+        return []
+    view = module_views.get(source_view) or {}
+    evidence: list[str] = []
+
+    def _add_numeric(field: str) -> None:
+        value = view.get(field)
+        if isinstance(value, (int, float)):
+            evidence.append(f"{source_view}.{field}={value}")
+
+    if chart_id == "value_opportunity":
+        _add_numeric("ask_price")
+        _add_numeric("fair_value_base")
+        _add_numeric("premium_discount_pct")
+        _add_numeric("ask_premium_pct")
+        drivers = list(view.get("key_value_drivers") or view.get("value_drivers") or [])
+        if drivers:
+            evidence.append(f"{source_view}.key_value_drivers=" + ", ".join(drivers[:3]))
+    elif chart_id == "risk_bar":
+        risk_flags = list(view.get("risk_flags") or [])
+        trust_flags = list(view.get("trust_flags") or [])
+        if risk_flags:
+            evidence.append(f"{source_view}.risk_flags=" + ", ".join(risk_flags[:4]))
+        if trust_flags:
+            evidence.append(f"{source_view}.trust_flags=" + ", ".join(trust_flags[:4]))
+    elif chart_id == "scenario_fan":
+        for field in ("bull_case_value", "base_case_value", "bear_case_value"):
+            _add_numeric(field)
+    elif chart_id == "cma_positioning":
+        comps = [c for c in (view.get("comps") or []) if isinstance(c, Mapping)]
+        if comps:
+            evidence.append(f"{source_view}.comps[{len(comps)}]")
+    elif chart_id == "rent_burn":
+        if view.get("burn_chart_payload"):
+            evidence.append(f"{source_view}.burn_chart_payload")
+    elif chart_id == "rent_ramp":
+        if view.get("ramp_chart_payload"):
+            evidence.append(f"{source_view}.ramp_chart_payload")
+
+    return evidence
+
+
+def _backfill_selection(
+    selection: RepresentationSelection,
+    module_views: Mapping[str, Mapping[str, Any]],
+) -> RepresentationSelection:
+    s = selection.model_copy(deep=True)
+    if s.chart_id == "value_opportunity" and s.claim_type == ClaimType.VALUE_DRIVERS:
+        # The chat UI has a single ask-vs-fair-value/value-thesis surface.
+        # Treat standalone VALUE_DRIVERS selections as that same chart rather
+        # than as a second independent chartable claim.
+        s.claim_type = ClaimType.PRICE_POSITION
+
+    candidate_sources = _candidate_sources(s.chart_id, s.claim_type, module_views)
+    if s.source_view is None:
+        spec = get_spec(s.chart_id) if s.chart_id else None
+        for source_view in candidate_sources:
+            if spec is None or _contains_required_inputs(spec, module_views.get(source_view)):
+                s.source_view = source_view
+                break
+
+    if not s.supporting_evidence:
+        evidence = _supporting_evidence_for(s.chart_id, s.source_view, module_views)
+        if evidence:
+            s.supporting_evidence = evidence
+
+    return s
 
 
 def _has_input(view: Mapping[str, Any], field: str) -> bool:

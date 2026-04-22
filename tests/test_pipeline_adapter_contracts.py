@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
 import unittest
 from unittest.mock import patch
+from pathlib import Path
 
 from api import events
 from api.pipeline_adapter import (
     _native_risk_chart,
     _sanitize_valuation_module_comps,
+    _seed_session_for_pinned,
     _to_listing_from_facts,
     _track_modules,
     _valuation_comps_from_view,
@@ -18,6 +21,11 @@ from api.pipeline_adapter import (
 )
 from briarwood.agent.router import AnswerType, RouterDecision
 from briarwood.agent.session import Session
+from briarwood.representation.agent import (
+    ClaimType,
+    RepresentationPlan,
+    RepresentationSelection,
+)
 
 
 def _run_stream(stream):
@@ -32,6 +40,32 @@ def _decision(answer_type: AnswerType) -> RouterDecision:
 
 
 class PipelineAdapterContractTests(unittest.TestCase):
+    class _ScriptedLLM:
+        def __init__(self, response):
+            self._response = response
+
+        def complete_structured(self, **_kwargs):
+            return self._response
+
+    def test_seed_session_for_saved_pin_preserves_live_listing_price_context(self) -> None:
+        session = Session(session_id="seed-pin")
+        pinned = {
+            "id": "saved-pid",
+            "address_line": "1223 Briarwood Rd, Belmar, NJ 07719",
+            "city": "Belmar",
+            "state": "NJ",
+            "price": 699000,
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "saved-pid").mkdir()
+            with patch("api.pipeline_adapter._SAVED_ROOT", root):
+                seeded = _seed_session_for_pinned(session, pinned)
+        self.assertEqual(seeded, "saved-pid")
+        self.assertEqual(session.current_property_id, "saved-pid")
+        self.assertEqual(session.current_live_listing["property_id"], "saved-pid")
+        self.assertEqual(session.current_live_listing["ask_price"], 699000)
+
     def test_decision_stream_emits_core_cards_before_text_and_native_chart_after(self) -> None:
         session = Session(session_id="decision-contract")
         session.last_decision_view = {
@@ -58,6 +92,29 @@ class PipelineAdapterContractTests(unittest.TestCase):
             "doc_count": 2,
             "bullish_signals": ["beach demand"],
             "bearish_signals": ["tight inventory"],
+            "signal_items": [
+                {
+                    "id": "sig-1",
+                    "bucket": "bullish",
+                    "title": "1201 Main Street redevelopment plan",
+                    "status": "approved",
+                    "display_line": "1201 Main Street redevelopment plan (approved)",
+                    "project_summary": "Approved supply item tied to 1201 Main Street redevelopment plan at 1201 Main Street, covering about 24 units. Briarwood treats it as a watch item rather than a confirmed catalyst over the medium term, with likely effects on future_supply, home_values.",
+                    "signal_type": "supply",
+                    "location_label": "1201 Main Street",
+                    "development_lat": 40.1815,
+                    "development_lng": -74.0212,
+                    "confidence": 0.82,
+                    "facts": ["24 residential units were approved."],
+                    "inference": "This may add moderate supply.",
+                    "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
+                    "source_document_id": "doc-1",
+                    "source_title": "Belmar Planning Board Minutes",
+                    "source_type": "planning_board_minutes",
+                    "source_url": "https://example.com/belmar/minutes",
+                    "source_date": "2026-02-11T00:00:00Z",
+                }
+            ],
         }
         session.last_comps_preview = {
             "count": 3,
@@ -123,6 +180,8 @@ class PipelineAdapterContractTests(unittest.TestCase):
         )
         self.assertGreater(scenario_chart_index, first_text_index)
         self.assertIsNotNone(content_events[scenario_chart_index].get("spec"))
+        town_event = next(event for event in content_events if event["type"] == events.EVENT_TOWN_SUMMARY)
+        self.assertEqual(town_event["signal_items"][0]["id"], "sig-1")
         scenario_table = next(event for event in content_events if event["type"] == events.EVENT_SCENARIO_TABLE)
         self.assertEqual(scenario_table.get("basis_label"), "entry basis")
         self.assertEqual(content_events[scenario_chart_index]["spec"].get("basis_label"), "entry basis")
@@ -255,6 +314,229 @@ class PipelineAdapterContractTests(unittest.TestCase):
                 first_text_index,
                 f"{card_type} must emit before the narrative",
             )
+
+    def test_decision_stream_emits_primary_proof_chart_before_secondary_representation_charts(self) -> None:
+        session = Session(session_id="decision-primary-chart")
+        session.last_decision_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "decision_stance": "buy_if_price_improves",
+            "primary_value_source": "current_value",
+            "ask_price": 800000,
+            "all_in_basis": 820000,
+            "fair_value_base": 760000,
+            "value_low": 735000,
+            "value_high": 790000,
+            "ask_premium_pct": 0.0526,
+            "basis_premium_pct": 0.0789,
+            "trust_flags": ["thin_comp_set"],
+            "what_must_be_true": ["comps hold"],
+            "key_risks": ["flood exposure"],
+            "lead_reason": "The all-in basis is running about 7.9% above Briarwood's fair-value read.",
+            "evidence_items": ["Fair value is $760,000 against a working basis of $820,000."],
+            "next_step_teaser": "Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
+            "primary_chart_claim": "price_position",
+            "overrides_applied": {},
+        }
+        session.last_value_thesis_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 800000,
+            "fair_value_base": 760000,
+            "premium_discount_pct": 0.0526,
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+            "value_drivers": ["walkable Belmar location"],
+            "key_value_drivers": ["walkable Belmar location"],
+            "what_must_be_true": ["comps hold"],
+            "comp_selection_summary": "Saved comps.",
+            "comps": [{"address": "101 Ocean Ave", "ask_price": 755000}],
+        }
+        session.last_market_support_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "comps": [{"address": "201 Ocean Ave", "ask_price": 765000}],
+        }
+        session.last_projection_view = {
+            "address": "123 Main St, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 800000,
+            "basis_label": "entry basis",
+            "bull_case_value": 910000,
+            "base_case_value": 845000,
+            "bear_case_value": 760000,
+            "stress_case_value": 710000,
+            "spread": 150000,
+        }
+
+        pinned_listing = {
+            "id": "subject-proof-chart",
+            "address_line": "123 Main St, Belmar, NJ 07719",
+            "city": "Belmar",
+            "state": "NJ",
+            "price": 800000,
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1500,
+            "status": "active",
+        }
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Decision narrative."),
+            patch(
+                "api.pipeline_adapter._representation_charts",
+                return_value=(
+                    [
+                        events.chart(
+                            kind="scenario_fan",
+                            spec={
+                                "kind": "scenario_fan",
+                                "ask_price": 800000,
+                                "bull_case_value": 910000,
+                                "base_case_value": 845000,
+                                "bear_case_value": 760000,
+                            },
+                            supports_claim="scenario_range",
+                            why_this_chart="Secondary scenario chart.",
+                        )
+                    ],
+                    [],
+                ),
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                decision_stream(
+                    "Underwrite this property.",
+                    _decision(AnswerType.DECISION),
+                    pinned_listing,
+                    conversation_id="conv-primary-chart",
+                )
+            )
+
+        first_text_index = next(
+            idx for idx, event in enumerate(emitted) if event["type"] == events.EVENT_TEXT_DELTA
+        )
+        first_chart = next(
+            event for event in emitted[first_text_index + 1 :] if event["type"] == events.EVENT_CHART
+        )
+        self.assertEqual(first_chart.get("kind"), "value_opportunity")
+        self.assertEqual(first_chart.get("supports_claim"), "price_position")
+        self.assertIn("proves the verdict", first_chart.get("why_this_chart", ""))
+
+    def test_representation_drift_without_lost_surface_does_not_emit_warning_banner(self) -> None:
+        """LLM chart selections that can be deterministically backfilled should
+        not surface a user-facing `representation_plan` warning."""
+        session = Session(session_id="decision-representation-drift")
+        session.last_decision_view = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "decision_stance": "buy_if_price_improves",
+            "primary_value_source": "current_value",
+            "ask_price": 767000,
+            "all_in_basis": 767000,
+            "fair_value_base": 720644,
+            "value_low": 690000,
+            "value_high": 803827,
+            "ask_premium_pct": 0.0604,
+            "basis_premium_pct": 0.0604,
+            "trust_flags": ["thin_comp_set"],
+            "what_must_be_true": ["Thin comp set gets resolved."],
+            "key_risks": ["Flood-zone exposure"],
+            "overrides_applied": {},
+        }
+        session.last_value_thesis_view = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 767000,
+            "fair_value_base": 720644,
+            "premium_discount_pct": 0.0604,
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+            "value_drivers": ["walkable Belmar location"],
+            "key_value_drivers": ["walkable Belmar location"],
+            "what_must_be_true": ["Thin comp set gets resolved."],
+            "comps": [],
+        }
+        session.last_risk_view = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 767000,
+            "bear_value": 685581,
+            "stress_value": 640000,
+            "risk_flags": ["flood_zone"],
+            "trust_flags": ["thin_comp_set"],
+            "key_risks": ["Flood-zone exposure"],
+            "total_penalty": 0.22,
+            "confidence_tier": "strong",
+        }
+        llm = self._ScriptedLLM(
+            RepresentationPlan(
+                selections=[
+                    RepresentationSelection(
+                        claim="Value drivers support the read.",
+                        claim_type=ClaimType.VALUE_DRIVERS,
+                        supporting_evidence=[],
+                        chart_id="value_opportunity",
+                        source_view=None,
+                    ),
+                    RepresentationSelection(
+                        claim="Risk composition is available.",
+                        claim_type=ClaimType.RISK_COMPOSITION,
+                        supporting_evidence=[],
+                        chart_id="risk_bar",
+                        source_view=None,
+                    ),
+                ]
+            )
+        )
+
+        pinned_listing = {
+            "id": "subject-3",
+            "address_line": "1008 14th Avenue, Belmar, NJ 07719",
+            "city": "Belmar",
+            "state": "NJ",
+            "price": 767000,
+            "beds": 3,
+            "baths": 1.0,
+            "sqft": 960,
+            "status": "active",
+        }
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.get_llm", return_value=llm),
+            patch("api.pipeline_adapter.dispatch", return_value="Decision narrative."),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                decision_stream(
+                    "Analyze 1008 14th Avenue, Belmar, NJ 07719",
+                    _decision(AnswerType.DECISION),
+                    pinned_listing,
+                    conversation_id="conv-representation-drift",
+                )
+            )
+
+        warning_sections = [
+            event["section"]
+            for event in emitted
+            if event["type"] == events.EVENT_PARTIAL_DATA_WARNING
+        ]
+        self.assertNotIn("representation_plan", warning_sections)
+        chart_kinds = [
+            event.get("kind")
+            for event in emitted
+            if event["type"] == events.EVENT_CHART
+        ]
+        self.assertIn("value_opportunity", chart_kinds)
+        self.assertIn("risk_bar", chart_kinds)
 
     def test_dispatch_stream_emits_risk_card_then_text_then_native_chart(self) -> None:
         session = Session(session_id="risk-contract")
@@ -631,6 +913,60 @@ class PipelineAdapterContractTests(unittest.TestCase):
             1,
         )
 
+    def test_dispatch_stream_emits_structured_research_signal_items(self) -> None:
+        session = Session(session_id="research-contract")
+        session.last_research_view = {
+            "town": "Belmar",
+            "state": "NJ",
+            "confidence_label": "High",
+            "narrative_summary": "Belmar has constructive catalysts and a live watchlist.",
+            "bullish_signals": ["1201 Main Street redevelopment plan (approved)"],
+            "bearish_signals": [],
+            "watch_items": ["BOROUGH OF BELMAR PLANNING BOARD SPECIAL (mentioned)"],
+            "signal_items": [
+                {
+                    "id": "sig-1",
+                    "bucket": "bullish",
+                    "title": "1201 Main Street redevelopment plan",
+                    "status": "approved",
+                    "display_line": "1201 Main Street redevelopment plan (approved)",
+                    "project_summary": "Approved supply item tied to 1201 Main Street redevelopment plan at 1201 Main Street, covering about 24 units. Briarwood treats it as a watch item rather than a confirmed catalyst over the medium term, with likely effects on future_supply, home_values.",
+                    "signal_type": "supply",
+                    "location_label": "1201 Main Street",
+                    "development_lat": 40.1815,
+                    "development_lng": -74.0212,
+                    "confidence": 0.82,
+                    "facts": ["24 residential units were approved."],
+                    "inference": "This may add moderate supply.",
+                    "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
+                    "source_document_id": "doc-1",
+                    "source_title": "Belmar Planning Board Minutes",
+                    "source_type": "planning_board_minutes",
+                    "source_url": "https://example.com/belmar/minutes",
+                    "source_date": "2026-02-11T00:00:00Z",
+                }
+            ],
+            "document_count": 4,
+            "warnings": [],
+        }
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Town research narrative."),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                dispatch_stream(
+                    "what's driving Belmar?",
+                    _decision(AnswerType.RESEARCH),
+                    conversation_id="conv-research-signal-items",
+                )
+            )
+
+        research_event = next(event for event in emitted if event["type"] == events.EVENT_RESEARCH_UPDATE)
+        self.assertEqual(research_event["signal_items"][0]["id"], "sig-1")
+        self.assertEqual(research_event["signal_items"][0]["development_lat"], 40.1815)
+
     def test_listing_translation_carries_cached_street_view(self) -> None:
         facts = {
             "address": "1600 L Street, Belmar, NJ 07719",
@@ -779,6 +1115,9 @@ class VerdictFromViewTests(unittest.TestCase):
             "what_changes_my_view": ["listing drops 5%"],
             "contradiction_count": 0,
             "blocked_thesis_warnings": [],
+            "lead_reason": "The all-in basis is running about 7.9% above Briarwood's fair-value read.",
+            "evidence_items": ["Fair value is $760,000 against a working basis of $820,000."],
+            "next_step_teaser": "Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
             "overrides_applied": {"renovation_capex": 25000},
         }
 
@@ -789,6 +1128,9 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertEqual(payload["ask_price"], 800000)
         self.assertEqual(payload["trust_flags"], ["thin_comp_set"])
         self.assertEqual(payload["trust_summary"], {"confidence": 0.72, "band": "medium"})
+        self.assertEqual(payload["lead_reason"], self._full_view()["lead_reason"])
+        self.assertEqual(payload["evidence_items"], self._full_view()["evidence_items"])
+        self.assertEqual(payload["next_step_teaser"], self._full_view()["next_step_teaser"])
         self.assertEqual(payload["overrides_applied"], {"renovation_capex": 25000})
         # UI expects stance, not decision_stance — the projector renames.
         self.assertNotIn("decision_stance", payload)
@@ -799,6 +1141,7 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertIsNone(payload["stance"])
         self.assertEqual(payload["trust_flags"], [])
         self.assertEqual(payload["trust_summary"], {})
+        self.assertEqual(payload["evidence_items"], [])
         self.assertEqual(payload["overrides_applied"], {})
 
     def test_extra_keys_are_ignored_not_rejected(self) -> None:

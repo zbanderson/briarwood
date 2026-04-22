@@ -38,6 +38,7 @@ function pct(n: number | null | undefined) {
 export function VerdictCard({ verdict }: Props) {
   const stance = verdict.stance ?? null;
   const tone = stance ? STANCE_TONE[stance] : undefined;
+  const evidenceItems = verdict.evidence_items ?? [];
 
   const ask = verdict.ask_price ?? null;
   const fair = verdict.fair_value_base ?? null;
@@ -87,9 +88,19 @@ export function VerdictCard({ verdict }: Props) {
       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
         <Stat label="Ask" value={money(ask)} />
         <Stat label="Fair value" value={money(fair)} />
-        <Stat label="vs ask" value={pct(verdict.ask_premium_pct)} />
-        <Stat label="vs basis" value={pct(verdict.basis_premium_pct)} />
+        <Stat label="Ask vs fair" value={pct(verdict.ask_premium_pct)} />
+        <Stat label="Basis vs fair" value={pct(verdict.basis_premium_pct)} />
       </div>
+
+      {verdict.lead_reason && (
+        <div className="mt-4 text-[13px] leading-6 text-[var(--color-text)]">
+          {verdict.lead_reason}
+        </div>
+      )}
+
+      {evidenceItems.length > 0 && (
+        <ListBlock label="What Briarwood is seeing" items={evidenceItems} />
+      )}
 
       {low != null && high != null && (
         <div className="mt-4">
@@ -108,6 +119,12 @@ export function VerdictCard({ verdict }: Props) {
               />
             )}
           </div>
+        </div>
+      )}
+
+      {verdict.next_step_teaser && (
+        <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-[12px] text-sky-100/90">
+          {verdict.next_step_teaser}
         </div>
       )}
 

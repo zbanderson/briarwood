@@ -231,6 +231,28 @@ def test_llm_happy_path_emits_registered_chart() -> None:
     assert not plan.selections[0].flagged
 
 
+def test_render_events_carries_claim_metadata() -> None:
+    agent = RepresentationAgent(llm_client=None)
+    plan = RepresentationPlan(
+        selections=[
+            RepresentationSelection(
+                claim="Subject is asking 9.2% above fair value.",
+                claim_type=ClaimType.PRICE_POSITION,
+                supporting_evidence=[
+                    "last_decision_view.ask_price=950000",
+                    "last_decision_view.fair_value_base=870000",
+                ],
+                chart_id="value_opportunity",
+                source_view="last_value_thesis_view",
+            ),
+        ]
+    )
+    events = agent.render_events(plan, _views())
+    assert events
+    assert events[0]["supports_claim"] == "price_position"
+    assert events[0]["why_this_chart"] == "Subject is asking 9.2% above fair value."
+
+
 def test_llm_unknown_chart_id_is_stripped_and_flagged() -> None:
     response = RepresentationPlan(
         selections=[
@@ -265,8 +287,51 @@ def test_llm_missing_evidence_is_flagged() -> None:
     )
     agent = RepresentationAgent(llm_client=_ScriptedLLM(response))
     plan = agent.plan(_unified(), user_question="", module_views=_views())
-    assert plan.selections[0].flagged is True
-    assert "no supporting evidence" in (plan.selections[0].flag_reason or "")
+    assert plan.selections[0].flagged is False
+    assert plan.selections[0].supporting_evidence
+
+
+def test_llm_value_drivers_chart_backfills_evidence_and_collapses_surface() -> None:
+    response = RepresentationPlan(
+        selections=[
+            RepresentationSelection(
+                claim="Value drivers support the read.",
+                claim_type=ClaimType.VALUE_DRIVERS,
+                supporting_evidence=[],
+                chart_id="value_opportunity",
+                source_view=None,
+            ),
+        ]
+    )
+    agent = RepresentationAgent(llm_client=_ScriptedLLM(response))
+    plan = agent.plan(_unified(), user_question="", module_views=_views())
+    sel = plan.selections[0]
+    assert sel.claim_type is ClaimType.PRICE_POSITION
+    assert sel.chart_id == "value_opportunity"
+    assert sel.source_view in {"last_value_thesis_view", "last_decision_view"}
+    assert sel.supporting_evidence
+    assert not sel.flagged
+
+
+def test_llm_risk_chart_backfills_evidence_from_risk_view() -> None:
+    response = RepresentationPlan(
+        selections=[
+            RepresentationSelection(
+                claim="Risk composition is available.",
+                claim_type=ClaimType.RISK_COMPOSITION,
+                supporting_evidence=[],
+                chart_id="risk_bar",
+                source_view=None,
+            ),
+        ]
+    )
+    agent = RepresentationAgent(llm_client=_ScriptedLLM(response))
+    plan = agent.plan(_unified(), user_question="", module_views=_views())
+    sel = plan.selections[0]
+    assert sel.chart_id == "risk_bar"
+    assert sel.source_view == "last_risk_view"
+    assert sel.supporting_evidence
+    assert not sel.flagged
 
 
 def test_llm_claim_type_mismatch_is_flagged() -> None:

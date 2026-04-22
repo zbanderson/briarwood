@@ -1,10 +1,9 @@
-"""V2 routed runner: intent-based routing, scoped execution, and unified synthesis.
+"""Routed runner: intent-based routing, scoped execution, and unified synthesis.
 
-This module contains the new routing-aware analysis path that selects
-modules based on user intent and delegates synthesis to
-``briarwood.synthesis.build_unified_output``. It falls back to the legacy
-engine when scoped execution is not fully supported for the selected
-module set.
+This module hosts the routing-aware analysis path that selects modules based
+on user intent and delegates synthesis to ``briarwood.synthesis.build_unified_output``.
+All module execution runs through the scoped registry — every routable module
+has a concrete scoped runner.
 """
 
 from __future__ import annotations
@@ -23,13 +22,11 @@ from briarwood.pipeline.triage import (
     compute_contribution_map_from_outputs,
     load_model_weights,
 )
-from briarwood.schemas import AnalysisReport, PropertyInput
+from briarwood.schemas import PropertyInput
 from briarwood.routing_schema import (
     AnalysisDepth,
     DecisionType,
     EngineOutput,
-    ModuleName,
-    ModulePayload,
     ParserOutput,
 )
 from briarwood.decision_model.scoring_config import BullBaseBearSettings, RiskSettings
@@ -38,28 +35,10 @@ from briarwood.settings import CostValuationSettings
 from briarwood.runner_common import (
     RoutedAnalysisResult,
     _prepare_property_input,
-    build_engine,
     validate_property_input,
 )
 
 logger = logging.getLogger(__name__)
-
-
-ROUTING_MODULE_MAP: dict[ModuleName, tuple[str, ...]] = {
-    ModuleName.VALUATION: ("current_value", "comparable_sales", "hybrid_value"),
-    ModuleName.CARRY_COST: ("cost_valuation", "income_support"),
-    ModuleName.RISK_MODEL: ("risk_constraints", "liquidity_signal", "market_momentum_signal"),
-    ModuleName.CONFIDENCE: ("property_data_quality", "current_value", "comparable_sales"),
-    ModuleName.RESALE_SCENARIO: ("bull_base_bear", "teardown_scenario"),
-    ModuleName.RENTAL_OPTION: ("income_support", "rental_ease"),
-    ModuleName.RENT_STABILIZATION: ("rental_ease", "town_county_outlook"),
-    ModuleName.HOLD_TO_RENT: ("income_support", "rental_ease", "bull_base_bear"),
-    ModuleName.RENOVATION_IMPACT: ("renovation_scenario", "value_drivers"),
-    ModuleName.ARV_MODEL: ("renovation_scenario", "current_value", "comparable_sales"),
-    ModuleName.MARGIN_SENSITIVITY: ("renovation_scenario", "bull_base_bear"),
-    ModuleName.UNIT_INCOME_OFFSET: ("income_support", "comparable_sales"),
-    ModuleName.LEGAL_CONFIDENCE: ("property_data_quality", "rental_ease"),
-}
 
 
 def _extract_model_confidences(
@@ -122,90 +101,6 @@ def _routing_user_input_from_property(
     return " ".join(parts)
 
 
-def _build_module_payload(module_name: ModuleName, report: AnalysisReport) -> ModulePayload:
-    """Adapt the full report into the routing-layer module payload shape."""
-
-    source_names = ROUTING_MODULE_MAP.get(module_name, ())
-    data: dict[str, Any] = {}
-    assumptions_used: dict[str, Any] = {}
-    warnings: list[str] = []
-    confidences: list[float] = []
-
-    for source_name in source_names:
-        result = report.module_results.get(source_name)
-        if result is None:
-            continue
-        data[source_name] = {
-            "summary": result.summary,
-            "metrics": result.metrics,
-            "score": result.score,
-        }
-        if result.confidence is not None:
-            confidences.append(float(result.confidence))
-        metrics = result.metrics or {}
-        metric_warnings = metrics.get("warnings")
-        if isinstance(metric_warnings, list):
-            warnings.extend(str(item) for item in metric_warnings if item)
-        metric_assumptions = metrics.get("assumptions")
-        if isinstance(metric_assumptions, list) and metric_assumptions:
-            assumptions_used[source_name] = metric_assumptions
-
-    confidence = round(sum(confidences) / len(confidences), 2) if confidences else None
-    deduped_warnings = list(dict.fromkeys(warnings))
-    return ModulePayload(
-        data=data,
-        confidence=confidence,
-        assumptions_used=assumptions_used,
-        warnings=deduped_warnings,
-    )
-
-
-def _build_engine_output_for_selected_modules(
-    selected_modules: list[ModuleName],
-    report: AnalysisReport,
-) -> EngineOutput:
-    """Project the legacy full report into the routing-layer engine output."""
-
-    outputs = {
-        module_name.value: _build_module_payload(module_name, report)
-        for module_name in selected_modules
-    }
-    return EngineOutput(outputs=outputs)
-
-
-def _make_legacy_module_runner(
-    property_input: PropertyInput,
-    *,
-    cost_settings: CostValuationSettings | None = None,
-    bull_base_bear_settings: BullBaseBearSettings | None = None,
-    risk_settings: RiskSettings | None = None,
-):
-    """Create a fallback module runner that executes the legacy engine once."""
-
-    report_cache: dict[str, AnalysisReport] = {}
-
-    def _runner(
-        selected_modules: list[ModuleName],
-        property_data: dict[str, Any],
-        parser_output: ParserOutput,
-    ) -> dict[str, Any]:
-        del property_data, parser_output
-        if "report" not in report_cache:
-            engine = build_engine(
-                cost_settings=cost_settings,
-                bull_base_bear_settings=bull_base_bear_settings,
-                risk_settings=risk_settings,
-            )
-            report_cache["report"] = engine.run_all(property_input)
-        report = report_cache["report"]
-        return _build_engine_output_for_selected_modules(
-            selected_modules,
-            report,
-        ).model_dump()
-
-    return _runner, report_cache
-
-
 def _scoped_synthesizer(
     property_summary: dict[str, Any],
     parser_output: dict[str, Any],
@@ -213,9 +108,9 @@ def _scoped_synthesizer(
 ) -> dict[str, Any]:
     """Build a deterministic unified answer directly from scoped module outputs.
 
-    Phase 5: this delegates to ``build_unified_output`` so the decision,
-    stance, trust flags, and value position are all derivable from module +
-    interaction trace state without an LLM.
+    Delegates to ``build_unified_output`` so the decision, stance, trust flags,
+    and value position are all derivable from module + interaction trace state
+    without an LLM.
     """
 
     from briarwood.synthesis import build_unified_output
@@ -230,147 +125,6 @@ def _scoped_synthesizer(
         module_results=module_results_only,
         interaction_trace=interaction_trace,
     )
-
-
-def _scoped_synthesizer_legacy(
-    property_summary: dict[str, Any],
-    parser_output: dict[str, Any],
-    module_results: dict[str, Any],
-) -> dict[str, Any]:
-    """Pre-Phase-5 narrative-first synthesizer (kept for comparison tests)."""
-
-    outputs = dict(module_results.get("outputs") or {})
-    valuation = outputs.get("valuation", {})
-    carry_cost = outputs.get("carry_cost", {})
-    risk_model = outputs.get("risk_model", {})
-    confidence = outputs.get("confidence", {})
-    rent_stabilization = outputs.get("rent_stabilization", {})
-    hold_to_rent = outputs.get("hold_to_rent", {})
-    unit_income_offset = outputs.get("unit_income_offset", {})
-    legal_confidence = outputs.get("legal_confidence", {})
-
-    parser = ParserOutput.model_validate(parser_output)
-    focus_set = {str(item).strip().lower() for item in parser.question_focus}
-    decision = DecisionType.MIXED
-    recommendation = "Mixed. More diligence is needed before committing."
-
-    valuation_summary = str(valuation.get("data", {}).get("summary") or "")
-    carry_summary = str(carry_cost.get("data", {}).get("summary") or "")
-    risk_summary = str(risk_model.get("data", {}).get("summary") or "")
-    legal_summary = str(legal_confidence.get("data", {}).get("summary") or "")
-
-    valuation_metrics = valuation.get("data", {}).get("metrics", {}) or {}
-    mispricing_pct = valuation_metrics.get("mispricing_pct")
-    monthly_cash_flow = (carry_cost.get("data", {}).get("metrics", {}) or {}).get("monthly_cash_flow")
-
-    if isinstance(mispricing_pct, (int, float)) and mispricing_pct >= 0.03:
-        recommendation = "Buy with measured conviction."
-        decision = DecisionType.BUY
-    elif isinstance(mispricing_pct, (int, float)) and mispricing_pct <= -0.10:
-        recommendation = "Pass unless the basis improves."
-        decision = DecisionType.PASS
-    elif isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow < -2000:
-        recommendation = "Mixed. The property may work only if the carry or plan improves."
-        decision = DecisionType.MIXED
-
-    if "future_income" in focus_set:
-        if isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow >= 0:
-            recommendation = "The rent path looks viable enough to keep underwriting."
-        else:
-            recommendation = "The rent path needs more proof before it can carry the decision."
-    elif "what_could_go_wrong" in focus_set:
-        recommendation = "The risk case is what should drive this decision right now."
-    elif "where_is_value" in focus_set:
-        if isinstance(mispricing_pct, (int, float)) and mispricing_pct > 0:
-            recommendation = "There may be value here, but only if the basis and plan hold up."
-        else:
-            recommendation = "Value creation is not obvious enough yet to carry the thesis."
-    elif "best_path" in focus_set:
-        recommendation = "The best path depends on choosing the right strategy before committing."
-
-    value_candidates = [
-        valuation_summary,
-        carry_summary if parser.analysis_depth != AnalysisDepth.SNAPSHOT else "",
-        str(unit_income_offset.get("data", {}).get("summary") or ""),
-        str(hold_to_rent.get("data", {}).get("summary") or ""),
-    ]
-    risk_candidates = [
-        risk_summary,
-        legal_summary,
-        str(rent_stabilization.get("data", {}).get("summary") or ""),
-        carry_summary if isinstance(monthly_cash_flow, (int, float)) and monthly_cash_flow < 0 else "",
-    ]
-    strategy_candidates = [
-        str(hold_to_rent.get("data", {}).get("summary") or ""),
-        str(unit_income_offset.get("data", {}).get("summary") or ""),
-        valuation_summary,
-        carry_summary,
-    ]
-
-    if "future_income" in focus_set:
-        driver_candidates = [
-            str(hold_to_rent.get("data", {}).get("summary") or ""),
-            str(unit_income_offset.get("data", {}).get("summary") or ""),
-            str(rent_stabilization.get("data", {}).get("summary") or ""),
-            carry_summary,
-        ]
-        risk_candidates = [
-            str(rent_stabilization.get("data", {}).get("summary") or ""),
-            legal_summary,
-            risk_summary,
-            carry_summary,
-        ]
-    elif "what_could_go_wrong" in focus_set:
-        driver_candidates = [risk_summary, legal_summary, carry_summary]
-        risk_candidates = [risk_summary, legal_summary, str(rent_stabilization.get("data", {}).get("summary") or ""), carry_summary]
-    elif "where_is_value" in focus_set:
-        driver_candidates = value_candidates
-    elif "best_path" in focus_set:
-        driver_candidates = strategy_candidates
-    else:
-        driver_candidates = value_candidates
-
-    key_value_drivers = [text for text in driver_candidates if text][:3]
-    key_risks = [text for text in risk_candidates if text][:3]
-
-    confidence_values = [
-        float(item.get("confidence"))
-        for item in (valuation, carry_cost, risk_model, confidence, rent_stabilization, hold_to_rent, unit_income_offset, legal_confidence)
-        if isinstance(item, dict) and isinstance(item.get("confidence"), (int, float))
-    ]
-    final_confidence = round(sum(confidence_values) / len(confidence_values), 2) if confidence_values else round(parser.confidence, 2)
-    final_confidence = max(0.0, min(1.0, final_confidence))
-
-    if "what_could_go_wrong" in focus_set and risk_summary:
-        best_path = "Pressure-test the downside first and do not outrun the current risk evidence."
-    elif "future_income" in focus_set:
-        best_path = (
-            "Treat the rent path as the gating question and verify real income durability before leaning on it."
-        )
-    elif "where_is_value" in focus_set:
-        best_path = (
-            "Only lean in if the value edge is real after basis, carry, and execution friction are all included."
-        )
-    else:
-        best_path = _best_path_from_intent(parser, decision)
-
-    return {
-        "recommendation": recommendation,
-        "decision": decision.value,
-        "best_path": best_path,
-        "key_value_drivers": key_value_drivers,
-        "key_risks": key_risks,
-        "confidence": final_confidence,
-        "analysis_depth_used": parser.analysis_depth.value,
-        "next_questions": list(dict.fromkeys(_next_questions_for_scoped_modules(parser, outputs)))[:3],
-        "recommended_next_run": _recommended_next_run(parser),
-        "supporting_facts": {
-            "property_id": property_summary.get("property_id"),
-            "selected_modules": sorted(outputs.keys()),
-            "mispricing_pct": mispricing_pct,
-            "monthly_cash_flow": monthly_cash_flow,
-        },
-    }
 
 
 def _next_questions_for_scoped_modules(
@@ -455,54 +209,40 @@ def run_routed_analysis_for_property(
     risk_settings: RiskSettings | None = None,
     prior_context: list[dict[str, object]] | None = None,
 ) -> RoutedAnalysisResult:
-    """Run a routed analysis with scoped execution first and safe legacy fallback.
+    """Run a routed analysis through the scoped execution path.
 
     The routed decision and unified answer come from the orchestrator's
-    scoped-first execution flow.  When scoped execution handles all selected
-    modules, the legacy engine is **not** run and ``result.report`` is None.
-    The legacy engine only runs when the orchestrator falls back to it for
-    modules that scoped execution cannot handle.
+    scoped execution flow. Every routable module set is fully covered by
+    the scoped registry; there is no legacy-engine fallback.
 
     *prior_context* is an optional conversation history passed through to the
     router so follow-up questions route at the right depth and focus.
     """
 
+    del cost_settings, bull_base_bear_settings, risk_settings  # kept for API compat
+
     validate_property_input(property_input)
     _prepare_property_input(property_input)
     property_data = property_input.to_dict()
     routing_text = _routing_user_input_from_property(property_input, user_input=user_input)
-    legacy_module_runner, report_cache = _make_legacy_module_runner(
-        property_input,
-        cost_settings=cost_settings,
-        bull_base_bear_settings=bull_base_bear_settings,
-        risk_settings=risk_settings,
-    )
     routed_artifacts = run_briarwood_analysis_with_artifacts(
         property_data=property_data,
         user_input=routing_text,
         llm_parser=llm_parser,
         synthesizer=_scoped_synthesizer,
-        module_runner=legacy_module_runner,
         prior_context=prior_context,
     )
 
     routing_decision = routed_artifacts["routing_decision"]
     property_summary = routed_artifacts["property_summary"]
     unified_output = routed_artifacts["unified_output"]
-    execution_mode = str(routed_artifacts["execution_mode"])
     unified_output.supporting_facts.update(
         {
-            "execution_mode": execution_mode,
             "context_type": "property",
             "missing_context": False,
             "was_conditional_answer": False,
         }
     )
-
-    # report is non-None only when the legacy module_runner was invoked as a
-    # fallback during orchestration.  When scoped execution handled the full
-    # module set the legacy engine never ran — and we no longer force it.
-    report = report_cache.get("report")
 
     module_results = dict(routed_artifacts.get("module_results") or {})
     module_outputs = dict(module_results.get("outputs") or {})
@@ -520,7 +260,6 @@ def run_routed_analysis_for_property(
             question=routing_text,
             context_type="property",
             routing_decision=routing_decision.model_dump(mode="json"),
-            execution_mode=execution_mode,
             unified_output=unified_output.model_dump(mode="json"),
             missing_context=False,
             was_conditional_answer=False,
@@ -533,12 +272,10 @@ def run_routed_analysis_for_property(
     )
 
     return RoutedAnalysisResult(
-        report=report,
         routing_decision=routing_decision,
         engine_output=engine_output,
         unified_output=unified_output,
         property_summary=property_summary,
-        execution_mode=execution_mode,
     )
 
 
@@ -552,7 +289,7 @@ def run_routed_report(
     risk_settings: RiskSettings | None = None,
     prior_context: list[dict[str, object]] | None = None,
 ) -> RoutedAnalysisResult:
-    """Run a JSON property through the legacy engine plus the new routing layer."""
+    """Run a JSON property through the routing layer and scoped execution."""
 
     property_input = load_property_from_json(property_path)
     return run_routed_analysis_for_property(
@@ -578,7 +315,7 @@ def run_routed_report_from_listing_text(
     risk_settings: RiskSettings | None = None,
     prior_context: list[dict[str, object]] | None = None,
 ) -> RoutedAnalysisResult:
-    """Run listing-text intake through the legacy engine plus the new routing layer."""
+    """Run listing-text intake through the routing layer and scoped execution."""
 
     property_input = load_property_from_listing_text(
         listing_text,
@@ -600,11 +337,10 @@ def format_routed_analysis(result: RoutedAnalysisResult, property_source: str | 
     """Render a concise decision-first text view for routed CLI runs."""
 
     unified = result.unified_output
-    address = result.report.address if result.report else result.property_summary.get("address", str(property_source))
+    address = result.property_summary.get("address", str(property_source))
     lines = [
         f"Briarwood routed analysis for {address}",
         f"source: {property_source}",
-        f"execution: {result.execution_mode}",
         "",
         f"Recommendation: {unified.recommendation}",
         f"Decision: {unified.decision.value}",

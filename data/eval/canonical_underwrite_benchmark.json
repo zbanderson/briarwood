@@ -1,0 +1,56 @@
+[
+  {
+    "fixture_id": "1008-14th-ave-belmar-nj-07719",
+    "prompt": "Underwrite this property.",
+    "expected_stance_band": [
+      "buy_if_price_improves",
+      "pass_unless_changes",
+      "interesting_but_fragile"
+    ],
+    "must_mention_evidence_fields": [
+      "lead_reason",
+      "evidence_items",
+      "fair_value_base",
+      "basis_premium_pct"
+    ],
+    "required_flip_condition": "what_changes_my_view",
+    "required_next_step_hook": "next_step_teaser",
+    "required_primary_chart_claim": "price_position",
+    "chatgpt_reference": "Buy only if price improves. The current basis looks a bit ahead of the fair-value read, so the deal needs better entry before it feels clean. The main caution is that conviction still depends on thinner evidence than you would want for a full green light. If price improves toward value, then the thesis gets more interesting."
+  },
+  {
+    "fixture_id": "briarwood-rd-belmar",
+    "prompt": "Underwrite this property.",
+    "expected_stance_band": [
+      "buy_if_price_improves",
+      "pass_unless_changes"
+    ],
+    "must_mention_evidence_fields": [
+      "lead_reason",
+      "evidence_items",
+      "fair_value_base"
+    ],
+    "required_flip_condition": "what_changes_my_view",
+    "required_next_step_hook": "next_step_teaser",
+    "required_primary_chart_claim": "price_position",
+    "chatgpt_reference": "This is not a clean yes at today's number. The deal can work, but only if the price comes back into the comp-backed value band and the supporting evidence holds. The underwriting risk is less about headline upside and more about whether the current basis is giving you enough margin. I would keep it live, but only around a better entry."
+  },
+  {
+    "fixture_id": "1600-l-street-belmar-nj-07719",
+    "prompt": "Underwrite this property.",
+    "expected_stance_band": [
+      "buy_if_price_improves",
+      "interesting_but_fragile",
+      "pass_unless_changes"
+    ],
+    "must_mention_evidence_fields": [
+      "lead_reason",
+      "evidence_items",
+      "fair_value_base"
+    ],
+    "required_flip_condition": "what_changes_my_view",
+    "required_next_step_hook": "next_step_teaser",
+    "required_primary_chart_claim": "price_position",
+    "chatgpt_reference": "Treat this as an underwrite, not a vibe check. The first question is whether today's basis is justified by the value evidence Briarwood actually has, and the second is what fragility still sits under that read. If the current number leaves too little room, the setup moves from interesting to thin very quickly. I would want a sharper look at the comp-backed value proof before leaning in."
+  }
+]

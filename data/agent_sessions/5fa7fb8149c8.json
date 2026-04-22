@@ -1,0 +1,137 @@
+{
+  "session_id": "5fa7fb8149c8",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "selected_search_result": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": "town_market_read",
+  "last_analysis_mode": "research",
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_market_support_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": {
+    "town": "Belmar",
+    "state": "NJ",
+    "confidence_label": "High",
+    "narrative_summary": "Belmar has 2 constructive catalysts; 2 items remain on the watchlist. Confidence is high.",
+    "bullish_signals": [
+      "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato (approved)",
+      "601 Main Street (completed)"
+    ],
+    "bearish_signals": [],
+    "watch_items": [
+      "1201 Main Street redevelopment plan (approved)",
+      "BOROUGH OF BELMAR PLANNING BOARD SPECIAL (mentioned)"
+    ],
+    "document_count": 4,
+    "warnings": []
+  },
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {},
+  "last_verifier_report": null,
+  "last_representation_plan": null,
+  "last_partial_data_warnings": [],
+  "turns": [
+    {
+      "user": "3BR homes under $900k in Belmar NJ with no HOA",
+      "assistant": "Found 2 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "Currently, the listing price of $767,000 is about 6.0% above Briarwood's estimated fair value of approximately $720,644. This premium raises concerns about the value proposition. If the price drops by around 6.0%, it would significantly enhance the investment case.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "How does the live market look around here?",
+      "assistant": "Belmar, NJ market read (High confidence): Belmar has 2 constructive catalysts; 2 items remain on the watchlist. Confidence is high.\nWhat looks constructive: the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato (approved); 601 Main Street (completed).\nWhat still needs watching: 1201 Main Street redevelopment plan (approved); BOROUGH OF BELMAR PLANNING BOARD SPECIAL (mentioned).\nResearch pull: 4 document(s) reviewed.",
+      "answer_type": "research"
+    }
+  ]
+}

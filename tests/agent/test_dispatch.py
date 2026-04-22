@@ -12,6 +12,8 @@ import unittest
 from unittest.mock import patch
 
 from briarwood.agent.dispatch import (
+    _analysis_overrides,
+    _build_town_summary,
     _deepen_browse_followup,
     _escalate_browse_affirmative,
     handle_edge,
@@ -120,6 +122,23 @@ class SearchHandlerInvestmentScreenTests(unittest.TestCase):
 
 
 class DecisionHandlerTests(unittest.TestCase):
+    def test_analysis_overrides_sync_live_pinned_ask_without_marking_user_override(self) -> None:
+        session = Session(
+            current_live_listing={"property_id": REF, "ask_price": 699000.0},
+            selected_search_result={"property_id": REF, "ask_price": 699000.0},
+        )
+        with patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"ask_price": 674200.0},
+        ):
+            effective, explicit = _analysis_overrides(
+                "should I buy this?",
+                pid=REF,
+                session=session,
+            )
+        self.assertEqual(explicit, {})
+        self.assertEqual(effective, {"ask_price": 699000.0})
+
     def test_decision_runs_analyze_and_reports_stance(self) -> None:
         """Clean case: no research-fixable trust flags → single analyze, no research."""
         decision = RouterDecision(
@@ -148,7 +167,7 @@ class DecisionHandlerTests(unittest.TestCase):
             )
         analyzer.assert_called_once_with(REF, overrides={})
         researcher.assert_not_called()
-        self.assertIn("buy_if_price_improves", response)
+        self.assertIn("buy if price improves", response)
         self.assertEqual(session.current_property_id, REF)
         self.assertTrue(response.startswith(session.last_surface_narrative))
 
@@ -341,6 +360,471 @@ class DecisionHandlerTests(unittest.TestCase):
         self.assertEqual(
             session.last_market_support_view["comp_selection_summary"],
             "Live Zillow market comps ranked toward the subject.",
+        )
+
+    def test_decision_populates_risk_strategy_and_rent_slots_on_first_turn(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        view = PropertyView(
+            pid=REF,
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            baths=1.0,
+            ask_price=767000.0,
+            bcv=None,
+            pricing_view="appears_fully_valued",
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            all_in_basis=767000.0,
+            ask_premium_pct=0.0604,
+            basis_premium_pct=0.0604,
+            decision_stance="buy_if_price_improves",
+            primary_value_source="current_value",
+            trust_flags=("thin_comp_set",),
+            trust_summary={"band": "Moderate confidence"},
+            what_must_be_true=("Thin comp set gets resolved.",),
+            key_risks=("Thin comp set",),
+            why_this_stance=("Current basis sits above fair value.",),
+            what_changes_my_view=("Price improves toward fair value.",),
+            contradiction_count=0,
+            blocked_thesis_warnings=("Thin comp set",),
+            unified={"key_value_drivers": ["Beach-adjacent location"]},
+        )
+        with patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=view,
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={"town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_comps_preview",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_decision_value_thesis",
+            return_value={"comps": []},
+        ), patch(
+            "briarwood.agent.dispatch._build_market_support_view",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value={
+                "ask_price": 767000.0,
+                "base_case_value": 737726.0,
+                "bull_case_value": 795946.0,
+                "bear_case_value": 685581.0,
+                "stress_case_value": 640000.0,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_risk_profile",
+            return_value={
+                "ask_price": 767000.0,
+                "risk_flags": ["flood_zone"],
+                "trust_flags": ["thin_comp_set"],
+                "key_risks": ["Flood-zone exposure"],
+                "total_penalty": 0.22,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={
+                "best_path": "buy_if_price_improves",
+                "recommendation": "Interesting if you can buy below ask.",
+                "pricing_view": "above_fair_value",
+                "primary_value_source": "current_value",
+                "rental_ease_label": "seasonal/mixed",
+                "rental_ease_score": 57.0,
+                "rent_support_score": 52.0,
+                "liquidity_score": 61.0,
+                "monthly_cash_flow": -866,
+                "cash_on_cash_return": 0.021,
+                "annual_noi": 18500,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={
+                "monthly_rent": 2352,
+                "effective_monthly_rent": 2234,
+                "annual_noi": 18500,
+                "rent_source_type": "seasonal_mixed",
+                "rental_ease_label": "seasonal/mixed",
+                "rental_ease_score": 57.0,
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_outlook",
+            return_value=RentOutlook(
+                property_id=REF,
+                address=view.address,
+                entry_basis=767000,
+                current_monthly_rent=2352,
+                effective_monthly_rent=2234,
+                annual_noi=18500,
+                rent_source_type="seasonal_mixed",
+                rental_ease_label="seasonal/mixed",
+                rental_ease_score=57.0,
+                horizon_years=3,
+                future_rent_low=2300,
+                future_rent_mid=2410,
+                future_rent_high=2600,
+                basis_to_rent_framing="Current rent annualizes to roughly 3.5% of the current basis.",
+                owner_occupy_then_rent=None,
+                zillow_market_rent=2500,
+                zillow_market_rent_low=2200,
+                zillow_market_rent_high=2900,
+                zillow_rental_comp_count=3,
+                market_context_note=None,
+                burn_chart_payload={"series": [{"year": 0, "rent_base": 2234, "rent_bull": 2400, "rent_bear": 2100, "monthly_obligation": 3100}]},
+                ramp_chart_payload={"series": [{"year": 0, "net_0": -866, "net_3": -866, "net_5": -866}]},
+                confidence_notes=[],
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": view.address, "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.build_property_brief",
+            return_value=PropertyBrief(
+                property_id=REF,
+                address=view.address,
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=1.0,
+                ask_price=767000.0,
+                pricing_view="appears_fully_valued",
+                analysis_depth_used="decision",
+                recommendation="Buy if the price improves.",
+                decision="buy",
+                decision_stance="buy_if_price_improves",
+                best_path="Proceed carefully.",
+                key_value_drivers=["Beach-adjacent location"],
+                key_risks=["Thin comp set"],
+                trust_flags=["thin_comp_set"],
+                next_questions=["What entry price works?"],
+                fair_value_base=720644.0,
+                ask_premium_pct=0.0604,
+                primary_value_source="current_value",
+                recommended_next_run="edge",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={},
+        ):
+            handle_decision("should I buy this?", decision, session, llm=None)
+
+        self.assertIsNotNone(session.last_risk_view)
+        self.assertEqual(session.last_risk_view["risk_flags"], ["flood_zone"])
+        self.assertEqual(session.last_risk_view["bear_value"], 685581.0)
+        self.assertEqual(session.last_risk_view["stress_value"], 640000.0)
+        self.assertIsNotNone(session.last_strategy_view)
+        self.assertEqual(session.last_strategy_view["best_path"], "buy_if_price_improves")
+        self.assertIsNotNone(session.last_rent_outlook_view)
+        self.assertEqual(session.last_rent_outlook_view["monthly_rent"], 2352)
+        self.assertEqual(session.last_rent_outlook_view["horizon_years"], 3)
+
+    def test_decision_value_questions_include_expanded_grounding_payload(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        view = PropertyView(
+            pid=REF,
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            baths=1.0,
+            ask_price=767000.0,
+            bcv=None,
+            pricing_view="appears_fully_valued",
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            all_in_basis=767000.0,
+            ask_premium_pct=0.0604,
+            basis_premium_pct=0.0604,
+            decision_stance="buy_if_price_improves",
+            primary_value_source="current_value",
+            trust_flags=("thin_comp_set",),
+            trust_summary={"band": "Moderate confidence"},
+            what_must_be_true=("Thin comp set gets resolved.",),
+            key_risks=("Thin comp set",),
+            why_this_stance=("Current basis sits above fair value.",),
+            what_changes_my_view=("Price improves toward fair value.",),
+            contradiction_count=0,
+            blocked_thesis_warnings=("Thin comp set",),
+            unified={
+                "key_value_drivers": ["Beach-adjacent location"],
+                "valuation_x_risk": {
+                    "adjustments": {
+                        "risk_adjusted_fair_value": 685000.0,
+                        "required_discount": 0.11,
+                    }
+                },
+            },
+        )
+        with patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=view,
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={"town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_comps_preview",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_decision_value_thesis",
+            return_value={"comps": []},
+        ), patch(
+            "briarwood.agent.dispatch._build_market_support_view",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value={"ask_price": 767000.0},
+        ), patch(
+            "briarwood.agent.dispatch.get_risk_profile",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_outlook",
+            side_effect=ToolUnavailable("skip rent"),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": view.address, "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.build_property_brief",
+            return_value=PropertyBrief(
+                property_id=REF,
+                address=view.address,
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=1.0,
+                ask_price=767000.0,
+                pricing_view="appears_fully_valued",
+                analysis_depth_used="decision",
+                recommendation="Buy if the price improves.",
+                decision="buy",
+                decision_stance="buy_if_price_improves",
+                best_path="Proceed carefully.",
+                key_value_drivers=["Beach-adjacent location"],
+                key_risks=["Thin comp set"],
+                trust_flags=["thin_comp_set"],
+                next_questions=["What entry price works?"],
+                fair_value_base=720644.0,
+                ask_premium_pct=0.0604,
+                primary_value_source="current_value",
+                recommended_next_run="edge",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.complete_and_verify",
+            return_value=(
+                "Anchored value answer.",
+                {
+                    "tier": "decision_value",
+                    "sentences_total": 0,
+                    "sentences_with_violations": 0,
+                    "ungrounded_declaration": False,
+                    "anchor_count": 0,
+                    "anchors": [],
+                    "violations": [],
+                },
+            ),
+        ) as complete:
+            handle_decision("What would change your value view?", decision, session, llm=object())
+
+        structured_inputs = complete.call_args.kwargs["structured_inputs"]
+        self.assertEqual(structured_inputs["address"], view.address)
+        self.assertEqual(structured_inputs["ask_price"], 767000.0)
+        self.assertEqual(structured_inputs["fair_value_base"], 720644.0)
+        self.assertEqual(structured_inputs["ask_premium_pct"], 0.0604)
+        self.assertEqual(structured_inputs["price_gap_pct"], 0.0604)
+        self.assertEqual(structured_inputs["risk_adjusted_fair_value"], 685000.0)
+        self.assertEqual(structured_inputs["required_discount"], 0.11)
+
+    def test_decision_summary_payload_includes_underwrite_digest(self) -> None:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        view = PropertyView(
+            pid=REF,
+            address="1008 14th Avenue, Belmar, NJ 07719",
+            town="Belmar",
+            state="NJ",
+            beds=3,
+            baths=1.0,
+            ask_price=767000.0,
+            bcv=None,
+            pricing_view="appears_fully_valued",
+            fair_value_base=720644.0,
+            value_low=690000.0,
+            value_high=803827.0,
+            all_in_basis=767000.0,
+            ask_premium_pct=0.0604,
+            basis_premium_pct=0.0604,
+            decision_stance="buy_if_price_improves",
+            primary_value_source="current_value",
+            trust_flags=("thin_comp_set",),
+            trust_summary={"band": "Moderate confidence"},
+            what_must_be_true=("Thin comp set gets resolved.",),
+            key_risks=("Thin comp set",),
+            why_this_stance=("Current basis sits above fair value.",),
+            what_changes_my_view=("Price improves toward fair value.",),
+            contradiction_count=0,
+            blocked_thesis_warnings=("Thin comp set",),
+            unified={"key_value_drivers": ["Beach-adjacent location"]},
+        )
+        with patch(
+            "briarwood.agent.dispatch.PropertyView.load",
+            return_value=view,
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            return_value={"town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_comps_preview",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch._build_decision_value_thesis",
+            return_value={
+                "ask_price": 767000.0,
+                "fair_value_base": 720644.0,
+                "premium_discount_pct": 0.0604,
+                "key_value_drivers": ["Beach-adjacent location"],
+                "comps": [{"address": "101 Ocean Ave", "ask_price": 755000.0}],
+            },
+        ), patch(
+            "briarwood.agent.dispatch._build_market_support_view",
+            return_value={
+                "comps": [{"address": "102 Ocean Ave", "ask_price": 760000.0}]
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value={"ask_price": 767000.0},
+        ), patch(
+            "briarwood.agent.dispatch.get_risk_profile",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch._risk_view_from_profile",
+            return_value={
+                "risk_flags": ["thin_comp_set"],
+                "key_risks": ["Thin comp set"],
+            },
+        ), patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch._strategy_view_from_fit",
+            return_value={"best_path": "Wait for a better basis."},
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.get_rent_outlook",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch._rent_outlook_view_from_result",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": view.address, "town": "Belmar", "state": "NJ"},
+        ), patch(
+            "briarwood.agent.dispatch.build_property_brief",
+            return_value=PropertyBrief(
+                property_id=REF,
+                address=view.address,
+                town="Belmar",
+                state="NJ",
+                beds=3,
+                baths=1.0,
+                ask_price=767000.0,
+                pricing_view="appears_fully_valued",
+                analysis_depth_used="decision",
+                recommendation="Buy if the price improves.",
+                decision="buy",
+                decision_stance="buy_if_price_improves",
+                best_path="Wait for a better basis.",
+                key_value_drivers=["Beach-adjacent location"],
+                key_risks=["Thin comp set"],
+                trust_flags=["thin_comp_set"],
+                next_questions=["What entry price works?"],
+                fair_value_base=720644.0,
+                ask_premium_pct=0.0604,
+                primary_value_source="current_value",
+                recommended_next_run="edge",
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_presentation",
+            return_value={},
+        ), patch(
+            "briarwood.agent.dispatch.complete_and_verify",
+            return_value=(
+                "Compact underwrite.",
+                {
+                    "tier": "decision_summary",
+                    "sentences_total": 0,
+                    "sentences_with_violations": 0,
+                    "ungrounded_declaration": False,
+                    "anchor_count": 0,
+                    "anchors": [],
+                    "violations": [],
+                },
+            ),
+        ) as complete:
+            handle_decision("Underwrite this property.", decision, session, llm=object())
+
+        structured_inputs = complete.call_args.kwargs["structured_inputs"]
+        self.assertEqual(
+            structured_inputs["lead_reason"],
+            "The all-in basis is running about 6.0% above Briarwood's fair-value read.",
+        )
+        self.assertEqual(
+            structured_inputs["primary_thesis"],
+            "Current basis sits above fair value.",
+        )
+        self.assertIn(
+            "Fair value is $720,644 against a working basis of $767,000.",
+            structured_inputs["top_supporting_facts"],
+        )
+        self.assertEqual(
+            structured_inputs["top_risk_or_trust_caveat"],
+            "Thin comp set.",
+        )
+        self.assertEqual(
+            structured_inputs["flip_condition"],
+            "Price improves toward fair value.",
+        )
+        self.assertIn("value chart", structured_inputs["next_surface_hook"].lower())
+        self.assertEqual(
+            session.last_decision_view["lead_reason"],
+            structured_inputs["lead_reason"],
+        )
+        self.assertEqual(
+            session.last_decision_view["evidence_items"],
+            structured_inputs["top_supporting_facts"],
+        )
+        self.assertEqual(
+            session.last_decision_view["next_step_teaser"],
+            structured_inputs["next_surface_hook"],
         )
 
 
@@ -657,7 +1141,7 @@ class EdgeHandlerTests(unittest.TestCase):
         self.assertGreaterEqual(loader.call_count, 1)
         self.assertEqual(loader.call_args_list[0].args[0], "1600-l-street-belmar-nj-07719")
         self.assertEqual(session.current_property_id, "1600-l-street-belmar-nj-07719")
-        self.assertIn("Stance: pass_unless_price_changes", response)
+        self.assertIn("Verdict: pass unless price changes.", response)
 
     def test_decision_prefers_current_live_listing_when_last_results_are_present(self) -> None:
         decision = RouterDecision(
@@ -719,7 +1203,7 @@ class EdgeHandlerTests(unittest.TestCase):
         promoter.assert_called_once_with(listing_context=current)
         self.assertGreaterEqual(loader.call_count, 1)
         self.assertEqual(loader.call_args_list[0].args[0], "1600-l-street-belmar-nj-07719")
-        self.assertIn("Stance: pass_unless_price_changes", response)
+        self.assertIn("Verdict: pass unless price changes.", response)
 
 
 class BrowseHandlerTests(unittest.TestCase):
@@ -1852,6 +2336,32 @@ class EdgeHandlerTests(unittest.TestCase):
 
 
 class ResearchHandlerTests(unittest.TestCase):
+    def test_build_town_summary_includes_structured_signal_items(self) -> None:
+        fake_ctx = type(
+            "TownContext",
+            (),
+            {
+                "median_price": 867500,
+                "median_ppsf": 516,
+                "sold_count": 320,
+                "context_confidence": 0.57,
+            },
+        )()
+        with patch(
+            "briarwood.modules.town_aggregation_diagnostics.get_town_context",
+            return_value=fake_ctx,
+        ), patch(
+            "briarwood.agent.dispatch.build_town_signal_items",
+            return_value=[{"id": "sig-1", "display_line": "1201 Main Street redevelopment plan (approved)"}],
+        ), patch(
+            "briarwood.local_intelligence.storage.JsonLocalSignalStore.load_town_signals",
+            return_value=[],
+        ):
+            summary = _build_town_summary("Belmar", "NJ")
+
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary["signal_items"][0]["id"], "sig-1")
+
     def test_research_uses_loaded_property_town_context(self) -> None:
         decision = RouterDecision(
             AnswerType.RESEARCH, confidence=0.6, target_refs=[], reason="llm classify"
@@ -1884,6 +2394,7 @@ class ResearchHandlerTests(unittest.TestCase):
         self.assertIn("Belmar, NJ market read", response)
         self.assertIn("What looks constructive", response)
         self.assertIn("What could weigh on the market", response)
+        self.assertIn("signal_items", session.last_research_view)
 
     def test_research_accepts_explicit_town_state_without_loaded_context(self) -> None:
         decision = RouterDecision(

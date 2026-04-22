@@ -193,10 +193,11 @@ function resolveSurface(spec: ChartSpec): ChartSurface {
 
 export function getChartSurface(chart: ChartEvent): ChartSurface {
   const advisor = chart.advisor ?? null;
+  const whyThisChart = chart.why_this_chart ?? null;
   if (!chart.spec) {
     return {
       title: advisor?.title ?? chartTitle(chart),
-      summary: advisor?.summary ?? null,
+      summary: whyThisChart ?? advisor?.summary ?? null,
       companion: advisor?.companion ?? null,
       shouldRender: Boolean(chart.url),
     };
@@ -205,7 +206,7 @@ export function getChartSurface(chart: ChartEvent): ChartSurface {
   return {
     ...surface,
     title: surface.title ?? chartTitle(chart),
-    summary: surface.summary ?? advisor?.summary ?? null,
+    summary: whyThisChart ?? surface.summary ?? advisor?.summary ?? null,
     companion: surface.companion ?? advisor?.companion ?? null,
   };
 }

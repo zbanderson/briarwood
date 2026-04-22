@@ -1,10 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import type { TownSummaryEvent } from "@/lib/chat/events";
+import type { TownSignalItem, TownSummaryEvent } from "@/lib/chat/events";
 
 type Props = {
   summary: TownSummaryEvent;
+  onSelectSignal?: (signal: TownSignalItem) => void;
 };
 
 const TIER_TONE: Record<string, string> = {
@@ -28,7 +29,7 @@ function tierLabel(tier: string | null | undefined) {
   return tier[0]!.toUpperCase() + tier.slice(1);
 }
 
-export function TownSummaryCard({ summary }: Props) {
+export function TownSummaryCard({ summary, onSelectSignal }: Props) {
   const tier = summary.confidence_tier ?? null;
   const tone = tier ? TIER_TONE[tier] : undefined;
   const conf = summary.confidence_raw;
@@ -84,6 +85,8 @@ export function TownSummaryCard({ summary }: Props) {
           label="Bullish signals"
           tone="emerald"
           items={summary.bullish_signals}
+          signals={(summary.signal_items ?? []).filter((item) => item.bucket === "bullish")}
+          onSelectSignal={onSelectSignal}
         />
       )}
       {summary.bearish_signals.length > 0 && (
@@ -91,6 +94,8 @@ export function TownSummaryCard({ summary }: Props) {
           label="Bearish signals"
           tone="rose"
           items={summary.bearish_signals}
+          signals={(summary.signal_items ?? []).filter((item) => item.bucket === "bearish")}
+          onSelectSignal={onSelectSignal}
         />
       )}
     </div>
@@ -112,10 +117,14 @@ function SignalBlock({
   label,
   tone,
   items,
+  signals,
+  onSelectSignal,
 }: {
   label: string;
   tone: "emerald" | "rose";
   items: string[];
+  signals: TownSignalItem[];
+  onSelectSignal?: (signal: TownSignalItem) => void;
 }) {
   const dot =
     tone === "emerald" ? "bg-emerald-400/70" : "bg-rose-400/70";
@@ -125,17 +134,46 @@ function SignalBlock({
         {label}
       </div>
       <ul className="mt-1.5 space-y-1 text-[13px] text-[var(--color-text-muted)]">
-        {items.map((item, i) => (
-          <li key={i} className="flex gap-2">
-            <span
-              className={cn(
-                "mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-                dot,
-              )}
-            />
-            <span>{item}</span>
+        {items.map((item, i) => {
+          const matchedSignal =
+            signals.find((signal) => signal.title === item || signal.display_line === item) ??
+            signals[i];
+          return (
+          <li key={i}>
+            {matchedSignal && onSelectSignal ? (
+              <button
+                type="button"
+                onClick={() => onSelectSignal(matchedSignal)}
+                className={cn(
+                  "group flex w-full items-start gap-2 rounded-lg px-1 py-1.5 text-left transition-colors",
+                  "hover:bg-[var(--color-bg-sunken)] hover:text-[var(--color-text)]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                    dot,
+                  )}
+                />
+                <span className="flex-1">{item}</span>
+                <span className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)] transition-colors group-hover:text-[var(--color-text-muted)]">
+                  Drill in
+                </span>
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <span
+                  className={cn(
+                    "mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                    dot,
+                  )}
+                />
+                <span>{item}</span>
+              </div>
+            )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );

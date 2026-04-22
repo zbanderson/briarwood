@@ -1,0 +1,117 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "601",
+            "short_name": "601",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Main Street",
+            "short_name": "Main St",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07719",
+            "short_name": "07719",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2701",
+            "short_name": "2701",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "601 Main St, Belmar, NJ 07719, USA",
+        "geometry": {
+          "location": {
+            "lat": 40.1830471,
+            "lng": -74.0247794
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1843305802915,
+              "lng": -74.0232107697085
+            },
+            "southwest": {
+              "lat": 40.1816326197085,
+              "lng": -74.0259087302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.182933,
+              "longitude": -74.0244195
+            }
+          }
+        ],
+        "place_id": "ChIJSe7R0eAnwokRYEMF0EmIM-c",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "601 Main St, Belmar, NJ 07719, USA",
+    "latitude": 40.1830471,
+    "longitude": -74.0247794,
+    "place_id": "ChIJSe7R0eAnwokRYEMF0EmIM-c",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719"
+  },
+  "fetched_at": "2026-04-22T16:46:07Z"
+}

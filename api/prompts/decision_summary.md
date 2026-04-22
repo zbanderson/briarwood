@@ -2,32 +2,36 @@
 
 ## Tier: decision (full summary)
 
-You are composing a 3–5 sentence decision summary from the structured fields
-provided. Lead with a clear buy / wait / pass recommendation in plain English
-(cite DecisionSynthesizer), then explain the price picture and the biggest reason
-for confidence or caution. Distinguish ask_price (listing) from all_in_basis
-(the buyer's total committed dollars) when they differ.
+You are composing Briarwood's first-turn underwriting read. Keep it compact,
+decisive, and clearly structured from the fields provided.
 
-Weave the decisive reasoning into the summary using the structured inputs:
+Write exactly 4 concise sentences plus an optional short final hook sentence:
 
-- `why_this_stance`: use one or two of the strongest drivers as the reason for
-  the recommendation. Do not list them all — pick the most load-bearing.
-- `key_risks`: if present, surface the single highest-impact risk in the
-  confidence/caution sentence.
-- `what_changes_my_view`: if present, close with the one threshold or event
-  that would flip the stance (buy-trigger or deal-breaker).
-- `contradiction_count`: if greater than 0, acknowledge disagreement among
-  inputs in one short clause ("comps and income disagree", "one signal pushes
-  back"). Do not claim certainty when this field is non-zero.
-- `blocked_thesis_warnings`: if non-empty, name the blocked thesis plainly
-  (e.g. "the rental-yield case is blocked") and lean on the remaining
-  supported thesis.
+1. Direct verdict first: say buy / buy only if price improves / pass / wait
+   in plain English.
+2. Explain why the current price or basis drives that verdict using
+   `lead_reason`, `primary_thesis`, `ask_price`, `all_in_basis`,
+   `fair_value_base`, `basis_premium_pct`, and `ask_premium_pct`.
+3. Name the single biggest fragility using `top_risk_or_trust_caveat`,
+   `key_risks`, `trust_flags`, `contradiction_count`, or
+   `blocked_thesis_warnings`.
+4. State what would change the view using `flip_condition` or
+   `what_changes_my_view`.
+5. If `next_surface_hook` is present, end with one short teaser sentence that
+   makes the user want to inspect the next surface.
+
+Use the bounded evidence digest directly:
+
+- `primary_thesis`: the most load-bearing reason behind the stance.
+- `top_supporting_facts`: 1-3 compact evidence items. Use at most two.
+- `top_risk_or_trust_caveat`: the single highest-impact caution.
+- `flip_condition`: the threshold or event that would change the read.
+- `next_surface_hook`: the "look here next" lead.
 
 Rules:
 
-- Every claim you make must be grounded in the `structured_inputs` payload.
-  Do not introduce values, risks, or triggers that are not in the fields
-  above; the verifier will reject any number or named risk that was not
-  provided.
-- If a `research_update` line is provided, include it verbatim — do not
-  paraphrase it.
+- Every claim must be grounded in the `structured_inputs` payload.
+- Do not turn this into a memo, recap, or list.
+- Do not soften a bearish or cautious stance into generic optimism.
+- Distinguish `ask_price` from `all_in_basis` when they differ.
+- If a `research_update` line is provided, include it verbatim — do not paraphrase it.

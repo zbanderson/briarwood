@@ -36,7 +36,7 @@ _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z\"'])")
 # and percentages need to win over the bare-integer fallback. Each capture is
 # normalized into a comparable string downstream.
 _NUMBER_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
-    ("currency_short", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s?([KkMmBb])")),
+    ("currency_short", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)\s?([KkMmBb])\b")),
     ("currency", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)")),
     ("percent", re.compile(r"(-?\d+(?:\.\d+)?)\s?%")),
     ("multiplier", re.compile(r"(\d+(?:\.\d+)?)\s?[xX]\b")),
@@ -67,6 +67,30 @@ _FORBIDDEN_HEDGES = (
     "it depends on many factors",
     "broadly speaking",
 )
+
+_ADDRESS_SUFFIXES = {
+    "ave",
+    "avenue",
+    "blvd",
+    "boulevard",
+    "circle",
+    "cir",
+    "court",
+    "ct",
+    "drive",
+    "dr",
+    "lane",
+    "ln",
+    "place",
+    "pl",
+    "rd",
+    "road",
+    "st",
+    "street",
+    "terrace",
+    "ter",
+    "way",
+}
 
 
 @dataclass
@@ -175,6 +199,7 @@ def _flatten_input_values(payload: Any) -> set[str]:
             # write 820000 as $820k, or 0.105 as 10.5%).
             if isinstance(node, float):
                 out.add(_normalize_token(str(round(node * 100, 2))))
+                out.add(_normalize_token(str(round(node * 100))))
             if isinstance(node, (int, float)) and abs(node) >= 1000:
                 out.add(_normalize_token(f"{round(node / 1000)}k"))
                 out.add(_normalize_token(f"{round(node / 1_000_000, 2)}m"))
@@ -215,6 +240,43 @@ def _flatten_input_strings(payload: Any) -> set[str]:
 
     _walk(payload)
     return out
+
+
+def _address_tokens(value: str) -> list[str]:
+    tokens = re.findall(r"[a-z0-9]+", value.lower())
+    if len(tokens) < 2 or not tokens[0].isdigit():
+        return []
+    if not any(token in _ADDRESS_SUFFIXES for token in tokens[1:5]):
+        return []
+    return tokens
+
+
+def _contains_token_sequence(haystack: list[str], needle: list[str]) -> bool:
+    if not needle or len(needle) > len(haystack):
+        return False
+    width = len(needle)
+    for idx in range(len(haystack) - width + 1):
+        if haystack[idx : idx + width] == needle:
+            return True
+    return False
+
+
+def _is_grounded_address_number(
+    raw: str,
+    sentence: str,
+    grounded_strings: set[str],
+) -> bool:
+    sentence_tokens = re.findall(r"[a-z0-9]+", sentence.lower())
+    for candidate in grounded_strings:
+        tokens = _address_tokens(candidate)
+        if not tokens or tokens[0] != raw:
+            continue
+        for width in (3, 2):
+            if len(tokens) >= width and _contains_token_sequence(
+                sentence_tokens, tokens[:width]
+            ):
+                return True
+    return False
 
 
 def extract_anchors(text: str) -> list[Anchor]:
@@ -275,9 +337,13 @@ def verify_sentence(
     violations: list[Violation] = []
     anchor_values = {a.normalized_value for a in anchors}
 
-    for raw, _kind in extract_numbers(sentence):
+    for raw, kind in extract_numbers(sentence):
         token = _normalize_token(raw)
         if token in anchor_values or token in grounded_numbers:
+            continue
+        if kind == "bare_int" and _is_grounded_address_number(
+            raw, sentence, grounded_strings
+        ):
             continue
         # Allow tokens that match within 0.5% rounding tolerance of any input.
         if _is_close_to_any(token, grounded_numbers, tolerance=0.005):

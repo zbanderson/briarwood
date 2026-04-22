@@ -69,7 +69,7 @@ def run_operational_sweep() -> dict[str, Any]:
     environment = _environment_checks()
     scoped_modules = _load_scoped_modules()
     fully_scoped_paths, partial_paths = _read_scoped_execution_paths()
-    evaluation_surfaces = _evaluation_surfaces()
+    evaluation_surfaces = _evaluation_surfaces(environment)
     report = OperationalSweepReport(
         generated_at=datetime.now(timezone.utc).isoformat(),
         environment=environment,
@@ -161,8 +161,18 @@ def _bullet_block_after(text: str, heading: str) -> list[str]:
     return lines
 
 
-def _evaluation_surfaces() -> list[EvaluationSurface]:
+def _missing_core_imports(environment: list[EnvironmentCheck]) -> list[str]:
+    required = {"pydantic"}
+    return [check.package for check in environment if check.package in required and not check.installed]
+
+
+def _evaluation_surfaces(environment: list[EnvironmentCheck]) -> list[EvaluationSurface]:
+    missing_core = _missing_core_imports(environment)
     commands = [
+        (
+            "canonical_underwrite_benchmark",
+            ["python3", "-m", "briarwood.eval.canonical_underwrite_benchmark"],
+        ),
         (
             "model_quality_harness",
             ["python3", "-m", "briarwood.eval.model_quality.harness", "--limit", "1"],
@@ -187,10 +197,22 @@ def _evaluation_surfaces() -> list[EvaluationSurface]:
             ],
         ),
     ]
-    return [_run_surface(name, command) for name, command in commands]
+    return [_run_surface(name, command, missing_core=missing_core) for name, command in commands]
 
 
-def _run_surface(name: str, command: list[str]) -> EvaluationSurface:
+def _run_surface(
+    name: str,
+    command: list[str],
+    *,
+    missing_core: list[str] | None = None,
+) -> EvaluationSurface:
+    if missing_core:
+        return EvaluationSurface(
+            name=name,
+            command=command,
+            status="blocked_by_environment",
+            detail="preflight failed: missing core imports " + ", ".join(sorted(missing_core)),
+        )
     try:
         proc = subprocess.run(
             command,

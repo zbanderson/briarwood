@@ -2,49 +2,99 @@
   "signals": [
     {
       "affected_dimensions": [
-        "future_supply",
+        "neighborhood_quality",
+        "amenity_trajectory",
         "home_values"
       ],
+      "canonical_key": null,
+      "confidence": 0.92,
+      "created_at": "2026-04-22T16:54:20.004430Z",
+      "evidence_excerpt": "The proposal for 500 River Road residential project with 12 units was denied after traffic concern and parking issue were discussed.",
+      "facts": [
+        "Signal classified as amenity.",
+        "Source type: zoning board minutes.",
+        "Status read as rejected.",
+        "Document references approximately 12 units.",
+        "Location referenced: 500 River Road."
+      ],
+      "first_seen_at": "2026-04-22T16:54:20.004438Z",
+      "id": "sig-025be82937ad",
+      "impact_direction": "negative",
+      "impact_magnitude": 3,
+      "inference": "This may create downside pressure or execution risk if the concern persists.",
+      "last_seen_at": "2026-04-22T16:54:20.004438Z",
+      "last_transition_at": null,
+      "metadata": {
+        "location": "500 River Road",
+        "units": 12
+      },
+      "occurrence_count": 1,
+      "previous_status": null,
+      "reconciliation_status": "new",
+      "signal_type": "amenity",
+      "source_date": "2026-02-25T00:00:00Z",
+      "source_document_id": "doc-297f24e40a30",
+      "source_type": "zoning_board_minutes",
+      "source_url": null,
+      "state": "NJ",
+      "status": "rejected",
+      "time_horizon": "medium_term",
+      "title": "500 River Road residential project with 12 units was denied after traffic concer",
+      "town": "Belmar",
+      "updated_at": "2026-04-22T16:54:20.004430Z"
+    },
+    {
+      "affected_dimensions": [
+        "future_supply",
+        "home_values",
+        "rent_growth"
+      ],
       "canonical_key": "tsk-457c92a39da2714f",
-      "confidence": 0.82,
-      "created_at": "2026-04-22T12:57:06.438367Z",
-      "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
+      "confidence": 0.92,
+      "created_at": "2026-04-22T16:54:20.004388Z",
+      "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved. Board members found the project consistent with the master plan.",
       "facts": [
         "Existing signal for the same project.",
-        "The document states 24 residential units were approved."
+        "The document states 24 residential units were approved.",
+        "Signal classified as supply.",
+        "Source type: planning board minutes.",
+        "Status read as approved.",
+        "Document references approximately 24 units.",
+        "Location referenced: 1201 Main Street."
       ],
       "first_seen_at": "2026-02-11T00:00:00Z",
-      "id": "sig-07b025575b6d",
-      "impact_direction": "mixed",
+      "id": "sig-71254b879dc4",
+      "impact_direction": "positive",
       "impact_magnitude": 4,
-      "inference": "This may add moderate supply. Earlier extraction run.",
-      "last_seen_at": "2026-04-22T12:57:06.438386Z",
+      "inference": "This may influence future supply and pricing dynamics if the 24-unit pipeline reaches delivery. This may add moderate supply. Earlier extraction run.",
+      "last_seen_at": "2026-04-22T16:54:20.004438Z",
       "last_transition_at": null,
       "metadata": {
         "location": "1201 Main Street",
         "related_source_document_ids": [
-          "older-doc",
-          "fixture-minutes-001"
+          "fixture-minutes-001",
+          "doc-5b47002292f8",
+          "older-doc"
         ],
         "source_type_history": [
           "planning_board_minutes"
         ],
         "units": 24
       },
-      "occurrence_count": 2,
+      "occurrence_count": 3,
       "previous_status": null,
       "reconciliation_status": "updated",
       "signal_type": "supply",
       "source_date": "2026-02-11T00:00:00Z",
-      "source_document_id": "fixture-minutes-001",
+      "source_document_id": "doc-5b47002292f8",
       "source_type": "planning_board_minutes",
       "source_url": null,
       "state": "NJ",
       "status": "approved",
       "time_horizon": "medium_term",
-      "title": "1201 Main Street redevelopment plan",
+      "title": "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
       "town": "Belmar",
-      "updated_at": "2026-04-22T12:57:06.438386Z"
+      "updated_at": "2026-04-22T16:54:20.004438Z"
     }
   ],
   "state": "NJ",

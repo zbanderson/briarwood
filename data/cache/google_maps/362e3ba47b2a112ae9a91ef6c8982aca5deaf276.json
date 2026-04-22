@@ -1,0 +1,107 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "500",
+            "short_name": "500",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "River Road",
+            "short_name": "River Rd",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07719",
+            "short_name": "07719",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "2141",
+            "short_name": "2141",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "500 River Rd, Belmar, NJ 07719, USA",
+        "geometry": {
+          "location": {
+            "lat": 40.1843884,
+            "lng": -74.0237958
+          },
+          "location_type": "RANGE_INTERPOLATED",
+          "viewport": {
+            "northeast": {
+              "lat": 40.18573738029149,
+              "lng": -74.02244681970849
+            },
+            "southwest": {
+              "lat": 40.1830394197085,
+              "lng": -74.02514478029151
+            }
+          }
+        },
+        "place_id": "EiM1MDAgUml2ZXIgUmQsIEJlbG1hciwgTkogMDc3MTksIFVTQSIxEi8KFAoSCY8azLLgJ8KJEflzGNPD9ouhEPQDKhQKEgnlfgrj4CfCiRFf4i_GYVHptA",
+        "types": [
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "500 River Rd, Belmar, NJ 07719, USA",
+    "latitude": 40.1843884,
+    "longitude": -74.0237958,
+    "place_id": "EiM1MDAgUml2ZXIgUmQsIEJlbG1hciwgTkogMDc3MTksIFVTQSIxEi8KFAoSCY8azLLgJ8KJEflzGNPD9ouhEPQDKhQKEgnlfgrj4CfCiRFf4i_GYVHptA",
+    "types": [
+      "street_address"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719"
+  },
+  "fetched_at": "2026-04-22T17:21:03Z"
+}

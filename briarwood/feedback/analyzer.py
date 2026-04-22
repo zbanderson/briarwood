@@ -24,9 +24,9 @@ class FeedbackReport:
 
     total_records: int = 0
 
-    # Execution mode breakdown
+    # Execution mode breakdown (historic records may tag other modes; new
+    # records are all "scoped" since the legacy fallback has been removed).
     execution_mode_counts: dict[str, int] = field(default_factory=dict)
-    legacy_fallback_rate: float = 0.0
 
     # Module frequency
     module_frequency: dict[str, int] = field(default_factory=dict)
@@ -65,7 +65,6 @@ class FeedbackReport:
         return {
             "total_records": self.total_records,
             "execution_mode_counts": self.execution_mode_counts,
-            "legacy_fallback_rate": round(self.legacy_fallback_rate, 3),
             "module_frequency": dict(sorted(self.module_frequency.items(), key=lambda x: x[1], reverse=True)),
             "module_selection_rate": {k: round(v, 3) for k, v in sorted(self.module_selection_rate.items(), key=lambda x: x[1], reverse=True)},
             "confidence_buckets": self.confidence_buckets,
@@ -132,9 +131,6 @@ def analyze(records: list[dict[str, Any]] | None = None) -> FeedbackReport:
 def _analyze_execution_modes(records: list[dict], report: FeedbackReport) -> None:
     modes = Counter(str(r.get("execution_mode") or "unknown") for r in records)
     report.execution_mode_counts = dict(modes)
-    total = sum(modes.values())
-    if total > 0:
-        report.legacy_fallback_rate = modes.get("legacy_fallback", 0) / total
 
 
 def _analyze_modules(records: list[dict], report: FeedbackReport) -> None:
@@ -166,9 +162,6 @@ def _analyze_confidence(records: list[dict], report: FeedbackReport) -> None:
         if conf < 0.55:
             for inp in (r.get("parser_output") or {}).get("missing_inputs") or []:
                 low_drivers[str(inp)] += 1
-            mode = str(r.get("execution_mode") or "")
-            if mode == "legacy_fallback":
-                low_drivers["_legacy_fallback"] += 1
 
     if confidences:
         report.mean_confidence = sum(confidences) / len(confidences)
@@ -372,7 +365,6 @@ def format_report(report: FeedbackReport) -> str:
     for mode, count in sorted(report.execution_mode_counts.items(), key=lambda x: -x[1]):
         pct = count / max(report.total_records, 1) * 100
         lines.append(f"  {mode:25s} {count:>4d}  ({pct:.0f}%)")
-    lines.append(f"  Legacy fallback rate: {report.legacy_fallback_rate:.1%}")
 
     lines.append(f"\n── Module Selection {'─' * 43}")
     for module, count in sorted(report.module_frequency.items(), key=lambda x: -x[1]):

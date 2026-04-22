@@ -8,8 +8,9 @@ import { Composer } from "./composer";
 import { DetailPanel } from "./detail-panel";
 import { EmptyState } from "./empty-state";
 import { MessageList, SuggestionChips } from "./messages";
+import { TownSignalPanel } from "./town-signal-panel";
 import { useChat, type ChatMessage } from "@/lib/chat/use-chat";
-import type { Listing } from "@/lib/chat/events";
+import type { Listing, TownSignalItem } from "@/lib/chat/events";
 
 type Props = {
   conversationId?: string;
@@ -26,6 +27,10 @@ export function ChatView({
   const router = useRouter();
   const [draft, setDraft] = useState("");
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [selectedTownSignal, setSelectedTownSignal] = useState<{
+    signal: TownSignalItem;
+    subjectListing: Listing | null;
+  } | null>(null);
   const pendingNavigationIdRef = useRef<string | null>(null);
   // Separate from selectedListing: the panel can close while the pin persists,
   // and the pin carries across subsequent typed turns until the user dismisses.
@@ -82,7 +87,14 @@ export function ChatView({
               <div className="pt-8">
                 <MessageList
                   messages={messages}
-                  onSelectListing={setSelectedListing}
+                  onSelectListing={(listing) => {
+                    setSelectedTownSignal(null);
+                    setSelectedListing(listing);
+                  }}
+                  onSelectTownSignal={(signal, subjectListing) => {
+                    setSelectedListing(null);
+                    setSelectedTownSignal({ signal, subjectListing });
+                  }}
                   onPrompt={submitImmediate}
                 />
                 {!isStreaming && (
@@ -132,6 +144,11 @@ export function ChatView({
         listing={selectedListing}
         onClose={() => setSelectedListing(null)}
         onRunAnalysis={runAnalysis}
+      />
+      <TownSignalPanel
+        signal={selectedTownSignal?.signal ?? null}
+        subjectListing={selectedTownSignal?.subjectListing ?? null}
+        onClose={() => setSelectedTownSignal(null)}
       />
     </div>
   );

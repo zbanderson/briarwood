@@ -17,6 +17,13 @@ from briarwood.runner_routed import run_routed_report
 
 
 FIXTURE = Path(__file__).resolve().parents[1] / "data" / "saved_properties" / "briarwood-rd-belmar" / "inputs.json"
+NULL_PRICE_FIXTURE = (
+    Path(__file__).resolve().parents[1]
+    / "data"
+    / "saved_properties"
+    / "1228-briarwood-road-belmar-nj"
+    / "inputs.json"
+)
 
 
 class RunRoutedReportIntegrationTests(unittest.TestCase):
@@ -78,6 +85,34 @@ class RunRoutedReportIntegrationTests(unittest.TestCase):
     def test_selected_modules_recorded_on_routing_decision(self) -> None:
         selected = self.result.routing_decision.selected_modules
         self.assertTrue(selected, "routing decision must select at least one module")
+
+
+class NullPriceFixtureScopedPathTests(unittest.TestCase):
+    """Regression: a property with ``purchase_price=null`` must still run
+    cleanly through scoped execution. Before Phase 2 this fixture hit the
+    legacy fallback because the router/module set depended on price-derived
+    inputs; with the fallback gone, the scoped registry must handle it
+    end-to-end without raising.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if not NULL_PRICE_FIXTURE.exists():
+            raise unittest.SkipTest(f"integration fixture missing: {NULL_PRICE_FIXTURE}")
+        cls.result = run_routed_report(
+            NULL_PRICE_FIXTURE, user_input="Should I buy this?"
+        )
+
+    def test_scoped_path_runs_without_error(self) -> None:
+        selected = self.result.routing_decision.selected_modules
+        self.assertTrue(selected, "routing decision must select at least one module")
+        outputs = self.result.engine_output.outputs
+        self.assertTrue(outputs, "scoped execution must populate at least one module output")
+
+    def test_unified_output_resolves_a_stance(self) -> None:
+        stance = self.result.unified_output.decision_stance
+        self.assertIsInstance(stance, DecisionStance)
+        self.assertTrue(stance.value)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ import json
 import re
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Mapping
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import logging
@@ -627,6 +627,10 @@ class _DecisionView(BaseModel):
     contradiction_count: int | None = None
     blocked_thesis_warnings: list[str] = Field(default_factory=list)
     overrides_applied: dict[str, Any] = Field(default_factory=dict)
+    lead_reason: str | None = None
+    evidence_items: list[str] = Field(default_factory=list)
+    next_step_teaser: str | None = None
+    primary_chart_claim: str | None = None
 
 
 def _verdict_from_view(view: dict[str, Any]) -> dict[str, Any]:
@@ -666,6 +670,9 @@ def _verdict_from_view(view: dict[str, Any]) -> dict[str, Any]:
         "contradiction_count": model.contradiction_count,
         "blocked_thesis_warnings": list(model.blocked_thesis_warnings),
         "overrides_applied": dict(model.overrides_applied),
+        "lead_reason": model.lead_reason,
+        "evidence_items": list(model.evidence_items),
+        "next_step_teaser": model.next_step_teaser,
     }
 
 
@@ -1116,6 +1123,82 @@ def _native_rent_ramp_chart(view: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+_PROOF_CHART_REASONS: dict[str, str] = {
+    "price_position": "This chart proves the verdict by showing where today's ask sits versus Briarwood's fair-value read.",
+    "comp_evidence": "This chart proves the verdict by showing which comps are actually backing the pricing call.",
+    "risk_composition": "This chart proves the verdict by showing which risks are doing the most work in the caution.",
+    "scenario_range": "This chart proves the verdict by showing how much room exists between the base case and the downside.",
+    "rent_coverage": "This chart proves the verdict by showing whether rent can realistically carry the monthly burden.",
+}
+
+
+def _annotate_chart_event(
+    chart_event: dict[str, Any] | None,
+    *,
+    supports_claim: str | None,
+    why_this_chart: str | None,
+) -> dict[str, Any] | None:
+    if chart_event is None:
+        return None
+    patched = dict(chart_event)
+    if supports_claim:
+        patched["supports_claim"] = supports_claim
+    if why_this_chart:
+        patched["why_this_chart"] = why_this_chart
+    return patched
+
+
+def _primary_proof_chart(
+    session: Session,
+    visual_advice: dict[str, dict[str, str]],
+) -> dict[str, Any] | None:
+    decision_view = session.last_decision_view if isinstance(session.last_decision_view, dict) else {}
+    value_view = session.last_value_thesis_view if isinstance(session.last_value_thesis_view, dict) else {}
+    market_view = session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
+    risk_view = session.last_risk_view if isinstance(session.last_risk_view, dict) else {}
+    rent_view = session.last_rent_outlook_view if isinstance(session.last_rent_outlook_view, dict) else {}
+    projection_view = session.last_projection_view if isinstance(session.last_projection_view, dict) else {}
+
+    claim = str(decision_view.get("primary_chart_claim") or "price_position")
+    section = "value"
+    if claim == "risk_composition":
+        chart_event = _native_risk_chart(risk_view)
+        section = "risk"
+        if chart_event is None:
+            claim = "price_position"
+    elif claim == "scenario_range":
+        chart_event = _native_scenario_chart(projection_view)
+        section = "scenario"
+        if chart_event is None:
+            claim = "price_position"
+    elif claim == "rent_coverage":
+        chart_event = _native_rent_chart(rent_view) or _native_rent_ramp_chart(rent_view)
+        section = "rent"
+        if chart_event is None:
+            claim = "price_position"
+    elif claim == "comp_evidence":
+        chart_event = _native_cma_chart(value_view, market_view=market_view)
+        section = "cma"
+        if chart_event is None:
+            claim = "price_position"
+    else:
+        chart_event = None
+
+    if claim == "price_position":
+        chart_event = _native_value_chart(value_view)
+        section = "value"
+        if chart_event is None:
+            chart_event = _native_cma_chart(value_view, market_view=market_view)
+            section = "cma"
+
+    chart_event = _apply_chart_advice(chart_event, visual_advice, section)
+    return _annotate_chart_event(
+        chart_event,
+        supports_claim=claim,
+        why_this_chart=_PROOF_CHART_REASONS.get(claim),
+    )
+
+
 def _visual_advice_payload(session: Session) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if isinstance(session.last_value_thesis_view, dict):
@@ -1284,6 +1367,41 @@ def _representation_module_views(
     }
 
 
+def _representation_selection_lost_surface(
+    selection: Any,
+    module_views: Mapping[str, Mapping[str, Any] | None],
+    rendered_chart_ids: set[str],
+) -> bool:
+    """Return True when a flagged selection corresponds to a chartable surface
+    that real session data could have produced, but that no emitted chart now
+    covers.
+
+    This keeps LLM drift as telemetry unless it actually causes a lost user
+    surface. Duplicate selections for a chart that still rendered elsewhere
+    should not show up as `partial_data_warning` banners.
+    """
+    if not getattr(selection, "flagged", False):
+        return False
+    from briarwood.representation.charts import all_specs as _all_specs
+
+    claim = getattr(selection, "claim_type", None)
+    claim_value = claim.value if hasattr(claim, "value") else str(claim or "")
+    candidates = [
+        spec for spec in _all_specs() if claim_value and claim_value in spec.claim_types
+    ]
+    if not candidates:
+        return False
+    if any(spec.id in rendered_chart_ids for spec in candidates):
+        return False
+    for spec in candidates:
+        for view in module_views.values():
+            if not isinstance(view, Mapping):
+                continue
+            if all(view.get(field) for field in spec.required_inputs):
+                return True
+    return False
+
+
 def _representation_charts(
     session: Session,
     user_question: str,
@@ -1326,6 +1444,11 @@ def _representation_charts(
         patched_event = _apply_chart_advice(ev, visual_advice, section)
         patched.append(patched_event if patched_event is not None else ev)
     selections = [s.model_dump(mode="json") for s in plan.selections]
+    rendered_chart_ids = {
+        str(event.get("kind"))
+        for event in patched
+        if isinstance(event.get("kind"), str) and event.get("kind")
+    }
 
     # NF1: warn when the LLM nominated chart selections that postprocessing had
     # to reject (drift signal). Skipped when the deterministic fallback was
@@ -1333,7 +1456,9 @@ def _representation_charts(
     if llm is not None:
         drift_reasons: list[str] = []
         for s in plan.selections:
-            if not s.flagged:
+            if not _representation_selection_lost_surface(
+                s, module_views, rendered_chart_ids
+            ):
                 continue
             claim = getattr(s, "claim_type", None)
             claim_label = claim.value if hasattr(claim, "value") else str(claim or "?")
@@ -1876,6 +2001,7 @@ def _frontend_listing_to_backend(pinned: dict[str, Any]) -> dict[str, Any]:
     expect. Without this translation, follow-up turns on a discovered listing
     fail at promotion time because the address key is missing."""
     return {
+        "property_id": pinned.get("id") or pinned.get("property_id"),
         "address": pinned.get("address_line") or pinned.get("address"),
         "town": pinned.get("city") or pinned.get("town"),
         "state": pinned.get("state"),
@@ -1900,14 +2026,13 @@ def _seed_session_for_pinned(
     pid (or None if the pin is a live listing without a saved counterpart)."""
     if not pinned:
         return None
+    backend_shape = _frontend_listing_to_backend(pinned)
+    session.current_live_listing = backend_shape
+    session.selected_search_result = backend_shape
     pid_hint = str(pinned.get("id") or "")
     if pid_hint and (_SAVED_ROOT / pid_hint).exists():
         session.current_property_id = pid_hint
         return pid_hint
-    if pinned.get("source_url"):
-        backend_shape = _frontend_listing_to_backend(pinned)
-        session.current_live_listing = backend_shape
-        session.selected_search_result = backend_shape
     return None
 
 
@@ -2046,6 +2171,10 @@ async def _decision_stream_impl(
 
     if isinstance(session.last_rent_outlook_view, dict):
         primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
+
+    primary_chart = _primary_proof_chart(session, visual_advice)
+    if _append_chart_once(projection_secondary, primary_chart):
+        native_projection_chart_emitted = True
 
     # Representation Agent (AUDIT 1.4 / 1.7): decision-tier charts are now
     # picked by the Representation Agent against the registered chart catalog,

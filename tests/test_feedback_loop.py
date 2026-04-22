@@ -61,18 +61,16 @@ class AnalyzerTests(unittest.TestCase):
     def test_analyze_empty_records(self) -> None:
         report = analyze([])
         self.assertEqual(report.total_records, 0)
-        self.assertEqual(report.legacy_fallback_rate, 0.0)
+        self.assertEqual(report.execution_mode_counts, {})
 
     def test_analyze_execution_mode_counts(self) -> None:
         records = [
-            _make_analysis_record(execution_mode="scoped"),
-            _make_analysis_record(execution_mode="scoped"),
-            _make_analysis_record(execution_mode="legacy_fallback"),
+            _make_analysis_record(),
+            _make_analysis_record(),
+            _make_analysis_record(),
         ]
         report = analyze(records)
-        self.assertEqual(report.execution_mode_counts["scoped"], 2)
-        self.assertEqual(report.execution_mode_counts["legacy_fallback"], 1)
-        self.assertAlmostEqual(report.legacy_fallback_rate, 1 / 3, places=3)
+        self.assertEqual(report.execution_mode_counts["scoped"], 3)
 
     def test_analyze_module_frequency(self) -> None:
         records = [
@@ -169,7 +167,7 @@ class AnalyzerTests(unittest.TestCase):
     def test_format_report_produces_text(self) -> None:
         records = [
             _make_analysis_record(),
-            _make_analysis_record(execution_mode="legacy_fallback"),
+            _make_analysis_record(),
         ]
         report = analyze(records)
         text = format_report(report)

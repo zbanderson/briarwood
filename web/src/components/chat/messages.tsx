@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/lib/chat/use-chat";
-import type { Listing } from "@/lib/chat/events";
+import type { Listing, TownSignalItem } from "@/lib/chat/events";
 import { PropertyCarousel } from "./property-carousel";
 import { VerdictCard } from "./verdict-card";
 import { ChartFrame } from "./chart-frame";
@@ -23,8 +23,7 @@ import { ModuleBadges } from "./module-badges";
 import { GroundedText } from "./grounded-text";
 import { EntryPointCard } from "./entry-point-card";
 
-// Lazy-load Mapbox — keeps it out of the main bundle and avoids SSR errors
-// from window-only globals in mapbox-gl.
+// Lazy-load Google Maps so the client-only browser API stays out of SSR.
 const InlineMap = dynamic(
   () => import("./inline-map").then((m) => m.InlineMap),
   { ssr: false, loading: () => <MapSkeleton /> },
@@ -42,19 +41,22 @@ function MapSkeleton() {
 type MessageListProps = {
   messages: ChatMessage[];
   onSelectListing?: (listing: Listing) => void;
+  onSelectTownSignal?: (signal: TownSignalItem, subjectListing: Listing | null) => void;
   onPrompt?: (prompt: string) => void;
 };
 
 export function MessageList({
   messages,
   onSelectListing,
+  onSelectTownSignal,
   onPrompt,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastMessageContent = messages[messages.length - 1]?.content;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, messages[messages.length - 1]?.content]);
+  }, [messages.length, lastMessageContent]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,6 +68,7 @@ export function MessageList({
             key={m.id}
             message={m}
             onSelectListing={onSelectListing}
+            onSelectTownSignal={onSelectTownSignal}
             onPrompt={onPrompt}
           />
         ),
@@ -94,10 +97,12 @@ function UserMessage({ content }: { content: string }) {
 function AssistantMessage({
   message,
   onSelectListing,
+  onSelectTownSignal,
   onPrompt,
 }: {
   message: ChatMessage;
   onSelectListing?: (listing: Listing) => void;
+  onSelectTownSignal?: (signal: TownSignalItem, subjectListing: Listing | null) => void;
   onPrompt?: (prompt: string) => void;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -126,6 +131,7 @@ function AssistantMessage({
   const showCompPreview = Boolean(
     compsPreview && !valueThesis && !valuationComps && !marketSupportComps,
   );
+  const subjectListing = listings[0] ?? null;
 
   return (
     <div className="flex">
@@ -235,7 +241,16 @@ function AssistantMessage({
           />
         )}
 
-        {townSummary && <TownSummaryCard summary={townSummary} />}
+        {townSummary && (
+          <TownSummaryCard
+            summary={townSummary}
+            onSelectSignal={
+              onSelectTownSignal
+                ? (signal) => onSelectTownSignal(signal, subjectListing)
+                : undefined
+            }
+          />
+        )}
         {townSummary && onPrompt && (
           <InlinePrompt
             prompt="What's driving the town outlook?"
@@ -257,7 +272,16 @@ function AssistantMessage({
           <ChartFrame key={`${c.kind ?? "chart"}-${c.url ?? "native"}-${i}`} chart={c} />
         ))}
 
-        {researchUpdate && <ResearchUpdateCard research={researchUpdate} />}
+        {researchUpdate && (
+          <ResearchUpdateCard
+            research={researchUpdate}
+            onSelectSignal={
+              onSelectTownSignal
+                ? (signal) => onSelectTownSignal(signal, subjectListing)
+                : undefined
+            }
+          />
+        )}
 
         {comparisonTable && <ComparisonTable table={comparisonTable} />}
 

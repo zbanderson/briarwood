@@ -1,0 +1,127 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "507",
+            "short_name": "507",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Sylvania Avenue",
+            "short_name": "Sylvania Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Avon-by-the-Sea",
+            "short_name": "Avon-By-The-Sea",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07717",
+            "short_name": "07717",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "1135",
+            "short_name": "1135",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "507 Sylvania Ave, Avon-By-The-Sea, NJ 07717, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.1924946,
+              "lng": -74.02076
+            },
+            "southwest": {
+              "lat": 40.1923403,
+              "lng": -74.0208665
+            }
+          },
+          "location": {
+            "lat": 40.1924251,
+            "lng": -74.0208191
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1938496302915,
+              "lng": -74.0194642697085
+            },
+            "southwest": {
+              "lat": 40.1911516697085,
+              "lng": -74.0221622302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1925984,
+              "longitude": -74.0207943
+            }
+          }
+        ],
+        "place_id": "ChIJx-Hi-9onwokRJhdJpSei1sM",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "507 Sylvania Ave, Avon-By-The-Sea, NJ 07717, USA",
+    "latitude": 40.1924251,
+    "longitude": -74.0208191,
+    "place_id": "ChIJx-Hi-9onwokRJhdJpSei1sM",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Avon-by-the-Sea",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07717"
+  },
+  "fetched_at": "2026-04-22T16:45:51Z"
+}

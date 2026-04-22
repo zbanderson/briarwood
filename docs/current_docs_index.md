@@ -10,6 +10,8 @@ Use this file as the starting point for product and implementation work.
   Current V2 scoped execution coverage and fallback status
 - `docs/operational_model_sweep.md`
   Operational review entrypoint for routed/scoped model and data-source audits
+- `docs/backend_model_surface_matrix.md`
+  Current backend-model-to-chat-surface map for the canonical decision flow
 - `unified_intelligence.md`
   Unified Intelligence behavior and output contract
 - `briarwood/routing_schema.py`

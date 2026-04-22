@@ -80,9 +80,10 @@ class FlattenInputValuesTests(unittest.TestCase):
 
 
 class DecisionSummaryVerifierRegressionTests(unittest.TestCase):
-    """Appendix D fixture from VERIFICATION_REPORT.md: the ``what_changes_my_view``
-    trigger sentence survives verification once the grounded-number set
-    includes magnitude tokens from string payload fields."""
+    """Appendix D fixture from VERIFICATION_REPORT.md: the lead stance verb
+    and ``what_changes_my_view`` trigger both survive verification once the
+    grounded-number set includes magnitude tokens from string payload
+    fields."""
 
     def test_buy_trigger_sentence_survives_when_payload_uses_magnitude_shorthand(
         self,
@@ -168,11 +169,34 @@ class VerifyResponseTests(unittest.TestCase):
         report = verify_response(draft, inputs, tier="decision_summary")
         self.assertEqual(report.sentences_with_violations, 0)
 
+    def test_grounded_address_number_is_not_flagged(self) -> None:
+        draft = "I would only get more constructive on 1008 14th Avenue if the price improves."
+        inputs = {"address": "1008 14th Avenue, Belmar, NJ 07719"}
+        report = verify_response(draft, inputs, tier="decision_value")
+        self.assertEqual(report.sentences_with_violations, 0)
+
     def test_percent_vs_fraction_variants(self) -> None:
         # Input stored as fraction 0.10; draft renders as 10%.
         draft = "Premium of 10%."
         inputs = {"ask_premium_pct": 0.10}
         report = verify_response(draft, inputs, tier="decision_summary")
+        self.assertEqual(report.sentences_with_violations, 0)
+
+    def test_value_view_followup_numbers_ground_when_payload_supplies_them(self) -> None:
+        draft = (
+            "I recommend considering a purchase for 1008 14th Avenue in Belmar, NJ, "
+            "but only if the price improves. While the current asking price is "
+            "$767,000, it exceeds Briarwood's fair value estimate of approximately "
+            "$720,644 by about 6%."
+        )
+        inputs = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "ask_price": 767000,
+            "fair_value_base": 720644,
+            "ask_premium_pct": 0.0604,
+            "price_gap_pct": 0.0604,
+        }
+        report = verify_response(draft, inputs, tier="decision_value")
         self.assertEqual(report.sentences_with_violations, 0)
 
     def test_known_module_label_does_not_flag(self) -> None:

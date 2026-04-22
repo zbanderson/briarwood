@@ -32,4 +32,16 @@ def run_backtest_program(*args, **kwargs):
     return _run_backtest_program(*args, **kwargs)
 
 
-__all__ = ["run_eval", "score_model", "main", "run_backtest_program"]
+def run_canonical_underwrite_benchmark(*args, **kwargs):
+    from briarwood.eval.canonical_underwrite_benchmark import run_benchmark as _run_benchmark
+
+    return _run_benchmark(*args, **kwargs)
+
+
+__all__ = [
+    "run_eval",
+    "score_model",
+    "main",
+    "run_backtest_program",
+    "run_canonical_underwrite_benchmark",
+]

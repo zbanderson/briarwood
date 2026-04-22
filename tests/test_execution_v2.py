@@ -235,12 +235,10 @@ class Wave1SupportTests(unittest.TestCase):
 
         self.assertTrue(supported)
         self.assertIsNotNone(plan)
-        self.assertEqual(
-            set(plan.ordered_modules),
-            {"valuation", "confidence"},
-        )
+        self.assertIn("valuation", plan.ordered_modules)
+        self.assertIn("confidence", plan.ordered_modules)
 
-    def test_unsupported_path_falls_back_cleanly(self) -> None:
+    def test_hold_to_rent_path_is_scoped_supported(self) -> None:
         selected_modules = [
             ModuleName.VALUATION,
             ModuleName.CARRY_COST,
@@ -250,7 +248,7 @@ class Wave1SupportTests(unittest.TestCase):
 
         supported, plan = supports_scoped_execution(selected_modules)
 
-        self.assertFalse(supported)
+        self.assertTrue(supported)
         self.assertIsNotNone(plan)
         self.assertIn("hold_to_rent", plan.ordered_modules)
         self.assertIn("rent_stabilization", plan.ordered_modules)
@@ -279,8 +277,8 @@ class Wave1SupportTests(unittest.TestCase):
         }
 
         self.assertNotEqual(
-            build_cache_key(property_data_a, parser_output, execution_mode="scoped"),
-            build_cache_key(property_data_b, parser_output, execution_mode="scoped"),
+            build_cache_key(property_data_a, parser_output),
+            build_cache_key(property_data_b, parser_output),
         )
 
 

@@ -17,6 +17,8 @@ export type ChartEvent = {
   kind?: string | null; // e.g. "value_opportunity", "scenario_fan", "radar_score"
   spec?: ChartSpec | null;
   provenance?: string[] | null;
+  supports_claim?: string | null;
+  why_this_chart?: string | null;
   advisor?: {
     title?: string | null;
     summary?: string | null;
@@ -144,6 +146,9 @@ export type VerdictEvent = {
   what_changes_my_view?: string[];
   contradiction_count?: number | null;
   blocked_thesis_warnings?: string[];
+  lead_reason?: string | null;
+  evidence_items?: string[];
+  next_step_teaser?: string | null;
   overrides_applied: Record<string, unknown>;
 };
 
@@ -189,6 +194,28 @@ export type ComparisonTableEvent = {
   properties: ComparisonRow[];
 };
 
+export type TownSignalItem = {
+  id: string;
+  bucket: "bullish" | "bearish" | "watch";
+  title: string;
+  status: string;
+  display_line: string;
+  project_summary: string;
+  signal_type: string;
+  location_label?: string | null;
+  development_lat?: number | null;
+  development_lng?: number | null;
+  confidence?: number | null;
+  facts: string[];
+  inference?: string | null;
+  evidence_excerpt: string;
+  source_document_id: string;
+  source_title?: string | null;
+  source_type: string;
+  source_url?: string | null;
+  source_date?: string | null;
+};
+
 export type TownSummaryEvent = {
   type: "town_summary";
   town: string;
@@ -201,6 +228,7 @@ export type TownSummaryEvent = {
   doc_count?: number | null;
   bullish_signals: string[];
   bearish_signals: string[];
+  signal_items?: TownSignalItem[];
 };
 
 export type CompsPreviewRow = {
@@ -395,6 +423,7 @@ export type ResearchUpdateEvent = {
   bullish_signals: string[];
   bearish_signals: string[];
   watch_items: string[];
+  signal_items?: TownSignalItem[];
   document_count?: number | null;
   warnings: string[];
 };

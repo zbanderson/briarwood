@@ -1,0 +1,117 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "510",
+            "short_name": "510",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "West End Avenue",
+            "short_name": "West End Ave",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Avon-by-the-Sea",
+            "short_name": "Avon-By-The-Sea",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07717",
+            "short_name": "07717",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "1139",
+            "short_name": "1139",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "510 West End Ave, Avon-By-The-Sea, NJ 07717, USA",
+        "geometry": {
+          "location": {
+            "lat": 40.1950277,
+            "lng": -74.0196437
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.19630678029149,
+              "lng": -74.01837901970849
+            },
+            "southwest": {
+              "lat": 40.1936088197085,
+              "lng": -74.0210769802915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1949342,
+              "longitude": -74.0197564
+            }
+          }
+        ],
+        "place_id": "ChIJx16fEtAnwokR61pRALi7uDc",
+        "types": [
+          "street_address",
+          "subpremise"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "510 West End Ave, Avon-By-The-Sea, NJ 07717, USA",
+    "latitude": 40.1950277,
+    "longitude": -74.0196437,
+    "place_id": "ChIJx16fEtAnwokR61pRALi7uDc",
+    "types": [
+      "street_address",
+      "subpremise"
+    ],
+    "town": "Avon-by-the-Sea",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07717"
+  },
+  "fetched_at": "2026-04-22T16:45:51Z"
+}

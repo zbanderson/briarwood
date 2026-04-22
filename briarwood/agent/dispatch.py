@@ -30,6 +30,7 @@ from briarwood.agent.fuzzy_terms import translate
 from briarwood.agent.feedback import log_turn as _log_untracked
 from briarwood.agent.overrides import parse_overrides, summarize as _override_summary
 from briarwood.agent.property_view import PropertyView
+from briarwood.local_intelligence.presentation import build_town_signal_items
 from briarwood.agent.tools import (
     CMAResult,
     ComparableProperty,
@@ -349,11 +350,224 @@ def _money(value: float | int | None) -> str:
     return f"${value:,.0f}" if isinstance(value, (int, float)) else "n/a"
 
 
-def _decision_view_to_dict(view: "PropertyView") -> dict[str, object]:
+_DECISION_SURFACE_HOOKS: dict[str, str] = {
+    "price_position": "Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
+    "comp_evidence": "Open the comp view next to see which comps are actually supporting the price read.",
+    "risk_composition": "Open the risk chart next to see what is actually driving the caution.",
+    "scenario_range": "Open the scenario range next to see how much room exists between the base case and the downside.",
+    "rent_coverage": "Open the rent view next to see whether rent can realistically cover the monthly carry.",
+}
+
+
+def _clean_sentence(text: str | None) -> str | None:
+    if not isinstance(text, str):
+        return None
+    cleaned = " ".join(text.strip().split())
+    if not cleaned:
+        return None
+    return cleaned if cleaned[-1] in ".!?" else f"{cleaned}."
+
+
+def _humanize_flag(flag: str | None) -> str | None:
+    if not isinstance(flag, str):
+        return None
+    cleaned = " ".join(flag.strip().split("_"))
+    return cleaned or None
+
+
+def _dedupe_lines(lines: list[str], *, limit: int) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        cleaned = _clean_sentence(line)
+        if cleaned is None:
+            continue
+        key = cleaned.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cleaned)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _price_reason(view: "PropertyView") -> str | None:
+    premium = (
+        view.basis_premium_pct
+        if isinstance(view.basis_premium_pct, (int, float))
+        else view.ask_premium_pct
+    )
+    basis_label = "all-in basis" if view.all_in_basis is not None else "ask"
+    if isinstance(premium, (int, float)):
+        if premium > 0.01:
+            return (
+                f"The {basis_label} is running about {abs(premium):.1%} above "
+                "Briarwood's fair-value read."
+            )
+        if premium < -0.01:
+            return (
+                f"The {basis_label} is landing about {abs(premium):.1%} below "
+                "Briarwood's fair-value read."
+            )
+        return f"The {basis_label} is broadly in line with Briarwood's fair-value read."
+    if isinstance(view.fair_value_base, (int, float)) and isinstance(view.ask_price, (int, float)):
+        return (
+            f"Briarwood's fair value is {_money(view.fair_value_base)} against an ask of "
+            f"{_money(view.ask_price)}."
+        )
+    return None
+
+
+def _supporting_facts(
+    view: "PropertyView",
+    *,
+    value_thesis_view: dict[str, object] | None,
+    strategy_view: dict[str, object] | None,
+    rent_view: dict[str, object] | None,
+) -> list[str]:
+    lines: list[str] = []
+    if isinstance(view.fair_value_base, (int, float)):
+        basis = view.all_in_basis if isinstance(view.all_in_basis, (int, float)) else view.ask_price
+        if isinstance(basis, (int, float)):
+            lines.append(
+                f"Fair value is {_money(view.fair_value_base)} against a working basis of {_money(basis)}."
+            )
+    lines.extend(list(view.why_this_stance or [])[:2])
+    if isinstance(value_thesis_view, dict):
+        lines.extend(list(value_thesis_view.get("key_value_drivers") or value_thesis_view.get("value_drivers") or [])[:2])
+    if isinstance(strategy_view, dict) and strategy_view.get("best_path"):
+        lines.append(f"Best current path: {strategy_view.get('best_path')}.")
+    if isinstance(rent_view, dict) and isinstance(rent_view.get("basis_to_rent_framing"), str):
+        lines.append(str(rent_view.get("basis_to_rent_framing")))
+    return _dedupe_lines(lines, limit=3)
+
+
+def _top_risk_or_trust_caveat(
+    view: "PropertyView",
+    *,
+    risk_view: dict[str, object] | None,
+) -> str | None:
+    risk_lines = list(view.key_risks or [])
+    if isinstance(risk_view, dict):
+        risk_lines.extend(list(risk_view.get("key_risks") or []))
+    first_risk = _dedupe_lines(risk_lines, limit=1)
+    if first_risk:
+        return first_risk[0]
+    trust_flag = next(iter(view.trust_flags or ()), None)
+    if trust_flag:
+        label = _humanize_flag(trust_flag)
+        if label:
+            return f"Confidence is still limited by {label}."
+    if isinstance(risk_view, dict):
+        risk_flags = list(risk_view.get("risk_flags") or [])
+        if risk_flags:
+            label = _humanize_flag(str(risk_flags[0]))
+            if label:
+                return f"The biggest visible caution is {label}."
+    return None
+
+
+def _decision_claim_hint(
+    view: "PropertyView",
+    *,
+    value_thesis_view: dict[str, object] | None,
+    risk_view: dict[str, object] | None,
+    rent_view: dict[str, object] | None,
+    projection_view: dict[str, object] | None,
+) -> str:
+    pvs = str(view.primary_value_source or "").lower()
+    stance = str(view.decision_stance or "").lower()
+    if ("rent" in pvs or "income" in pvs or "unit" in pvs) and isinstance(rent_view, dict):
+        return "rent_coverage"
+    if stance == "execution_dependent" and isinstance(projection_view, dict):
+        return "scenario_range"
+    if stance in {"conditional", "pass", "pass_unless_changes", "interesting_but_fragile"} and isinstance(risk_view, dict):
+        if list(risk_view.get("risk_flags") or []) or list(risk_view.get("trust_flags") or []):
+            return "risk_composition"
+    if isinstance(value_thesis_view, dict) and list(value_thesis_view.get("comps") or []):
+        return "price_position"
+    return "price_position"
+
+
+def _decision_underwrite_digest(
+    view: "PropertyView",
+    *,
+    value_thesis_view: dict[str, object] | None,
+    risk_view: dict[str, object] | None,
+    strategy_view: dict[str, object] | None,
+    rent_view: dict[str, object] | None,
+    projection_view: dict[str, object] | None,
+) -> dict[str, object]:
+    primary_thesis = _dedupe_lines(
+        list(view.why_this_stance or [])
+        + (
+            list(value_thesis_view.get("key_value_drivers") or value_thesis_view.get("value_drivers") or [])
+            if isinstance(value_thesis_view, dict)
+            else []
+        ),
+        limit=1,
+    )
+    claim_hint = _decision_claim_hint(
+        view,
+        value_thesis_view=value_thesis_view,
+        risk_view=risk_view,
+        rent_view=rent_view,
+        projection_view=projection_view,
+    )
+    lead_reason = _price_reason(view)
+    return {
+        "lead_reason": lead_reason,
+        "primary_thesis": primary_thesis[0] if primary_thesis else _price_reason(view),
+        "top_supporting_facts": _supporting_facts(
+            view,
+            value_thesis_view=value_thesis_view,
+            strategy_view=strategy_view,
+            rent_view=rent_view,
+        ),
+        "top_risk_or_trust_caveat": _top_risk_or_trust_caveat(view, risk_view=risk_view),
+        "flip_condition": _dedupe_lines(list(view.what_changes_my_view or []), limit=1)[0]
+        if list(view.what_changes_my_view or [])
+        else None,
+        "next_surface_hook": _DECISION_SURFACE_HOOKS.get(claim_hint),
+        "primary_chart_claim": claim_hint,
+    }
+
+
+def _compose_compact_underwrite(
+    view: "PropertyView",
+    *,
+    underwrite_digest: dict[str, object],
+    research_lines: list[str],
+) -> str:
+    stance = (view.decision_stance or "conditional").replace("_", " ")
+    verdict_line = f"Verdict: {stance}."
+    lead_reason = _clean_sentence(underwrite_digest.get("lead_reason")) if isinstance(underwrite_digest.get("lead_reason"), str) else None
+    caveat = _clean_sentence(underwrite_digest.get("top_risk_or_trust_caveat")) if isinstance(underwrite_digest.get("top_risk_or_trust_caveat"), str) else None
+    flip = _clean_sentence(underwrite_digest.get("flip_condition")) if isinstance(underwrite_digest.get("flip_condition"), str) else None
+    teaser = _clean_sentence(underwrite_digest.get("next_surface_hook")) if isinstance(underwrite_digest.get("next_surface_hook"), str) else None
+    lines = [verdict_line]
+    if lead_reason:
+        lines.append(lead_reason)
+    if caveat:
+        lines.append(caveat)
+    if flip:
+        lines.append(flip)
+    if teaser:
+        lines.append(teaser)
+    lines.extend(_dedupe_lines(research_lines, limit=1))
+    return " ".join(lines)
+
+
+def _decision_view_to_dict(
+    view: "PropertyView",
+    *,
+    underwrite_digest: dict[str, object] | None = None,
+) -> dict[str, object]:
     """Snapshot the decision-tier fields a UI verdict card needs. Kept as a
     dict (not the PropertyView object itself) so it serializes cleanly into
     Session.save() and round-trips through the persisted session JSON."""
-    return {
+    payload: dict[str, object] = {
         "pid": view.pid,
         "address": view.address,
         "town": view.town,
@@ -377,6 +591,16 @@ def _decision_view_to_dict(view: "PropertyView") -> dict[str, object]:
         "blocked_thesis_warnings": list(view.blocked_thesis_warnings or []),
         "overrides_applied": dict(view.overrides_applied or {}),
     }
+    if underwrite_digest:
+        payload.update(
+            {
+                "lead_reason": underwrite_digest.get("lead_reason"),
+                "evidence_items": list(underwrite_digest.get("top_supporting_facts") or []),
+                "next_step_teaser": underwrite_digest.get("next_surface_hook"),
+                "primary_chart_claim": underwrite_digest.get("primary_chart_claim"),
+            }
+        )
+    return payload
 
 
 # Per-process cache of (town, state) tuples that have already auto-fetched
@@ -509,6 +733,8 @@ def _build_town_summary(town: str | None, state: str | None) -> dict[str, object
     else:
         tier = "thin"
 
+    signal_items = build_town_signal_items(town, state, geocode=_geocode_town_signal_query)
+
     return {
         "town": town,
         "state": state,
@@ -520,7 +746,29 @@ def _build_town_summary(town: str | None, state: str | None) -> dict[str, object
         "doc_count": doc_count,
         "bullish_signals": bullish,
         "bearish_signals": bearish,
+        "signal_items": signal_items,
     }
+
+
+def _geocode_town_signal_query(query: str) -> tuple[float | None, float | None]:
+    """Best-effort geocode for town-signal drill-ins."""
+
+    from briarwood.data_sources.google_maps_client import GoogleMapsClient
+
+    client = GoogleMapsClient()
+    if not client.is_configured or not query.strip():
+        return None, None
+    try:
+        response = client.geocode(query)
+    except Exception:
+        return None, None
+    payload = response.normalized_payload or {}
+    lat = payload.get("latitude")
+    lng = payload.get("longitude")
+    return (
+        float(lat) if isinstance(lat, (int, float)) else None,
+        float(lng) if isinstance(lng, (int, float)) else None,
+    )
 
 
 def _cma_rows_from_result(cma_result: CMAResult | None) -> list[dict[str, object]]:
@@ -1238,6 +1486,122 @@ def _populate_browse_slots(
         }
 
 
+def _strategy_view_from_fit(
+    facts: dict[str, object] | None,
+    fit: dict[str, object],
+    *,
+    address: str | None,
+    town: str | None,
+    state: str | None,
+) -> dict[str, object]:
+    resolved = facts or {}
+    return {
+        "address": resolved.get("address") or address,
+        "town": resolved.get("town") or town,
+        "state": resolved.get("state") or state,
+        "best_path": fit.get("best_path"),
+        "recommendation": fit.get("recommendation"),
+        "pricing_view": fit.get("pricing_view"),
+        "primary_value_source": fit.get("primary_value_source"),
+        "rental_ease_label": fit.get("rental_ease_label"),
+        "rental_ease_score": fit.get("rental_ease_score"),
+        "rent_support_score": fit.get("rent_support_score"),
+        "liquidity_score": fit.get("liquidity_score"),
+        "monthly_cash_flow": fit.get("monthly_cash_flow"),
+        "cash_on_cash_return": fit.get("cash_on_cash_return"),
+        "annual_noi": fit.get("annual_noi"),
+    }
+
+
+def _rent_outlook_view_from_result(
+    facts: dict[str, object] | None,
+    rent_payload: dict[str, object] | None,
+    rent_outlook: RentOutlook,
+    *,
+    address: str | None,
+    town: str | None,
+    state: str | None,
+) -> dict[str, object]:
+    resolved = facts or {}
+    payload = rent_payload or {}
+    return {
+        "address": resolved.get("address") or address,
+        "town": resolved.get("town") or town,
+        "state": resolved.get("state") or state,
+        "entry_basis": rent_outlook.entry_basis,
+        "monthly_rent": payload.get("monthly_rent", rent_outlook.current_monthly_rent),
+        "effective_monthly_rent": payload.get(
+            "effective_monthly_rent", rent_outlook.effective_monthly_rent
+        ),
+        "rent_source_type": payload.get("rent_source_type", rent_outlook.rent_source_type),
+        "rental_ease_label": payload.get("rental_ease_label", rent_outlook.rental_ease_label),
+        "rental_ease_score": payload.get("rental_ease_score", rent_outlook.rental_ease_score),
+        "annual_noi": payload.get("annual_noi", rent_outlook.annual_noi),
+        "horizon_years": rent_outlook.horizon_years,
+        "future_rent_low": rent_outlook.future_rent_low,
+        "future_rent_mid": rent_outlook.future_rent_mid,
+        "future_rent_high": rent_outlook.future_rent_high,
+        "zillow_market_rent": rent_outlook.zillow_market_rent,
+        "zillow_rental_comp_count": rent_outlook.zillow_rental_comp_count,
+        "market_context_note": rent_outlook.market_context_note,
+        "basis_to_rent_framing": rent_outlook.basis_to_rent_framing,
+        "owner_occupy_then_rent": rent_outlook.owner_occupy_then_rent,
+        "carry_offset_ratio": rent_outlook.carry_offset_ratio,
+        "break_even_rent": rent_outlook.break_even_rent,
+        "break_even_probability": rent_outlook.break_even_probability,
+        "adjusted_rent_confidence": rent_outlook.adjusted_rent_confidence,
+        "rent_haircut_pct": rent_outlook.rent_haircut_pct,
+        "burn_chart_payload": dict(rent_outlook.burn_chart_payload or {}),
+        "ramp_chart_payload": dict(rent_outlook.ramp_chart_payload or {}),
+    }
+
+
+def _risk_view_from_profile(
+    facts: dict[str, object] | None,
+    profile: dict[str, object],
+    *,
+    address: str | None,
+    town: str | None,
+    state: str | None,
+    bear_value: float | None = None,
+    stress_value: float | None = None,
+) -> dict[str, object]:
+    resolved = facts or {}
+    total_penalty = _normalize_penalty(profile.get("total_penalty"))
+    if isinstance(total_penalty, (int, float)):
+        if total_penalty >= 0.5:
+            tier = "thin"
+        elif total_penalty >= 0.25:
+            tier = "moderate"
+        else:
+            tier = "strong"
+    else:
+        tier = None
+    bear = (
+        profile.get("bear_case_value")
+        if isinstance(profile.get("bear_case_value"), (int, float))
+        else bear_value
+    )
+    stress = (
+        profile.get("stress_case_value")
+        if isinstance(profile.get("stress_case_value"), (int, float))
+        else stress_value
+    )
+    return {
+        "address": resolved.get("address") or address,
+        "town": resolved.get("town") or town,
+        "state": resolved.get("state") or state,
+        "ask_price": profile.get("ask_price"),
+        "bear_value": bear,
+        "stress_value": stress,
+        "risk_flags": list(profile.get("risk_flags") or []),
+        "trust_flags": list(profile.get("trust_flags") or []),
+        "key_risks": list(profile.get("key_risks") or []),
+        "total_penalty": total_penalty,
+        "confidence_tier": tier,
+    }
+
+
 def _format_decision_from_presentation(
     payload: dict[str, object] | None,
     *,
@@ -1467,9 +1831,13 @@ def handle_decision(
                 session.current_property_id = None
                 return _format_live_listing_decision(result)
             return "Which property should I underwrite?"
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    analysis_overrides, user_overrides = _analysis_overrides(
+        text,
+        pid=pid,
+        session=session,
+    )
     try:
-        view = PropertyView.load(pid, overrides=overrides, depth="decision")
+        view = PropertyView.load(pid, overrides=analysis_overrides, depth="decision")
     except ToolUnavailable as exc:
         return f"I couldn't analyze that ({exc})."
     session.current_property_id = pid
@@ -1500,7 +1868,7 @@ def handle_decision(
         record_partial=_record_partial,
     )
     try:
-        cma_result = get_cma(pid, overrides=overrides)
+        cma_result = get_cma(pid, overrides=analysis_overrides)
     except Exception as exc:
         cma_result = None
         _record_partial("cma", exc)
@@ -1530,7 +1898,7 @@ def handle_decision(
     projection_chart_line = ""
     presentation_payload: dict[str, object] | None = None
     try:
-        proj = get_projection(pid, overrides=overrides)
+        proj = get_projection(pid, overrides=analysis_overrides)
         session.last_projection_view = {
             **proj,
             "address": view.address,
@@ -1561,7 +1929,7 @@ def handle_decision(
     # new town context, they're about re-underwriting at a user-supplied basis.
     research_targets = set(view.trust_flags) & _AUTO_RESEARCH_FLAGS
     research_lines: list[str] = []
-    if research_targets and not overrides:
+    if research_targets and not user_overrides:
         town, state = _summary_town_state(pid)
         if town and state:
             first_flag = next(iter(research_targets))
@@ -1573,7 +1941,7 @@ def handle_decision(
                 research_result = {"warnings": [f"research error: {exc}"]}
             before = view
             try:
-                view = PropertyView.load(pid, overrides=overrides, depth="decision")
+                view = PropertyView.load(pid, overrides=analysis_overrides, depth="decision")
             except ToolUnavailable:
                 view = before
             diff = _diff_unified(before.unified or {}, view.unified or {})
@@ -1585,6 +1953,123 @@ def handle_decision(
                     f"document(s) for {first_flag}."
                 )
 
+    property_summary: dict[str, object] | None = None
+    try:
+        property_summary = get_property_summary(pid)
+    except ToolUnavailable:
+        property_summary = {
+            "address": view.address,
+            "town": view.town,
+            "state": view.state,
+        }
+
+    projection_view = (
+        session.last_projection_view if isinstance(session.last_projection_view, dict) else {}
+    )
+    try:
+        risk_profile = get_risk_profile(pid, overrides=analysis_overrides)
+        risk_view = _risk_view_from_profile(
+            property_summary,
+            risk_profile,
+            address=view.address,
+            town=view.town,
+            state=view.state,
+            bear_value=projection_view.get("bear_case_value"),
+            stress_value=projection_view.get("stress_case_value"),
+        )
+        if any(
+            risk_view.get(key)
+            for key in ("risk_flags", "trust_flags", "key_risks", "bear_value", "stress_value")
+        ):
+            session.last_risk_view = risk_view
+        else:
+            session.last_risk_view = None
+    except Exception as exc:
+        session.last_risk_view = None
+        _record_partial("risk_profile", exc)
+
+    try:
+        strategy_fit = get_strategy_fit(pid, overrides=analysis_overrides)
+        strategy_view = _strategy_view_from_fit(
+            property_summary,
+            strategy_fit,
+            address=view.address,
+            town=view.town,
+            state=view.state,
+        )
+        if any(strategy_view.get(key) is not None for key in strategy_view if key not in {"address", "town", "state"}):
+            session.last_strategy_view = strategy_view
+        else:
+            session.last_strategy_view = None
+    except Exception as exc:
+        session.last_strategy_view = None
+        _record_partial("strategy_fit", exc)
+
+    try:
+        rent_payload = get_rent_estimate(pid, overrides=analysis_overrides)
+        rent_outlook = get_rent_outlook(
+            pid,
+            years=3,
+            overrides=analysis_overrides,
+            rent_payload=rent_payload,
+            property_summary=property_summary or {},
+        )
+        rent_view = _rent_outlook_view_from_result(
+            property_summary,
+            dict(rent_payload),
+            rent_outlook,
+            address=view.address,
+            town=view.town,
+            state=view.state,
+        )
+        if any(
+            rent_view.get(key)
+            for key in (
+                "monthly_rent",
+                "effective_monthly_rent",
+                "future_rent_low",
+                "future_rent_mid",
+                "future_rent_high",
+                "burn_chart_payload",
+                "ramp_chart_payload",
+            )
+        ):
+            session.last_rent_outlook_view = rent_view
+        else:
+            session.last_rent_outlook_view = None
+    except Exception as exc:
+        session.last_rent_outlook_view = None
+        _record_partial("rent_outlook", exc)
+
+    underwrite_digest = _decision_underwrite_digest(
+        view,
+        value_thesis_view=(
+            session.last_value_thesis_view
+            if isinstance(session.last_value_thesis_view, dict)
+            else None
+        ),
+        risk_view=session.last_risk_view if isinstance(session.last_risk_view, dict) else None,
+        strategy_view=(
+            session.last_strategy_view
+            if isinstance(session.last_strategy_view, dict)
+            else None
+        ),
+        rent_view=(
+            session.last_rent_outlook_view
+            if isinstance(session.last_rent_outlook_view, dict)
+            else None
+        ),
+        projection_view=(
+            session.last_projection_view
+            if isinstance(session.last_projection_view, dict)
+            else None
+        ),
+    )
+    session.last_decision_view = _decision_view_to_dict(
+        view,
+        underwrite_digest=underwrite_digest,
+    )
+
     stance = view.decision_stance or "unknown"
     pvs = view.primary_value_source or "unknown"
     flags = list(view.trust_flags)
@@ -1593,9 +2078,9 @@ def handle_decision(
     # capex is applied (renovation override, capex lane, etc.).
     basis = view.all_in_basis if view.all_in_basis is not None else view.ask_price
     premium = view.basis_premium_pct
-    if not overrides:
+    if not user_overrides:
         try:
-            summary = get_property_summary(pid)
+            summary = property_summary or get_property_summary(pid)
             derived_brief = build_property_brief(pid, summary, dict(view.unified or {}))
             presentation_payload = get_property_presentation(
                 pid,
@@ -1638,6 +2123,13 @@ def handle_decision(
                 + (f" {range_bits[0]}" if range_bits else "")
                 + f"{support}.{caveat}"
             )
+        compact = _compose_compact_underwrite(
+            view,
+            underwrite_digest=underwrite_digest,
+            research_lines=research_lines,
+        )
+        if compact.strip() and compact.strip() != f"Verdict: {stance.replace('_', ' ')}.":
+            return _finalize(compact)
         rendered = _format_decision_from_presentation(
             presentation_payload,
             stance=stance,
@@ -1668,15 +2160,22 @@ def handle_decision(
         )
         support = view.primary_value_source or "current analysis"
         caveat = ", ".join(flags) if flags else "none"
+        valuation_x_risk = dict((dict(view.unified or {}).get("valuation_x_risk") or {}).get("adjustments") or {})
+        risk_adjusted_fair_value = valuation_x_risk.get("risk_adjusted_fair_value")
+        required_discount = valuation_x_risk.get("required_discount")
         value_inputs = {
             "address": view.address,
+            "ask_price": view.ask_price,
             "fair_value_base": view.fair_value_base,
             "value_low": view.value_low,
             "value_high": view.value_high,
+            "ask_premium_pct": view.ask_premium_pct,
+            "price_gap_pct": view.ask_premium_pct,
             "primary_value_source": support,
             "trust_flags": list(flags),
-            "ask_price": view.ask_price,
             "all_in_basis": view.all_in_basis,
+            "risk_adjusted_fair_value": risk_adjusted_fair_value,
+            "required_discount": required_discount,
         }
         cleaned, report = complete_and_verify(
             llm=llm,
@@ -1684,12 +2183,15 @@ def handle_decision(
             user=(
                 f"user_question: {text}\n"
                 f"address: {view.address}\n"
+                f"ask_price: {view.ask_price}\n"
                 f"fair_value_base: {view.fair_value_base}\n"
                 f"value_range: {range_s}\n"
+                f"ask_premium_pct: {view.ask_premium_pct}\n"
                 f"primary_value_source: {support}\n"
                 f"trust_flags: {caveat}\n"
-                f"ask_price: {view.ask_price}\n"
                 f"all_in_basis: {view.all_in_basis}\n"
+                f"risk_adjusted_fair_value: {risk_adjusted_fair_value}\n"
+                f"required_discount: {required_discount}\n"
             ),
             structured_inputs=value_inputs,
             tier="decision_value",
@@ -1720,6 +2222,12 @@ def handle_decision(
         "what_changes_my_view": what_changes_my_view,
         "contradiction_count": contradiction_count,
         "blocked_thesis_warnings": blocked_thesis_warnings,
+        "lead_reason": underwrite_digest.get("lead_reason"),
+        "primary_thesis": underwrite_digest.get("primary_thesis"),
+        "top_supporting_facts": list(underwrite_digest.get("top_supporting_facts") or []),
+        "top_risk_or_trust_caveat": underwrite_digest.get("top_risk_or_trust_caveat"),
+        "flip_condition": underwrite_digest.get("flip_condition"),
+        "next_surface_hook": underwrite_digest.get("next_surface_hook"),
         "research_update": research_lines,
     }
     user = (
@@ -1739,6 +2247,12 @@ def handle_decision(
         f"what_changes_my_view: {what_changes_my_view}\n"
         f"contradiction_count: {contradiction_count}\n"
         f"blocked_thesis_warnings: {blocked_thesis_warnings}\n"
+        f"lead_reason: {underwrite_digest.get('lead_reason')}\n"
+        f"primary_thesis: {underwrite_digest.get('primary_thesis')}\n"
+        f"top_supporting_facts: {list(underwrite_digest.get('top_supporting_facts') or [])}\n"
+        f"top_risk_or_trust_caveat: {underwrite_digest.get('top_risk_or_trust_caveat')}\n"
+        f"flip_condition: {underwrite_digest.get('flip_condition')}\n"
+        f"next_surface_hook: {underwrite_digest.get('next_surface_hook')}\n"
         f"research_update: {' | '.join(research_lines) or 'none'}"
     )
     cleaned, report = complete_and_verify(
@@ -2003,6 +2517,7 @@ def handle_research(
         "bullish_signals": bullish,
         "bearish_signals": bearish,
         "watch_items": watch_items,
+        "signal_items": build_town_signal_items(town, state, geocode=_geocode_town_signal_query),
         "document_count": market_read.document_count,
         "warnings": list(market_read.warnings or []),
     }
@@ -2066,6 +2581,17 @@ _VALUE_CHANGE_RE = re.compile(
 
 
 def _reference_ask_price(pid: str | None, session: Session) -> float | None:
+    live = session.current_live_listing or session.selected_search_result or {}
+    if isinstance(live, dict):
+        live_pid = live.get("property_id") or live.get("external_id")
+        ask_price = live.get("ask_price")
+        if (
+            pid
+            and isinstance(live_pid, str)
+            and live_pid == pid
+            and isinstance(ask_price, (int, float))
+        ):
+            return float(ask_price)
     if pid:
         try:
             summary = get_property_summary(pid)
@@ -2074,7 +2600,6 @@ def _reference_ask_price(pid: str | None, session: Session) -> float | None:
         ask_price = summary.get("ask_price")
         if isinstance(ask_price, (int, float)):
             return float(ask_price)
-    live = session.current_live_listing or session.selected_search_result or {}
     ask_price = live.get("ask_price") if isinstance(live, dict) else None
     if isinstance(ask_price, (int, float)):
         return float(ask_price)
@@ -2117,6 +2642,54 @@ def _trust_payload_from_thesis(
 
 def _parse_turn_overrides(text: str, *, pid: str | None, session: Session) -> dict[str, object]:
     return parse_overrides(text, reference_price=_reference_ask_price(pid, session))
+
+
+def _analysis_overrides(
+    text: str,
+    *,
+    pid: str | None,
+    session: Session,
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Return (effective_overrides, explicit_user_overrides).
+
+    Saved property metadata can lag the live listing ask. When the current
+    pinned listing points at the same property and carries a fresher price,
+    underwrite on that price for this turn without treating it like a user
+    requested what-if scenario.
+    """
+    explicit = _parse_turn_overrides(text, pid=pid, session=session)
+    effective = dict(explicit)
+    if "ask_price" in effective or not pid:
+        return effective, explicit
+
+    live = session.current_live_listing or session.selected_search_result or {}
+    if not isinstance(live, dict):
+        return effective, explicit
+
+    live_pid = live.get("property_id") or live.get("external_id")
+    live_ask = live.get("ask_price")
+    if not (
+        isinstance(live_pid, str)
+        and live_pid == pid
+        and isinstance(live_ask, (int, float))
+    ):
+        return effective, explicit
+
+    summary_ask = None
+    try:
+        summary = get_property_summary(pid)
+    except ToolUnavailable:
+        summary = {}
+    raw_summary_ask = summary.get("ask_price") if isinstance(summary, dict) else None
+    if isinstance(raw_summary_ask, (int, float)):
+        summary_ask = float(raw_summary_ask)
+
+    synced_ask = float(live_ask)
+    if summary_ask is not None and abs(summary_ask - synced_ask) < 0.5:
+        return effective, explicit
+
+    effective["ask_price"] = synced_ask
+    return effective, explicit
 
 
 def _infer_chart_kind(text: str) -> str:
@@ -2270,7 +2843,7 @@ def handle_rent_lookup(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id to estimate rent on."
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     horizon_years = _future_rent_horizon_years(text)
     try:
         rent = get_rent_estimate(pid, overrides=overrides)
@@ -2478,7 +3051,7 @@ def handle_projection(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property should I project forward?"
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     if _is_renovation_resale_question(text):
         try:
             outlook = get_renovation_resale_outlook(pid, overrides=overrides)
@@ -2821,7 +3394,7 @@ def handle_risk(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     trust_mode = bool(_TRUST_GAPS_RE.search(text))
     downside_mode = bool(_DOWNSIDE_DETAIL_RE.search(text))
     if trust_mode:
@@ -3002,7 +3575,7 @@ def handle_edge(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     cma_mode = bool(_CMA_RE.search(text))
     comp_set_mode = bool(_COMP_SET_RE.search(text))
     entry_point_mode = bool(_ENTRY_POINT_RE.search(text))
@@ -3269,7 +3842,7 @@ def handle_strategy(
             pid, _, _ = _promote_unsaved_address_from_text(text, session)
     if pid is None:
         return "Which property? Give me a saved property id."
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     try:
         fit = get_strategy_fit(pid, overrides=overrides)
     except ToolUnavailable as exc:
@@ -3390,7 +3963,7 @@ def handle_browse(
                     session.current_property_id = None
                     return _format_live_listing_brief(live_listing)
                 return _browse_missing_property_message(match)
-    overrides = _parse_turn_overrides(text, pid=pid, session=session)
+    overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     try:
         brief = get_property_brief(pid, overrides=overrides)
     except ToolUnavailable as exc:

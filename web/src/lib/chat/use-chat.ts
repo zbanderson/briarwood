@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type {
   ChartEvent,
   ChatEvent,
@@ -98,101 +98,11 @@ export function useChat({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const conversationIdRef = useRef<string | undefined>(initialConversationId);
-  const abortRef = useRef<AbortController | null>(null);
-
-  const send = useCallback(
-    async ({ content, pinnedListing }: SendOptions) => {
-      if (isStreaming || !content.trim()) return;
-      setError(null);
-      setSuggestions([]);
-
-      const userMsg: ChatMessage = {
-        id: tempId("u"),
-        role: "user",
-        content: content.trim(),
-      };
-      const assistantMsg: ChatMessage = {
-        id: tempId("a"),
-        role: "assistant",
-        content: "",
-        isStreaming: true,
-      };
-
-      // Snapshot history *before* this turn so the request body matches what
-      // the model should see (excluding the in-flight assistant placeholder).
-      const historyForRequest = [...messages, userMsg].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
-      setIsStreaming(true);
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: historyForRequest,
-            conversation_id: conversationIdRef.current ?? null,
-            pinned_listing: pinnedListing ?? null,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!res.ok || !res.body) {
-          throw new Error(`Request failed (${res.status})`);
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          // SSE frames are separated by a blank line.
-          let sep: number;
-          while ((sep = buffer.indexOf("\n\n")) !== -1) {
-            const frame = buffer.slice(0, sep);
-            buffer = buffer.slice(sep + 2);
-            const dataLine = frame
-              .split("\n")
-              .find((l) => l.startsWith("data:"));
-            if (!dataLine) continue;
-            const payload = dataLine.slice(5).trim();
-            if (!payload) continue;
-            let event: ChatEvent;
-            try {
-              event = JSON.parse(payload) as ChatEvent;
-            } catch {
-              continue;
-            }
-            applyEvent(event, assistantMsg.id);
-          }
-        }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        setError((err as Error).message);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMsg.id ? { ...m, isStreaming: false } : m,
-          ),
-        );
-      } finally {
-        setIsStreaming(false);
-        abortRef.current = null;
-      }
-    },
-    // applyEvent is defined below and uses setters that are stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isStreaming, messages],
+  const [conversationId, setConversationId] = useState<string | undefined>(
+    initialConversationId,
+  );
+  const [abortController, setAbortController] = useState<AbortController | null>(
+    null,
   );
 
   const applyEvent = useCallback(
@@ -334,7 +244,7 @@ export function useChat({
           setSuggestions(event.items);
           break;
         case "conversation":
-          conversationIdRef.current = event.id;
+          setConversationId(event.id);
           onConversationCreated?.(event.id, event.title);
           break;
         case "message":
@@ -413,9 +323,101 @@ export function useChat({
     [onConversationCreated, onDone],
   );
 
+  const send = useCallback(
+    async ({ content, pinnedListing }: SendOptions) => {
+      if (isStreaming || !content.trim()) return;
+      setError(null);
+      setSuggestions([]);
+
+      const userMsg: ChatMessage = {
+        id: tempId("u"),
+        role: "user",
+        content: content.trim(),
+      };
+      const assistantMsg: ChatMessage = {
+        id: tempId("a"),
+        role: "assistant",
+        content: "",
+        isStreaming: true,
+      };
+
+      // Snapshot history *before* this turn so the request body matches what
+      // the model should see (excluding the in-flight assistant placeholder).
+      const historyForRequest = [...messages, userMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setIsStreaming(true);
+
+      const controller = new AbortController();
+      setAbortController(controller);
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: historyForRequest,
+            conversation_id: conversationId ?? null,
+            pinned_listing: pinnedListing ?? null,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error(`Request failed (${res.status})`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE frames are separated by a blank line.
+          let sep: number;
+          while ((sep = buffer.indexOf("\n\n")) !== -1) {
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            const dataLine = frame
+              .split("\n")
+              .find((l) => l.startsWith("data:"));
+            if (!dataLine) continue;
+            const payload = dataLine.slice(5).trim();
+            if (!payload) continue;
+            let event: ChatEvent;
+            try {
+              event = JSON.parse(payload) as ChatEvent;
+            } catch {
+              continue;
+            }
+            applyEvent(event, assistantMsg.id);
+          }
+        }
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setError((err as Error).message);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id ? { ...m, isStreaming: false } : m,
+          ),
+        );
+      } finally {
+        setIsStreaming(false);
+        setAbortController(null);
+      }
+    },
+    [applyEvent, conversationId, isStreaming, messages],
+  );
+
   const stop = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+    abortController?.abort();
+  }, [abortController]);
 
   return {
     messages,
@@ -425,6 +427,6 @@ export function useChat({
     send,
     stop,
     setMessages,
-    conversationId: conversationIdRef.current,
+    conversationId,
   };
 }

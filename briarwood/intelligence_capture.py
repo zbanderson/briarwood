@@ -28,7 +28,6 @@ def build_routed_capture_record(
     question: str,
     context_type: str,
     routing_decision: dict[str, Any],
-    execution_mode: str,
     unified_output: dict[str, Any],
     missing_context: bool = False,
     was_conditional_answer: bool = False,
@@ -49,7 +48,6 @@ def build_routed_capture_record(
     tags = _capture_tags(
         parser_output=parser_output,
         selected_modules=list(routing_decision.get("selected_modules") or []),
-        execution_mode=execution_mode,
         confidence=float(unified_output.get("confidence") or 0.0),
         missing_context=missing_context,
         was_conditional_answer=was_conditional_answer,
@@ -60,7 +58,6 @@ def build_routed_capture_record(
         "parser_output": parser_output,
         "routing_decision": routing_decision,
         "selected_modules": list(routing_decision.get("selected_modules") or []),
-        "execution_mode": execution_mode,
         "unified_output_summary": {
             "recommendation": unified_output.get("recommendation"),
             "decision": unified_output.get("decision"),
@@ -83,7 +80,6 @@ def build_intake_agent_capture_record(
     *,
     question: str,
     triage_decision: dict[str, Any],
-    execution_mode: str,
     prior_session: dict[str, Any] | None = None,
     final_answer_conditional: bool = False,
 ) -> dict[str, Any]:
@@ -114,7 +110,6 @@ def build_intake_agent_capture_record(
         "context_type": context_type,
         "triage_decision": triage_decision,
         "resolved_entity": resolved,
-        "execution_mode": execution_mode,
         "was_conditional_answer": final_answer_conditional,
         "tags": list(dict.fromkeys(tags)),
     }
@@ -124,7 +119,6 @@ def _capture_tags(
     *,
     parser_output: dict[str, Any],
     selected_modules: list[Any],
-    execution_mode: str,
     confidence: float,
     missing_context: bool,
     was_conditional_answer: bool,
@@ -135,8 +129,6 @@ def _capture_tags(
         tags.append("low-confidence-due-to-missing-inputs")
     if was_conditional_answer:
         tags.append("unknown-question-pattern")
-    if execution_mode == "legacy_fallback":
-        tags.append("unsupported-module-path")
     if not selected_modules:
         tags.append("missing-scenario-type")
     if confidence < 0.55:
@@ -153,7 +145,6 @@ def build_followup_capture_record(
     question: str,
     context_type: str,
     routing_decision: dict[str, Any],
-    execution_mode: str,
     unified_output: dict[str, Any],
     conversation_history: list[dict[str, Any]],
     trigger: str = "next_question",
@@ -193,7 +184,6 @@ def build_followup_capture_record(
     tags = _capture_tags(
         parser_output=parser_output,
         selected_modules=list(routing_decision.get("selected_modules") or []),
-        execution_mode=execution_mode,
         confidence=float(unified_output.get("confidence") or 0.0),
         missing_context=False,
         was_conditional_answer=False,
@@ -222,7 +212,6 @@ def build_followup_capture_record(
         "parser_output": parser_output,
         "routing_decision": routing_decision,
         "selected_modules": list(routing_decision.get("selected_modules") or []),
-        "execution_mode": execution_mode,
         "unified_output_summary": {
             "recommendation": unified_output.get("recommendation"),
             "decision": unified_output.get("decision"),

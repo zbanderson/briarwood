@@ -88,6 +88,8 @@ def chart(
     spec: dict[str, Any] | None = None,
     provenance: list[str] | None = None,
     advisor: dict[str, Any] | None = None,
+    supports_claim: str | None = None,
+    why_this_chart: str | None = None,
 ) -> dict[str, Any]:
     """Visual artifact or native chart spec emitted by handlers.
 
@@ -107,6 +109,10 @@ def chart(
         payload["provenance"] = provenance
     if advisor is not None:
         payload["advisor"] = advisor
+    if supports_claim is not None:
+        payload["supports_claim"] = supports_claim
+    if why_this_chart is not None:
+        payload["why_this_chart"] = why_this_chart
     return payload
 
 
@@ -157,7 +163,8 @@ def town_summary(payload: dict[str, Any]) -> dict[str, Any]:
     """Town-level context card: median price, median PPSF, raw confidence tier,
     and 2-3 key signals from seeded local-intelligence docs. Emitted on first
     DECISION response so the user doesn't have to ask 'what about this town?'
-    as a follow-up to every property read."""
+    as a follow-up to every property read. Payload may also carry
+    `signal_items` for richer line-item drill-ins."""
     return {"type": EVENT_TOWN_SUMMARY, **payload}
 
 
@@ -226,7 +233,8 @@ def trust_summary(payload: dict[str, Any]) -> dict[str, Any]:
 
 def research_update(payload: dict[str, Any]) -> dict[str, Any]:
     """Structured town-research output: confidence, narrative, bullish/bearish
-    signals, watch items, document count, warnings. From research_town() via
+    signals, watch items, document count, warnings. Payload may also carry
+    `signal_items` for richer line-item drill-ins. From research_town() via
     session.last_research_view."""
     return {"type": EVENT_RESEARCH_UPDATE, **payload}
 

@@ -1,0 +1,478 @@
+{
+  "session_id": "1ad4e5d96612",
+  "current_property_id": "briarwood-rd-belmar",
+  "current_live_listing": null,
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": {
+    "pid": "briarwood-rd-belmar",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 674200.0,
+    "all_in_basis": 849000.0,
+    "fair_value_base": 774093.57,
+    "value_low": 686976.64,
+    "value_high": 861210.5,
+    "ask_premium_pct": -0.1074,
+    "basis_premium_pct": 0.0882,
+    "trust_flags": [],
+    "trust_summary": {
+      "confidence": 0.7535,
+      "band": "High confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "what_must_be_true": [],
+    "key_risks": [],
+    "why_this_stance": [
+      "Current basis sits about 8.8% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 8.8% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "overrides_applied": {
+      "ask_price": 699000.0
+    }
+  },
+  "last_projection_view": {
+    "property_id": "briarwood-rd-belmar",
+    "ask_price": 699000.0,
+    "bull_case_value": 863109.0,
+    "base_case_value": 803822.0,
+    "bear_case_value": 752686.0,
+    "stress_case_value": 541865.0,
+    "spread": 110423.0,
+    "bull_total_adjustment_pct": 0.115,
+    "base_total_adjustment_pct": 0.0384,
+    "bear_total_adjustment_pct": -0.0277,
+    "bull_growth_rate": 0.2348,
+    "base_growth_rate": 0.15,
+    "bear_growth_rate": 0.0768,
+    "bcv_anchor": 774093.57,
+    "listing_ask_price": 699000.0,
+    "basis_label": "entry basis",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null
+  },
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "ask_price": 699000.0,
+    "bear_value": 752686.0,
+    "stress_value": 541865.0,
+    "risk_flags": [
+      "flood_medium",
+      "older_housing_stock",
+      "higher_vacancy"
+    ],
+    "trust_flags": [],
+    "key_risks": [],
+    "total_penalty": 0.177,
+    "confidence_tier": "strong"
+  },
+  "last_value_thesis_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "ask_price": 674200.0,
+    "fair_value_base": 774093.57,
+    "value_low": 686976.64,
+    "value_high": 861210.5,
+    "premium_discount_pct": -0.1074,
+    "pricing_view": "appears undervalued",
+    "primary_value_source": "unknown",
+    "net_opportunity_delta_pct": 0.1074,
+    "value_drivers": [],
+    "key_value_drivers": [],
+    "what_must_be_true": [],
+    "why_this_stance": [
+      "Current basis sits about 8.8% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 8.8% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "trust_summary": {
+      "confidence": 0.7535,
+      "band": "High confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "risk_adjusted_fair_value": null,
+    "required_discount": null,
+    "comp_selection_summary": null,
+    "comps": [],
+    "optionality_signal": {
+      "primary_source": "unknown",
+      "hidden_upside_items": [],
+      "summary": null
+    }
+  },
+  "last_market_support_view": null,
+  "last_strategy_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "best_path": "Make an offer inside the risk-adjusted band rather than at ask.",
+    "recommendation": "Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin.",
+    "pricing_view": "appears undervalued",
+    "primary_value_source": "unknown",
+    "rental_ease_label": "Seasonal / Mixed",
+    "rental_ease_score": 59.71,
+    "rent_support_score": 42.0,
+    "liquidity_score": 68.43,
+    "monthly_cash_flow": -2083.89,
+    "cash_on_cash_return": -0.1431,
+    "annual_noi": 16847.56
+  },
+  "last_rent_outlook_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "entry_basis": 699000.0,
+    "monthly_rent": 3500.0,
+    "effective_monthly_rent": 3290.0,
+    "rent_source_type": "provided",
+    "rental_ease_label": "Seasonal / Mixed",
+    "rental_ease_score": 59.71,
+    "annual_noi": 16847.56,
+    "horizon_years": 3,
+    "future_rent_low": 3290,
+    "future_rent_mid": 3595,
+    "future_rent_high": 3809,
+    "zillow_market_rent": null,
+    "zillow_rental_comp_count": 0,
+    "market_context_note": null,
+    "basis_to_rent_framing": "Current rent annualizes to roughly 5.6% of the current basis.",
+    "owner_occupy_then_rent": null,
+    "carry_offset_ratio": 0.612,
+    "break_even_rent": 5374,
+    "break_even_probability": 0.2,
+    "adjusted_rent_confidence": 0.5971,
+    "rent_haircut_pct": null,
+    "burn_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "rent_base": 3290,
+          "rent_bull": 3290,
+          "rent_bear": 3290,
+          "monthly_obligation": 5374
+        },
+        {
+          "year": 1,
+          "rent_base": 3389,
+          "rent_bull": 3454,
+          "rent_bear": 3323,
+          "monthly_obligation": 5374
+        },
+        {
+          "year": 2,
+          "rent_base": 3490,
+          "rent_bull": 3627,
+          "rent_bear": 3356,
+          "monthly_obligation": 5374
+        },
+        {
+          "year": 3,
+          "rent_base": 3595,
+          "rent_bull": 3809,
+          "rent_bear": 3390,
+          "monthly_obligation": 5374
+        }
+      ],
+      "title": "Rent burn chart",
+      "monthly_obligation": 5374
+    },
+    "ramp_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "net_0": -2084,
+          "net_3": -2084,
+          "net_5": -2084
+        },
+        {
+          "year": 1,
+          "net_0": -2084,
+          "net_3": -1985,
+          "net_5": -1919
+        },
+        {
+          "year": 2,
+          "net_0": -2084,
+          "net_3": -1884,
+          "net_5": -1747
+        },
+        {
+          "year": 3,
+          "net_0": -2084,
+          "net_3": -1779,
+          "net_5": -1565
+        },
+        {
+          "year": 4,
+          "net_0": -2084,
+          "net_3": -1671,
+          "net_5": -1375
+        },
+        {
+          "year": 5,
+          "net_0": -2084,
+          "net_3": -1560,
+          "net_5": -1175
+        },
+        {
+          "year": 6,
+          "net_0": -2084,
+          "net_3": -1445,
+          "net_5": -965
+        },
+        {
+          "year": 7,
+          "net_0": -2084,
+          "net_3": -1328,
+          "net_5": -745
+        },
+        {
+          "year": 8,
+          "net_0": -2084,
+          "net_3": -1206,
+          "net_5": -513
+        },
+        {
+          "year": 9,
+          "net_0": -2084,
+          "net_3": -1081,
+          "net_5": -270
+        },
+        {
+          "year": 10,
+          "net_0": -2084,
+          "net_3": -952,
+          "net_5": -15
+        }
+      ],
+      "title": "Rent ramp and break-even",
+      "current_rent": 3290,
+      "monthly_obligation": 5374,
+      "today_cash_flow": -2084,
+      "break_even_years": {
+        "0": null,
+        "3": null,
+        "5": null
+      }
+    }
+  },
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": "The current asking price of $699,000 is about 8.8% above Briarwood's estimated fair value of $774,094, suggesting there's room for negotiation. A significant risk is minimal here, as there are no notable warning flags. Your stance could improve with an adjustment of about 8.8% to the price, which would make the deal more favorable.",
+  "last_visual_advice": {
+    "value": {
+      "title": "Fair Value Assessment",
+      "summary": "The property's ask price is undervalued compared to its fair value estimate.",
+      "companion": "Combine this with rent projections to assess investment viability.",
+      "preferred_surface": "table_first"
+    },
+    "rent": {
+      "title": "Rental Potential Analysis",
+      "summary": "The current rent annualizes to roughly 5.6% of the entry basis, indicating solid cash flow potential.",
+      "companion": "Consider the rent burn chart for year-over-year rental projections.",
+      "preferred_surface": "chart_first"
+    },
+    "scenario": {
+      "title": "Scenario Analysis Overview",
+      "summary": "Projected values vary significantly across bull, base, and bear cases, with a considerable upside potential.",
+      "companion": "Use this with the risk assessment to weigh investment choices.",
+      "preferred_surface": "card_first"
+    },
+    "risk": {
+      "title": "Risk Assessment Summary",
+      "summary": "Identified risk factors include flood risk and older housing stock, indicating a cautious investment stance.",
+      "companion": "Align this with trust metrics to gauge decision confidence.",
+      "preferred_surface": "table_first"
+    },
+    "trust": {
+      "title": "Trust and Confidence Levels",
+      "summary": "High confidence in the valuation, bolstered by consistent data and low contradiction counts.",
+      "companion": "Couple this with value insights to solidify decision-making.",
+      "preferred_surface": "card_first"
+    }
+  },
+  "last_verifier_report": {
+    "tier": "decision_summary",
+    "sentences_total": 4,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "I recommend moving forward with a purchase of 1223 Briarwood Road if the price improves.",
+        "value": "1223",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 1,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "last_representation_plan": {
+    "selections": [
+      {
+        "claim": "The current ask price is below the fair value base.",
+        "claim_type": "price_position",
+        "supporting_evidence": [
+          "last_value_thesis_view.ask_price",
+          "last_value_thesis_view.fair_value_base"
+        ],
+        "chart_id": "value_opportunity",
+        "source_view": "last_value_thesis_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Future value scenarios suggest a reasonable upside.",
+        "claim_type": "scenario_range",
+        "supporting_evidence": [
+          "last_projection_view.bull_case_value",
+          "last_projection_view.base_case_value",
+          "last_projection_view.bear_case_value"
+        ],
+        "chart_id": "scenario_fan",
+        "source_view": "last_projection_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Market risks could impact the overall investment composition.",
+        "claim_type": "risk_composition",
+        "supporting_evidence": [
+          "last_risk_view.risk_flags"
+        ],
+        "chart_id": "risk_bar",
+        "source_view": "last_risk_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Potential rental income currently does not cover monthly expenses.",
+        "claim_type": "rent_coverage",
+        "supporting_evidence": [
+          "last_rent_outlook_view.monthly_rent",
+          "last_strategy_view.monthly_cash_flow"
+        ],
+        "chart_id": null,
+        "source_view": "last_strategy_view",
+        "flagged": true,
+        "flag_reason": "source_view missing required inputs: burn_chart_payload"
+      },
+      {
+        "claim": "Without price improvement, profitability may be compromised.",
+        "claim_type": "downside_risk",
+        "supporting_evidence": [
+          "last_decision_view.why_this_stance"
+        ],
+        "chart_id": null,
+        "source_view": "last_decision_view",
+        "flagged": true,
+        "flag_reason": "Lacks specific numerical evidence related to downside.; source_view missing required inputs: risk_flags"
+      }
+    ]
+  },
+  "last_partial_data_warnings": [
+    {
+      "section": "representation_plan",
+      "reason": "dropped 1 chart selection(s): rent_coverage:source_view missing required inputs: burn_chart_payload",
+      "verdict_reliable": true
+    }
+  ],
+  "turns": [
+    {
+      "user": "3BR homes under $900k in Belmar NJ with no HOA",
+      "assistant": "Found 2 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "So we are talking with the owner of 1223 briarwood road in Belmar NJ about buying his property for 699k",
+      "assistant": "The current asking price of $699,000 is about 8.8% above Briarwood's estimated fair value of $774,094, suggesting there's room for negotiation. A significant risk is minimal here, as there are no notable warning flags. Your stance could improve with an adjustment of about 8.8% to the price, which would make the deal more favorable.",
+      "answer_type": "decision"
+    }
+  ]
+}

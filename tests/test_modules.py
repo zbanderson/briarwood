@@ -9,18 +9,14 @@ from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.hybrid_value import HybridValueModule
 from briarwood.modules.income_support import IncomeSupportModule
 from briarwood.modules.location_intelligence import LocationIntelligenceModule
-from briarwood.modules.liquidity_signal import LiquiditySignalModule
 from briarwood.modules.local_intelligence import LocalIntelligenceModule
-from briarwood.modules.market_momentum_signal import MarketMomentumSignalModule
 from briarwood.modules.market_value_history import MarketValueHistoryModule
-from briarwood.modules.property_snapshot import PropertySnapshotModule
 from briarwood.modules.renovation_scenario import RenovationScenarioModule
 from briarwood.modules.rental_ease import RentalEaseModule
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scarcity_support import ScarcitySupportModule
 from briarwood.modules.teardown_scenario import TeardownScenarioModule
 from briarwood.modules.town_county_outlook import TownCountyOutlookModule
-from briarwood.modules.value_drivers import ValueDriversModule
 from briarwood.schemas import EvidenceMode, PropertyInput, ScenarioOutput, ValuationOutput
 from briarwood.settings import CostValuationSettings
 
@@ -58,7 +54,6 @@ class ModuleTests(unittest.TestCase):
     def test_all_modules_return_standard_shape(self) -> None:
         property_input = sample_property()
         modules = [
-            PropertySnapshotModule(),
             MarketValueHistoryModule(),
             ComparableSalesModule(),
             HybridValueModule(),
@@ -66,34 +61,16 @@ class ModuleTests(unittest.TestCase):
             CostValuationModule(),
             IncomeSupportModule(),
             RentalEaseModule(),
-            LiquiditySignalModule(),
-            MarketMomentumSignalModule(),
             BullBaseBearModule(),
             RiskConstraintsModule(),
             TownCountyOutlookModule(),
             ScarcitySupportModule(),
             LocationIntelligenceModule(),
             LocalIntelligenceModule(),
-            ValueDriversModule(),
         ]
 
         for module in modules:
-            if module.name == "value_drivers":
-                current_value_result = CurrentValueModule().run(property_input)
-                income_result = IncomeSupportModule().run(property_input)
-                location_result = LocationIntelligenceModule().run(property_input)
-                town_result = TownCountyOutlookModule().run(property_input)
-                result = module.run(
-                    property_input,
-                    prior_results={
-                        "current_value": current_value_result,
-                        "income_support": income_result,
-                        "location_intelligence": location_result,
-                        "town_county_outlook": town_result,
-                    },
-                )
-            else:
-                result = module.run(property_input)
+            result = module.run(property_input)
             self.assertIsInstance(result.metrics, dict)
             self.assertIsInstance(result.score, float)
             self.assertIsInstance(result.confidence, float)
@@ -141,8 +118,6 @@ class ModuleTests(unittest.TestCase):
     def test_location_modules_return_payloads(self) -> None:
         town_result = TownCountyOutlookModule().run(sample_property())
         scarcity_result = ScarcitySupportModule().run(sample_property())
-        liquidity_result = LiquiditySignalModule().run(sample_property())
-        momentum_result = MarketMomentumSignalModule().run(sample_property())
         location_result = LocationIntelligenceModule().run(sample_property())
         local_result = LocalIntelligenceModule().run(sample_property())
 
@@ -150,10 +125,6 @@ class ModuleTests(unittest.TestCase):
         self.assertGreaterEqual(town_result.confidence, 0.0)
         self.assertIn("scarcity_support_score", scarcity_result.metrics)
         self.assertIn("buyer_takeaway", scarcity_result.metrics)
-        self.assertIn("liquidity_score", liquidity_result.metrics)
-        self.assertIn("liquidity_label", liquidity_result.metrics)
-        self.assertIn("market_momentum_score", momentum_result.metrics)
-        self.assertIn("market_momentum_label", momentum_result.metrics)
         self.assertIn("location_score", location_result.metrics)
         self.assertIn("geo_peer_comp_count", location_result.metrics)
         self.assertIn("development_activity_score", local_result.metrics)
@@ -275,34 +246,6 @@ class ModuleTests(unittest.TestCase):
 
         current_value_result = CurrentValueModule().run(property_input)
         self.assertLess(float(current_value_result.metrics["briarwood_current_value"] or 0.0), 1_500_000.0)
-
-    def test_value_drivers_module_builds_bridge_from_base_to_adjusted_value(self) -> None:
-        property_input = sample_property()
-        current_value_result = CurrentValueModule().run(property_input)
-        income_result = IncomeSupportModule().run(property_input)
-        location_result = LocationIntelligenceModule().run(property_input)
-        town_result = TownCountyOutlookModule().run(property_input)
-
-        result = ValueDriversModule().run(
-            property_input,
-            prior_results={
-                "current_value": current_value_result,
-                "income_support": income_result,
-                "location_intelligence": location_result,
-                "town_county_outlook": town_result,
-            },
-        )
-
-        self.assertIn("driver_count", result.metrics)
-        self.assertGreaterEqual(result.metrics["driver_count"], 1)
-        self.assertIsNotNone(result.payload)
-        payload = result.payload
-        self.assertAlmostEqual(
-            payload.base_value + sum(driver.estimated_value_impact for driver in payload.drivers),
-            payload.adjusted_value,
-            places=2,
-        )
-        self.assertGreaterEqual(len(payload.bridge), 2)
 
     def test_current_value_confidence_is_capped_when_rent_missing(self) -> None:
         property_input = sample_property()

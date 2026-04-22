@@ -1,0 +1,120 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "1201",
+            "short_name": "1201",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Main Street",
+            "short_name": "Main St",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Belmar",
+            "short_name": "Belmar",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07719",
+            "short_name": "07719",
+            "types": [
+              "postal_code"
+            ]
+          }
+        ],
+        "formatted_address": "1201 Main St, Belmar, NJ 07719, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.1777463,
+              "lng": -74.02634929999999
+            },
+            "southwest": {
+              "lat": 40.1764187,
+              "lng": -74.0284866
+            }
+          },
+          "location": {
+            "lat": 40.1771086,
+            "lng": -74.0274417
+          },
+          "location_type": "GEOMETRIC_CENTER",
+          "viewport": {
+            "northeast": {
+              "lat": 40.17843148029149,
+              "lng": -74.02606896970849
+            },
+            "southwest": {
+              "lat": 40.1757335197085,
+              "lng": -74.0287669302915
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1769269,
+              "longitude": -74.0265838
+            }
+          }
+        ],
+        "place_id": "ChIJA1lR4eInwokRIQw13NQGMnk",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "1201 Main St, Belmar, NJ 07719, USA",
+    "latitude": 40.1771086,
+    "longitude": -74.0274417,
+    "place_id": "ChIJA1lR4eInwokRIQw13NQGMnk",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Belmar",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07719"
+  },
+  "fetched_at": "2026-04-22T16:46:08Z"
+}

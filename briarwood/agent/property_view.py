@@ -9,10 +9,12 @@ Three independent views of a property used to exist in parallel:
 3. Scenario view — what-if overrides rewrote ``purchase_price`` in a tempfile
    but the downstream field labels kept calling it "ask", hiding the shift.
 
-``PropertyView`` collapses those into one contract: ``ask_price`` is always
-the listing ask (from ``summary.json``), ``all_in_basis`` is a distinct named
-derived field, and overrides are carried explicitly so the narration layer
-can say what changed.
+``PropertyView`` collapses those into one contract: ``ask_price`` is the
+working ask for the current turn. By default that comes from ``summary.json``;
+if the user or the chat surface supplied a fresher turn-specific ask override,
+that value wins for both display and analysis. ``all_in_basis`` remains a
+distinct named derived field, and explicit user overrides are carried through
+so the narration layer can say what changed.
 """
 
 from __future__ import annotations
@@ -86,8 +88,9 @@ class PropertyView:
         depth="decision" — also runs analyze_property with any overrides.
 
         Invariant: ``view.ask_price`` is identical at both depths for the
-        same pid. Listing ask comes from summary.json; the analysis
-        pipeline never gets to rename it.
+        same pid + override set. The default source is ``summary.json``;
+        turn-specific ask overrides intentionally replace it so the analysis
+        and the UI stay on the same working price.
         """
         summary = get_property_summary(pid)
         base = cls._from_summary(pid, summary, overrides or {})
@@ -104,6 +107,9 @@ class PropertyView:
         summary: Mapping[str, Any],
         overrides: Mapping[str, Any],
     ) -> "PropertyView":
+        ask_price = _as_float(overrides.get("ask_price"))
+        if ask_price is None:
+            ask_price = _as_float(summary.get("ask_price"))
         return cls(
             pid=pid,
             address=summary.get("address"),
@@ -111,7 +117,7 @@ class PropertyView:
             state=summary.get("state"),
             beds=summary.get("beds"),
             baths=summary.get("baths"),
-            ask_price=_as_float(summary.get("ask_price")),
+            ask_price=ask_price,
             bcv=_as_float(summary.get("bcv")),
             pricing_view=summary.get("pricing_view"),
             overrides_applied=dict(overrides),
@@ -131,8 +137,8 @@ class PropertyView:
             state=self.state,
             beds=self.beds,
             baths=self.baths,
-            # Listing ask stays pinned to summary.json — never overwritten by
-            # the analysis layer. This is the core invariant of PropertyView.
+            # The display ask stays pinned to the working turn input chosen in
+            # _from_summary — never overwritten by the analysis layer.
             ask_price=self.ask_price,
             bcv=self.bcv,
             pricing_view=self.pricing_view,

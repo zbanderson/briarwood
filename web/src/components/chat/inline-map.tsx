@@ -1,16 +1,7 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
-
-import { useEffect, useRef } from "react";
-import {
-  Map as MapboxMap,
-  Marker,
-  NavigationControl,
-  type MapRef,
-} from "react-map-gl/mapbox";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { MapPin as MapPinIcon } from "lucide-react";
-import { cn } from "@/lib/cn";
 import type { Listing, MapPin } from "@/lib/chat/events";
 
 type Props = {
@@ -22,10 +13,116 @@ type Props = {
   onSelect?: (pinId: string) => void;
 };
 
-const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+type GoogleMapsNamespace = {
+  Map: new (element: HTMLElement, options: GoogleMapOptions) => GoogleMapInstance;
+  Marker: new (options: GoogleMarkerOptions) => GoogleMarkerInstance;
+  LatLngBounds: new () => GoogleLatLngBounds;
+  Size: new (width: number, height: number) => GoogleSize;
+  Point: new (x: number, y: number) => GooglePoint;
+};
 
-// Mapbox dark style — themed cleanly to match our background.
-const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
+type GoogleWindow = Window & {
+  google?: {
+    maps?: GoogleMapsNamespace;
+  };
+  __briarwoodGoogleMapsPromise?: Promise<GoogleMapsNamespace>;
+};
+
+type GoogleMapOptions = {
+  center: GoogleLatLngLiteral;
+  zoom: number;
+  disableDefaultUI?: boolean;
+  zoomControl?: boolean;
+  mapTypeControl?: boolean;
+  streetViewControl?: boolean;
+  fullscreenControl?: boolean;
+  clickableIcons?: boolean;
+  gestureHandling?: "cooperative" | "greedy" | "none" | "auto";
+  styles?: GoogleMapStyle[];
+};
+
+type GoogleMapStyle = {
+  elementType?: string;
+  featureType?: string;
+  stylers: Array<Record<string, string | number>>;
+};
+
+type GoogleLatLngLiteral = {
+  lat: number;
+  lng: number;
+};
+
+type GoogleSize = object;
+type GooglePoint = object;
+
+type GoogleMapInstance = {
+  fitBounds: (bounds: GoogleLatLngBounds, padding?: number | GooglePadding) => void;
+  panTo: (latLng: GoogleLatLngLiteral) => void;
+  setCenter: (latLng: GoogleLatLngLiteral) => void;
+  setZoom: (zoom: number) => void;
+};
+
+type GooglePadding = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+type GoogleLatLngBounds = {
+  extend: (latLng: GoogleLatLngLiteral) => void;
+};
+
+type GoogleMarkerOptions = {
+  map: GoogleMapInstance;
+  position: GoogleLatLngLiteral;
+  title?: string;
+  optimized?: boolean;
+  zIndex?: number;
+  icon?: GoogleMarkerIcon;
+};
+
+type GoogleMarkerIcon = {
+  url: string;
+  scaledSize: GoogleSize;
+  anchor: GooglePoint;
+  labelOrigin: GooglePoint;
+};
+
+type GoogleMapsEventHandle = {
+  remove?: () => void;
+};
+
+type GoogleMarkerInstance = {
+  addListener: (eventName: string, handler: () => void) => GoogleMapsEventHandle;
+  setIcon: (icon: GoogleMarkerIcon) => void;
+  setMap: (map: GoogleMapInstance | null) => void;
+  setPosition: (position: GoogleLatLngLiteral) => void;
+  setTitle: (title: string) => void;
+  setZIndex: (zIndex: number) => void;
+};
+
+type RenderedMarker = {
+  pinId: string;
+  marker: GoogleMarkerInstance;
+  listeners: GoogleMapsEventHandle[];
+};
+
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_SRC = "https://maps.googleapis.com/maps/api/js";
+
+const GOOGLE_MAP_STYLE: GoogleMapStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#1f1e1d" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#b8b2a4" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1f1e1d" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#3a3835" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#262524" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#232522" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#34322f" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#4a423a" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f2d2b" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#18232e" }] },
+];
 
 export function InlineMap({
   center,
@@ -35,86 +132,95 @@ export function InlineMap({
   onHover,
   onSelect,
 }: Props) {
-  const mapRef = useRef<MapRef>(null);
-  const tokenState = getMapboxTokenState(TOKEN);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<GoogleMapInstance | null>(null);
+  const markersRef = useRef<RenderedMarker[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const keyState = getGoogleMapsApiKeyState(API_KEY);
 
-  // Fit bounds whenever the pin set changes.
   useEffect(() => {
-    if (!tokenState.ok) return;
-    const map = mapRef.current;
-    if (!map || pins.length === 0) return;
+    if (!keyState.ok) return;
+    if (!containerRef.current) return;
 
-    const lngs = pins.map((p) => p.lng);
-    const lats = pins.map((p) => p.lat);
-    const sw: [number, number] = [Math.min(...lngs), Math.min(...lats)];
-    const ne: [number, number] = [Math.max(...lngs), Math.max(...lats)];
+    let disposed = false;
 
-    if (pins.length === 1) {
-      map.flyTo({ center: [pins[0].lng, pins[0].lat], zoom: 14, duration: 600 });
-    } else {
-      map.fitBounds([sw, ne], {
-        padding: { top: 40, bottom: 40, left: 40, right: 40 },
-        duration: 600,
-        maxZoom: 14,
+    loadGoogleMaps(API_KEY)
+      .then((maps) => {
+        if (disposed || !containerRef.current) return;
+        setLoadError(null);
+        if (!mapRef.current) {
+          mapRef.current = new maps.Map(containerRef.current, {
+            center: { lng: center[0], lat: center[1] },
+            zoom: pins.length <= 1 ? 14 : 12,
+            disableDefaultUI: true,
+            zoomControl: true,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            clickableIcons: false,
+            gestureHandling: "cooperative",
+            styles: GOOGLE_MAP_STYLE,
+          });
+        }
+        renderMarkers({
+          maps,
+          map: mapRef.current,
+          markersRef,
+          pins,
+          activeId: null,
+          onHover,
+          onSelect,
+        });
+        fitPins(maps, mapRef.current, pins, center);
+      })
+      .catch(() => {
+        if (!disposed) {
+          setLoadError("Google Maps could not load in the browser.");
+        }
       });
-    }
-  }, [pins, tokenState.ok]);
 
-  // Pan to the active pin when the user hovers a card off-screen.
+    return () => {
+      disposed = true;
+    };
+  }, [center, keyState.ok, onHover, onSelect, pins]);
+
   useEffect(() => {
-    if (!tokenState.ok || !activeId) return;
-    const pin = pins.find((p) => p.id === activeId);
+    if (!keyState.ok || !mapRef.current) return;
+    const maps = (window as GoogleWindow).google?.maps;
+    if (!maps) return;
+    renderMarkers({
+      maps,
+      map: mapRef.current,
+      markersRef,
+      pins,
+      activeId,
+      onHover,
+      onSelect,
+    });
+    if (!activeId) return;
+    const pin = pins.find((candidate) => candidate.id === activeId);
     if (!pin) return;
-    mapRef.current?.panTo([pin.lng, pin.lat], { duration: 300 });
-  }, [activeId, pins, tokenState.ok]);
+    mapRef.current.panTo({ lat: pin.lat, lng: pin.lng });
+  }, [activeId, keyState.ok, onHover, onSelect, pins]);
 
-  if (!tokenState.ok) {
-    return <MissingTokenFallback pinCount={pins.length} reason={tokenState.reason} />;
+  useEffect(() => {
+    return () => {
+      clearMarkers(markersRef.current);
+      markersRef.current = [];
+      mapRef.current = null;
+    };
+  }, []);
+
+  if (!keyState.ok) {
+    return <MissingApiKeyFallback pinCount={pins.length} reason={keyState.reason} />;
+  }
+  if (loadError) {
+    return <MissingApiKeyFallback pinCount={pins.length} reason={loadError} />;
   }
 
   return (
     <div className="relative mt-3 h-[220px] w-full overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
-      <MapboxMap
-        ref={mapRef}
-        mapboxAccessToken={TOKEN}
-        initialViewState={{
-          longitude: center[0],
-          latitude: center[1],
-          zoom: 12,
-        }}
-        mapStyle={MAP_STYLE}
-        attributionControl={false}
-        // Subtle interaction defaults — no rotation, no pitch.
-        dragRotate={false}
-        touchPitch={false}
-        cooperativeGestures
-      >
-        <NavigationControl
-          position="top-right"
-          showCompass={false}
-          visualizePitch={false}
-        />
-
-        {pins.map((p) => (
-          <Marker
-            key={p.id}
-            longitude={p.lng}
-            latitude={p.lat}
-            anchor="bottom"
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              onSelect?.(p.id);
-            }}
-          >
-            <PinMarker
-              label={p.label ?? ""}
-              active={activeId === p.id}
-              onMouseEnter={() => onHover?.(p.id)}
-              onMouseLeave={() => onHover?.(null)}
-            />
-          </Marker>
-        ))}
-      </MapboxMap>
+      <div ref={containerRef} className="h-full w-full" />
 
       {listings && listings.length > 0 && (
         <div
@@ -128,67 +234,216 @@ export function InlineMap({
   );
 }
 
-function getMapboxTokenState(token: string | undefined) {
-  if (!token) {
+function renderMarkers({
+  maps,
+  map,
+  markersRef,
+  pins,
+  activeId,
+  onHover,
+  onSelect,
+}: {
+  maps: GoogleMapsNamespace;
+  map: GoogleMapInstance;
+  markersRef: MutableRefObject<RenderedMarker[]>;
+  pins: MapPin[];
+  activeId?: string | null;
+  onHover?: (pinId: string | null) => void;
+  onSelect?: (pinId: string) => void;
+}) {
+  const nextById = new Map(pins.map((pin) => [pin.id, pin]));
+  const existingById = new Map(markersRef.current.map((entry) => [entry.pinId, entry]));
+
+  for (const entry of markersRef.current) {
+    if (nextById.has(entry.pinId)) continue;
+    detachMarker(entry);
+    existingById.delete(entry.pinId);
+  }
+
+  const nextRendered: RenderedMarker[] = [];
+  for (const pin of pins) {
+    const existing = existingById.get(pin.id);
+    const isActive = activeId === pin.id;
+    if (existing) {
+      existing.marker.setPosition({ lat: pin.lat, lng: pin.lng });
+      existing.marker.setTitle(pin.label ?? "Property");
+      existing.marker.setZIndex(isActive ? 2 : 1);
+      existing.marker.setIcon(buildMarkerIcon(maps, pin.label ?? "", isActive));
+      nextRendered.push(existing);
+      continue;
+    }
+
+    const marker = new maps.Marker({
+      map,
+      position: { lat: pin.lat, lng: pin.lng },
+      title: pin.label ?? "Property",
+      optimized: false,
+      zIndex: isActive ? 2 : 1,
+      icon: buildMarkerIcon(maps, pin.label ?? "", isActive),
+    });
+
+    const listeners = [
+      marker.addListener("click", () => onSelect?.(pin.id)),
+      marker.addListener("mouseover", () => onHover?.(pin.id)),
+      marker.addListener("mouseout", () => onHover?.(null)),
+    ];
+
+    nextRendered.push({ pinId: pin.id, marker, listeners });
+  }
+
+  markersRef.current = nextRendered;
+}
+
+function fitPins(
+  maps: GoogleMapsNamespace,
+  map: GoogleMapInstance,
+  pins: MapPin[],
+  center: [number, number],
+) {
+  if (pins.length === 0) {
+    map.setCenter({ lng: center[0], lat: center[1] });
+    map.setZoom(12);
+    return;
+  }
+  if (pins.length === 1) {
+    map.setCenter({ lng: pins[0].lng, lat: pins[0].lat });
+    map.setZoom(14);
+    return;
+  }
+
+  const bounds = new maps.LatLngBounds();
+  for (const pin of pins) {
+    bounds.extend({ lat: pin.lat, lng: pin.lng });
+  }
+  map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+}
+
+function clearMarkers(markers: RenderedMarker[]) {
+  for (const entry of markers) {
+    detachMarker(entry);
+  }
+}
+
+function detachMarker(entry: RenderedMarker) {
+  for (const listener of entry.listeners) {
+    listener.remove?.();
+  }
+  entry.marker.setMap(null);
+}
+
+function buildMarkerIcon(
+  maps: GoogleMapsNamespace,
+  label: string,
+  active: boolean,
+): GoogleMarkerIcon {
+  const visibleLabel = label.trim() || "Home";
+  const sanitizedLabel = escapeSvgText(visibleLabel);
+  const width = Math.max(64, Math.min(160, 20 + visibleLabel.length * 8));
+  const height = 42;
+  const pillFill = active ? "#c96442" : "#262524";
+  const pillStroke = active ? "#c96442" : "#3a3835";
+  const textFill = active ? "#fff8f3" : "#f3efe6";
+  const pointerFill = active ? "#c96442" : "#262524";
+  const pointerStroke = active ? "#c96442" : "#3a3835";
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect x="1" y="1" rx="16" ry="16" width="${width - 2}" height="28" fill="${pillFill}" stroke="${pillStroke}" stroke-width="2" />
+      <path d="M ${width / 2 - 6} 25 L ${width / 2} 35 L ${width / 2 + 6} 25 Z" fill="${pointerFill}" stroke="${pointerStroke}" stroke-width="2" stroke-linejoin="round" />
+      <text x="50%" y="18" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="${textFill}">${sanitizedLabel}</text>
+    </svg>
+  `.trim();
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new maps.Size(width, height),
+    anchor: new maps.Point(width / 2, height),
+    labelOrigin: new maps.Point(width / 2, 16),
+  };
+}
+
+function escapeSvgText(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function getGoogleMapsApiKeyState(apiKey: string | undefined) {
+  const normalized = apiKey?.trim() ?? "";
+  if (!normalized) {
     return {
       ok: false,
       reason:
-        "Map needs a public Mapbox token in web/.env.local as NEXT_PUBLIC_MAPBOX_TOKEN.",
+        "Map needs a browser-safe Google Maps key in web/.env.local as NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.",
     };
   }
-  if (token.startsWith("sk.")) {
+  if (normalized.includes("YOUR_") || normalized.includes("your_")) {
     return {
       ok: false,
       reason:
-        "Mapbox secret tokens (`sk.`) cannot be used in the browser. Put a public `pk.` token in web/.env.local.",
-    };
-  }
-  if (!token.startsWith("pk.")) {
-    return {
-      ok: false,
-      reason:
-        "Mapbox token looks invalid for client-side use. Use a public token that starts with `pk.` in web/.env.local.",
+        "Replace the placeholder Google Maps key in web/.env.local with a real browser key.",
     };
   }
   return { ok: true, reason: "" };
 }
 
-function PinMarker({
-  label,
-  active,
-  onMouseEnter,
-  onMouseLeave,
-}: {
-  label: string;
-  active?: boolean;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-}) {
-  return (
-    <div
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      className={cn(
-        "relative flex translate-y-1 cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-md transition-all",
-        active
-          ? "z-10 scale-110 border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-fg)]"
-          : "border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)] hover:border-[var(--color-text-faint)]",
-      )}
-    >
-      <span>{label}</span>
-      <span
-        className={cn(
-          "absolute -bottom-1 left-1/2 -translate-x-1/2 h-2 w-2 rotate-45 border-r border-b",
-          active
-            ? "bg-[var(--color-accent)] border-[var(--color-accent)]"
-            : "bg-[var(--color-bg-elevated)] border-[var(--color-border)]",
-        )}
-      />
-    </div>
-  );
+function loadGoogleMaps(apiKey: string | undefined): Promise<GoogleMapsNamespace> {
+  const normalized = apiKey?.trim();
+  if (!normalized) {
+    return Promise.reject(new Error("Missing Google Maps API key"));
+  }
+
+  const win = window as GoogleWindow;
+  if (win.google?.maps) {
+    return Promise.resolve(win.google.maps);
+  }
+  if (win.__briarwoodGoogleMapsPromise) {
+    return win.__briarwoodGoogleMapsPromise;
+  }
+
+  win.__briarwoodGoogleMapsPromise = new Promise<GoogleMapsNamespace>((resolve, reject) => {
+    const callbackName = "__briarwoodGoogleMapsInit";
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[data-google-maps-loader="briarwood"]`,
+    );
+
+    (win as GoogleWindow & Record<string, unknown>)[callbackName] = () => {
+      const maps = (window as GoogleWindow).google?.maps;
+      if (!maps) {
+        reject(new Error("Google Maps loaded without maps namespace"));
+        return;
+      }
+      resolve(maps);
+    };
+
+    if (existingScript) {
+      existingScript.addEventListener("error", () => {
+        reject(new Error("Google Maps script failed to load"));
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = `${GOOGLE_MAPS_API_SRC}?key=${encodeURIComponent(normalized)}&loading=async&callback=${callbackName}`;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleMapsLoader = "briarwood";
+    script.onerror = () => {
+      reject(new Error("Google Maps script failed to load"));
+    };
+    document.head.appendChild(script);
+  }).catch((error) => {
+    win.__briarwoodGoogleMapsPromise = undefined;
+    throw error;
+  });
+
+  return win.__briarwoodGoogleMapsPromise;
 }
 
-function MissingTokenFallback({
+function MissingApiKeyFallback({
   pinCount,
   reason,
 }: {
@@ -204,7 +459,7 @@ function MissingTokenFallback({
       <p className="text-xs text-[var(--color-text-muted)]">
         {reason}{" "}
         <code className="rounded bg-[var(--color-surface)] px-1 py-0.5 text-[10px] text-[var(--color-text)]">
-          NEXT_PUBLIC_MAPBOX_TOKEN
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         </code>{" "}
         in <code className="text-[var(--color-text)]">web/.env.local</code>
       </p>

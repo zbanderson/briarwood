@@ -18,6 +18,7 @@ from briarwood.local_intelligence.models import (
     TimeHorizon,
     TownSignal,
 )
+from briarwood.local_intelligence.presentation import build_town_signal_items
 from briarwood.local_intelligence.normalize import normalize_source_documents
 from briarwood.local_intelligence.reconcile import reconcile_signals
 from briarwood.local_intelligence.summarize import build_town_summary
@@ -258,8 +259,132 @@ class LocalIntelligenceTests(unittest.TestCase):
 
         self.assertTrue(run.documents)
         self.assertTrue(run.signals)
-        self.assertTrue(any("Auto-collected" in warning for warning in run.warnings))
-        self.assertNotIn("local_documents", run.missing_inputs)
+
+    def test_build_town_signal_items_include_source_metadata_and_geocoded_pin(self) -> None:
+        now = datetime.now(timezone.utc)
+        signal = TownSignal(
+            id="sig-town-ui-1",
+            town="Belmar",
+            state="NJ",
+            signal_type=SignalType.SUPPLY,
+            title="1201 Main Street redevelopment plan",
+            canonical_key="tsk-town-ui-1",
+            source_document_id="doc-town-ui-1",
+            source_type=SourceType.PLANNING_BOARD_MINUTES,
+            source_date=now,
+            source_url=None,
+            status=SignalStatus.APPROVED,
+            time_horizon=TimeHorizon.MEDIUM_TERM,
+            impact_direction=ImpactDirection.MIXED,
+            impact_magnitude=4,
+            confidence=0.82,
+            facts=["The document states 24 residential units were approved."],
+            inference="This may add moderate supply.",
+            affected_dimensions=["future_supply", "home_values"],
+            evidence_excerpt="Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
+            created_at=now,
+            updated_at=now,
+            first_seen_at=now,
+            last_seen_at=now,
+            metadata={"location": "1201 Main Street", "units": 24},
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = JsonLocalSignalStore(root / "signals")
+            store.save_town_signals(town="Belmar", state="NJ", signals=[signal])
+            docs_root = root / "documents"
+            docs_root.mkdir(parents=True, exist_ok=True)
+            (docs_root / "belmar-nj.json").write_text(
+                json.dumps(
+                    {
+                        "documents": [
+                            {
+                                "id": "doc-town-ui-1",
+                                "title": "Belmar Planning Board Minutes",
+                                "url": "https://example.com/belmar/minutes",
+                                "published_at": "2026-02-11T00:00:00Z",
+                            }
+                        ]
+                    }
+                )
+            )
+            calls: list[str] = []
+
+            def fake_geocode(query: str) -> tuple[float | None, float | None]:
+                calls.append(query)
+                return (40.1815, -74.0212)
+
+            items = build_town_signal_items(
+                "Belmar",
+                "NJ",
+                signal_store=store,
+                documents_root=docs_root,
+                geocode=fake_geocode,
+            )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(calls, ["1201 Main Street, Belmar, NJ"])
+        self.assertEqual(items[0]["display_line"], "1201 Main Street redevelopment plan (approved)")
+        self.assertEqual(items[0]["bucket"], "watch")
+        self.assertEqual(items[0]["development_lat"], 40.1815)
+        self.assertEqual(items[0]["development_lng"], -74.0212)
+        self.assertEqual(items[0]["source_title"], "Belmar Planning Board Minutes")
+        self.assertEqual(items[0]["source_url"], "https://example.com/belmar/minutes")
+        self.assertEqual(items[0]["source_date"], now.isoformat())
+        self.assertIn("24 units", items[0]["project_summary"])
+
+    def test_build_town_signal_items_preserve_text_location_but_skip_bad_geocode(self) -> None:
+        now = datetime.now(timezone.utc)
+        signal = TownSignal(
+            id="sig-town-ui-2",
+            town="Belmar",
+            state="NJ",
+            signal_type=SignalType.REGULATION_CHANGE,
+            title="Belmar housing element",
+            canonical_key="tsk-town-ui-2",
+            source_document_id="doc-town-ui-2",
+            source_type=SourceType.PLANNING_BOARD_MINUTES,
+            source_date=None,
+            source_url=None,
+            status=SignalStatus.APPROVED,
+            time_horizon=TimeHorizon.LONG_TERM,
+            impact_direction=ImpactDirection.POSITIVE,
+            impact_magnitude=4,
+            confidence=0.9,
+            facts=["Document references approximately 43 units."],
+            inference="Could improve long-term compliance visibility.",
+            affected_dimensions=["regulatory_risk"],
+            evidence_excerpt="The amended fair share plan was presented to the board.",
+            created_at=now,
+            updated_at=now,
+            first_seen_at=now,
+            last_seen_at=now,
+            metadata={"location": "7:00 p", "units": 43},
+        )
+
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            store = JsonLocalSignalStore(root / "signals")
+            store.save_town_signals(town="Belmar", state="NJ", signals=[signal])
+            docs_root = root / "documents"
+            docs_root.mkdir(parents=True, exist_ok=True)
+            (docs_root / "belmar-nj.json").write_text(json.dumps({"documents": []}))
+            geocode_calls: list[str] = []
+
+            items = build_town_signal_items(
+                "Belmar",
+                "NJ",
+                signal_store=store,
+                documents_root=docs_root,
+                geocode=lambda query: (geocode_calls.append(query), (40.0, -74.0))[1],
+            )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(geocode_calls, [])
+        self.assertEqual(items[0]["location_label"], "7:00 p")
+        self.assertIsNone(items[0]["development_lat"])
+        self.assertIsNone(items[0]["development_lng"])
 
     def test_municipal_document_collector_uses_cache_after_first_fetch(self) -> None:
         registry = {

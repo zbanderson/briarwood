@@ -1,0 +1,973 @@
+{
+  "session_id": "ce5f3a67710d",
+  "current_property_id": "briarwood-rd-belmar",
+  "current_live_listing": {
+    "property_id": "briarwood-rd-belmar",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 674200,
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1196,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "briarwood-rd-belmar",
+    "source": null
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "selected_search_result": {
+    "property_id": "briarwood-rd-belmar",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 674200,
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1196,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "briarwood-rd-belmar",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": {
+    "pid": "briarwood-rd-belmar",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 674200.0,
+    "all_in_basis": 824200.0,
+    "fair_value_base": 774093.57,
+    "value_low": 686976.64,
+    "value_high": 861210.5,
+    "ask_premium_pct": -0.1482,
+    "basis_premium_pct": 0.0608,
+    "trust_flags": [],
+    "trust_summary": {
+      "confidence": 0.766,
+      "band": "High confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "what_must_be_true": [],
+    "key_risks": [],
+    "why_this_stance": [
+      "Current basis sits about 6.1% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 6.1% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "overrides_applied": {}
+  },
+  "last_projection_view": {
+    "property_id": "briarwood-rd-belmar",
+    "ask_price": 674200.0,
+    "bull_case_value": 863109.0,
+    "base_case_value": 803822.0,
+    "bear_case_value": 752686.0,
+    "stress_case_value": 541865.0,
+    "spread": 110423.0,
+    "bull_total_adjustment_pct": 0.115,
+    "base_total_adjustment_pct": 0.0384,
+    "bear_total_adjustment_pct": -0.0277,
+    "bull_growth_rate": 0.2802,
+    "base_growth_rate": 0.1923,
+    "bear_growth_rate": 0.1164,
+    "bcv_anchor": 774093.57,
+    "basis_label": "ask",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null
+  },
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "ask_price": 674200.0,
+    "bear_value": 752686.0,
+    "stress_value": 541865.0,
+    "risk_flags": [
+      "flood_medium",
+      "older_housing_stock",
+      "higher_vacancy"
+    ],
+    "trust_flags": [],
+    "key_risks": [],
+    "total_penalty": 0.177,
+    "confidence_tier": "strong"
+  },
+  "last_value_thesis_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "ask_price": 674200.0,
+    "fair_value_base": 774093.57,
+    "value_low": 686976.64,
+    "value_high": 861210.5,
+    "premium_discount_pct": -0.1482,
+    "pricing_view": "appears undervalued",
+    "primary_value_source": "unknown",
+    "net_opportunity_delta_pct": 0.1482,
+    "value_drivers": [],
+    "key_value_drivers": [],
+    "what_must_be_true": [],
+    "why_this_stance": [
+      "Current basis sits about 6.1% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 6.1% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "trust_summary": {
+      "confidence": 0.766,
+      "band": "High confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "risk_adjusted_fair_value": null,
+    "required_discount": null,
+    "comp_selection_summary": null,
+    "comps": [],
+    "optionality_signal": {
+      "primary_source": "unknown",
+      "hidden_upside_items": [],
+      "summary": null
+    }
+  },
+  "last_market_support_view": null,
+  "last_strategy_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "best_path": "Make an offer inside the risk-adjusted band rather than at ask.",
+    "recommendation": "Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin.",
+    "pricing_view": "appears undervalued",
+    "primary_value_source": "unknown",
+    "rental_ease_label": "Seasonal / Mixed",
+    "rental_ease_score": 59.71,
+    "rent_support_score": 42.0,
+    "liquidity_score": 68.43,
+    "monthly_cash_flow": -1923.98,
+    "cash_on_cash_return": -0.137,
+    "annual_noi": 17281.48
+  },
+  "last_rent_outlook_view": {
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "town": null,
+    "state": null,
+    "entry_basis": 674200.0,
+    "monthly_rent": 3500.0,
+    "effective_monthly_rent": 3290.0,
+    "rent_source_type": "provided",
+    "rental_ease_label": "Seasonal / Mixed",
+    "rental_ease_score": 59.71,
+    "annual_noi": 17281.48,
+    "horizon_years": 3,
+    "future_rent_low": 3290,
+    "future_rent_mid": 3595,
+    "future_rent_high": 3809,
+    "zillow_market_rent": null,
+    "zillow_rental_comp_count": 0,
+    "market_context_note": null,
+    "basis_to_rent_framing": "Current rent annualizes to roughly 5.9% of the current basis.",
+    "owner_occupy_then_rent": null,
+    "carry_offset_ratio": 0.631,
+    "break_even_rent": 5214,
+    "break_even_probability": 0.2,
+    "adjusted_rent_confidence": 0.5971,
+    "rent_haircut_pct": null,
+    "burn_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "rent_base": 3290,
+          "rent_bull": 3290,
+          "rent_bear": 3290,
+          "monthly_obligation": 5214
+        },
+        {
+          "year": 1,
+          "rent_base": 3389,
+          "rent_bull": 3454,
+          "rent_bear": 3323,
+          "monthly_obligation": 5214
+        },
+        {
+          "year": 2,
+          "rent_base": 3490,
+          "rent_bull": 3627,
+          "rent_bear": 3356,
+          "monthly_obligation": 5214
+        },
+        {
+          "year": 3,
+          "rent_base": 3595,
+          "rent_bull": 3809,
+          "rent_bear": 3390,
+          "monthly_obligation": 5214
+        }
+      ],
+      "title": "Rent burn chart",
+      "monthly_obligation": 5214
+    },
+    "ramp_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "net_0": -1924,
+          "net_3": -1924,
+          "net_5": -1924
+        },
+        {
+          "year": 1,
+          "net_0": -1924,
+          "net_3": -1825,
+          "net_5": -1759
+        },
+        {
+          "year": 2,
+          "net_0": -1924,
+          "net_3": -1724,
+          "net_5": -1587
+        },
+        {
+          "year": 3,
+          "net_0": -1924,
+          "net_3": -1619,
+          "net_5": -1405
+        },
+        {
+          "year": 4,
+          "net_0": -1924,
+          "net_3": -1511,
+          "net_5": -1215
+        },
+        {
+          "year": 5,
+          "net_0": -1924,
+          "net_3": -1400,
+          "net_5": -1015
+        },
+        {
+          "year": 6,
+          "net_0": -1924,
+          "net_3": -1286,
+          "net_5": -805
+        },
+        {
+          "year": 7,
+          "net_0": -1924,
+          "net_3": -1168,
+          "net_5": -585
+        },
+        {
+          "year": 8,
+          "net_0": -1924,
+          "net_3": -1046,
+          "net_5": -353
+        },
+        {
+          "year": 9,
+          "net_0": -1924,
+          "net_3": -921,
+          "net_5": -110
+        },
+        {
+          "year": 10,
+          "net_0": -1924,
+          "net_3": -792,
+          "net_5": 145
+        }
+      ],
+      "title": "Rent ramp and break-even",
+      "current_rent": 3290,
+      "monthly_obligation": 5214,
+      "today_cash_flow": -1924,
+      "break_even_years": {
+        "0": null,
+        "3": null,
+        "5": 10
+      }
+    }
+  },
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": {
+    "property_id": "briarwood-rd-belmar",
+    "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+    "contract_type": "decision_summary",
+    "analysis_mode": "decision",
+    "cards": [
+      {
+        "key": "property_header",
+        "title": "Property",
+        "body": [
+          "1223 Briarwood Rd, Belmar, NJ 07719 \u2014 ask $674,200"
+        ],
+        "tone": "neutral"
+      },
+      {
+        "key": "purchase_brief",
+        "title": "Purchase Brief",
+        "body": [
+          "Immediate setup: buy if price improves. Ask is 14.8% below the fair value anchor.",
+          "What supports it: Make an offer inside the risk-adjusted band rather than at ask.",
+          "What could weaken confidence: no major trust flags were surfaced in the snapshot read.",
+          "Next best question: Lock the all-in basis including closing costs and any negotiated credits."
+        ],
+        "tone": "decision"
+      },
+      {
+        "key": "data_coverage",
+        "title": "Source Coverage",
+        "body": [
+          "ATTOM added structured sale history and ownership timing context.",
+          "Google Maps added geocode and nearby-place context.",
+          "Still missing: ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
+        ],
+        "tone": "supporting"
+      },
+      {
+        "key": "location_pulse",
+        "title": "Location Pulse",
+        "body": [
+          "Nearby place scan: 3 grocery store, 2 park, 2 secondary school."
+        ],
+        "tone": "supporting"
+      }
+    ],
+    "tables": [
+      {
+        "key": "source_coverage",
+        "title": "Source Coverage",
+        "columns": [
+          "category",
+          "status"
+        ],
+        "rows": [
+          {
+            "category": "address",
+            "status": "user_supplied"
+          },
+          {
+            "category": "beds_baths",
+            "status": "user_supplied"
+          },
+          {
+            "category": "capex_assumption",
+            "status": "user_supplied"
+          },
+          {
+            "category": "capex_budget",
+            "status": "missing"
+          },
+          {
+            "category": "comp_support",
+            "status": "missing"
+          },
+          {
+            "category": "condition_assumption",
+            "status": "user_supplied"
+          },
+          {
+            "category": "hoa",
+            "status": "missing"
+          },
+          {
+            "category": "insurance_estimate",
+            "status": "user_supplied"
+          },
+          {
+            "category": "listing_history",
+            "status": "missing"
+          },
+          {
+            "category": "lot_size",
+            "status": "user_supplied"
+          },
+          {
+            "category": "price_ask",
+            "status": "user_supplied"
+          },
+          {
+            "category": "rent_confidence",
+            "status": "missing"
+          },
+          {
+            "category": "rent_estimate",
+            "status": "user_supplied"
+          },
+          {
+            "category": "scarcity_inputs",
+            "status": "user_supplied"
+          },
+          {
+            "category": "sqft",
+            "status": "user_supplied"
+          },
+          {
+            "category": "strategy_intent",
+            "status": "missing"
+          },
+          {
+            "category": "taxes",
+            "status": "user_supplied"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "key": "verdict_gauge",
+        "kind": "verdict_gauge",
+        "title": "Decision Stance",
+        "payload": {
+          "property_id": "briarwood-rd-belmar"
+        }
+      },
+      {
+        "key": "value_opportunity",
+        "kind": "value_opportunity",
+        "title": "Ask vs Value",
+        "payload": {
+          "property_id": "briarwood-rd-belmar"
+        }
+      },
+      {
+        "key": "risk_bar",
+        "kind": "risk_bar",
+        "title": "Risk Profile",
+        "payload": {
+          "property_id": "briarwood-rd-belmar"
+        }
+      }
+    ],
+    "next_actions": [
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "evidence": {
+      "enrichment": {
+        "property_id": "briarwood-rd-belmar",
+        "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+        "town": "Belmar",
+        "state": "NJ",
+        "summary": {
+          "property_id": "briarwood-rd-belmar",
+          "address": "1223 Briarwood Rd, Belmar, NJ 07719",
+          "label": "1223 Briarwood Rd",
+          "ask_price": 674200.0,
+          "bcv": 774805.44,
+          "pricing_view": "appears undervalued",
+          "confidence": 0.7,
+          "comp_trust": "Public Record Matched",
+          "missing_input_count": 5,
+          "is_hybrid_valuation": false,
+          "timestamp": "2026-04-21T19:47:05"
+        },
+        "source_coverage": {
+          "address": "user_supplied",
+          "price_ask": "user_supplied",
+          "beds_baths": "user_supplied",
+          "sqft": "user_supplied",
+          "lot_size": "user_supplied",
+          "taxes": "user_supplied",
+          "hoa": "missing",
+          "listing_history": "missing",
+          "rent_estimate": "user_supplied",
+          "rent_confidence": "missing",
+          "insurance_estimate": "user_supplied",
+          "comp_support": "missing",
+          "condition_assumption": "user_supplied",
+          "capex_assumption": "user_supplied",
+          "capex_budget": "missing",
+          "strategy_intent": "missing",
+          "scarcity_inputs": "user_supplied"
+        },
+        "listing_source": {
+          "source_url": null,
+          "provenance": [
+            "manual_subject_entry"
+          ],
+          "missing_input_count": 5
+        },
+        "google": {
+          "geocode": {
+            "formatted_address": "1223 Briarwood Rd, Belmar, NJ 07719, USA",
+            "latitude": 40.1771721,
+            "longitude": -74.0351573,
+            "place_id": "ChIJw9eKrwgowokRjQjOvj8-UDU",
+            "types": [
+              "premise",
+              "street_address"
+            ],
+            "town": "Belmar",
+            "state": "NJ",
+            "county": "Monmouth",
+            "zip_code": "07719"
+          },
+          "nearby_places": {
+            "places": [
+              {
+                "place_id": "ChIJaUbq6_WHwYkRD962kmK1AU0",
+                "name": "ShopRite of Belmar",
+                "address": "1732 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1696816,
+                "longitude": -74.04469259999999,
+                "distance_meters": 1162,
+                "rating": 3.9,
+                "user_rating_count": 1037,
+                "google_maps_uri": "https://maps.google.com/?cid=5548915650870042127&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+                "name": "Belmar",
+                "address": "Belmar, NJ 07719, USA",
+                "primary_type": "train_station",
+                "latitude": 40.180367,
+                "longitude": -74.02746739999999,
+                "distance_meters": 744,
+                "rating": 4,
+                "user_rating_count": 24,
+                "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJNWDm0eYnwokRlkehC1z6yQs",
+                "name": "St. Rose High School",
+                "address": "607 7th Ave, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.181906,
+                "longitude": -74.02368129999999,
+                "distance_meters": 1108,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=849485277975103382&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+                "name": "Maclearie Park",
+                "address": "905 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "park",
+                "latitude": 40.1788472,
+                "longitude": -74.035854,
+                "distance_meters": 195,
+                "rating": 4.6,
+                "user_rating_count": 608,
+                "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJRebeHQEowokRGs3wrZJ6VW0",
+                "name": "Matt's Farm Market & Garden Center",
+                "address": "1740 NJ-71, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1697438,
+                "longitude": -74.0330408,
+                "distance_meters": 845,
+                "rating": 4.8,
+                "user_rating_count": 182,
+                "google_maps_uri": "https://maps.google.com/?cid=7878337893556604186&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+                "name": "Academy Charter High School",
+                "address": "1725 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.1712428,
+                "longitude": -74.0278285,
+                "distance_meters": 907,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+                "name": "Supersavers Market",
+                "address": "1210 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1766522,
+                "longitude": -74.02627629999999,
+                "distance_meters": 757,
+                "rating": 4.4,
+                "user_rating_count": 133,
+                "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJWen7GgCIwYkRb4uXAvH4PHQ",
+                "name": "Marucci Memorial Park",
+                "address": "300 South Blvd, Spring Lake, NJ 07762, USA",
+                "primary_type": "park",
+                "latitude": 40.165427,
+                "longitude": -74.0290698,
+                "distance_meters": 1405,
+                "rating": 4.6,
+                "user_rating_count": 122,
+                "google_maps_uri": "https://maps.google.com/?cid=8375843121016572783&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              }
+            ],
+            "type_counts": {
+              "grocery_store": 3,
+              "train_station": 1,
+              "secondary_school": 2,
+              "park": 2
+            },
+            "nearest_by_type": {
+              "grocery_store": {
+                "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+                "name": "Supersavers Market",
+                "address": "1210 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1766522,
+                "longitude": -74.02627629999999,
+                "distance_meters": 757,
+                "rating": 4.4,
+                "user_rating_count": 133,
+                "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "train_station": {
+                "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+                "name": "Belmar",
+                "address": "Belmar, NJ 07719, USA",
+                "primary_type": "train_station",
+                "latitude": 40.180367,
+                "longitude": -74.02746739999999,
+                "distance_meters": 744,
+                "rating": 4,
+                "user_rating_count": 24,
+                "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "secondary_school": {
+                "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+                "name": "Academy Charter High School",
+                "address": "1725 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.1712428,
+                "longitude": -74.0278285,
+                "distance_meters": 907,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "park": {
+                "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+                "name": "Maclearie Park",
+                "address": "905 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "park",
+                "latitude": 40.1788472,
+                "longitude": -74.035854,
+                "distance_meters": 195,
+                "rating": 4.6,
+                "user_rating_count": 608,
+                "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              }
+            }
+          },
+          "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1771721%2C-74.0351573&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+        },
+        "attom": {
+          "property_detail": {
+            "address": "1223 BRIARWOOD RD, BELMAR, NJ 07719",
+            "baths": 1.0,
+            "beds": 3,
+            "garage_spaces": null,
+            "latitude": "40.177165",
+            "longitude": "-74.035134",
+            "lot_size": 0.085,
+            "property_type": "SFR",
+            "sqft": 1196,
+            "stories": 2,
+            "year_built": 1918
+          },
+          "sale_history_snapshot": {
+            "complete_event_count": 0,
+            "first_sale_date": null,
+            "first_sale_price": null,
+            "history_confidence": 0.15,
+            "history_confidence_label": "thin",
+            "history_flags": [],
+            "history_span_years": null,
+            "last_sale_date": null,
+            "last_sale_price": null,
+            "most_recent_hold_years": null,
+            "repeat_sale_pairs": [],
+            "sale_count": 0,
+            "sale_history": [],
+            "source_surface": "snapshot"
+          },
+          "assessment_detail": {
+            "assessed_improvement": null,
+            "assessed_land": 174000,
+            "assessed_total": 269500,
+            "market_value": 269500,
+            "tax_amount": 3921.0,
+            "tax_year": 2024
+          }
+        },
+        "town_intelligence": null,
+        "warnings": [
+          "ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
+        ],
+        "fetched_at": "2026-04-22T13:26:59"
+      },
+      "risk": {
+        "property_id": "briarwood-rd-belmar",
+        "risk_flags": [
+          "flood_medium",
+          "older_housing_stock",
+          "higher_vacancy"
+        ],
+        "risk_count": 3,
+        "total_penalty": 17.7,
+        "total_credit": 2.0,
+        "flood_risk": "medium",
+        "trust_flags": [],
+        "key_risks": [],
+        "ask_price": 674200.0,
+        "bear_case_value": null,
+        "stress_case_value": null,
+        "decision_stance": "buy_if_price_improves"
+      },
+      "contract_type": "decision_summary",
+      "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1771721%2C-74.0351573&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+    }
+  },
+  "last_surface_narrative": "The current asking price of $674,200 is about 6.1% higher than Briarwood's fair value estimate of $774,093.57. This premium indicates there's potential for a better deal. A price improvement of roughly 6.1% would significantly enhance this investment opportunity. There are no highlighted risks or contradictions in the current analysis.",
+  "last_visual_advice": {
+    "value": {
+      "title": "Current Property Valuation",
+      "summary": "The property is currently priced below its fair value, indicating potential undervaluation.",
+      "companion": "Refer to the risk and trust assessments to understand valuation reliability.",
+      "preferred_surface": "table_first"
+    },
+    "rent": {
+      "title": "Rental Performance Overview",
+      "summary": "Current rent is approximately 5.9% of the property's purchase price with a moderate rental ease score.",
+      "companion": "Use the rent burn and ramp charts for deeper rental cash flow analysis.",
+      "preferred_surface": "chart_first"
+    },
+    "scenario": {
+      "title": "Valuation Scenarios",
+      "summary": "Projected property values range from stress to bullish scenarios, showing significant potential upside.",
+      "companion": "Check the trust assessment for the reliability of these projections.",
+      "preferred_surface": "chart_first"
+    },
+    "risk": {
+      "title": "Risk Assessment",
+      "summary": "Several medium-level risks identified, including flood potential and housing age, affecting value stability.",
+      "companion": "Consider this alongside the property valuation for a comprehensive view.",
+      "preferred_surface": "card_first"
+    },
+    "trust": {
+      "title": "Trust in Valuation",
+      "summary": "High confidence in the current valuation metrics, indicating solid reliability despite some reliance issues.",
+      "companion": "Review the trust assessment alongside market comparisons for context.",
+      "preferred_surface": "table_first"
+    }
+  },
+  "last_verifier_report": {
+    "tier": "decision_summary",
+    "sentences_total": 5,
+    "sentences_with_violations": 1,
+    "ungrounded_declaration": false,
+    "anchor_count": 1,
+    "anchors": [
+      {
+        "module": "ValuationModel",
+        "field": "fair_value_base",
+        "value": "774093.57"
+      }
+    ],
+    "violations": [
+      {
+        "kind": "ungrounded_number",
+        "sentence": "I recommend a buy if the price improves for 1223 Briarwood Rd, Belmar, NJ.",
+        "value": "1223",
+        "reason": "number not present in structured_inputs or anchors"
+      }
+    ],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 1,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "last_representation_plan": {
+    "selections": [
+      {
+        "claim": "Current ask price is below the fair value estimate.",
+        "claim_type": "price_position",
+        "supporting_evidence": [
+          "last_decision_view.ask_price",
+          "last_decision_view.fair_value_base"
+        ],
+        "chart_id": "value_opportunity",
+        "source_view": "last_decision_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "There is a projected bull case value significantly higher than the ask price.",
+        "claim_type": "scenario_range",
+        "supporting_evidence": [
+          "last_projection_view.bull_case_value",
+          "last_decision_view.ask_price"
+        ],
+        "chart_id": "scenario_fan",
+        "source_view": "last_projection_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Current risk factors indicate potential downside in value.",
+        "claim_type": "downside_risk",
+        "supporting_evidence": [
+          "last_risk_view.risk_flags"
+        ],
+        "chart_id": "risk_bar",
+        "source_view": "last_risk_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Expected future rental income may not cover the investment costs at current prices.",
+        "claim_type": "rent_coverage",
+        "supporting_evidence": [
+          "last_rent_outlook_view.annual_noi",
+          "last_strategy_view.monthly_cash_flow"
+        ],
+        "chart_id": "rent_burn",
+        "source_view": "last_rent_outlook_view",
+        "flagged": true,
+        "flag_reason": "Evidence does not explicitly confirm rental coverage."
+      },
+      {
+        "claim": "Future rent expectations show potential for growth, but risk remains.",
+        "claim_type": "rent_ramp",
+        "supporting_evidence": [
+          "last_rent_outlook_view.future_rent_high",
+          "last_rent_outlook_view.annual_noi"
+        ],
+        "chart_id": "rent_ramp",
+        "source_view": "last_rent_outlook_view",
+        "flagged": false,
+        "flag_reason": null
+      }
+    ]
+  },
+  "last_partial_data_warnings": [
+    {
+      "section": "representation_plan",
+      "reason": "dropped 2 chart selection(s): comp_evidence:No relevant comps available for supporting evidence.; rent_coverage:source_view missing required inputs: burn_chart_payload",
+      "verdict_reliable": true
+    }
+  ],
+  "turns": [
+    {
+      "user": "3BR homes under $900k in Belmar NJ with no HOA",
+      "assistant": "Found 2 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The current asking price of $767,000 is about 6.0% higher than Briarwood's fair value estimate of $720,643.75; this premium is the primary reason to be cautious. A price reduction of around 6.0% would significantly enhance the investment appeal, particularly if the total costs, including closing costs and any negotiated credits, are locked in effectively.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "what can you tell me about 1223 briarwood road, belmar, nj",
+      "assistant": "Decision: This property appears undervalued, presenting a strong buying opportunity. \nWhy: The asking price of $674,200 is about 15% lower than its fair value of $774,093.57. \nNext move: Make an offer within the risk-adjusted price range, and inquire about including closing costs.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "Show me the downside case in more detail",
+      "assistant": "In the downside case for the property at 1223 Briarwood Rd, the stress value is set at approximately $541,865, which reflects a significant drop from the asking price of $674,200. This scenario could be influenced by several risks, including medium flood risk, older housing stock, and potential for higher vacancy. While confidence in the overall outlook is strong, these risks indicate there could be challenges that might lead to a more conservative valuation, impacting your investment's stability.",
+      "answer_type": "risk"
+    },
+    {
+      "user": "What's the worst case?",
+      "assistant": "In the worst-case scenario for the property at 1223 Briarwood Rd, the value could drop to around $541,865. This risk is tied to factors like medium flood risk, older housing stock, and higher vacancy rates, but there are no specific key risks identified that would further jeopardize the investment. The confidence in this assessment is strong, indicating that while there are concerns, the baseline outlook remains stable.",
+      "answer_type": "risk"
+    },
+    {
+      "user": "Show me the comp set",
+      "assistant": "",
+      "answer_type": "visualize"
+    },
+    {
+      "user": "Analyze 1223 Briarwood Rd, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The current asking price of $674,200 is about 6.1% higher than Briarwood's fair value estimate of $774,093.57. This premium indicates there's potential for a better deal. A price improvement of roughly 6.1% would significantly enhance this investment opportunity. There are no highlighted risks or contradictions in the current analysis.",
+      "answer_type": "decision"
+    }
+  ]
+}

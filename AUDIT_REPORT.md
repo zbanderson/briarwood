@@ -1,420 +1,291 @@
-# Briarwood Intelligence — Full Audit Report
-Date: 2026-04-19
-Workspace: briarwood
-Supersedes: 2026-04-12
-
-## Executive Summary
-
-Briarwood now has a real decision-first routed core. The strongest current path is the scoped routed analysis flow: `route_user_input()` selects typed module sets, `execute_plan()` runs scoped modules against a typed `ExecutionContext`, `run_all_bridges()` records cross-module interactions, and `build_unified_output()` produces a deterministic `UnifiedIntelligenceOutput` with a trust gate, explicit `decision_stance`, `primary_value_source`, `trust_flags`, and `what_changes_my_view` fields. That core is bounded by typed contracts in `briarwood/routing_schema.py` and is covered by focused planner, executor, orchestrator, and structured-synthesis tests. `briarwood/router.py:564-586`, `briarwood/execution/context.py:8-31`, `briarwood/execution/executor.py:289-364`, `briarwood/interactions/registry.py:42-65`, `briarwood/synthesis/structured.py:34-115`, `tests/test_execution_v2.py:14-228`, `tests/test_orchestrator.py:22-435`, `tests/synthesis/test_structured_synthesizer.py:60-175`
-
-The biggest product risk is verdict lineage. Chat/API decision flows render the deterministic routed verdict from `briarwood/synthesis/structured.py`, but Dash and report surfaces still compute a separate legacy verdict through `briarwood.decision_engine.build_decision()`. A third older pipeline stack (`briarwood/pipeline/*`) still defines its own `UnifiedIntelligenceAgent` and `DecisionAgent`. The new SSE projector explicitly rejects legacy `BUY/LEAN BUY/NEUTRAL/LEAN PASS/AVOID` labels because they are incompatible with the routed `DecisionStance` vocabulary. There is no reconciliation layer that guarantees these paths agree for the same property. `briarwood/synthesis/structured.py:63-115`, `briarwood/decision_engine.py:29-96`, `briarwood/dash_app/quick_decision.py:35-55`, `briarwood/dash_app/view_models.py:3062-3175`, `briarwood/reports/sections/thesis_section.py:8-30`, `briarwood/reports/sections/conclusion_section.py:9-52`, `api/pipeline_adapter.py:548-639`, `tests/test_pipeline_adapter_contracts.py:798-821`, `briarwood/pipeline/runner.py:31-78`
-
-The biggest product gaps are portfolio awareness and trustworthy evidence lineage. The routed execution boundary carries property data, assumptions, market/comp context, and macro context, but no holdings, portfolio constraints, or alternative opportunity set. The only explicit “capital allocation” module, `opportunity_cost`, compares appreciation-only property CAGR to passive benchmarks; it does not compare against the user’s actual portfolio or other live property candidates. `briarwood/execution/context.py:20-31`, `briarwood/orchestrator.py:397-531`, `briarwood/modules/opportunity_cost.py:1-26`, `briarwood/modules/opportunity_cost.py:120-187`, `briarwood/interactions/opportunity_x_value.py:69-100`, `briarwood/dash_app/components.py:5928-5988`
-
-The biggest technical risks are stale/shared state and user-facing silent degradation. The orchestrator uses process-global mutable caches for routing, module results, synthesis output, and scoped module outputs; the synthesis cache key excludes material property facts such as `beds`, `baths`, `sqft`, and `taxes`, so changed property facts under the same property id and assumption set can reuse stale outputs without warning. Separately, the decision handler silently drops town summary, comps preview, value thesis, and scenario enrichments on exception, and the chat UI drops part of the backend’s verdict and verifier payloads. `briarwood/orchestrator.py:29-33`, `briarwood/orchestrator.py:116-137`, `briarwood/orchestrator.py:433-523`, `briarwood/agent/dispatch.py:1381-1429`, `api/pipeline_adapter.py:602-660`, `web/src/lib/chat/events.ts:113-131`, `web/src/components/chat/verdict-card.tsx:37-133`, `web/src/lib/chat/use-chat.ts:350-359`
-
-The current architecture supports the Briarwood promise best in deterministic property-level underwriting and weakest in cross-surface consistency, portfolio-level allocation, and comp/verdict provenance. The first fixes should be: collapse verdict generation to one canonical path, correct the user-facing comp provenance mismatch in CMA/event surfaces, and harden cache/state invalidation so repeated runs cannot silently reuse stale decisions. `docs/current_docs_index.md:20-27`, `briarwood/synthesis/structured.py:121-227`, `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`, `briarwood/agent/tools.py:1892-1963`
-
-## Phase 0 — Repo Map Reference
-
-See `REPO_MAP.md` at the repo root for the directory map, inventory counts, dependency snapshot, and initial architecture read.
-
-## Phase 1 — Product / Feature Audit
-
-### 1.1 Foundational Question Coverage
-
-| Foundational Question | Responsible Components | Prompt(s) | Output Destination | Confidence Present? |
-| --- | --- | --- | --- | --- |
-| 1. Is this property mispriced? | `valuation`, `valuation_x_town`, `valuation_x_risk`, `build_unified_output()` | `decision_value.md`, `decision_summary.md` | `verdict`, `value_thesis`, narrative summary | Yes: module confidence plus synth aggregate/trust gate. `briarwood/modules/valuation.py:15-63`, `briarwood/synthesis/structured.py:52-68`, `briarwood/synthesis/structured.py:233-271`, `briarwood/agent/dispatch.py:1556-1613` |
-| 2. What does it cost to own? | `carry_cost`, `rental_option`, `rent_stabilization`, `hold_to_rent` | `decision_summary.md`, `rent_lookup.md`, `strategy.md` | `strategy_path`, `rent_outlook`, `scenario_table`, narrative | Yes, but split across multiple modules and surfaces. `briarwood/routing_schema.py:145-184`, `briarwood/modules/rental_option_scoped.py:16-72`, `briarwood/modules/rent_stabilization.py:13-61`, `briarwood/modules/hold_to_rent.py:10-68`, `api/events.py:189-205`, `api/events.py:196-200` |
-| 3. What happens under different scenarios? | `resale_scenario`, `renovation_impact`, `arv_model`, `margin_sensitivity`, `scenario_x_risk` | `projection.md`, `decision_summary.md` | `scenario_table`, native scenario chart, renovation outlooks | Yes. `briarwood/modules/resale_scenario_scoped.py:17-78`, `briarwood/modules/renovation_impact_scoped.py:11-28`, `briarwood/modules/margin_sensitivity_scoped.py:10-87`, `api/pipeline_adapter.py:1746-1771` |
-| 4. What are the real risks? | `risk_model`, `legal_confidence`, `confidence`, `conflict_detector`, `rent_x_risk`, `scenario_x_risk` | `risk.md`, `decision_summary.md` | `risk_profile`, `trust_summary`, `verdict`, narrative | Yes. `briarwood/modules/risk_model.py:19-80`, `briarwood/modules/legal_confidence.py:10-123`, `briarwood/modules/confidence.py:16-98`, `briarwood/interactions/conflict_detector.py:22-94`, `briarwood/synthesis/structured.py:274-343` |
-| 5. Is this the best use of capital right now? | `opportunity_cost`, `opportunity_x_value` | No dedicated chat prompt; folded into decision/value synthesis | `key_value_drivers` or `key_risks` only when bridge fires | Partially. Confidence exists on the module, but there is no dedicated surfaced card. `briarwood/modules/opportunity_cost.py:38-187`, `briarwood/interactions/opportunity_x_value.py:25-100`, `briarwood/synthesis/structured.py:436-470` |
-| 6. Is there hidden upside or optionality? | `strategy_classifier`, `renovation_impact`, `arv_model`, `unit_income_offset`, `primary_value_source`; legacy `hybrid_value` still embeds optionality math | No dedicated `hidden_upside` prompt or routed focus path | Indirectly in `value_thesis`, `strategy_path`, `primary_value_source` | Partial only. `briarwood/modules/strategy_classifier.py:64-182`, `briarwood/interactions/primary_value_source.py:38-100`, `briarwood/modules/unit_income_offset.py:11-87`, `briarwood/modules/hybrid_value.py:162-223` |
-
-**Orphans**
-
-- The older `briarwood/pipeline/*` stack is a parallel decision architecture with its own `Pipeline`, `UnifiedIntelligenceAgent`, and `DecisionAgent`, but it is not the chat/API routed path described in the current docs. It is still exercised by tests and chart helpers. `briarwood/pipeline/runner.py:1-78`, `briarwood/pipeline/unified.py:29-144`, `briarwood/pipeline/decision.py:16-100`, `tests/test_pipeline_e2e.py:22-125`
-- Dash/report decision helpers are compatibility surfaces, not the current routed source of truth, but they still compute top-line recommendations from `build_decision(report)`. `docs/current_docs_index.md:20-27`, `briarwood/dash_app/quick_decision.py:35-55`, `briarwood/reports/sections/thesis_section.py:8-30`
-
-**Gaps**
-
-- `CoreQuestion.HIDDEN_UPSIDE` exists in the canonical enum, but `QUESTION_FOCUS_TO_MODULE_HINTS` never maps it to module hints, and no default intent includes it in `INTENT_TO_QUESTIONS`. Hidden upside exists only as indirect optionality/reno logic, not as a first-class routed question. `briarwood/routing_schema.py:28-38`, `briarwood/routing_schema.py:114-140`, `briarwood/routing_schema.py:227-262`
-- Capital allocation is not portfolio-aware. The routed contracts carry no portfolio state, and `opportunity_cost` is explicitly appreciation-only vs passive benchmarks. `briarwood/execution/context.py:20-31`, `briarwood/modules/opportunity_cost.py:10-25`
-
-**Overlaps**
-
-- Briarwood answers “rent / hold economics” through multiple overlapping surfaces: `rental_option`, `rent_stabilization`, `hold_to_rent`, `get_rent_outlook()`, `get_strategy_fit()`, and the narrative layer. `briarwood/modules/rental_option_scoped.py:16-72`, `briarwood/modules/rent_stabilization.py:13-61`, `briarwood/modules/hold_to_rent.py:10-68`, `briarwood/agent/tools.py:1519-1693`, `briarwood/agent/tools.py:2015-2054`
-- There are at least three top-line recommendation surfaces: deterministic routed synthesis, legacy `decision_engine`, and the older `briarwood/pipeline/decision.py` adapter. `briarwood/synthesis/structured.py:63-115`, `briarwood/decision_engine.py:29-96`, `briarwood/pipeline/decision.py:16-41`
-
-**Conflict Risk**
-
-- `api/events.cma_table()` says the CMA event shows “which comps fed fair value and why,” but `get_cma()` explicitly prefers live Zillow market comps before saved comps and does not read the actual valuation comp set. This creates a user-facing provenance risk: the comp table can imply fair-value lineage it does not actually represent. `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`, `briarwood/agent/tools.py:1892-1963`
-- `decision_stream()` renders both a structured verdict card and separate prose summary text; those surfaces are generated by different code paths and can drift. `api/pipeline_adapter.py:1675-1779`, `briarwood/agent/dispatch.py:1576-1613`, `web/src/components/chat/messages.tsx:128-171`
-
-### 1.2 Verdict Lineage
-
-There is not one verdict path.
-
-1. The current routed/chat verdict path is deterministic:
-   `run_briarwood_analysis_with_artifacts()` -> `run_all_bridges()` -> `_scoped_synthesizer()` -> `build_unified_output()` -> `PropertyView.load(depth="decision")` -> `session.last_decision_view` -> `events.verdict()`. `briarwood/orchestrator.py:505-529`, `briarwood/runner_routed.py:209-232`, `briarwood/agent/property_view.py:75-159`, `briarwood/agent/dispatch.py:1374-1379`, `api/pipeline_adapter.py:1675-1677`
-2. Dash/report verdicts still come from the legacy `decision_engine.build_decision(report)` path. `briarwood/decision_engine.py:29-96`, `briarwood/dash_app/quick_decision.py:35-55`, `briarwood/dash_app/view_models.py:3062-3175`, `briarwood/reports/sections/conclusion_section.py:14-52`
-3. The older pipeline stack defines a separate `UnifiedIntelligenceAgent` and `DecisionAgent`. `briarwood/pipeline/unified.py:29-144`, `briarwood/pipeline/decision.py:16-41`
-
-**Inference:** the same property can yield different top-line calls across surfaces, because the routed stack uses `DecisionStance`/`DecisionType` plus bridge-based trust gating, while the Dash/report stack uses separate `BUY/LEAN BUY/NEUTRAL/LEAN PASS/AVOID` bands and the SSE layer explicitly rejects those legacy labels. There is no reconciliation step between the vocabularies. `briarwood/synthesis/structured.py:121-227`, `briarwood/decision_engine.py:169-285`, `api/pipeline_adapter.py:570-583`, `tests/test_pipeline_adapter_contracts.py:798-821`
-
-This is a **P0** against trustworthy verdict lineage.
-
-### 1.3 Summary Fidelity
-
-The top-line decision summary is generated independently from the deterministic verdict card, but it is grounded to a structured subset of the routed output.
-
-- `handle_decision()` passes `decision_stance`, `primary_value_source`, ask/basis/fair value, premium percentages, `trust_flags`, `what_must_be_true`, and `research_update` into the `decision_summary` prompt. `briarwood/agent/dispatch.py:1576-1603`
-- The LLM output is numerically/entity verified and may be regenerated once under strict mode, then optionally reviewed by a critic. `briarwood/agent/composer.py:332-466`
-- The narrative input omits `key_risks`, `why_this_stance`, `what_changes_my_view`, `contradiction_count`, and `blocked_thesis_warnings`, so the prose can remain numerically grounded while still under-surfacing the decisive break condition or conflict list. `briarwood/agent/dispatch.py:1577-1589`, `briarwood/synthesis/structured.py:59-86`
-
-Result: summary fidelity is **Partial**. It is not an ungrounded free-for-all, but it is not a direct rendering of the full verdict object either.
-
-### 1.4 Explainability vs Dashboard Drift
-
-- **Verdict:** strong structured explainability exists in the routed output (`trust_flags`, `what_must_be_true`, `why_this_stance`, `what_changes_my_view`), but the main verdict card only renders stance, pricing stats, trust flags, `what_must_be_true`, and `key_risks`. `briarwood/routing_schema.py:364-375`, `api/pipeline_adapter.py:617-639`, `web/src/components/chat/verdict-card.tsx:37-133`
-- **Scenarios:** `scenario_table` answers a user question and carries explicit units (`spread_unit="dollars"`), which is a strong pattern. `api/events.py:111-139`, `web/src/lib/chat/events.ts:140-152`
-- **Risks:** the risk card is question-shaped and backed by structured fields; good. `api/events.py:169-173`
-- **Comps:** the comp story drifts. `comps_preview` and `cma_table` are user-facing evidence surfaces, but `get_cma()` prefers live Zillow market support before saved Briarwood comps and does not guarantee those rows are the actual valuation evidence. `api/events.py:162-166`, `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`, `briarwood/agent/tools.py:1892-1963`
-- **Value:** `value_thesis` is closer to explainable intelligence because it carries drivers, `what_must_be_true`, and trust summary. `web/src/lib/chat/events.ts:235-258`
-- **Cost to own / rent:** split across `strategy_path`, `rent_outlook`, and narrative; good evidence exists, but the user has to synthesize multiple cards. `api/events.py:189-200`
-- **Upside:** present only indirectly through strategy/optionality signals; not first-class.
-- **Charts/tables:** native chart specs are question-shaped when present, and HTML artifact fallback is secondary. `api/pipeline_adapter.py:1693-1736`, `api/pipeline_adapter.py:1765-1788`
-
-### 1.5 Confidence Scoring
-
-Confidence is implemented end-to-end in the routed stack, but it is unevenly surfaced.
-
-- Each routed `ModulePayload` can carry `confidence`, `warnings`, `missing_inputs`, and `confidence_band`. `briarwood/routing_schema.py:301-325`
-- `run_confidence()` computes a rule-based composite from prior module confidences, data quality, completeness, contradiction count, comp quality, model agreement, scenario fragility, legal certainty, and estimated reliance. `briarwood/modules/confidence.py:16-98`, `briarwood/modules/confidence.py:133-166`
-- `build_unified_output()` aggregates module confidence, applies bridge-level penalties, and collapses stance to `CONDITIONAL` when aggregate confidence is below `0.40`. `briarwood/synthesis/structured.py:58-68`, `briarwood/synthesis/structured.py:153-161`, `briarwood/synthesis/structured.py:474-539`
-- The trust summary is preserved to the API surface (`trust_summary`) and rendered in a separate card. `api/pipeline_adapter.py:642-660`, `web/src/components/chat/messages.tsx:171-178`
-- The main verdict card does not display numeric confidence or the explanation lists that accompany the trust gate. `web/src/components/chat/verdict-card.tsx:37-133`
-
-Low confidence does change verdict behavior in the routed stack; that is good. `briarwood/synthesis/structured.py:153-161`
-
-Confidence weaknesses:
-
-- Confidence is strong in the routed stack but absent from the legacy `decision_engine` vocabulary; Dash/report recommendations rely on `conviction` from a different model. `briarwood/decision_engine.py:95-96`, `briarwood/dash_app/quick_decision.py:39-54`
-- `opportunity_cost` has confidence, but its capital-allocation signal is only surfaced indirectly through `key_value_drivers`/`key_risks`, not as a dedicated confidence-bearing card. `briarwood/modules/opportunity_cost.py:173-186`, `briarwood/synthesis/structured.py:436-470`
-
-### 1.6 Portfolio Context
-
-The current routed implementation is not portfolio-aware.
-
-- The routed orchestrator takes `property_data`, `user_input`, optional `prior_context`, and produces a property-scoped `ExecutionContext`; there is no portfolio or holdings input. `briarwood/orchestrator.py:397-531`, `briarwood/execution/context.py:20-31`
-- `opportunity_cost` compares the property to T-bills and the S&P 500 only, and its own docstring says the signal is appreciation-only and not IRR-grade. `briarwood/modules/opportunity_cost.py:3-25`, `briarwood/modules/opportunity_cost.py:120-171`
-- A portfolio dashboard exists only in the Dash compatibility UI. `briarwood/dash_app/components.py:5928-5988`
-
-This is a significant product gap relative to the stated “allocate capital versus other opportunities” promise.
-
-### 1.7 Visual Narrative Alignment
-
-- `verdict` card answers the core question but drops part of the backend meaning. `api/pipeline_adapter.py:617-639`, `web/src/components/chat/verdict-card.tsx:37-133`
-- `scenario_table` is aligned and explicit about units; strong. `api/events.py:111-139`
-- `comparison_table` is consistent with the backend projector, but it exposes routed `decision_stance` rather than any portfolio allocation view. `api/pipeline_adapter.py:729-760`
-- `cma_table` is not aligned to its label: the event implies “comps that fed fair value,” while the implementation may be a live market-support table. `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`
-- `messages.tsx` renders prose plus cards in one assistant turn; nearby text can contradict or omit what the cards show. `web/src/components/chat/messages.tsx:128-171`
-
-### 1.8 End-to-End User Flow
-
-Realistic traced flow: user pastes or analyzes one property in chat and requests a decision.
-
-1. **Input entry**
-   Shape: `ChatRequest{messages, conversation_id?, pinned_listing?}`.
-   File: `api/main.py:76-81`, `api/main.py:230-257`
-   Failure mode: empty messages or last message not from user -> HTTP 400, visible.
-2. **Tier routing**
-   `classify_turn()` decides chat answer tier; “Analyze ...” on a pinned listing is forcibly promoted to decision tier even if the chat router would classify it as browse.
-   File: `api/main.py:287-336`, `briarwood/agent/router.py:266-320`
-   Failure mode: router exception -> SSE `error` then echo fallback, visible. `api/main.py:293-299`
-3. **Session load**
-   `conversation_id` is mapped directly to `Session.session_id`, and prior turn views are rehydrated from `data/agent_sessions/<id>.json`.
-   File: `api/pipeline_adapter.py:125-147`, `briarwood/agent/session.py:15-124`
-   Failure mode: corrupt session JSON -> fresh session silently replaces it; user is not notified. `api/pipeline_adapter.py:138-145`
-4. **Decision dispatch**
-   `decision_stream()` calls `dispatch()` in a threadpool, forcing `AnswerType.DECISION` if needed.
-   File: `api/pipeline_adapter.py:1629-1661`
-   Failure mode: dispatch exception -> streamed plain text “Decision analysis failed: ...” plus suggestions, not a structured error event. `api/pipeline_adapter.py:1654-1661`
-5. **Property resolution and routed analysis**
-   `handle_decision()` resolves the property id, builds `PropertyView.load(depth="decision")`, which calls `analyze_property()`, which calls `run_routed_report()`, which calls `run_routed_analysis_for_property()`, which calls `run_briarwood_analysis_with_artifacts()`.
-   File: `briarwood/agent/dispatch.py:1347-1379`, `briarwood/agent/property_view.py:75-99`, `briarwood/agent/tools.py:471-492`, `briarwood/runner_routed.py:448-542`, `briarwood/orchestrator.py:397-531`
-   Shape transitions:
-   - `summary.json` + `inputs.json` -> `PropertyInput`
-   - `ParserOutput` -> `RoutingDecision`
-   - `ExecutionContext` -> `EngineOutput` / module-results dict
-   - module results + `InteractionTrace` -> `UnifiedIntelligenceOutput`
-6. **Scoped execution / fallback**
-   The orchestrator prefers scoped execution when every selected module and dependency has a real runner; otherwise it calls the legacy full-engine runner once and projects selected modules back out.
-   File: `briarwood/orchestrator.py:443-499`, `briarwood/runner_routed.py:176-206`
-   Failure mode: no scoped support and no legacy runner -> exception; visible to caller. `briarwood/orchestrator.py:490-494`
-7. **Bridge + synthesis**
-   Cross-module bridges record adjustments and conflicts; deterministic synthesis computes the final stance, recommendation, trust summary, and explanation lists.
-   File: `briarwood/interactions/registry.py:42-65`, `briarwood/synthesis/structured.py:34-115`
-   Failure mode: a bridge bug is swallowed into a non-firing `BridgeRecord`; run continues. `briarwood/interactions/registry.py:53-63`
-8. **Secondary evidence surfaces**
-   `handle_decision()` separately builds town summary, CMA, comps preview, value thesis, and projection cards. These enrichments are each wrapped in broad `try/except` and are silently skipped on failure.
-   File: `briarwood/agent/dispatch.py:1381-1429`
-9. **Narrative synthesis**
-   `decision_summary` prompt is composed from `PropertyView` fields and verified/criticized.
-   File: `briarwood/agent/dispatch.py:1576-1613`, `briarwood/agent/composer.py:332-466`
-   Failure mode: LLM budget/transport failure -> deterministic fallback or empty text depending on path; partially visible. `briarwood/agent/composer.py:355-370`
-10. **API stream**
-    `decision_stream()` emits verdict/town/comps/value/risk/strategy/rent/trust cards first, scenario/secondary charts later, then the listings/map and verifier report.
-    File: `api/pipeline_adapter.py:1671-1800`
-11. **Frontend render**
-    `useChat()` parses SSE frames and stores structured payloads on the assistant message; `messages.tsx` renders verdict, text, cards, charts, map, and optional critic panel.
-    File: `web/src/lib/chat/use-chat.ts:147-376`, `web/src/components/chat/messages.tsx:125-265`
-    Failure mode: unknown event JSON is ignored; `tool_call` / `tool_result` are no-ops; verifier data is mostly discarded except critic telemetry. `web/src/lib/chat/use-chat.ts:163-167`, `web/src/lib/chat/use-chat.ts:346-359`
-
-Latency: no per-hop latency telemetry is emitted in this flow. Auto-research can add an extra town-research fetch plus a second `PropertyView.load()` rerun, but runtime code does not measure or surface elapsed time. `briarwood/agent/dispatch.py:1439-1468`
-
-### 1.9 Product Promise Test
-
-| Dimension | Rating | Evidence |
-| --- | --- | --- |
-| Intelligence | **Partial** | Strong deterministic property-level routing/synthesis exists, but capital allocation is only passive-benchmark comparison and not portfolio-aware. `briarwood/synthesis/structured.py:34-115`, `briarwood/modules/opportunity_cost.py:1-26`, `briarwood/execution/context.py:20-31` |
-| Explainability | **Partial** | Routed verdict objects are explainable, but UI/prose/card surfaces do not preserve all reasoning, and CMA provenance is overstated. `briarwood/routing_schema.py:364-375`, `web/src/components/chat/verdict-card.tsx:37-133`, `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848` |
-| Confidence | **Strong** in routed core / **Weak** across whole workspace | Routed confidence and trust gating are explicit and tested; legacy verdict paths remain separate. `briarwood/modules/confidence.py:16-98`, `briarwood/synthesis/structured.py:153-161`, `tests/synthesis/test_structured_synthesizer.py:100-129`, `briarwood/decision_engine.py:29-96` |
-| Portfolio-aware decision support | **Absent** | No portfolio input in routed contracts; only passive-benchmark comparison and a legacy Dash portfolio dashboard. `briarwood/execution/context.py:20-31`, `briarwood/modules/opportunity_cost.py:13-25`, `briarwood/dash_app/components.py:5928-5988` |
-| Fast comprehension | **Partial** | The chat stack emits a top-line verdict and cards early, but users still receive prose plus multiple cards and sometimes mismatched comp/value evidence. `api/pipeline_adapter.py:1675-1779`, `web/src/components/chat/messages.tsx:128-171`, `briarwood/agent/tools.py:1802-1848` |
-
-## Phase 2 — Technical Audit
-
-### 2.1 LLM Call Site Inventory
-
-| Call Site | File:Line | Provider | Model | Task Type | Structured Output? | Schema | Retry? | Timeout? | Consumer |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Chat intent classifier | `briarwood/agent/router.py:245-263` via `briarwood/agent/llm.py:121-188` / `245-343` | OpenAI or Anthropic | OpenAI structured default `gpt-5`; Anthropic default `claude-sonnet-4-6` | answer-type classification | Yes | `RouterClassification` | No | Yes, client ctor default 30s | `classify()` |
-| Narrative composer | `briarwood/agent/composer.py:332-466` via `briarwood/agent/llm.py:93-120` / `213-244` | OpenAI by default; Anthropic for narrative tiers when available | OpenAI default `gpt-4o-mini`; Anthropic default `claude-sonnet-4-6` | free-form narrative synthesis | No | N/A | One verifier-driven regen attempt | Yes, 30s client timeout | `dispatch` handlers |
-| Decision critic | `briarwood/agent/composer.py:249-269` | Anthropic | `claude-opus-4-7` by default | critic / rewrite review | Yes | `DecisionCriticReview` | No | Yes, Anthropic client timeout 30s | `decision_summary` only |
-| Local intelligence extraction | `briarwood/local_intelligence/adapters.py:156-192` | OpenAI | `OpenAILocalIntelligenceConfig.model` | structured town-signal extraction | Yes | `TownSignalDraftBatch` | No | Yes, config timeout | `OpenAILocalIntelligenceExtractor.extract()` |
-| Anthropic structured helper (general) | `briarwood/agent/llm.py:245-343` | Anthropic | caller override or default `claude-sonnet-4-6` | generic structured JSON emission | Yes | caller Pydantic model | No | Yes | router/critic/other structured callers |
-
-Downstream trust of LLM output is mixed:
-
-- Structured outputs are schema-validated and return `None` on transport/parse/schema failure. `briarwood/agent/llm.py:130-188`, `briarwood/agent/llm.py:260-343`, `briarwood/local_intelligence/adapters.py:179-192`
-- Narrative outputs are verified for numeric/entity grounding and may be regenerated once, but the final prose is still free-form and not schema-validated. `briarwood/agent/composer.py:372-466`
-
-### 2.2 Agent / Module I-O Contracts
-
-| Component | Input Contract | Output Contract | Validated? | Consumers | Failure Handling | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| Routed parser | `str -> ParserOutput` | `ParserOutput` | Yes, Pydantic | `route_user_input()` | fallback to rules/defaults | Strong contract. `briarwood/router.py:467-491`, `briarwood/routing_schema.py:266-299` |
-| Scoped modules | `ExecutionContext` | `ModulePayload` dict | Yes, normalized through `ModulePayload` | executor, bridges, synth | module-specific fallback payloads | Strong pattern. `briarwood/execution/context.py:8-31`, `briarwood/routing_schema.py:301-325` |
-| Interaction bridges | `ModuleOutputs` | `BridgeRecord` in `InteractionTrace` | Partially; record shape fixed, bridge bodies not | synth | exceptions downgraded to non-firing record | Safe but can hide bridge bugs. `briarwood/interactions/registry.py:42-65` |
-| Unified synthesis | `property_summary + parser_output + module_results + trace` | `UnifiedIntelligenceOutput` | Yes | chat/API/property view | `model_validate()` in orchestrator | Strong pattern. `briarwood/synthesis/structured.py:34-115`, `briarwood/orchestrator.py:326-335` |
-| Decision view projector | `dict(session.last_decision_view)` | verdict payload | Yes, via `_DecisionView` | SSE layer / UI | warning + empty verdict fallback | Good defensive projector. `api/pipeline_adapter.py:548-639` |
-| Decision summary narrative | structured subset of `PropertyView` | string + verifier report | Partially; grounding verifier only | chat narrative | verifier/critic/fallback text | Can omit reasoning fields. `briarwood/agent/dispatch.py:1576-1613`, `briarwood/agent/composer.py:372-466` |
-| Local intelligence extractor | `SourceDocument` | `TownSignalDraftBatch` -> `TownSignal[]` | Yes | local intelligence service | empty batch or exception | Strong schema-first extraction. `briarwood/local_intelligence/adapters.py:130-192` |
-
-**Best existing pattern**
-
-The best current pattern is the routed module -> bridge -> deterministic synth path:
-
-- typed inputs (`ExecutionContext`)
-- typed outputs (`ModulePayload`, `UnifiedIntelligenceOutput`)
-- deterministic bridge trace
-- explicit trust gating
-- focused tests. `briarwood/execution/context.py:8-31`, `briarwood/routing_schema.py:301-375`, `briarwood/interactions/registry.py:42-65`, `tests/test_execution_v2.py:49-228`, `tests/synthesis/test_structured_synthesizer.py:60-175`
-
-Other surfaces that should copy it:
-
-- CMA / comp provenance surfaces
-- Dash/report verdict generation
-- LLM narrative summaries
-
-### 2.3 Provider / Model Fit
-
-- Structured router classification using OpenAI `gpt-5` by default is reliable but expensive for a tiny two-field schema. This is a poor cost/latency fit unless the env overrides it. `briarwood/agent/llm.py:144-160`, `briarwood/agent/router.py:231-263`
-- Narrative decision summaries routed to Anthropic Sonnet, with optional Opus critic, are a reasonable fit for prose quality and stance review. `briarwood/agent/composer.py:50-57`, `briarwood/agent/composer.py:119-123`, `briarwood/agent/composer.py:427-466`
-- Local intelligence extraction uses strict JSON schema output, which is appropriate for provider reliability and downstream validation. `briarwood/local_intelligence/adapters.py:156-192`
-
-Recommended fit changes:
-
-- Move router classification off default `gpt-5` to a cheaper structured-capable model tier unless accuracy evidence shows a clear need. `briarwood/agent/llm.py:144-160`
-- Keep the current verifier/critic pattern for decision narration; it is one of the stronger LLM safety patterns in the repo. `briarwood/agent/composer.py:332-466`
-
-### 2.4 Error Handling, Retries, and Budget Controls
-
-Strengths:
-
-- Provider budget caps are explicit and per-provider. `briarwood/cost_guard.py:64-141`
-- `BudgetExceeded` propagates through LLM clients so composer can distinguish cost exhaustion from empty model output. `briarwood/agent/llm.py:93-103`, `briarwood/agent/llm.py:138-143`, `tests/agent/test_llm.py:100-113`
-- Narrative composer has one strict regen retry and an optional critic pass. `briarwood/agent/composer.py:377-466`
-
-Weaknesses:
-
-- Most structured LLM failures return `None` with a warning and no retry. `briarwood/agent/llm.py:162-188`, `briarwood/local_intelligence/adapters.py:181-192`
-- `handle_decision()` silently skips town summary, comps preview, value thesis, and scenario enrichment on exceptions. `briarwood/agent/dispatch.py:1381-1429`
-- `_load_or_create_session()` silently resets a broken session file. `api/pipeline_adapter.py:138-145`
-- Bridge exceptions are swallowed into a non-firing record. `briarwood/interactions/registry.py:53-63`
-
-Flagged behaviors:
-
-- **Silent partial-response rendering without warning:** yes, in decision enrichment. `briarwood/agent/dispatch.py:1381-1429`
-- **Silent fallback to empty structured output:** yes, several LLM structured calls. `briarwood/agent/llm.py:162-188`, `briarwood/local_intelligence/adapters.py:181-192`
-- **Default verdict fallback:** no direct hardcoded default verdict in the routed deterministic synth, which is a strength. `briarwood/synthesis/structured.py:153-227`
-
-### 2.5 Data Lineage and Integrity
-
-Strengths:
-
-- `build_property_summary()` strips raw listing text before synthesis. `briarwood/orchestrator.py:64-113`, `tests/test_orchestrator.py:22-39`, `tests/test_orchestrator.py:286-347`
-- `PropertyView` and `compute_value_position()` explicitly separate listing ask from all-in basis, and both files document the prior mismatch. `briarwood/agent/property_view.py:1-16`, `briarwood/agent/property_view.py:88-99`, `briarwood/synthesis/structured.py:237-248`
-- `scenario_table` fixes spread units explicitly. `api/events.py:125-139`
-
-Risks:
-
-- `value_position.premium_discount_pct` is still an alias of `basis_premium_pct`, even though its name can be read as ask-vs-fair. `briarwood/synthesis/structured.py:244-268`
-- The CMA surface can show live Zillow comps while claiming to show comps that fed fair value. `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`
-- Cache keys omit material property facts and can therefore serve stale data when the same property id is re-underwritten after facts change. `briarwood/orchestrator.py:116-137`, `briarwood/orchestrator.py:448-455`
-
-### 2.6 State, Caching, and Concurrency
-
-State locations:
-
-- Process-global routing/module/synthesis caches in `orchestrator.py`. `briarwood/orchestrator.py:29-33`
-- Per-conversation session JSON in `data/agent_sessions/<session_id>.json`. `briarwood/agent/session.py:15-24`, `briarwood/agent/session.py:86-124`
-
-Caching risks:
-
-- `_SYNTHESIS_OUTPUT_CACHE` and `_MODULE_RESULTS_CACHE` are keyed by `property_id` plus a narrow assumption payload, not the full normalized property facts. `briarwood/orchestrator.py:116-137`, `briarwood/orchestrator.py:448-455`
-- Those caches are process-global mutable dicts with no lock, TTL, or invalidation strategy. `briarwood/orchestrator.py:29-33`
-- Scoped module outputs are also stored in a process-global dict. `briarwood/orchestrator.py:32`, `briarwood/orchestrator.py:478-483`
-
-**Inference:** two analyses of the same property id with changed structural facts but identical assumptions can reuse stale module/synthesis output. The cache key construction omits `beds`, `baths`, `sqft`, `taxes`, and other facts even though those feed valuation and carry models. `briarwood/orchestrator.py:116-137`, `briarwood/orchestrator.py:64-103`
-
-This is a correctness risk, not just a performance concern.
-
-### 2.7 API and Streaming Audit
-
-- FastAPI defines typed request models for chat and conversation CRUD. `api/main.py:60-94`
-- `/api/chat` is the primary streaming endpoint and returns `text/event-stream`. `api/main.py:230-366`
-- Event types are centralized in `api/events.py` and mirrored in `web/src/lib/chat/events.ts`. `api/events.py:12-38`, `web/src/lib/chat/events.ts:113-339`
-- There is no version field on the SSE protocol. Contract compatibility relies on comments and tests. `api/events.py:1-38`, `tests/test_pipeline_adapter_contracts.py:32-220`
-
-Contract consistency:
-
-- Good: `_DecisionView` validates verdict payload reads. `api/pipeline_adapter.py:548-639`
-- Good: dedicated contract tests pin stream ordering and event shapes. `tests/test_pipeline_adapter_contracts.py:33-120`
-- Weak: `tool_call` / `tool_result` are emitted in protocol constants but ignored by the frontend. `api/events.py:13-18`, `web/src/lib/chat/use-chat.ts:346-349`
-
-### 2.8 Frontend Contract Fidelity
-
-- The frontend faithfully stores most structured events, but it discards most `verifier_report` data and keeps only `critic`. `web/src/lib/chat/use-chat.ts:350-359`
-- The backend verdict payload includes `trust_summary`, `why_this_stance`, `what_changes_my_view`, `contradiction_count`, and `blocked_thesis_warnings`; the TS `VerdictEvent` type omits those fields, and `VerdictCard` does not render them. `api/pipeline_adapter.py:617-639`, `web/src/lib/chat/events.ts:113-131`, `web/src/components/chat/verdict-card.tsx:37-133`
-- `messages.tsx` renders verdict first and prose immediately after, so meaning can diverge even when the stream itself is correct. `web/src/components/chat/messages.tsx:128-140`
-
-### 2.9 Tests and Observability
-
-Test coverage is strongest around the routed core:
-
-- planner/executor/cache behavior: `tests/test_execution_v2.py:14-284`
-- orchestrator contracts: `tests/test_orchestrator.py:22-435`
-- structured synthesis: `tests/synthesis/test_structured_synthesizer.py:60-175`
-- SSE adapter contracts: `tests/test_pipeline_adapter_contracts.py:32-220`
-- LLM client budget/schema handling: `tests/agent/test_llm.py:77-455`
-- chat API stream basics: `tests/test_chat_api.py:63-102`
-
-Observability is mixed:
-
-- Runtime warnings exist across router, composer, local-intelligence collectors, and session persistence, but there is no general runtime metrics/tracing layer for per-agent latency or failure rates. `briarwood/router.py:81-91`, `briarwood/agent/composer.py:358-465`, `api/pipeline_adapter.py:138-145`
-- Offline feedback/eval capture exists: routed analyses append JSONL captures with `execution_mode`, `contribution_map`, and `model_confidences`; separate feedback/eval harnesses compute drift and rejection metrics. `briarwood/runner_routed.py:511-533`, `briarwood/intelligence_capture.py:26-79`, `briarwood/eval/harness.py:1-225`, `briarwood/feedback/analyzer.py:21-193`
-
-Direct answers:
-
-- Can the team tell which agent is slowest? **No runtime evidence found.**
-- Can the team tell which agent fails most? **Not from runtime metrics; only scattered warning logs.**
-- Can the team detect verdict drift? **Partially offline** via capture/eval tooling, not in the live request path. `briarwood/eval/harness.py:163-225`
-- Can the team detect schema breakage quickly? **Partially yes** for some surfaces because of Pydantic and stream contract tests, but not universally. `api/pipeline_adapter.py:548-639`, `tests/test_pipeline_adapter_contracts.py:798-829`
-
-### 2.10 Dependencies and Technical Debt
-
-Real architectural debt:
-
-- Current docs say `resale_scenario`, `rental_option`, `renovation_impact`, `arv_model`, and `margin_sensitivity` are unsupported and should trigger fallback, but the actual registry wires concrete runners for all of them. `docs/scoped_execution_support.md:28-37`, `docs/scoped_execution_support.md:59-69`, `briarwood/execution/registry.py:87-181`
-- Multiple live decision architectures coexist: routed synthesis, legacy `decision_engine`, and `briarwood/pipeline/*`. `briarwood/synthesis/structured.py:63-115`, `briarwood/decision_engine.py:29-96`, `briarwood/pipeline/runner.py:31-78`
-- Many scoped modules are still wrappers around legacy modules, which is explicit debt rather than hidden debt. `docs/scoped_execution_support.md:70-85`, `briarwood/modules/valuation.py:16-23`, `briarwood/modules/rental_option_scoped.py:17-24`, `briarwood/modules/renovation_impact_scoped.py:12-16`
-
-Harmless clutter:
-
-- Older pipeline architecture and chart/session helpers are still tested and therefore not dead, but they are secondary to the routed/chat surface. `briarwood/pipeline/runner.py:1-78`, `tests/test_pipeline_e2e.py:22-125`
-
-Active correctness risk:
-
-- CMA provenance mismatch
-- split verdict lineage
-- stale cache keys
-
-## Phase 3 — Cross-Cutting Findings
-
-### 3.1 Severity Summary
-
-- **P0:** 3
-- **P1:** 6
-- **P2:** 3
-
-### 3.2 Findings Table
-
-| ID | Severity | Title | What is happening | Why it matters | Evidence | Suggested fix direction | Rough effort |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F1 | **P0** | Multiple Verdict Paths | Routed chat/API uses deterministic `build_unified_output()`, while Dash/reports use `build_decision(report)` and the old pipeline keeps a third decision surface. | Briarwood does not have one trustworthy verdict lineage. | `briarwood/synthesis/structured.py:63-115`; `briarwood/decision_engine.py:29-96`; `briarwood/dash_app/quick_decision.py:35-55`; `briarwood/pipeline/runner.py:31-78`; `api/pipeline_adapter.py:570-583` | Choose one canonical verdict source and make other surfaces project from it. | L |
-| F2 | **P0** | CMA Provenance Mismatch | The CMA event says it shows comps that fed fair value, but `get_cma()` prefers live Zillow market comps and does not read the actual valuation comp set. | Users can be misled about why Briarwood thinks a property is cheap or expensive. | `api/events.py:184-186`; `briarwood/agent/tools.py:1802-1848`; `briarwood/agent/tools.py:1892-1963` | Split “market support comps” from “valuation comps” into separate explicit contracts. | M |
-| F3 | **P0** | Stale Routed Cache Key | Global synthesis/module caches are keyed too coarsely and omit material property facts. | Changed facts can silently reuse stale decisions. | `briarwood/orchestrator.py:29-33`; `briarwood/orchestrator.py:116-137`; `briarwood/orchestrator.py:448-455` | Re-key caches off normalized property facts or add invalidation/versioning. | M |
-| F4 | **P1** | No Portfolio-Aware Allocation Logic | Routed execution carries no portfolio state, and `opportunity_cost` is passive-benchmark-only. | The product promise is capital allocation, but the implementation is property-isolation plus passive benchmark comparison. | `briarwood/execution/context.py:20-31`; `briarwood/modules/opportunity_cost.py:13-25`; `briarwood/dash_app/components.py:5928-5988` | Add portfolio/constraint inputs and a real opportunity-set comparison layer. | XL |
-| F5 | **P1** | Hidden Upside Is Not First-Class Routed Logic | `HIDDEN_UPSIDE` exists in the core question enum but is not mapped to module hints or default intent coverage. | Briarwood cannot reliably answer “where is the hidden upside?” as its own routed question. | `briarwood/routing_schema.py:28-38`; `briarwood/routing_schema.py:114-140`; `briarwood/routing_schema.py:227-262` | Add dedicated question-focus routing and a surfaced optionality contract. | M |
-| F6 | **P1** | Summary Prose Is Only Partially Coupled To Deterministic Verdict | The LLM summary is grounded to a subset of the routed view, but omits several decisive reasoning/trust fields. | Top-line text can remain numerically correct while under-explaining why the call is fragile. | `briarwood/agent/dispatch.py:1576-1603`; `briarwood/synthesis/structured.py:59-86`; `briarwood/agent/composer.py:372-466` | Generate prose from the full verdict object or expose its omitted fields in the summary input. | M |
-| F7 | **P1** | Silent Partial Degradation In Decision Enrichment | Town summary, CMA, comps preview, value thesis, and scenarios are swallowed on exception. | Users can get a thinner answer without warning. | `briarwood/agent/dispatch.py:1381-1429` | Surface partial-data warnings in the response contract. | S |
-| F8 | **P1** | Docs Contradict Scoped Registry Reality | Current docs say several modules are unsupported; registry wires concrete runners for them. | The team cannot trust the docs to reason about fallback behavior. | `docs/scoped_execution_support.md:28-37`; `docs/scoped_execution_support.md:59-69`; `briarwood/execution/registry.py:87-181` | Update current docs from the registry or generate docs from code. | S |
-| F9 | **P1** | Two Routers Govern One User Flow | Chat tier routing (`briarwood/agent/router.py`) and analysis routing (`briarwood/router.py`) are separate systems. | Intent drift between “answer type” and “analysis modules” remains a structural risk. | `briarwood/agent/router.py:231-320`; `briarwood/router.py:525-586`; `api/main.py:287-336` | Define one canonical intent hierarchy or explicit translation contract between them. | M |
-| F10 | **P2** | Frontend Drops Part Of Backend Meaning | Verdict UI ignores several backend verdict fields; verifier report is mostly discarded. | Explainability is weakened even when the backend produced the right information. | `api/pipeline_adapter.py:617-639`; `web/src/lib/chat/events.ts:113-131`; `web/src/components/chat/verdict-card.tsx:37-133`; `web/src/lib/chat/use-chat.ts:350-359` | Expand TS/event types and render the extra trust/explanation fields intentionally. | S |
-| F11 | **P2** | Parallel Pipeline Architecture Still Lives Beside Routed Core | `briarwood/pipeline/*` still defines its own unified/decision stack and runner. | Increases maintenance load and concept duplication. | `briarwood/pipeline/runner.py:31-78`; `briarwood/pipeline/unified.py:29-144`; `briarwood/pipeline/decision.py:16-41` | Mark it deprecated, carve out its remaining use cases, or remove after migration. | M |
-| F12 | **P2** | Router Classification Default Model Is Over-Tiered | Structured router classification defaults to `gpt-5` on OpenAI. | Unnecessary latency/cost for a tiny schema task. | `briarwood/agent/llm.py:144-160`; `briarwood/agent/router.py:245-263` | Down-tier the default structured router model. | S |
-
-### 3.3 Top 10 Priorities
-
-1. Unify verdict generation behind one canonical routed verdict path. Severity: **P0**. Owner: Routing/Platform. Effort: **L**.
-2. Fix CMA/comp provenance so user-facing comp tables accurately identify valuation evidence versus market-support comps. Severity: **P0**. Owner: Chat/API + Valuation. Effort: **M**.
-3. Rebuild routed cache keys and invalidation so changed property facts cannot silently reuse stale results. Severity: **P0**. Owner: Execution/Platform. Effort: **M**.
-4. Add a real portfolio/opportunity-set input contract to the routed stack. Severity: **P1**. Owner: Product + Routing/Execution. Effort: **XL**.
-5. Make hidden upside/optionality a first-class routed question with surfaced outputs. Severity: **P1**. Owner: Routing + Modules. Effort: **M**.
-6. Tie top-line decision prose directly to the full deterministic verdict object. Severity: **P1**. Owner: Chat/API. Effort: **M**.
-7. Stop silently swallowing decision enrichments; emit explicit partial-data warnings. Severity: **P1**. Owner: Chat/API. Effort: **S**.
-8. Reconcile `docs/scoped_execution_support.md` with the actual module registry. Severity: **P1**. Owner: Platform/Docs. Effort: **S**.
-9. Define a clear contract between chat-tier routing and analysis routing. Severity: **P1**. Owner: Platform. Effort: **M**.
-10. Expand frontend rendering of trust/verdict/verifier fields so explanation survives to the user. Severity: **P2**. Owner: Frontend. Effort: **S**.
-
-### 3.4 Architectural Patterns
-
-- **Multiple verdict paths:** routed synth, legacy decision engine, and older pipeline decision adapters all still exist. `briarwood/synthesis/structured.py:63-115`, `briarwood/decision_engine.py:29-96`, `briarwood/pipeline/decision.py:16-41`
-- **Strong contract enforcement in the routed core:** `ParserOutput`, `ModulePayload`, `ExecutionContext`, `UnifiedIntelligenceOutput`, `_DecisionView`. `briarwood/routing_schema.py:266-388`, `briarwood/execution/context.py:8-31`, `api/pipeline_adapter.py:548-639`
-- **Reasoning not always tightly coupled to rendering:** deterministic verdict fields are richer than what the main verdict UI renders. `briarwood/synthesis/structured.py:88-115`, `web/src/components/chat/verdict-card.tsx:37-133`
-- **Prompt-layer synthesis is bounded, not calculative:** LLMs narrate and classify, but verdict math remains deterministic in Python. `briarwood/synthesis/structured.py:34-115`, `briarwood/agent/dispatch.py:1576-1613`
-- **Legacy wrappers are explicit:** many scoped modules still declare which legacy modules they wrap. `briarwood/modules/valuation.py:16-23`, `briarwood/modules/rental_option_scoped.py:17-24`, `briarwood/modules/renovation_impact_scoped.py:12-16`
-- **Hidden fallback logic remains common:** chat enrichments and session reloads frequently fail open. `briarwood/agent/dispatch.py:1381-1429`, `api/pipeline_adapter.py:138-145`
-
-### 3.5 What Is Working Well
-
-- The routed deterministic synthesis path is the strongest implementation in the workspace. It gives Briarwood a reproducible, inspectable verdict path with trust gating and bridge-based contradiction handling. `briarwood/synthesis/structured.py:34-115`, `briarwood/interactions/conflict_detector.py:22-94`, `tests/synthesis/test_structured_synthesizer.py:60-175`
-- The scoped execution boundary is clean and testable. `ExecutionContext` is explicit, the planner resolves dependencies, the executor caches module outputs by relevant inputs, and tests pin rerun behavior. `briarwood/execution/context.py:8-31`, `briarwood/execution/planner.py:20-131`, `briarwood/execution/executor.py:289-364`, `tests/test_execution_v2.py:49-228`
-- The SSE adapter has meaningful contract tests, which is uncommon and valuable. `tests/test_pipeline_adapter_contracts.py:32-220`
-- The narrative LLM safety stack is thoughtful: grounding markers, verifier, strict regen, budget caps, and optional critic. `api/prompts/_base.md:1-46`, `api/guardrails.py:146-303`, `briarwood/agent/composer.py:332-466`, `briarwood/cost_guard.py:64-141`
-- `PropertyView` is a concrete fix for a real semantic bug around ask price versus all-in basis; this is the right kind of contract hardening. `briarwood/agent/property_view.py:1-16`, `briarwood/agent/property_view.py:88-99`
-
-## Final Assessment
-
-Briarwood can be trusted today for one thing more than anything else: a deterministic, property-level routed underwriting read where the verdict comes from typed module outputs and explicit trust gating. Trust is strongest in the scoped routed core, the bridge layer, and the Phase 5 deterministic synthesis path. `briarwood/execution/context.py:8-31`, `briarwood/interactions/registry.py:42-65`, `briarwood/synthesis/structured.py:34-115`
-
-Briarwood cannot yet be fully trusted to support a capital allocation decision across the whole workspace. Trust is weakest where multiple verdict systems coexist, where user-facing comp provenance overstates what actually fed fair value, and where the routed stack still has no portfolio-aware input contract. `briarwood/decision_engine.py:29-96`, `api/events.py:184-186`, `briarwood/agent/tools.py:1802-1848`, `briarwood/execution/context.py:20-31`
-
-What would make it materially more trustworthy is not “more AI.” It is architectural consolidation: one verdict path, one comp-provenance story, cache keys that cannot silently serve stale answers, and explicit portfolio/opportunity-set inputs so Briarwood’s top-line recommendation really answers the capital-allocation question it claims to answer. `docs/current_docs_index.md:20-27`, `briarwood/orchestrator.py:116-137`, `briarwood/modules/opportunity_cost.py:13-25`
-
-## Stop Gate
-
-Read-only audit complete. No code changes made. Awaiting review.
+# Briarwood Technical Audit — Same-Day Action Plan
+**Date:** 2026-04-22
+**Workspace:** `briarwood`
+**Mode:** Read-only audit. No code changes were made.
+**Supersedes:** the earlier `AUDIT_REPORT.md` (same-day, narrative format) — this version is fix-oriented.
+
+---
+
+## Phase 1 — Architecture Map (one page)
+
+### Surface layers
+- **FastAPI bridge** (`api/`): owns SSE wire format and conversation persistence.
+  - Entry: [api/main.py:230-366](api/main.py#L230-L366) `/api/chat` → classify → `decision_stream` / `search_stream` / `browse_stream` / `dispatch_stream` / `_echo_stream` (fallback).
+  - Event protocol: [api/events.py](api/events.py) (28 event types).
+  - Adapter glue: [api/pipeline_adapter.py](api/pipeline_adapter.py) (~2,400 lines — projects session views into SSE events).
+- **Next.js chat UI** (`web/`): consumes the SSE events. Cards in [web/src/components/chat/](web/src/components/chat/) (26 components, all actively imported).
+
+### Reasoning core (canonical decision path)
+- **Routing** [briarwood/router.py](briarwood/router.py) → typed [briarwood/routing_schema.py](briarwood/routing_schema.py) (`RoutingDecision`, `UnifiedIntelligenceOutput`).
+- **Orchestrator** [briarwood/orchestrator.py](briarwood/orchestrator.py) — scoped-first with legacy fallback. Caches: `_ROUTING_DECISION_CACHE`, `_MODULE_RESULTS_CACHE`, `_SYNTHESIS_OUTPUT_CACHE`, `_SCOPED_MODULE_OUTPUT_CACHE`.
+- **Scoped execution** [briarwood/execution/](briarwood/execution/): `planner.py` → `executor.py` against an `ExecutionContext`, registry in [briarwood/execution/registry.py](briarwood/execution/registry.py).
+- **Module library** [briarwood/modules/](briarwood/modules/) — 44 files, mostly heuristics (no sklearn/torch).
+- **Bridges** [briarwood/interactions/](briarwood/interactions/) — `run_all_bridges()` reconciles cross-module signals.
+- **Unified Intelligence (synthesis)** [briarwood/synthesis/structured.py:34-117](briarwood/synthesis/structured.py#L34-L117) — *the* deterministic decision builder. Genuine fusion: trust gate, stance classifier, conflict integration, optionality signal.
+
+### Runner glue
+- [briarwood/runner_routed.py](briarwood/runner_routed.py) — canonical entry from the chat path.
+- [briarwood/runner_common.py](briarwood/runner_common.py) — hosts `build_engine()` (lifted from the deleted legacy runner) which wires 19 module instances into a single `AnalysisEngine`. Used as the **legacy fallback** when scoped execution can't satisfy the routed module set.
+- [briarwood/engine.py](briarwood/engine.py) — `AnalysisEngine` class. **Live**, only via the fallback above.
+
+### LLM layer
+- [briarwood/agent/llm.py](briarwood/agent/llm.py) — `OpenAIChatClient`, `AnthropicChatClient`, both with `complete()` + `complete_structured()` (strict JSON mode / Anthropic tool-use). Cost guard via `briarwood/cost_guard.py`.
+- [briarwood/local_intelligence/adapters.py](briarwood/local_intelligence/adapters.py) — separate Responses-API call for town-signal extraction.
+- Prompts split between [api/prompts/](api/prompts/) (markdown, ~13 files) and inline `_LLM_SYSTEM` strings inside Python modules (router, composer critic, local_intelligence/prompts.py).
+
+### Models
+The repo has **no ML stack** (no sklearn, torch, xgboost in `requirements.txt`). Every "model" in `briarwood/modules/` is a hand-tuned heuristic over property facts. The only learned components are the LLMs (router classification, prose narration, town-signal extraction).
+
+### What was deleted on 2026-04-22 (verdict-path consolidation)
+Per [REPO_MAP.md](REPO_MAP.md#L6-L12) and confirmed by direct filesystem check: `briarwood/decision_engine.py`, `briarwood/runner.py`, `briarwood/runner_legacy.py`, `briarwood/dash_app/{app,view_models,...}.py`, `briarwood/reports/{...}`, `briarwood/projections/`, `briarwood/scorecard.py`, `briarwood/deal_curve.py`, `run_dash.py`, `app.py` — **all gone**. The "competing verdict surfaces" finding from prior audits is largely **obsolete**. There is now one canonical verdict path: `synthesis/structured.py → PropertyView.load(depth="decision") → _verdict_from_view → events.verdict()`.
+
+### Unified intelligence layer status
+**It exists and is real.** [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) is a single deterministic fusion service with:
+- Trust gate (`TRUST_FLOOR_ANY=0.40`, `TRUST_FLOOR_STRONG=0.70`).
+- Stance classifier ([structured.py:123-227](briarwood/synthesis/structured.py#L123-L227)) that integrates `value_position`, `valuation_x_risk`, `valuation_x_town`, `scenario_x_risk`, `conflict_detector`.
+- Single canonical schema (`UnifiedIntelligenceOutput`).
+- Pydantic-validated SSE projector ([api/pipeline_adapter.py:570-660](api/pipeline_adapter.py#L570-L660)) with stance-vocabulary guardrail.
+
+This is a substantial improvement over the prior audit baseline.
+
+---
+
+## Executive Summary (top 5)
+
+1. **F-001 (Critical):** When the LLM router crashes, the `/api/chat` endpoint silently falls through to `_echo_stream` which serves **hardcoded mock listings** (`api/mock_listings.py`) — there is no env flag, no UI banner. Users can see fabricated demo data thinking it's live. [api/main.py:319-320](api/main.py#L319-L320), [api/mock_listings.py](api/mock_listings.py).
+2. **F-002 (High):** `_assert_valuation_module_comps()` raises `AssertionError` on a single bad comp row, which aborts the SSE stream mid-flight. One stray flag and the user gets a generic error instead of a partial verdict. [api/pipeline_adapter.py:722-748](api/pipeline_adapter.py#L722-L748), error path: [api/main.py:347-350](api/main.py#L347-L350).
+3. **F-003 (High):** The synthesis layer computes `optionality_signal` (hidden upside levers — F5 in the routing schema) and routes it into `value-thesis-card.tsx`, but the **verdict card never surfaces it**. The decision card drops it on the floor along with `primary_value_source` and `all_in_basis`. Real signal, invisible to user. [briarwood/synthesis/structured.py:87,116](briarwood/synthesis/structured.py#L87), [api/pipeline_adapter.py:642-643](api/pipeline_adapter.py#L642-L643), [web/src/components/chat/verdict-card.tsx:38-141](web/src/components/chat/verdict-card.tsx#L38-L141).
+4. **F-004 (High):** Two execution paths still exist — scoped (preferred) and a **legacy `AnalysisEngine` fallback** in `runner_common.build_engine()` that wires 19 module instances. When scoped execution can't satisfy a routed module set, the fallback runs but its outputs reach the synthesizer through a different shape. Risk: silently divergent decisions depending on which path was taken, and 19-module construction on every fallback (no caching). [briarwood/runner_common.py:64-145](briarwood/runner_common.py#L64-L145), [briarwood/orchestrator.py:530-549](briarwood/orchestrator.py#L530-L549).
+5. **F-005 (High):** `briarwood/dash_app/` directory contains **only `__pycache__`** — every source file was deleted on 2026-04-22 but the folder and its bytecode remain. The bytecode can still be importable on a fresh checkout that re-syncs the cache. Delete the directory.
+
+---
+
+## Findings
+
+### F-001 — Mock listings served on router failure with no warning
+- **Severity:** Critical
+- **Category:** Pipeline / UI
+- **Location:** [api/main.py:293-336](api/main.py#L293-L336), [api/mock_listings.py](api/mock_listings.py)
+- **Evidence:**
+  ```python
+  try:
+      decision = classify_turn(last.content)
+  except Exception as exc:
+      decision = None
+      yield events.encode_sse(events.error(...))
+  ...
+  if decision is None:
+      stream = _echo_stream(last.content, pinned_listing)  # ← serves mock listings
+  ```
+  `_echo_stream` calls `mock_listings_for(text)` which returns hardcoded BELMAR/AVON/ASBURY arrays from `api/mock_listings.py`. There is no env gate.
+- **Impact:** During any provider outage, OPENAI_API_KEY misconfiguration, or rate-limit episode, users see fictional listings indistinguishable from real ones. Especially dangerous for the prototype demo.
+- **Same-Day Fix:**
+  1. Gate `_echo_stream` behind `BRIARWOOD_DEMO_MODE=true` env. If the flag isn't set, return a clear error event ("router unavailable, please retry") and `done()`.
+  2. If the flag IS set, prepend a `partial_data_warning(section="echo_fallback", reason="demo_mode", verdict_reliable=False)` event so the UI banners these as demo content. Effort: ~30 min.
+
+### F-002 — Single bad comp row aborts the SSE stream
+- **Severity:** High
+- **Category:** Pipeline
+- **Location:** [api/pipeline_adapter.py:722-748](api/pipeline_adapter.py#L722-L748)
+- **Evidence:**
+  ```python
+  def _assert_valuation_module_comps(payload):
+      for index, row in enumerate(payload.get("rows") or []):
+          if row.get("feeds_fair_value") is not True:
+              raise AssertionError(...)
+  ```
+  Boundary handler in [api/main.py:347-350](api/main.py#L347-L350) catches the exception and emits a generic `error` event, terminating the stream **before** `verdict`/`scenario_table` etc. have flushed.
+- **Impact:** The user gets a cryptic error and loses the rest of the decision response (verdict card, risk profile, narrative). The contract guard is correct in spirit but its enforcement mode is wrong.
+- **Same-Day Fix:** Replace `raise AssertionError` with a logger.warning + drop the offending row + emit `partial_data_warning(section="valuation_comps", reason="provenance_drift", verdict_reliable=True)`. Keep streaming. Effort: ~30 min. (Add a regression test in `tests/test_pipeline_adapter_contracts.py`.)
+
+### F-003 — Verdict card silently drops three computed fields
+- **Severity:** High
+- **Category:** UI / Pipeline
+- **Location:**
+  - Computed: [briarwood/synthesis/structured.py:87,102,116](briarwood/synthesis/structured.py#L87) (`optionality_signal`, `primary_value_source` in `supporting_facts`).
+  - Projected to wire: [api/pipeline_adapter.py:642-660](api/pipeline_adapter.py#L642-L660) (`primary_value_source`, `all_in_basis` are in the verdict event payload).
+  - Dropped by UI: [web/src/components/chat/verdict-card.tsx:38-141](web/src/components/chat/verdict-card.tsx#L38-L141) — never read.
+  - Wire schema for `optionality_signal` lives on `value_thesis`, not `verdict` ([web/src/lib/chat/events.ts:313](web/src/lib/chat/events.ts#L313)).
+- **Impact:** "Hidden upside" is one of the six foundational questions per the prior audit's question matrix and is the F5 line item. It's computed and surfaced into the value-thesis card but the decision card the user reads first never references it. Same for `primary_value_source` (Comps? Hybrid? Income?) — answers a question users routinely ask in the chat.
+- **Same-Day Fix:**
+  1. Add `primary_value_source` as a one-line subtitle under "Decision" in `verdict-card.tsx` ("Anchored on: comps").
+  2. Render `all_in_basis` as a 5th `Stat` cell when it differs from `ask_price` by ≥0.5%.
+  3. Add a `optionality_signal` event/projection on the verdict (or render it as a "Hidden upside" pill row). Effort: ~2 hr.
+
+### F-004 — Legacy `AnalysisEngine` fallback path still runs
+- **Severity:** High
+- **Category:** Unified Layer
+- **Location:** [briarwood/runner_common.py:14,64-145](briarwood/runner_common.py#L64), called by [briarwood/orchestrator.py:530-549](briarwood/orchestrator.py#L530-L549) when `supports_scoped_execution()` is False, and by [briarwood/runner_routed.py](briarwood/runner_routed.py).
+- **Evidence:** `build_engine()` constructs `AnalysisEngine` with **19 module instances** wired with cross-module dependencies. None of these modules go through the scoped registry; they run via the older `AnalysisModule.run()` interface, then their results are normalized by `_normalize_module_results()` ([briarwood/orchestrator.py:345-357](briarwood/orchestrator.py#L345-L357)) before reaching the same synthesizer.
+- **Impact:**
+  - Two divergent execution shapes — same property can yield different module result keys depending on whether scoped execution covers all routed modules. Synthesis silently treats them differently because key lookups won't match.
+  - `build_engine()` is invoked **on every fallback** with no caching of the engine instance; module init does heavy fixture loading (`build_default_town_county_service`, `MarketValueHistoryModule`).
+  - The 19 modules in `build_engine()` include legacy variants (`HybridValueModule`, `BullBaseBearModule`, `RenovationScenarioModule`, `TeardownScenarioModule`, `RentalEaseModule`, `LiquiditySignalModule`, `MarketMomentumSignalModule`, `LocationIntelligenceModule`, `ValueDriversModule`) whose names don't match the scoped-registry module names — so the synthesis cache key collides between scoped and fallback runs (both produce the same `analysis_cache_key` for the same property+parser).
+- **Same-Day Fix (read-only triage today, code change later):**
+  1. **Today:** Add a one-line log + counter at [briarwood/orchestrator.py:548](briarwood/orchestrator.py#L548) when `execution_mode == "legacy_fallback"` so we can quantify how often it actually fires in the prototype. If the count is zero in a normal session, we can rip it out.
+  2. **Today:** Bake `execution_mode` into the analysis cache key (`build_cache_key` in [briarwood/orchestrator.py:171-202](briarwood/orchestrator.py#L171-L202)) so scoped + fallback never share an entry. Effort: ~20 min.
+  3. **Deferred:** if the fallback log shows zero hits, delete `runner_common.build_engine()`, `engine.py`, and the 9 unscoped modules.
+
+### F-005 — Dead `briarwood/dash_app/` directory (only `__pycache__` left)
+- **Severity:** High (cleanliness, low risk in itself but confusing)
+- **Category:** Dead Code
+- **Location:** [briarwood/dash_app/](briarwood/dash_app/)
+- **Evidence:**
+  ```text
+  drwxr-xr-x  3 zachanderson  staff   96 Apr 22 08:30 .
+  drwxr-xr-x  7 zachanderson  staff  224 Apr 22 08:30 __pycache__
+  ```
+  All `.py` source files were deleted in the 2026-04-22 consolidation, but the folder remains. README.md, REPO_MAP.md, and CLAUDE.md still reference Dash modules in detail.
+- **Impact:** A teammate cloning fresh and running `python -m briarwood.dash_app.app` will trip on stale `.pyc` files; the README's lengthy Dash section misleads new contributors.
+- **Same-Day Fix:** `rm -rf briarwood/dash_app/`; delete the Dash sections in [README.md:506-563](README.md#L506) and the Dash row from [REPO_MAP.md](REPO_MAP.md). Effort: ~15 min.
+
+### F-006 — Inline LLM system prompts scattered across modules
+- **Severity:** Medium
+- **Category:** LLM
+- **Location:**
+  - Router classifier prompt: [briarwood/agent/router.py](briarwood/agent/router.py) (search `_LLM_SYSTEM`)
+  - Composer critic prompt: [briarwood/agent/composer.py](briarwood/agent/composer.py) (search `_CRITIC_SYSTEM`)
+  - Local-intelligence extraction: [briarwood/local_intelligence/prompts.py](briarwood/local_intelligence/prompts.py)
+- **Evidence:** `api/prompts/` holds 13 markdown prompts (decision_summary, lookup, projection, risk, etc.) but the router and critic prompts live as Python string literals — different lifecycle, no version field, can't A/B without code-deploy.
+- **Impact:** Rolling back a bad prompt or running an A/B requires a Python edit + restart. Inconsistent ownership: prose surfaces are versioned, structured surfaces aren't.
+- **Same-Day Fix:** Move `_LLM_SYSTEM` (router) and `_CRITIC_SYSTEM` (composer) to `api/prompts/router_classifier.md` and `api/prompts/decision_critic.md`; load via `briarwood.agent.composer.load_prompt`. Effort: ~1.5 hr.
+
+### F-007 — `default_client()` silently downgrades from Anthropic to OpenAI
+- **Severity:** Medium
+- **Category:** LLM
+- **Location:** [briarwood/agent/llm.py:350-370](briarwood/agent/llm.py#L350-L370)
+- **Evidence:**
+  ```python
+  if provider == "anthropic" and os.environ.get("ANTHROPIC_API_KEY"):
+      try:
+          return AnthropicChatClient()
+      except Exception as exc:
+          _logger.warning("Anthropic client init failed, falling back to OpenAI: %s", exc)
+  ...
+  ```
+  The warning logs but no surface signal to the operator.
+- **Impact:** A misconfigured Anthropic key, transient SDK import error, or version mismatch silently routes everything through OpenAI — costs land on the wrong provider, A/B comparisons are invalidated.
+- **Same-Day Fix:** When `BRIARWOOD_AGENT_PROVIDER=anthropic` is explicit, treat init failure as fatal (raise) instead of falling through. If provider is unset, current behavior is fine. Effort: ~20 min.
+
+### F-008 — gpt-5 (or larger) accepted as router classifier with no ceiling warning
+- **Severity:** Medium
+- **Category:** LLM
+- **Location:** [briarwood/agent/llm.py:144-148](briarwood/agent/llm.py#L144-L148)
+- **Evidence:**
+  ```python
+  # AUDIT F12: ... gpt-5 is over-tiered for it. Default to the cheapest
+  # structured-capable OpenAI tier. Env override preserves the prior default.
+  use_model = model or os.environ.get("BRIARWOOD_STRUCTURED_MODEL", "gpt-4o-mini")
+  ```
+  The comment acknowledges the cost issue but the env override accepts any model with no warning.
+- **Impact:** A stray env var produces a 50–100× per-call cost regression for a 2-field schema with no telemetry signal.
+- **Same-Day Fix:** Add `if use_model.startswith("gpt-5"): _logger.warning("classifier called with %s — over-tiered for 2-field schema", use_model)`. Effort: ~5 min.
+
+### F-009 — Numeric verifier regex doesn't normalize `%`
+- **Severity:** Medium
+- **Category:** LLM
+- **Location:** [briarwood/agent/composer.py](briarwood/agent/composer.py) — search `_NUMERIC_TOKEN_RE`
+- **Evidence:**
+  ```python
+  _NUMERIC_TOKEN_RE = re.compile(r"[$]?\d[\d,]*(?:\.\d+)?%?")
+  def _numeric_tokens(text):
+      ...
+      normalized = match.replace("$", "").replace(",", "")  # ← no .rstrip("%")
+  ```
+- **Impact:** The grounding verifier's preservation check would treat `"82.5%"` and `"82.5"` as different tokens, but `"82.5%"` and `"825"` (10× misprint) as different too — so it catches some drift but a hallucinated percentage that drops the dot can still pass. Verifier is advisory now ("Strict mode behind BRIARWOOD_STRICT_REGEN") but the same regex feeds the gate.
+- **Same-Day Fix:** Add `.rstrip("%")` after the comma/dollar strip. Effort: ~5 min + test.
+
+### F-010 — `market_support_comps` has no source provenance flag in payload
+- **Severity:** Medium
+- **Category:** Pipeline / UI
+- **Location:** [briarwood/agent/tools.py](briarwood/agent/tools.py) — `get_cma()` and `_live_zillow_cma_candidates`/`_fallback_saved_cma_candidates` (~lines 1802-1963).
+- **Evidence:** The event factory at [api/events.py:198-206](api/events.py#L198-L206) hardcodes `"source": "live_market"`, but the underlying data source can transparently fall back from live Zillow to saved comps when SearchAPI is unconfigured. The payload doesn't distinguish.
+- **Impact:** UI claims "Live market context" while showing cached saved-comp fallbacks. Provenance promise leaks.
+- **Same-Day Fix:** Have `get_cma()` return both rows + a `comps_source` literal (`"live_zillow"` | `"saved_fallback"`); plumb to the event payload; UI footnote. Effort: ~1 hr.
+
+### F-011 — Router retries have no backoff or jitter
+- **Severity:** Medium
+- **Category:** LLM
+- **Location:** [briarwood/agent/router.py](briarwood/agent/router.py) — the `for attempt in (1, 2):` block (~lines 210-225)
+- **Evidence:** Two immediate retries with no `time.sleep`. On a provider 5xx burst, every concurrent request retries in lockstep.
+- **Impact:** Amplifies provider transient errors instead of damping them. Low blast radius today (prototype, low concurrency) but easy fix.
+- **Same-Day Fix:** Add `time.sleep(min(0.25 * (2 ** (attempt - 1)) + random.random() * 0.1, 1.5))` on retry. Effort: ~15 min.
+
+### F-012 — README + REPO_MAP describe deleted modules
+- **Severity:** Medium (docs)
+- **Category:** Dead Code (docs)
+- **Location:** [README.md](README.md) (sections "Project Shape", "Run", "Dash Workspace"), [REPO_MAP.md](REPO_MAP.md) (lines 6-12 disclaimer is correct, but the directory tree at lines 18-160 still lists `briarwood/dash_app/`, `briarwood/decision_engine.py`, `app.py`, `run_dash.py`, `briarwood/runner.py`, `briarwood/runner_legacy.py` without flagging them deleted in the table itself).
+- **Impact:** Onboarding confusion. Search-by-doc lands on phantom files.
+- **Same-Day Fix:** Strip deleted module references from README "Project Shape" and "Run"; update REPO_MAP "Major Directory Summary" table to drop the Dash row. Effort: ~30 min.
+
+### F-013 — Multiple stale audit reports at repo root
+- **Severity:** Low
+- **Category:** Dead Code (docs)
+- **Location:** Root: `AUDIT_REPORT.md` (this file, just rewritten), `AUDIT_REPORT_2.0.md`, `BRIARWOOD-AUDIT.md`, `STATE_OF_1.0.md`, `UX-ASSESSMENT.md`, `unified_intelligence.md`, `analysis/00..05*.md`.
+- **Impact:** The last commit message references "refactoring post audits from Claude". Several of these audits cite modules that no longer exist (e.g., `briarwood/decision_engine.py`, `briarwood/pipeline/runner.py`). Future readers will load wrong context.
+- **Same-Day Fix:** Move all but the live `AUDIT_REPORT.md` and `unified_intelligence.md` to `analysis/archive/<date>/`. Effort: ~15 min.
+
+### F-014 — Verdict event projection uses `extra="ignore"` without drift logging
+- **Severity:** Low
+- **Category:** Unified Layer
+- **Location:** [api/pipeline_adapter.py:584](api/pipeline_adapter.py#L584) (`model_config = ConfigDict(extra="ignore")`)
+- **Evidence:** Comment at lines 580-582 acknowledges this is intentional for replay safety, but unknown-field drift on the *write* side has no observation. If `dispatch._decision_view_to_dict` adds a field, the projector silently swallows it.
+- **Impact:** Schema drift between writer (dispatch) and reader (projector) goes undetected until someone reads the projector code. F-003 is the live example.
+- **Same-Day Fix:** When `extra="ignore"` triggers, log the dropped keys at DEBUG. Better: add a periodic test that dumps `_DecisionView.model_fields` and compares to the writer's `_decision_view_to_dict` keys. Effort: ~30 min.
+
+### F-015 — 13 modules in `briarwood/modules/` lack inbound references
+- **Severity:** Low (verification needed)
+- **Category:** Dead Code
+- **Location:** [briarwood/modules/](briarwood/modules/) (44 files; registry at [briarwood/execution/registry.py](briarwood/execution/registry.py) wires ~17; `runner_common.build_engine` adds ~19 more for fallback; some overlap).
+- **Impact:** Could be 10-13 truly dead files or could be wired indirectly via the agent layer. Phase 5 agent flagged but did not enumerate.
+- **Same-Day Fix:** Run `python -c "import briarwood.modules.X"` for each file then `grep -rn "briarwood.modules.X" briarwood/ api/ tests/` — anything with zero non-self matches is dead. Effort: ~45 min, ship the deletes.
+
+---
+
+## Working Well (brief)
+
+- **Unified intelligence is real.** [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) is a single deterministic fusion service with a trust gate, stance classifier, and conflict integration. Not a pass-through.
+- **Cache-key correctness fixed.** The previously flagged staleness bug is closed: [briarwood/orchestrator.py:43-63,186-202](briarwood/orchestrator.py#L43-L63) now hashes structural property facts AND assumptions into the analysis cache key.
+- **Verdict-card drift gate is in place.** [api/pipeline_adapter.py:570-604](api/pipeline_adapter.py#L570-L604) validates through a Pydantic `_DecisionView` and rejects unknown stance vocab.
+- **CMA provenance split exists.** Two distinct events (`valuation_comps` for fed-fair-value rows; `market_support_comps` for live-market context) — even with F-002 and F-010 caveats, the architectural split is correct.
+- **Cost guard wraps both providers.** [briarwood/cost_guard.py](briarwood/cost_guard.py) is called from both `OpenAIChatClient` and `AnthropicChatClient` for every call.
+- **Frontend has zero dead components.** All 26 cards in [web/src/components/chat/](web/src/components/chat/) have at least one importer.
+- **Loading/empty states exist.** Lazy maps render `<MapSkeleton/>` not perpetual spinners; chat-view renders `error` state inline.
+
+---
+
+## Today's Action Plan (sequenced, impact-per-hour)
+
+> **Quick wins first.** Each line: estimated effort → finding IDs.
+
+1. **Gate echo/mock fallback behind `BRIARWOOD_DEMO_MODE`** — 30 min — F-001.
+2. **Stop SSE crash on stray comp row** (assert → log+drop+warn) — 30 min — F-002.
+3. **Delete `briarwood/dash_app/`** + scrub README/REPO_MAP — 30 min — F-005, partial F-012.
+4. **Add `execution_mode` to `build_cache_key`** + log fallback hits — 20 min — F-004 (instrumentation step only).
+5. **Add `primary_value_source` + `all_in_basis` to verdict card** — 45 min — F-003 (partial — optionality_signal full surface deferred).
+6. **Anthropic init failure → raise when explicit** — 20 min — F-007.
+7. **gpt-5 classifier warning** — 5 min — F-008.
+8. **Numeric regex `%` strip** + add unit test — 20 min — F-009.
+9. **Router retry backoff+jitter** — 15 min — F-011.
+10. **Move stale audits to `analysis/archive/`** — 15 min — F-013.
+11. **Sweep 13 unreferenced modules**, delete the truly dead — 45 min — F-015.
+12. **`extra="ignore"` drift logging** — 30 min — F-014.
+
+**Total today (single engineer): ~5h 25m.**
+
+The four highest-impact fixes (#1, #2, #3 partial, #4 instrumentation) take **~2h** and would meaningfully reduce user-visible risk before close of business.
+
+---
+
+## Deferred Items
+
+- **F-003 full surface (optionality_signal in verdict card):** ~3h, requires a UI design pass on hidden-upside vs key-risks pill grouping.
+- **F-004 fallback removal:** depends on F-004 instrumentation results from today; if the fallback log shows zero hits over a few sessions, schedule a delete-PR (1 day to delete, scope test).
+- **F-006 prompt centralization:** ~3h, plus governance decision on prompt versioning convention.
+- **F-010 CMA provenance plumb:** ~1h backend + ~30 min UI footnote — bundle as a small PR.
+- **Portfolio-aware capital allocation** (carried over from prior audit's #5 foundational question): the routed contracts still carry no portfolio state, and `opportunity_cost` only compares to passive benchmarks. Multi-day scope; product decision required first.
+- **Hidden-upside as a routed first-class question:** `CoreQuestion.HIDDEN_UPSIDE` enum exists but is not in any default intent or focus mapping ([briarwood/routing_schema.py](briarwood/routing_schema.py)). 1-day scope.
+
+---
+
+*End of audit.*

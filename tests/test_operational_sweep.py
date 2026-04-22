@@ -15,6 +15,12 @@ class OperationalSweepTests(unittest.TestCase):
         self.assertIn("tavily_recommendations", report)
         self.assertIn("attom_recommendations", report)
         self.assertTrue(any(row["name"] == "valuation" for row in report["scoped_modules"]))
+        self.assertTrue(
+            any(
+                row["name"] == "canonical_underwrite_benchmark"
+                for row in report["evaluation_surfaces"]
+            )
+        )
         statuses = {row["status"] for row in report["evaluation_surfaces"]}
         self.assertTrue(statuses <= {"runnable_and_passing", "runnable_but_failing", "blocked_by_environment"})
 

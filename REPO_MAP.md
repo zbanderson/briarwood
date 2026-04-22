@@ -1,6 +1,6 @@
 # Briarwood Repo Map
 
-Date: 2026-04-19
+Date: 2026-04-22
 Workspace: `briarwood`
 
 > **Historical snapshot.** References to `briarwood/dash_app/`, `briarwood/reports/`,
@@ -10,6 +10,14 @@ Workspace: `briarwood`
 > deleted during the 2026-04-22 verdict-path consolidation. The canonical verdict now
 > flows through `briarwood.synthesis.structured` → `briarwood.runner_routed` →
 > FastAPI (`api/`) → Next.js (`web/`).
+>
+> **Phase 2 (2026-04-22) — legacy fallback removed.** `briarwood/engine.py`
+> (`AnalysisEngine` + `build_engine`), the legacy-fallback branch in
+> `orchestrator.py`, the `execution_mode` cache-key coordinate, and the
+> legacy-only modules (`property_snapshot`, `liquidity_signal`,
+> `market_momentum_signal`, `value_drivers`) have been deleted. Every routable
+> module set is covered by the scoped registry; `supports_scoped_execution`
+> now raises `RoutingError` instead of falling back.
 
 ## A. Directory Map
 
@@ -75,9 +83,6 @@ Tree is limited to two levels deep and excludes `.git`, `node_modules`, `.venv`,
 │   ├── router.py
 │   ├── routing_schema.py
 │   ├── decision_engine.py
-│   ├── engine.py
-│   ├── runner.py
-│   ├── runner_legacy.py
 │   └── runner_routed.py
 ├── data/
 │   ├── agent_artifacts/
@@ -163,7 +168,7 @@ Tree is limited to two levels deep and excludes `.git`, `node_modules`, `.venv`,
 | Directory | Purpose | Key files | Layer |
 | --- | --- | --- | --- |
 | `api/` | FastAPI bridge for chat, SSE streaming, conversation storage, street-view lookup, and prompt-driven pipeline dispatch. | `api/main.py`, `api/pipeline_adapter.py`, `api/events.py`, `api/prompts/*` | Surface Layer + Cross-cutting / Infra |
-| `briarwood/` | Core Python product code: routing, scoped execution, deterministic modules, synthesis, legacy runner compatibility, and data integrations. | `briarwood/orchestrator.py`, `briarwood/routing_schema.py`, `briarwood/router.py`, `briarwood/decision_engine.py`, `briarwood/runner_routed.py` | Reasoning Layer + Data Layer |
+| `briarwood/` | Core Python product code: routing, scoped execution, deterministic modules, synthesis, and data integrations. The legacy `AnalysisEngine` fallback was removed in Phase 2 (2026-04-22); the scoped registry is now the sole execution path. | `briarwood/orchestrator.py`, `briarwood/routing_schema.py`, `briarwood/router.py`, `briarwood/decision_engine.py`, `briarwood/runner_routed.py` | Reasoning Layer + Data Layer |
 | `briarwood/agent/` | Chat-oriented agent stack: routing, prompt composition, rendering, provider wrappers, and session state for the newer conversational pipeline. | `briarwood/agent/router.py`, `briarwood/agent/composer.py`, `briarwood/agent/llm.py`, `briarwood/agent/rendering.py` | Surface Layer + Reasoning Layer |
 | `briarwood/agents/` | Domain-specific analysis agents and supporting schemas for comps, current value, income, rent context, market history, scarcity, school signal, and town/county context. | `briarwood/agents/*/agent.py`, `briarwood/agents/*/schemas.py` | Reasoning Layer + Data Layer |
 | `briarwood/modules/` | Module wrappers and scoped execution units that feed routed analysis and decision synthesis. | `briarwood/modules/*.py`, `briarwood/execution/planner.py`, `briarwood/execution/executor.py` | Reasoning Layer |
@@ -264,4 +269,4 @@ Routing and execution contracts look strongest: the current docs point directly 
 
 ### Contracts that look weakest from layout alone
 
-The workspace still carries legacy compatibility paths: chat-specific `briarwood/agent/*` orchestration, routed/scoped core orchestration, and legacy runner files (`engine.py`, `runner.py`, `runner_legacy.py`) coexist. Inference: this increases the risk of duplicated verdict composition and uneven contract enforcement until the audit verifies the actual call graph. Supporting evidence: concurrent presence of the legacy/full-engine files and the scoped-first orchestrator files in the same package root, plus the docs note that legacy dashboard-era structures are still compatibility surfaces ([docs/current_docs_index.md](docs/current_docs_index.md):22-27).
+With the Phase 2 consolidation, the core reasoning path has a single spine: `briarwood.router` → `briarwood.orchestrator` (scoped-only) → `briarwood.execution` → `briarwood.synthesis.structured` → `briarwood.runner_routed`. The chat-specific `briarwood/agent/*` layer remains a parallel surface concern. The legacy `AnalysisEngine`, `build_engine()`, `runner.py`, `runner_legacy.py`, and legacy-only modules (`property_snapshot`, `liquidity_signal`, `market_momentum_signal`, `value_drivers`) have been deleted — no verdict-composition duplication remains.

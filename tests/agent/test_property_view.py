@@ -129,6 +129,21 @@ class InvariantTests(unittest.TestCase):
         self.assertEqual(view.all_in_basis, 1_150_000.0)
         self.assertNotEqual(view.ask_price, view.all_in_basis)
 
+    def test_explicit_ask_override_becomes_working_ask(self) -> None:
+        """Turn-level ask overrides should keep the UI and analysis on one price."""
+        with patch(
+            "briarwood.agent.property_view.get_property_summary", return_value=_SUMMARY
+        ), patch(
+            "briarwood.agent.property_view.analyze_property", return_value=_UNIFIED
+        ):
+            view = PropertyView.load(
+                "pid",
+                depth="decision",
+                overrides={"ask_price": 699_000.0},
+            )
+        self.assertEqual(view.ask_price, 699_000.0)
+        self.assertEqual(view.overrides_applied, {"ask_price": 699_000.0})
+
     def test_overrides_carried_through(self) -> None:
         with patch(
             "briarwood.agent.property_view.get_property_summary", return_value=_SUMMARY
