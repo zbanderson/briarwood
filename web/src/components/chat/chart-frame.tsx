@@ -7,6 +7,7 @@ import type {
   ChartEvent,
   CmaPositioningChartSpec,
   ChartSpec,
+  HorizontalBarWithRangesChartSpec,
   RentBurnChartSpec,
   RentRampChartSpec,
   RiskBarChartSpec,
@@ -111,6 +112,9 @@ function NativeChart({ spec, title }: { spec: ChartSpec; title: string }) {
   }
   if (spec.kind === "value_opportunity") {
     return <ValueOpportunityChart spec={spec} title={title} />;
+  }
+  if (spec.kind === "horizontal_bar_with_ranges") {
+    return <HorizontalBarWithRangesChart spec={spec} title={title} />;
   }
   return null;
 }
@@ -897,4 +901,152 @@ function breakEvenLabel(year: number | null | undefined) {
   if (year == null) return "No break-even";
   if (year === 0) return "Works today";
   return `Year ${year}`;
+}
+
+function HorizontalBarWithRangesChart({
+  spec,
+  title,
+}: {
+  spec: HorizontalBarWithRangesChartSpec;
+  title: string;
+}) {
+  const scenarios = spec.scenarios.filter(
+    (s) => isNumber(s.low) && isNumber(s.high) && isNumber(s.median),
+  );
+  if (scenarios.length === 0) return null;
+
+  const unit = spec.unit ?? "";
+  const rowHeight = 44;
+  const topPad = 48;
+  const bottomPad = 28;
+  const leftPad = 140;
+  const rightPad = 32;
+  const chartWidth = SVG_W - leftPad - rightPad;
+  const viewH = topPad + scenarios.length * rowHeight + bottomPad;
+
+  const allValues = scenarios.flatMap((s) => [s.low, s.high, s.median]);
+  const bounds = chartBounds(allValues);
+  const xForValue = (value: number) =>
+    leftPad + ((value - bounds.min) / (bounds.max - bounds.min || 1)) * chartWidth;
+  const rowY = (index: number) => topPad + index * rowHeight + rowHeight / 2;
+
+  const formatValue = (n: number) => {
+    if (!isNumber(n)) return "—";
+    const rounded = Math.round(n);
+    return unit ? `${rounded}` : `$${rounded.toLocaleString()}`;
+  };
+
+  const emphasisId = spec.emphasis_scenario_id ?? null;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${SVG_W} ${viewH}`} className="w-full">
+        <rect
+          x="0"
+          y="0"
+          width={SVG_W}
+          height={viewH}
+          rx="18"
+          fill="var(--color-bg-sunken)"
+        />
+        <text x={leftPad} y="22" fontSize="13" fill="var(--color-text)">
+          {title}
+        </text>
+        {unit && (
+          <text
+            x={SVG_W - rightPad}
+            y="22"
+            textAnchor="end"
+            fontSize="11"
+            fill="var(--color-text-faint)"
+          >
+            {unit}
+          </text>
+        )}
+        {scenarios.map((scenario, index) => {
+          const isEmphasized = emphasisId != null && scenario.id === emphasisId;
+          const isSubject = scenario.is_subject === true;
+          const y = rowY(index);
+          const x1 = xForValue(scenario.low);
+          const x2 = xForValue(scenario.high);
+          const xMed = xForValue(scenario.median);
+          const barWidth = Math.max(x2 - x1, 6);
+
+          const fillColor = isEmphasized
+            ? "rgba(245, 197, 66, 0.35)"
+            : isSubject
+              ? "rgba(242, 139, 130, 0.22)"
+              : "rgba(121, 184, 255, 0.20)";
+          const strokeColor = isEmphasized
+            ? "#f5c542"
+            : isSubject
+              ? "#f28b82"
+              : "#79b8ff";
+          const labelWeight = isEmphasized ? 600 : 500;
+
+          return (
+            <g key={scenario.id}>
+              <text
+                x={leftPad - 12}
+                y={y + 4}
+                textAnchor="end"
+                fontSize="11"
+                fontWeight={labelWeight}
+                fill="var(--color-text)"
+              >
+                {scenario.label.slice(0, 22)}
+              </text>
+              <rect
+                x={x1}
+                y={y - 10}
+                width={barWidth}
+                height={20}
+                rx="6"
+                fill={fillColor}
+                stroke={strokeColor}
+                strokeWidth={isEmphasized ? 2 : 1}
+              />
+              <line
+                x1={xMed}
+                y1={y - 12}
+                x2={xMed}
+                y2={y + 12}
+                stroke={strokeColor}
+                strokeWidth="2"
+              />
+              <text
+                x={x2 + 8}
+                y={y + 4}
+                fontSize="10"
+                fill="var(--color-text-muted)"
+              >
+                {formatValue(scenario.median)}
+                {isNumber(scenario.sample_size)
+                  ? ` · n=${scenario.sample_size}`
+                  : ""}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--color-text-faint)]">
+        {scenarios.map((scenario) => {
+          const isEmphasized = emphasisId != null && scenario.id === emphasisId;
+          return (
+            <span
+              key={scenario.id}
+              className={cn(
+                "rounded-full border px-2 py-0.5",
+                isEmphasized
+                  ? "border-[#f5c542] text-[var(--color-text)]"
+                  : "border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)]",
+              )}
+            >
+              {scenario.label}: {formatValue(scenario.low)}–{formatValue(scenario.high)}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

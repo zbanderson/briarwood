@@ -242,3 +242,28 @@ register(
     ),
     _render_hidden_upside_band,
 )
+
+
+def _render_horizontal_bar_with_ranges(_inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """Phase-3 wedge chart. The claim-object representation layer
+    (`briarwood/claims/representation/`) builds the SSE spec directly from a
+    `VerdictWithComparisonClaim`, so the registry entry is a marker for
+    discoverability + validation. Returning ``None`` matches the no-event
+    contract used by `hidden_upside_band`."""
+    return None
+
+
+register(
+    ChartSpec(
+        id="horizontal_bar_with_ranges",
+        name="Scenario ranges",
+        description=(
+            "One horizontal range bar per scenario with a median tick, used "
+            "by the verdict_with_comparison archetype. The wedge's "
+            "representation layer builds the spec directly from the claim."
+        ),
+        required_inputs=["scenarios"],
+        claim_types=["scenario_comparison"],
+    ),
+    _render_horizontal_bar_with_ranges,
+)

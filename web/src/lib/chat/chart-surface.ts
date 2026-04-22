@@ -2,6 +2,7 @@ import type {
   ChartEvent,
   ChartSpec,
   CmaPositioningChartSpec,
+  HorizontalBarWithRangesChartSpec,
   RentBurnChartSpec,
   RentRampChartSpec,
   RiskBarChartSpec,
@@ -172,6 +173,27 @@ function rentRampSurface(spec: RentRampChartSpec): ChartSurface {
   };
 }
 
+function horizontalBarRangesSurface(
+  spec: HorizontalBarWithRangesChartSpec,
+): ChartSurface {
+  const scenarios = spec.scenarios.filter(
+    (s) => isNumber(s.low) && isNumber(s.high) && isNumber(s.median),
+  );
+  if (scenarios.length === 0) return { shouldRender: false };
+  const emphasis = spec.emphasis_scenario_id
+    ? scenarios.find((s) => s.id === spec.emphasis_scenario_id)
+    : null;
+  return {
+    title: "Scenario ranges",
+    summary: emphasis
+      ? `Highlighted: ${emphasis.label}.`
+      : null,
+    companion:
+      "Each bar spans the low-to-high range for that scenario; the tick marks the median.",
+    shouldRender: true,
+  };
+}
+
 function resolveSurface(spec: ChartSpec): ChartSurface {
   switch (spec.kind) {
     case "value_opportunity":
@@ -186,6 +208,8 @@ function resolveSurface(spec: ChartSpec): ChartSurface {
       return rentBurnSurface(spec);
     case "rent_ramp":
       return rentRampSurface(spec);
+    case "horizontal_bar_with_ranges":
+      return horizontalBarRangesSurface(spec);
     default:
       return { shouldRender: true };
   }

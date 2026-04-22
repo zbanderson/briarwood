@@ -105,13 +105,31 @@ export type ValueOpportunityChartSpec = {
   premium_discount_pct?: number | null;
   value_drivers?: string[];
 };
+export type HorizontalBarWithRangesScenario = {
+  id: string;
+  label: string;
+  low: number;
+  high: number;
+  median: number;
+  is_subject?: boolean | null;
+  flag?: "value_opportunity" | "caution" | "none" | null;
+  flag_reason?: string | null;
+  sample_size?: number | null;
+};
+export type HorizontalBarWithRangesChartSpec = {
+  kind: "horizontal_bar_with_ranges";
+  unit?: string | null;
+  scenarios: HorizontalBarWithRangesScenario[];
+  emphasis_scenario_id?: string | null;
+};
 export type ChartSpec =
   | ScenarioFanChartSpec
   | CmaPositioningChartSpec
   | RiskBarChartSpec
   | RentBurnChartSpec
   | RentRampChartSpec
-  | ValueOpportunityChartSpec;
+  | ValueOpportunityChartSpec
+  | HorizontalBarWithRangesChartSpec;
 export type VerdictTrustSummary = {
   confidence?: number | null;
   band?: string | null;

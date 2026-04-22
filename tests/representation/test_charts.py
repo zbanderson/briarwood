@@ -6,7 +6,7 @@ from briarwood.representation import charts
 from briarwood.representation.charts import ChartSpec
 
 
-def test_registry_has_all_six_native_charts() -> None:
+def test_registry_has_all_registered_charts() -> None:
     ids = {spec.id for spec in charts.all_specs()}
     assert ids == {
         "scenario_fan",
@@ -15,7 +15,19 @@ def test_registry_has_all_six_native_charts() -> None:
         "risk_bar",
         "rent_burn",
         "rent_ramp",
+        "hidden_upside_band",
+        "horizontal_bar_with_ranges",
     }
+
+
+def test_horizontal_bar_with_ranges_is_a_marker_spec() -> None:
+    # Wedge chart: registry entry exists for discoverability + id validation,
+    # but rendering happens in the claim-object representation layer, so the
+    # registry renderer must return None like `hidden_upside_band`.
+    spec = charts.get_spec("horizontal_bar_with_ranges")
+    assert spec is not None
+    assert spec.claim_types == ["scenario_comparison"]
+    assert charts.render("horizontal_bar_with_ranges", {"scenarios": []}) is None
 
 
 def test_every_spec_declares_claim_types_and_required_inputs() -> None:
