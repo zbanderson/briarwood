@@ -40,6 +40,11 @@ _NUMBER_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("currency", re.compile(r"\$\s?(\d{1,3}(?:,\d{3})*(?:\.\d+)?)")),
     ("percent", re.compile(r"(-?\d+(?:\.\d+)?)\s?%")),
     ("multiplier", re.compile(r"(\d+(?:\.\d+)?)\s?[xX]\b")),
+    # NEW-V-003: dollar-less magnitude shorthand ("695k", "1.5m", "2B") so
+    # prose-string payload fields ("seller cuts to 695k") register as grounded
+    # when the LLM surfaces the expanded form ("$695,000"). Placed ahead of
+    # bare_int so "695k" is captured as magnitude, not truncated to "695".
+    ("bare_magnitude", re.compile(r"(?<![\w.$%])(\d+(?:\.\d+)?)\s?([KkMmBb])\b")),
     ("bare_int", re.compile(r"(?<![\w.$%])(\d{3,})(?![\w%])")),
 ]
 
@@ -146,8 +151,11 @@ def _flatten_input_values(payload: Any) -> set[str]:
     value as a normalized token. We compare extracted draft numbers against
     this set as a coarse "is this number grounded?" check.
 
-    Strings that look numeric are included; pure prose is skipped — entity
-    matching is handled separately.
+    NEW-V-003: also extract numeric tokens embedded inside prose strings
+    (e.g. ``what_changes_my_view: ["seller cuts to 695k"]``) using the same
+    ``_NUMBER_PATTERNS`` the draft side parses with. Without this step, the
+    LLM is prompted to surface such triggers numerically (``$695,000``) and
+    the verifier then rejects the sentence because the token is "ungrounded".
     """
     out: set[str] = set()
 
@@ -172,10 +180,15 @@ def _flatten_input_values(payload: Any) -> set[str]:
                 out.add(_normalize_token(f"{round(node / 1_000_000, 2)}m"))
         elif isinstance(node, str):
             stripped = node.strip()
-            if stripped:
-                tok = _normalize_token(stripped)
-                if tok and tok != stripped.lower():
-                    out.add(tok)
+            if not stripped:
+                return
+            tok = _normalize_token(stripped)
+            if tok and tok != stripped.lower():
+                out.add(tok)
+            for raw, _kind in extract_numbers(stripped):
+                embedded = _normalize_token(raw)
+                if embedded:
+                    out.add(embedded)
 
     _walk(payload)
     out.discard("")

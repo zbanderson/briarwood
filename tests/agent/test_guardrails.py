@@ -15,6 +15,7 @@ import unittest
 
 from api.guardrails import (
     Anchor,
+    _flatten_input_values,
     extract_anchors,
     extract_numbers,
     split_sentences,
@@ -45,6 +46,54 @@ class TokenExtractionTests(unittest.TestCase):
         kinds_for = {raw: kind for raw, kind in found}
         self.assertIn("2024", kinds_for)
         self.assertNotIn("12", kinds_for)
+
+
+class FlattenInputValuesTests(unittest.TestCase):
+    """NEW-V-003: numeric tokens embedded in prose-string payload fields must
+    register as grounded so the verifier does not strip sentences the LLM was
+    prompted to produce from those strings."""
+
+    def test_number_in_string_value_inside_list_is_extracted(self) -> None:
+        payload = {"what_changes_my_view": ["seller cuts to 695k"]}
+        tokens = _flatten_input_values(payload)
+        self.assertIn("695000", tokens)
+
+    def test_number_in_string_value_inside_dict_is_extracted(self) -> None:
+        payload = {"trigger": {"description": "Seller drops ask to $695,000"}}
+        tokens = _flatten_input_values(payload)
+        self.assertIn("695000", tokens)
+
+    def test_string_with_year_still_behaves_like_bare_int_baseline(self) -> None:
+        """Guard against false positives: the baseline behavior of bare_int
+        (>=3 digits) is preserved — we do not loosen extraction on strings
+        like "in 2024"."""
+        payload = {"note": ["Built in 2024"]}
+        tokens = _flatten_input_values(payload)
+        self.assertIn("2024", tokens)
+
+    def test_string_with_single_digit_does_not_fabricate_token(self) -> None:
+        """"unit 3" must not register as a grounded 3; bare_int requires
+        3+ digits and the new magnitude pattern requires a k/m/b suffix."""
+        payload = {"note": ["unit 3"]}
+        tokens = _flatten_input_values(payload)
+        self.assertNotIn("3", tokens)
+
+
+class DecisionSummaryVerifierRegressionTests(unittest.TestCase):
+    """Appendix D fixture from VERIFICATION_REPORT.md: the ``what_changes_my_view``
+    trigger sentence survives verification once the grounded-number set
+    includes magnitude tokens from string payload fields."""
+
+    def test_buy_trigger_sentence_survives_when_payload_uses_magnitude_shorthand(
+        self,
+    ) -> None:
+        draft = (
+            "My stance would change if the seller reduces the price to "
+            "$695,000 [[what_changes_my_view]]."
+        )
+        inputs = {"what_changes_my_view": ["seller cuts to 695k"]}
+        report = verify_response(draft, inputs, tier="decision_summary")
+        self.assertEqual(report.sentences_with_violations, 0)
 
 
 class AnchorParsingTests(unittest.TestCase):
