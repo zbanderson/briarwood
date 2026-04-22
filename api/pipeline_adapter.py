@@ -33,7 +33,13 @@ from briarwood.agent.llm import LLMClient, default_client
 from briarwood.agent.presentation_advisor import advise_visual_surfaces
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
-from briarwood.routing_schema import DecisionStance
+from briarwood.representation import RepresentationAgent
+from briarwood.routing_schema import (
+    AnalysisDepth,
+    DecisionStance,
+    DecisionType,
+    UnifiedIntelligenceOutput,
+)
 from briarwood.agent.tools import (
     _existing_or_slugified_property_id,
     _json_ready,
@@ -416,7 +422,8 @@ _MODULE_REGISTRY: list[tuple[str, str, str]] = [
     (events.EVENT_TRUST_SUMMARY,    "confidence",        "Confidence Engine"),
     (events.EVENT_TOWN_SUMMARY,     "town_context",      "Town Context"),
     (events.EVENT_COMPS_PREVIEW,    "comp_set",          "Comp Set"),
-    (events.EVENT_CMA_TABLE,        "cma",               "CMA"),
+    (events.EVENT_VALUATION_COMPS,     "valuation_model",   "Valuation Model"),
+    (events.EVENT_MARKET_SUPPORT_COMPS, "cma",              "CMA"),
     (events.EVENT_SCENARIO_TABLE,   "projection_engine", "Projection Engine"),
     (events.EVENT_COMPARISON_TABLE, "comparison_runner", "Comparison Runner"),
     (events.EVENT_VALUE_THESIS,     "value_thesis",      "Value Thesis"),
@@ -660,7 +667,13 @@ def _trust_summary_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def _cma_table_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
+def _valuation_comps_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
+    """Project the valuation-module comps (comps that fed fair value) from the
+    value_thesis view. F2: these are the ``comparable_sales`` module's
+    ``comps_used`` rows, NOT live Zillow market comps. Every row must carry
+    valuation-module provenance — enforced at emission by
+    ``_assert_valuation_module_comps``.
+    """
     rows = list(view.get("comps") or [])
     if not rows:
         return None
@@ -671,6 +684,53 @@ def _cma_table_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
         "summary": view.get("comp_selection_summary"),
         "rows": rows,
     }
+
+
+def _market_support_comps_from_view(view: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Project the market-support comps (live Zillow / saved fallback) from a
+    dedicated session view. F2: these are sourced from ``get_cma()`` and are
+    explicitly NOT the comps that fed fair value.
+    """
+    if not isinstance(view, dict):
+        return None
+    rows = list(view.get("comps") or [])
+    if not rows:
+        return None
+    return {
+        "address": view.get("address"),
+        "town": view.get("town"),
+        "state": view.get("state"),
+        "summary": view.get("comp_selection_summary"),
+        "rows": rows,
+    }
+
+
+def _assert_valuation_module_comps(payload: dict[str, Any]) -> None:
+    """Raise AssertionError if any row in a valuation_comps payload did not
+    originate from the valuation module's ``comps_used`` set.
+
+    F2 contract guard: the valuation_comps event promises rows that fed the
+    fair value computation. ``briarwood.agent.tools._selected_comp_rows``
+    — the canonical projection of ``comparable_sales.comps_used`` —
+    stamps ``feeds_fair_value=True`` on every row by construction
+    (provenance can override, but falls back to True). Any row without that
+    flag is either a live-market context comp or a browse-path neighbor —
+    neither belongs in this event.
+    """
+    rows = payload.get("rows") or []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise AssertionError(
+                f"valuation_comps row {index} is not a dict: {row!r}"
+            )
+        if row.get("feeds_fair_value") is not True:
+            raise AssertionError(
+                "valuation_comps event must only carry comps that fed the fair "
+                f"value computation; row {index} has feeds_fair_value="
+                f"{row.get('feeds_fair_value')!r} (source_label="
+                f"{row.get('source_label')!r}, selected_by="
+                f"{row.get('selected_by')!r})."
+            )
 
 
 def _scenario_table_from_view(view: dict[str, Any]) -> dict[str, Any]:
@@ -819,8 +879,23 @@ def _native_value_chart(view: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
-def _native_cma_chart(view: dict[str, Any]) -> dict[str, Any] | None:
-    rows = [row for row in list(view.get("comps") or []) if isinstance(row, dict)]
+def _native_cma_chart(
+    view: dict[str, Any] | None,
+    *,
+    market_view: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """F2: the "where the comps sit" positioning chart visualizes live-market
+    support around the subject, so rows come from ``last_market_support_view``
+    when available. ``view`` (value_thesis_view) still supplies the subject's
+    anchors — ask, fair value, value band — but its ``comps`` list now only
+    holds valuation-module rows, which are a narrower set. Falling back to the
+    value-thesis comps keeps existing turns that populate both views from
+    regressing; callers that want strict separation pass ``market_view``.
+    """
+    view = view or {}
+    market_view = market_view or {}
+    candidate_rows = list(market_view.get("comps") or []) or list(view.get("comps") or [])
+    rows = [row for row in candidate_rows if isinstance(row, dict)]
     priced_rows = [row for row in rows if isinstance(row.get("ask_price"), (int, float))]
     if not priced_rows:
         return None
@@ -829,7 +904,7 @@ def _native_cma_chart(view: dict[str, Any]) -> dict[str, Any] | None:
         kind="cma_positioning",
         spec={
             "kind": "cma_positioning",
-            "subject_address": view.get("address"),
+            "subject_address": view.get("address") or market_view.get("address"),
             "subject_ask": view.get("ask_price"),
             "fair_value_base": view.get("fair_value_base"),
             "value_low": view.get("value_low"),
@@ -999,9 +1074,9 @@ def _visual_advice_payload(session: Session) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if isinstance(session.last_value_thesis_view, dict):
         payload["value"] = dict(session.last_value_thesis_view)
-        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
-        if cma_payload is not None:
-            payload["cma"] = cma_payload
+        valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
+        if valuation_payload is not None:
+            payload["cma"] = valuation_payload
     if isinstance(session.last_rent_outlook_view, dict):
         payload["rent"] = dict(session.last_rent_outlook_view)
     if isinstance(session.last_projection_view, dict):
@@ -1047,6 +1122,165 @@ def _apply_chart_advice(
         "preferred_surface": section_advice.get("preferred_surface"),
     }
     return patched
+
+
+_CHART_ID_TO_ADVICE_SECTION: dict[str, str] = {
+    "value_opportunity": "value",
+    "cma_positioning": "cma",
+    "risk_bar": "risk",
+    "rent_burn": "rent",
+    "rent_ramp": "rent",
+    "scenario_fan": "scenario",
+}
+
+
+def _unified_from_session(session: Session) -> UnifiedIntelligenceOutput | None:
+    """Reconstruct a best-effort UnifiedIntelligenceOutput for the
+    Representation Agent from the session views produced by `handle_decision`.
+
+    The session persists a projected view of the verdict, not the raw routed
+    output. We synthesize the fields the Agent reads (stance, value position,
+    trust flags, drivers, risks, reasoning) from the decision + value-thesis
+    views. Non-representation fields (`recommendation`, `best_path`, etc.) are
+    filled with inert defaults so the Pydantic model validates without
+    pretending the surface has information it does not."""
+    decision_view = (
+        session.last_decision_view
+        if isinstance(session.last_decision_view, dict)
+        else None
+    )
+    value_view = (
+        session.last_value_thesis_view
+        if isinstance(session.last_value_thesis_view, dict)
+        else {}
+    )
+    if not decision_view:
+        return None
+
+    stance_raw = decision_view.get("decision_stance")
+    try:
+        stance = DecisionStance(stance_raw) if stance_raw else DecisionStance.CONDITIONAL
+    except ValueError:
+        stance = DecisionStance.CONDITIONAL
+
+    trust_summary_raw = decision_view.get("trust_summary")
+    trust_summary = dict(trust_summary_raw) if isinstance(trust_summary_raw, dict) else {}
+    confidence_raw = trust_summary.get("confidence")
+    confidence = (
+        max(0.0, min(1.0, float(confidence_raw)))
+        if isinstance(confidence_raw, (int, float))
+        else 0.5
+    )
+
+    key_value_drivers = list(
+        value_view.get("key_value_drivers")
+        or value_view.get("value_drivers")
+        or []
+    )
+
+    return UnifiedIntelligenceOutput(
+        recommendation="Decision summary pending.",
+        decision=DecisionType.MIXED,
+        best_path="review",
+        key_value_drivers=key_value_drivers,
+        key_risks=list(decision_view.get("key_risks") or []),
+        confidence=confidence,
+        analysis_depth_used=AnalysisDepth.DECISION,
+        decision_stance=stance,
+        primary_value_source=decision_view.get("primary_value_source") or "unknown",
+        value_position={
+            "ask_price": decision_view.get("ask_price"),
+            "fair_value_base": decision_view.get("fair_value_base"),
+            "ask_premium_pct": decision_view.get("ask_premium_pct"),
+            "basis_premium_pct": decision_view.get("basis_premium_pct"),
+        },
+        what_must_be_true=list(decision_view.get("what_must_be_true") or []),
+        trust_flags=list(decision_view.get("trust_flags") or []),
+        trust_summary=trust_summary,
+        contradiction_count=int(decision_view.get("contradiction_count") or 0),
+        blocked_thesis_warnings=list(decision_view.get("blocked_thesis_warnings") or []),
+        why_this_stance=list(decision_view.get("why_this_stance") or []),
+        what_changes_my_view=list(decision_view.get("what_changes_my_view") or []),
+    )
+
+
+def _representation_module_views(
+    session: Session,
+) -> dict[str, dict[str, Any] | None]:
+    """Snapshot the session views the Representation Agent may cite.
+
+    Keys mirror `briarwood.representation.agent.KNOWN_SOURCE_VIEWS`. A view
+    that was not populated by this turn is passed as `None` so the agent
+    can tell "the module did not run" from "the module ran and had no
+    usable data"."""
+    return {
+        "last_decision_view": session.last_decision_view
+        if isinstance(session.last_decision_view, dict)
+        else None,
+        "last_value_thesis_view": session.last_value_thesis_view
+        if isinstance(session.last_value_thesis_view, dict)
+        else None,
+        "last_market_support_view": session.last_market_support_view
+        if isinstance(session.last_market_support_view, dict)
+        else None,
+        "last_risk_view": session.last_risk_view
+        if isinstance(session.last_risk_view, dict)
+        else None,
+        "last_strategy_view": session.last_strategy_view
+        if isinstance(session.last_strategy_view, dict)
+        else None,
+        "last_rent_outlook_view": session.last_rent_outlook_view
+        if isinstance(session.last_rent_outlook_view, dict)
+        else None,
+        "last_projection_view": session.last_projection_view
+        if isinstance(session.last_projection_view, dict)
+        else None,
+    }
+
+
+def _representation_charts(
+    session: Session,
+    user_question: str,
+    visual_advice: dict[str, dict[str, str]],
+    llm: LLMClient | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Run the Representation Agent and return advisor-patched chart events
+    plus a serializable view of the selections for telemetry.
+
+    Returns `([], [])` when the session has no verdict yet — callers should
+    still emit whatever non-chart cards they have. Never raises: agent
+    failures degrade to an empty selection list."""
+    unified = _unified_from_session(session)
+    if unified is None:
+        return [], []
+    module_views = _representation_module_views(session)
+    try:
+        agent = RepresentationAgent(llm_client=llm)
+        plan = agent.plan(
+            unified,
+            user_question=user_question,
+            module_views=module_views,
+        )
+    except Exception as exc:
+        _logger.warning("representation agent failed: %s", exc)
+        return [], []
+
+    market_view = module_views.get("last_market_support_view")
+    raw_events = agent.render_events(plan, module_views, market_view=market_view)
+    patched: list[dict[str, Any]] = []
+    for ev in raw_events:
+        kind = ev.get("kind") or ""
+        section = _CHART_ID_TO_ADVICE_SECTION.get(kind, kind)
+        patched_event = _apply_chart_advice(ev, visual_advice, section)
+        patched.append(patched_event if patched_event is not None else ev)
+    selections = [s.model_dump(mode="json") for s in plan.selections]
+    try:
+        session.last_representation_plan = {"selections": selections}
+    except Exception:
+        # session dataclass may not declare this slot yet; it is advisory
+        # telemetry only and doesn't need to persist to land the feature.
+        pass
+    return patched, selections
 
 
 def _append_chart_once(
@@ -1170,10 +1404,15 @@ def _slot_derived_chips(session: Session) -> list[str]:
         if isinstance(doc_count, int) and doc_count > 0:
             chips.append("What's driving the town outlook?")
 
-    raw_cma = getattr(session, "last_cma_table", None)
-    cma = raw_cma if isinstance(raw_cma, dict) else None
-    if cma and cma.get("rows"):
+    # F2: value_thesis_view carries the valuation-module comps that fed fair
+    # value; last_market_support_view carries the live-market context comps.
+    # Two distinct chips so the user picks which panel to drill into.
+    thesis_view = session.last_value_thesis_view
+    if isinstance(thesis_view, dict) and thesis_view.get("comps"):
         chips.append("Which comps actually fed fair value?")
+    market_view = session.last_market_support_view
+    if isinstance(market_view, dict) and market_view.get("comps"):
+        chips.append("How does the live market look around here?")
 
     return chips
 
@@ -1442,9 +1681,15 @@ async def _browse_stream_impl(
 
     if isinstance(session.last_value_thesis_view, dict):
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
-        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
-        if cma_payload is not None:
-            primary_events.append(events.cma_table(cma_payload))
+        valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
+        if valuation_payload is not None:
+            _assert_valuation_module_comps(valuation_payload)
+            primary_events.append(events.valuation_comps(valuation_payload))
+        market_payload = _market_support_comps_from_view(
+            session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
+        )
+        if market_payload is not None:
+            primary_events.append(events.market_support_comps(market_payload))
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))
@@ -1456,7 +1701,12 @@ async def _browse_stream_impl(
         if _append_chart_once(secondary_events, native_chart):
             native_chart_emitted = True
         cma_chart = _apply_chart_advice(
-            _native_cma_chart(session.last_value_thesis_view),
+            _native_cma_chart(
+                session.last_value_thesis_view,
+                market_view=session.last_market_support_view
+                if isinstance(session.last_market_support_view, dict)
+                else None,
+            ),
             visual_advice,
             "cma",
         )
@@ -1687,52 +1937,39 @@ async def _decision_stream_impl(
     # is silently skipped, matching the _dispatch_stream_impl contract.
     if isinstance(session.last_value_thesis_view, dict):
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
-        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
-        if cma_payload is not None:
-            primary_events.append(events.cma_table(cma_payload))
-        value_chart = _apply_chart_advice(
-            _native_value_chart(session.last_value_thesis_view),
-            visual_advice,
-            "value",
+        valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
+        if valuation_payload is not None:
+            _assert_valuation_module_comps(valuation_payload)
+            primary_events.append(events.valuation_comps(valuation_payload))
+        market_payload = _market_support_comps_from_view(
+            session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
         )
-        if _append_chart_once(projection_secondary, value_chart):
-            native_projection_chart_emitted = True
-        cma_chart = _apply_chart_advice(
-            _native_cma_chart(session.last_value_thesis_view),
-            visual_advice,
-            "cma",
-        )
-        if _append_chart_once(projection_secondary, cma_chart):
-            native_projection_chart_emitted = True
+        if market_payload is not None:
+            primary_events.append(events.market_support_comps(market_payload))
 
     if isinstance(session.last_risk_view, dict):
         primary_events.append(events.risk_profile(session.last_risk_view))
-        risk_chart = _apply_chart_advice(
-            _native_risk_chart(session.last_risk_view),
-            visual_advice,
-            "risk",
-        )
-        if _append_chart_once(projection_secondary, risk_chart):
-            native_projection_chart_emitted = True
 
     if isinstance(session.last_strategy_view, dict):
         primary_events.append(events.strategy_path(session.last_strategy_view))
 
     if isinstance(session.last_rent_outlook_view, dict):
         primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
-        rent_chart = _apply_chart_advice(
-            _native_rent_chart(session.last_rent_outlook_view),
-            visual_advice,
-            "rent",
-        )
-        if _append_chart_once(projection_secondary, rent_chart):
-            native_projection_chart_emitted = True
-        rent_ramp_chart = _apply_chart_advice(
-            _native_rent_ramp_chart(session.last_rent_outlook_view),
-            visual_advice,
-            "rent",
-        )
-        if _append_chart_once(projection_secondary, rent_ramp_chart):
+
+    # Representation Agent (AUDIT 1.4 / 1.7): decision-tier charts are now
+    # picked by the Representation Agent against the registered chart catalog,
+    # backed by the UnifiedIntelligenceOutput we reconstruct from session
+    # views. The hardcoded `_native_*_chart` fan-out used to emit the same
+    # six charts whenever the corresponding view was populated — the agent
+    # replaces that with a claim-driven selection.
+    representation_charts, _representation_selections = _representation_charts(
+        session,
+        text,
+        visual_advice,
+        llm,
+    )
+    for chart_ev in representation_charts:
+        if _append_chart_once(projection_secondary, chart_ev):
             native_projection_chart_emitted = True
 
     if isinstance(session.last_decision_view, dict):
@@ -1762,13 +1999,9 @@ async def _decision_stream_impl(
                     spread=payload["spread"],
                 )
             )
-            native_chart = _apply_chart_advice(
-                _native_scenario_chart(pv),
-                visual_advice,
-                "scenario",
-            )
-            if _append_chart_once(projection_secondary, native_chart):
-                native_projection_chart_emitted = True
+            # The scenario_fan chart that used to accompany this table is
+            # now the Representation Agent's call — it was emitted above as
+            # part of `representation_charts` if the agent picked it.
 
     async for ev in _stream_text(cleaned):
         yield ev
@@ -1950,9 +2183,15 @@ async def _dispatch_stream_impl(
 
     if isinstance(session.last_value_thesis_view, dict):
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
-        cma_payload = _cma_table_from_view(session.last_value_thesis_view)
-        if cma_payload is not None:
-            primary_events.append(events.cma_table(cma_payload))
+        valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
+        if valuation_payload is not None:
+            _assert_valuation_module_comps(valuation_payload)
+            primary_events.append(events.valuation_comps(valuation_payload))
+        market_payload = _market_support_comps_from_view(
+            session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
+        )
+        if market_payload is not None:
+            primary_events.append(events.market_support_comps(market_payload))
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))
@@ -1964,7 +2203,12 @@ async def _dispatch_stream_impl(
         if _append_chart_once(secondary_events, native_chart):
             native_chart_emitted = True
         cma_chart = _apply_chart_advice(
-            _native_cma_chart(session.last_value_thesis_view),
+            _native_cma_chart(
+                session.last_value_thesis_view,
+                market_view=session.last_market_support_view
+                if isinstance(session.last_market_support_view, dict)
+                else None,
+            ),
             visual_advice,
             "cma",
         )
