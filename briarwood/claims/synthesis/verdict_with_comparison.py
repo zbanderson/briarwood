@@ -33,7 +33,10 @@ from briarwood.claims.verdict_with_comparison import (
 )
 
 METHOD_NAME = "comparable_sales_v1"
-MIN_SCENARIO_SAMPLE = 1  # Editor's "sample_size < 5" caveat is a separate check.
+MIN_SCENARIO_SAMPLE = 1
+# Scenarios below this size get a small-sample caveat. The Editor's
+# caveat-for-gap check looks for one caveat per such scenario.
+SMALL_SAMPLE_THRESHOLD = 5
 
 # Delta thresholds (in percent) for verdict label.
 VALUE_FIND_THRESHOLD = -5.0
@@ -258,6 +261,17 @@ def _build_scenarios(
             )
             continue
         scenarios.append(_scenario_from_comps(tier_id, label, tier_comps, is_subject))
+        if len(tier_comps) < SMALL_SAMPLE_THRESHOLD:
+            caveats.append(
+                Caveat(
+                    text=(
+                        f"Sample size for the '{label}' scenario is below "
+                        f"{SMALL_SAMPLE_THRESHOLD} (n={len(tier_comps)})."
+                    ),
+                    severity="info",
+                    source="synthesis.verdict_with_comparison",
+                )
+            )
 
     if not scenarios:
         caveats.append(

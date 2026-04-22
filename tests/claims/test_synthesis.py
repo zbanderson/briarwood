@@ -187,6 +187,23 @@ class CaveatTests(unittest.TestCase):
         ]
         self.assertEqual(bridge_caveats, [])
 
+    def test_small_sample_caveat_per_scenario_below_threshold(self) -> None:
+        # Belmar: renovated_same=3, renovated_plus_bath=2 (both < 5), subject=6
+        claim = _build()
+        small = [
+            s for s in claim.comparison.scenarios if s.sample_size < 5
+        ]
+        self.assertTrue(small, msg="expected at least one small-sample scenario")
+        for scenario in small:
+            matches = [
+                c for c in claim.caveats
+                if scenario.label in c.text and "Sample size" in c.text
+            ]
+            self.assertEqual(
+                len(matches), 1,
+                msg=f"expected one small-sample caveat for {scenario.id}, got {len(matches)}",
+            )
+
 
 class ProvenanceTests(unittest.TestCase):
     def test_consulted_modules_listed(self) -> None:
