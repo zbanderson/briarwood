@@ -57,7 +57,6 @@ Tree is limited to two levels deep and excludes `.git`, `node_modules`, `.venv`,
 │   ├── agent/
 │   ├── agents/
 │   ├── charts/
-│   ├── dash_app/
 │   ├── data_quality/
 │   ├── data_sources/
 │   ├── decision_model/
@@ -164,15 +163,14 @@ Tree is limited to two levels deep and excludes `.git`, `node_modules`, `.venv`,
 | Directory | Purpose | Key files | Layer |
 | --- | --- | --- | --- |
 | `api/` | FastAPI bridge for chat, SSE streaming, conversation storage, street-view lookup, and prompt-driven pipeline dispatch. | `api/main.py`, `api/pipeline_adapter.py`, `api/events.py`, `api/prompts/*` | Surface Layer + Cross-cutting / Infra |
-| `briarwood/` | Core Python product code: routing, scoped execution, deterministic modules, synthesis, legacy runner compatibility, Dash UI, and data integrations. | `briarwood/orchestrator.py`, `briarwood/routing_schema.py`, `briarwood/router.py`, `briarwood/decision_engine.py`, `briarwood/runner_routed.py` | Reasoning Layer + Data Layer |
+| `briarwood/` | Core Python product code: routing, scoped execution, deterministic modules, synthesis, legacy runner compatibility, and data integrations. | `briarwood/orchestrator.py`, `briarwood/routing_schema.py`, `briarwood/router.py`, `briarwood/decision_engine.py`, `briarwood/runner_routed.py` | Reasoning Layer + Data Layer |
 | `briarwood/agent/` | Chat-oriented agent stack: routing, prompt composition, rendering, provider wrappers, and session state for the newer conversational pipeline. | `briarwood/agent/router.py`, `briarwood/agent/composer.py`, `briarwood/agent/llm.py`, `briarwood/agent/rendering.py` | Surface Layer + Reasoning Layer |
 | `briarwood/agents/` | Domain-specific analysis agents and supporting schemas for comps, current value, income, rent context, market history, scarcity, school signal, and town/county context. | `briarwood/agents/*/agent.py`, `briarwood/agents/*/schemas.py` | Reasoning Layer + Data Layer |
 | `briarwood/modules/` | Module wrappers and scoped execution units that feed routed analysis and decision synthesis. | `briarwood/modules/*.py`, `briarwood/execution/planner.py`, `briarwood/execution/executor.py` | Reasoning Layer |
 | `briarwood/local_intelligence/` | Structured local-intelligence extraction, normalization, storage, prompt assembly, and reconciliation. | `briarwood/local_intelligence/service.py`, `adapters.py`, `models.py`, `prompts.py` | Data Layer + Reasoning Layer |
-| `briarwood/dash_app/` | Legacy/compatibility Dash UI for property analysis, compare flows, view models, charts, and data-quality views. | `briarwood/dash_app/app.py`, `simple_view.py`, `components.py`, `view_models.py`, `viz.py` | Surface Layer |
 | `web/` | Next.js 16 chat frontend and route handlers that proxy to the FastAPI backend and render card/table/chart surfaces. | `web/src/app/page.tsx`, `web/src/app/api/*/route.ts`, `web/src/lib/chat/use-chat.ts`, `web/src/components/chat/*` | Surface Layer |
 | `data/` | Local persisted inputs, artifacts, sessions, saved properties, comps, local-intelligence outputs, and sample property fixtures. | `data/sample_property.json`, `data/agent_artifacts/`, `data/saved_properties/` | Data Layer |
-| `tests/` | Unit-heavy regression surface across routing, execution, modules, chat API, Dash view models, synthesis, and domain agents. | `tests/test_execution_v2.py`, `tests/test_orchestrator.py`, `tests/agent/test_llm.py`, `tests/test_chat_api.py` | Cross-cutting / Infra |
+| `tests/` | Unit-heavy regression surface across routing, execution, modules, chat API, synthesis, and domain agents. | `tests/test_execution_v2.py`, `tests/test_orchestrator.py`, `tests/agent/test_llm.py`, `tests/test_chat_api.py` | Cross-cutting / Infra |
 | `docs/` | Current and historical documentation; current source-of-truth points to routing schema, orchestrator, scoped execution support, and unified intelligence. | `docs/current_docs_index.md`, `docs/scoped_execution_support.md`, `unified_intelligence.md` | Cross-cutting / Infra |
 | `scripts/` and `audit_scripts/` | Operational helpers, ingestion utilities, demos, refresh jobs, and prior audit/report generation scripts. | `scripts/dev_chat.py`, `scripts/property_intel_audit_report.py`, `audit_scripts/*.py` | Cross-cutting / Infra |
 
@@ -189,13 +187,13 @@ Counts below are from direct file-system inspection of the current workspace.
 | Module files | 43 | `briarwood/modules/*.py` excluding `__init__.py` |
 | Prompt files | 13 | Markdown prompt files under `api/prompts/` |
 | LLM provider invocation sites | 5 | Four direct calls in [`briarwood/agent/llm.py`](briarwood/agent/llm.py) and one adapter call in [`briarwood/local_intelligence/adapters.py`](briarwood/local_intelligence/adapters.py) |
-| Chart surfaces / specs | 15 | 6 typed chat chart specs in `web/src/lib/chat/events.ts`, 3 primary decision-view charts in [`briarwood/dash_app/viz.py`](briarwood/dash_app/viz.py), and 6 additional Dash chart renderers in [`briarwood/dash_app/components.py`](briarwood/dash_app/components.py) |
-| Table components / renderers | 8 | 3 web chat table components plus 5 named Dash table renderers/helpers |
+| Chart surfaces / specs | 6 | 6 typed chat chart specs in `web/src/lib/chat/events.ts` (Dash-era renderers removed in the 2026-04-22 consolidation) |
+| Table components / renderers | 3 | 3 web chat table components (Dash table renderers removed in the 2026-04-22 consolidation) |
 | FastAPI endpoints | 8 | Conversation CRUD, chat stream, health, street-view in [`api/main.py`](api/main.py) |
 | Next.js route handlers | 7 | `web/src/app/api/*/route.ts` exports |
 | Typed-contract files | 58 | 26 Python files with `BaseModel` plus 32 TypeScript files with `type`/`interface` declarations |
 | Streaming / SSE handlers | 3 | FastAPI streaming endpoint, Next route proxy, and browser-side event parser |
-| Explicit caching layers | 9+ | Orchestrator caches, executor cache support, prompt cache, Dash report/preset caches, file-backed view-model cache, `lru_cache` helpers, and data-source caches |
+| Explicit caching layers | 7+ | Orchestrator caches, executor cache support, prompt cache, file-backed view-model cache, `lru_cache` helpers, and data-source caches |
 | Tests | 125 | 55 root tests, 19 `tests/agent`, 28 `tests/agents`, 13 `tests/modules`, 10 grouped directory tests elsewhere |
 
 Key evidence for notable counts:
@@ -258,10 +256,7 @@ The current authoritative flow is declared as `landing intake -> routed analysis
 
 ### Likely UI rendering boundaries
 
-There are two surface layers in active code:
-
-- FastAPI + Next.js chat: FastAPI owns the SSE wire format and serves artifact URLs, while `web/` renders the conversational UI and proxies API calls ([api/main.py](api/main.py):1-8, [api/main.py](api/main.py):52-57, [web/src/app/page.tsx](web/src/app/page.tsx):1-15, [web/src/lib/api.ts](web/src/lib/api.ts):1-49).
-- Dash compatibility UI: `run_dash.py` boots `briarwood.dash_app.app`, and the Dash app still exposes markets, property analysis, compare, and settings tabs ([run_dash.py](run_dash.py):1-6, [briarwood/dash_app/app.py](briarwood/dash_app/app.py):87-123).
+The single active surface layer is the FastAPI + Next.js chat: FastAPI owns the SSE wire format and serves artifact URLs, while `web/` renders the conversational UI and proxies API calls ([api/main.py](api/main.py):1-8, [api/main.py](api/main.py):52-57, [web/src/app/page.tsx](web/src/app/page.tsx):1-15, [web/src/lib/api.ts](web/src/lib/api.ts):1-49). The Dash compatibility UI (`run_dash.py`, `briarwood/dash_app/`) was removed in the 2026-04-22 consolidation.
 
 ### Contracts that look strongest from layout alone
 
@@ -269,4 +264,4 @@ Routing and execution contracts look strongest: the current docs point directly 
 
 ### Contracts that look weakest from layout alone
 
-The workspace has multiple surface layers and legacy compatibility paths at once: a Dash app, a Next.js chat UI, chat-specific `briarwood/agent/*` orchestration, routed/scoped core orchestration, and legacy runner files (`engine.py`, `runner.py`, `runner_legacy.py`) all coexist. Inference: this increases the risk of duplicated verdict composition, drift between chat and Dash surfaces, and uneven contract enforcement until the audit verifies the actual call graph. Supporting evidence: concurrent presence of the legacy/full-engine files and the scoped-first orchestrator files in the same package root, plus the docs note that legacy dashboard-era structures are still compatibility surfaces ([docs/current_docs_index.md](docs/current_docs_index.md):22-27).
+The workspace still carries legacy compatibility paths: chat-specific `briarwood/agent/*` orchestration, routed/scoped core orchestration, and legacy runner files (`engine.py`, `runner.py`, `runner_legacy.py`) coexist. Inference: this increases the risk of duplicated verdict composition and uneven contract enforcement until the audit verifies the actual call graph. Supporting evidence: concurrent presence of the legacy/full-engine files and the scoped-first orchestrator files in the same package root, plus the docs note that legacy dashboard-era structures are still compatibility surfaces ([docs/current_docs_index.md](docs/current_docs_index.md):22-27).
