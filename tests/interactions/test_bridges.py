@@ -10,6 +10,7 @@ from __future__ import annotations
 import unittest
 
 from briarwood.interactions import InteractionTrace, run_all_bridges
+from briarwood.interactions import primary_value_source
 from briarwood.interactions.bridge import BridgeRecord
 from briarwood.modules.carry_cost import run_carry_cost
 from briarwood.modules.risk_model import run_risk_model
@@ -97,6 +98,34 @@ class BridgeRegistryTests(unittest.TestCase):
         self.assertIn("records", serialized)
         self.assertIn("fired_count", serialized)
         self.assertEqual(serialized["total_count"], 9)
+
+    def test_primary_value_source_logs_unknown_path(self) -> None:
+        """NEW-V-005: when no signals fire, the bridge emits an INFO log
+        summarizing which signals were checked and absent, so the blank
+        'unknown' classification is traceable in production logs."""
+        empty_outputs: dict[str, dict] = {}
+        with self.assertLogs(primary_value_source.__name__, level="DEBUG") as captured:
+            record = primary_value_source.run(empty_outputs)
+
+        self.assertFalse(record.fired)
+        self.assertEqual(record.adjustments["primary_value_source"], "unknown")
+        # DEBUG logs for all four branches fired=False, plus one INFO log at the tail.
+        messages = [entry.getMessage() for entry in captured.records]
+        self.assertTrue(
+            any("strategy_check" in m and "fired=False" in m for m in messages)
+        )
+        self.assertTrue(
+            any("valuation_mispricing_check" in m and "fired=False" in m for m in messages)
+        )
+        self.assertTrue(
+            any("carry_offset_check" in m and "fired=False" in m for m in messages)
+        )
+        self.assertTrue(
+            any("scenario_check" in m and "fired=False" in m for m in messages)
+        )
+        info_records = [r for r in captured.records if r.levelname == "INFO"]
+        self.assertEqual(len(info_records), 1)
+        self.assertIn("primary_value_source.unknown", info_records[0].getMessage())
 
     def test_bridge_exception_does_not_kill_run(self) -> None:
         # Pass a broken outputs dict that might trip a bridge; the registry

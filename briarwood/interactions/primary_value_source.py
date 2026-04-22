@@ -16,12 +16,16 @@ and picks the source whose signals dominate.
 
 from __future__ import annotations
 
+import logging
+
 from briarwood.interactions.bridge import (
     BridgeRecord,
     ModuleOutputs,
     _metrics,
     _payload,
 )
+
+_logger = logging.getLogger(__name__)
 
 NAME = "primary_value_source"
 
@@ -48,7 +52,13 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
         "redevelopment_play": ("optionality", 0.85, "Teardown/land signals → optionality."),
         "scarcity_hold": ("scarcity", 0.8, "Town scarcity dominates the thesis."),
     }
-    if strategy in strategy_map:
+    strategy_fired = strategy in strategy_map
+    _logger.debug(
+        "primary_value_source.strategy_check fired=%s strategy=%r",
+        strategy_fired,
+        strategy,
+    )
+    if strategy_fired:
         label, weight, reason = strategy_map[strategy]
         candidates.append((label, weight, reason))
         reasoning.append(reason)
@@ -56,26 +66,60 @@ def run(outputs: ModuleOutputs) -> BridgeRecord:
     # 2. Valuation signals: heavy scenario upside tilts to repositioning.
     val_metrics = _metrics(valuation)
     mispricing_pct = val_metrics.get("mispricing_pct")
-    if isinstance(mispricing_pct, (int, float)) and mispricing_pct > 0.20:
+    mispricing_fired = (
+        isinstance(mispricing_pct, (int, float)) and mispricing_pct > 0.20
+    )
+    _logger.debug(
+        "primary_value_source.valuation_mispricing_check fired=%s mispricing_pct=%r",
+        mispricing_fired,
+        mispricing_pct,
+    )
+    if mispricing_fired:
         candidates.append(
             ("current_value", 0.5, f"Comp-based value is {mispricing_pct*100:.0f}% above ask — price vs comps is the story.")
         )
 
     # 3. Carry-offset-supported deals favor income.
+    ratio = None
     if carry is not None:
         rent_x_cost = outputs.get("__bridge__rent_x_cost")  # optional: same-run bridge result
-        ratio = None
         if isinstance(rent_x_cost, dict):
             ratio = (rent_x_cost.get("adjustments") or {}).get("carry_offset_ratio")
-        if isinstance(ratio, (int, float)) and ratio >= 1.0:
-            candidates.append(("income", 0.6, f"Carry-offset ratio {ratio:.2f} — cash flow supports."))
+    carry_fired = isinstance(ratio, (int, float)) and ratio >= 1.0
+    _logger.debug(
+        "primary_value_source.carry_offset_check fired=%s carry_present=%s ratio=%r",
+        carry_fired,
+        carry is not None,
+        ratio,
+    )
+    if carry_fired:
+        candidates.append(("income", 0.6, f"Carry-offset ratio {ratio:.2f} — cash flow supports."))
 
     # 4. Scenario-heavy deals → repositioning.
     s_metrics = _metrics(scenario)
-    if s_metrics.get("renovation_budget") or s_metrics.get("capex_basis_used"):
+    scenario_fired = bool(
+        s_metrics.get("renovation_budget") or s_metrics.get("capex_basis_used")
+    )
+    _logger.debug(
+        "primary_value_source.scenario_check fired=%s renovation_budget=%r capex_basis_used=%r",
+        scenario_fired,
+        s_metrics.get("renovation_budget"),
+        s_metrics.get("capex_basis_used"),
+    )
+    if scenario_fired:
         candidates.append(("repositioning", 0.55, "Scenario module carries a renovation budget."))
 
     if not candidates:
+        _logger.info(
+            "primary_value_source.unknown strategy=%r mispricing_pct=%r carry_present=%s "
+            "carry_ratio=%r renovation_budget=%r capex_basis_used=%r",
+            strategy,
+            mispricing_pct,
+            carry is not None,
+            ratio,
+            s_metrics.get("renovation_budget"),
+            s_metrics.get("capex_basis_used"),
+        )
         return BridgeRecord(
             name=NAME,
             fired=False,
