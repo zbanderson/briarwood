@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import type { ValueThesisEvent } from "@/lib/chat/events";
+import type { HiddenUpsideItem, ValueThesisEvent } from "@/lib/chat/events";
 
 type Props = {
   thesis: ValueThesisEvent;
@@ -116,6 +116,10 @@ export function ValueThesisCard({ thesis, hideCompStory = false }: Props) {
           tone="amber"
         />
       )}
+      {thesis.optionality_signal &&
+        thesis.optionality_signal.hidden_upside_items.length > 0 && (
+          <HiddenUpsideBlock signal={thesis.optionality_signal} />
+        )}
       {thesis.blocked_thesis_warnings && thesis.blocked_thesis_warnings.length > 0 && (
         <ListBlock
           label="Blocked thesis warnings"
@@ -181,6 +185,58 @@ function MiniStat({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div className="mt-0.5 font-medium text-[var(--color-text)]">{value}</div>
+    </div>
+  );
+}
+
+function HiddenUpsideBlock({
+  signal,
+}: {
+  signal: { hidden_upside_items: HiddenUpsideItem[]; summary?: string | null };
+}) {
+  return (
+    <div className="mt-4">
+      <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
+        Hidden upside
+      </div>
+      {signal.summary && (
+        <div className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+          {signal.summary}
+        </div>
+      )}
+      <ul className="mt-2 space-y-2">
+        {signal.hidden_upside_items.map((item, i) => {
+          const magUsd = money(item.magnitude_usd);
+          const magPct = pct(item.magnitude_pct);
+          const hasUsd = item.magnitude_usd != null && Number.isFinite(item.magnitude_usd);
+          const magnitude = [hasUsd ? magUsd : null, magPct].filter(Boolean).join(" · ");
+          return (
+            <li
+              key={`${item.kind}-${i}`}
+              className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] p-2.5 text-[13px]"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-medium text-[var(--color-text)]">
+                  {item.label}
+                </span>
+                {magnitude && (
+                  <span className="shrink-0 text-[12px] font-medium text-emerald-300">
+                    {magnitude}
+                  </span>
+                )}
+              </div>
+              {item.rationale && (
+                <div className="mt-1 text-[12px] text-[var(--color-text-muted)]">
+                  {item.rationale}
+                </div>
+              )}
+              <div className="mt-1 text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]">
+                {item.source_module.replace(/_/g, " ")}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

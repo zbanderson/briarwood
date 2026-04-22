@@ -185,7 +185,7 @@ class DecisionHandlerTests(unittest.TestCase):
         self.assertIn("$742,000 to $861,000", response)
         self.assertNotIn("unknown", response.lower())
 
-    def test_decision_prefers_live_cma_comps_for_preview_and_value_thesis(self) -> None:
+    def test_decision_splits_valuation_and_market_support_comps(self) -> None:
         decision = RouterDecision(
             AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
         )
@@ -247,12 +247,35 @@ class DecisionHandlerTests(unittest.TestCase):
             confidence_notes=[],
             missing_fields=[],
         )
+        valuation_module_thesis = {
+            "ask_price": 767000.0,
+            "fair_value_base": 720644.0,
+            "comp_selection_summary": "Valuation module comps used for fair value.",
+            "comps": [
+                {
+                    "property_id": "saved-1202-m-street",
+                    "address": "1202 M Street, Belmar, NJ 07719",
+                    "beds": 3,
+                    "baths": 2.0,
+                    "ask_price": 735000.0,
+                    "blocks_to_beach": None,
+                    "source_label": "Saved comp",
+                    "source_summary": "Saved nearby comp",
+                    "inclusion_reason": "Closest match on layout.",
+                    "selected_by": "valuation",
+                    "feeds_fair_value": True,
+                },
+            ],
+        }
         with patch(
             "briarwood.agent.dispatch.PropertyView.load",
             return_value=view,
         ), patch(
             "briarwood.agent.dispatch.get_cma",
             return_value=live_cma,
+        ), patch(
+            "briarwood.agent.dispatch.get_value_thesis",
+            return_value=valuation_module_thesis,
         ), patch(
             "briarwood.agent.dispatch._build_town_summary",
             return_value={"town": "Belmar", "state": "NJ"},
@@ -298,12 +321,148 @@ class DecisionHandlerTests(unittest.TestCase):
         ):
             handle_decision("should I buy this?", decision, session, llm=None)
 
+        # comps_preview still reflects the live CMA (used for the inline preview)
         self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
-        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        # F2: value_thesis.comps now must be valuation-module comps only.
+        self.assertEqual(
+            session.last_value_thesis_view["comps"][0]["property_id"],
+            "saved-1202-m-street",
+        )
         self.assertEqual(
             session.last_value_thesis_view["comp_selection_summary"],
+            "Valuation module comps used for fair value.",
+        )
+        # F2: live-market comps land in last_market_support_view, not value_thesis.
+        self.assertIsNotNone(session.last_market_support_view)
+        self.assertEqual(
+            session.last_market_support_view["comps"][0]["property_id"],
+            "1302-l-street",
+        )
+        self.assertEqual(
+            session.last_market_support_view["comp_selection_summary"],
             "Live Zillow market comps ranked toward the subject.",
         )
+
+
+class DecisionPartialDataWarningTests(unittest.TestCase):
+    """F7: enrichment failures must not silently degrade — handle_decision
+    records each failure on ``session.last_partial_data_warnings`` so the
+    SSE layer can surface a banner."""
+
+    def _base_view(self) -> PropertyView:
+        return PropertyView(
+            pid=REF,
+            address="526 West End Ave, Avon By The Sea, NJ 07717",
+            town="Avon By The Sea",
+            state="NJ",
+            beds=3,
+            baths=2.0,
+            ask_price=1_499_000.0,
+            bcv=None,
+            pricing_view="appears_fully_valued",
+            fair_value_base=1_379_080.0,
+            all_in_basis=1_499_000.0,
+            decision_stance="buy_if_price_improves",
+            primary_value_source="current_value",
+            trust_flags=("incomplete_carry_inputs",),
+        )
+
+    def _run_with_failures(self, *, fail: set[str]) -> Session:
+        decision = RouterDecision(
+            AnswerType.DECISION, confidence=0.9, target_refs=[REF], reason="test"
+        )
+        session = Session()
+        view = self._base_view()
+
+        def _maybe_raise(section: str, ok_value):
+            if section in fail:
+                raise RuntimeError(f"forced {section} failure")
+            return ok_value
+
+        town_summary = {"town": view.town, "state": view.state}
+        cma_result = CMAResult(
+            property_id=REF,
+            address=view.address,
+            town=view.town,
+            state=view.state,
+            ask_price=view.ask_price,
+            fair_value_base=view.fair_value_base,
+            value_low=None,
+            value_high=None,
+            pricing_view=view.pricing_view,
+            primary_value_source=view.primary_value_source,
+            comp_selection_summary="Live comps.",
+            comps=[],
+            confidence_notes=[],
+            missing_fields=[],
+        )
+        with patch(
+            "briarwood.agent.dispatch.PropertyView.load", return_value=view
+        ), patch(
+            "briarwood.agent.dispatch._build_town_summary",
+            side_effect=lambda *a, **kw: _maybe_raise("town_summary", town_summary),
+        ), patch(
+            "briarwood.agent.dispatch.get_cma",
+            side_effect=lambda *a, **kw: _maybe_raise("cma", cma_result),
+        ), patch(
+            "briarwood.agent.dispatch._build_comps_preview",
+            side_effect=lambda *a, **kw: _maybe_raise(
+                "comps_preview", {"comps": []}
+            ),
+        ), patch(
+            "briarwood.agent.dispatch._build_decision_value_thesis",
+            side_effect=lambda *a, **kw: _maybe_raise(
+                "value_thesis", {"comps": []}
+            ),
+        ), patch(
+            "briarwood.agent.dispatch._build_market_support_view",
+            side_effect=lambda *a, **kw: _maybe_raise(
+                "market_support_comps", {"comps": []}
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            side_effect=lambda *a, **kw: _maybe_raise(
+                "projection",
+                {
+                    "ask_price": view.ask_price,
+                    "base_case_value": view.fair_value_base,
+                    "bull_case_value": view.fair_value_base * 1.1,
+                    "bear_case_value": view.fair_value_base * 0.9,
+                },
+            ),
+        ), patch(
+            "briarwood.agent.dispatch.get_property_summary",
+            return_value={"address": view.address, "town": view.town, "state": view.state},
+        ):
+            handle_decision("should I buy this?", decision, session, llm=None)
+        return session
+
+    def test_town_summary_failure_records_warning(self) -> None:
+        session = self._run_with_failures(fail={"town_summary"})
+        sections = [w["section"] for w in session.last_partial_data_warnings]
+        self.assertIn("town_summary", sections)
+        self.assertIsNone(session.last_town_summary)
+        # Core decision still lands — verdict view populated.
+        self.assertIsNotNone(session.last_decision_view)
+
+    def test_each_enrichment_failure_records_distinct_warning(self) -> None:
+        for section in [
+            "town_summary",
+            "cma",
+            "comps_preview",
+            "value_thesis",
+            "market_support_comps",
+            "projection",
+        ]:
+            with self.subTest(section=section):
+                session = self._run_with_failures(fail={section})
+                sections = [w["section"] for w in session.last_partial_data_warnings]
+                self.assertIn(section, sections)
+                entry = next(
+                    w for w in session.last_partial_data_warnings if w["section"] == section
+                )
+                self.assertIn("forced", entry["reason"])
+                self.assertTrue(entry["verdict_reliable"])
 
 
 class EdgeHandlerTests(unittest.TestCase):
@@ -1014,10 +1173,19 @@ class SearchHandlerTests(unittest.TestCase):
         ):
             handle_browse("what do you think of 1008 14th ave?", self._decision(), session, llm=None)
 
+        # comps_preview continues to render the live CMA rows.
         self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
-        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        # F2: browse does not run the valuation module, so value_thesis.comps
+        # must be empty and live-market comps live on last_market_support_view.
+        self.assertEqual(session.last_value_thesis_view["comps"], [])
+        self.assertIsNone(session.last_value_thesis_view["comp_selection_summary"])
+        self.assertIsNotNone(session.last_market_support_view)
         self.assertEqual(
-            session.last_value_thesis_view["comp_selection_summary"],
+            session.last_market_support_view["comps"][0]["property_id"],
+            "1302-l-street",
+        )
+        self.assertEqual(
+            session.last_market_support_view["comp_selection_summary"],
             "Live Zillow market comps ranked toward the subject.",
         )
 
@@ -1615,7 +1783,7 @@ class EdgeHandlerTests(unittest.TestCase):
         thesis.assert_called_once_with(REF, overrides={"ask_price": 1_300_000.0})
         analyzer.assert_called_once_with(REF, overrides={"ask_price": 1_300_000.0})
 
-    def test_cma_turn_uses_cma_comps_when_thesis_has_none(self) -> None:
+    def test_cma_turn_routes_live_comps_to_market_support_not_value_thesis(self) -> None:
         decision = RouterDecision(
             AnswerType.EDGE, confidence=0.9, target_refs=[REF], reason="test"
         )
@@ -1671,7 +1839,15 @@ class EdgeHandlerTests(unittest.TestCase):
             response = handle_edge("what does the CMA look like?", decision, session, llm=None)
 
         self.assertIn("1302-l-street", response)
-        self.assertEqual(session.last_value_thesis_view["comps"][0]["property_id"], "1302-l-street")
+        # F2: thesis had no comps — value_thesis.comps must NOT silently fall
+        # back to the live CMA rows. Live comps surface on last_market_support_view
+        # and feed the comps_preview so the inline table still renders.
+        self.assertEqual(session.last_value_thesis_view["comps"], [])
+        self.assertIsNotNone(session.last_market_support_view)
+        self.assertEqual(
+            session.last_market_support_view["comps"][0]["property_id"],
+            "1302-l-street",
+        )
         self.assertEqual(session.last_comps_preview["comps"][0]["property_id"], "1302-l-street")
 
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/cn";
 import type { VerdictEvent } from "@/lib/chat/events";
 
@@ -123,11 +124,107 @@ export function VerdictCard({ verdict }: Props) {
         </div>
       )}
 
+      {verdict.why_this_stance && verdict.why_this_stance.length > 0 && (
+        <ListBlock label="Why this stance" items={verdict.why_this_stance} />
+      )}
+
       {verdict.what_must_be_true.length > 0 && (
         <ListBlock label="What must be true" items={verdict.what_must_be_true} />
       )}
       {verdict.key_risks.length > 0 && (
         <ListBlock label="Key risks" items={verdict.key_risks} />
+      )}
+
+      <VerdictDetails verdict={verdict} />
+    </div>
+  );
+}
+
+function VerdictDetails({ verdict }: { verdict: VerdictEvent }) {
+  const [open, setOpen] = useState(false);
+
+  const whatChanges = verdict.what_changes_my_view ?? [];
+  const blocked = verdict.blocked_thesis_warnings ?? [];
+  const contradictions = verdict.contradiction_count ?? null;
+  const trust = verdict.trust_summary ?? null;
+
+  const hasContent =
+    whatChanges.length > 0 ||
+    blocked.length > 0 ||
+    (contradictions != null && contradictions > 0) ||
+    (trust != null &&
+      (trust.confidence != null ||
+        trust.band != null ||
+        trust.field_completeness != null ||
+        trust.estimated_reliance != null));
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="mt-4 border-t border-[var(--color-border-subtle)] pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between text-[11px] uppercase tracking-wider text-[var(--color-text-faint)] hover:text-[var(--color-text-muted)]"
+        aria-expanded={open}
+      >
+        <span>{open ? "Hide details" : "Show more"}</span>
+        <span aria-hidden>{open ? "−" : "+"}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {trust && (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] sm:grid-cols-4">
+              {trust.confidence != null && (
+                <Stat
+                  label="Confidence"
+                  value={`${Math.round(trust.confidence * 100)}%`}
+                />
+              )}
+              {trust.band && <Stat label="Band" value={trust.band} />}
+              {trust.field_completeness != null && (
+                <Stat
+                  label="Completeness"
+                  value={`${Math.round(trust.field_completeness * 100)}%`}
+                />
+              )}
+              {trust.estimated_reliance != null && (
+                <Stat
+                  label="Reliance"
+                  value={`${Math.round(trust.estimated_reliance * 100)}%`}
+                />
+              )}
+            </div>
+          )}
+
+          {contradictions != null && contradictions > 0 && (
+            <div className="text-[12px] text-amber-200/90">
+              {contradictions} contradiction{contradictions === 1 ? "" : "s"} across
+              modules — see verifier report for details.
+            </div>
+          )}
+
+          {whatChanges.length > 0 && (
+            <ListBlock label="What changes my view" items={whatChanges} />
+          )}
+
+          {blocked.length > 0 && (
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-rose-300/80">
+                Blocked thesis warnings
+              </div>
+              <ul className="mt-1.5 space-y-1 text-[12px] text-rose-200/90">
+                {blocked.map((w, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="mt-2 inline-block h-1 w-1 shrink-0 rounded-full bg-rose-400/70" />
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

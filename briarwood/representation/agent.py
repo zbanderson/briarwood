@@ -56,6 +56,12 @@ class ClaimType(str, Enum):
     RISK_COMPOSITION = "risk_composition"
     RENT_COVERAGE = "rent_coverage"
     RENT_RAMP = "rent_ramp"
+    # F5: hidden upside levers that don't show up in the ask-vs-fair-value
+    # frame — renovation spread, accessory-unit income, repositioning, etc.
+    # Sourced from ``UnifiedIntelligenceOutput.optionality_signal``. No
+    # registered chart yet; surfaced as a claim-only selection so the UI
+    # can render it in the value_thesis SSE card.
+    HIDDEN_UPSIDE = "hidden_upside"
 
 
 # Known module-view keys the agent can cite as a chart's source.
@@ -410,6 +416,35 @@ class RepresentationAgent:
                     supporting_evidence=["last_rent_outlook_view.ramp_chart_payload"],
                     chart_id="rent_ramp",
                     source_view="last_rent_outlook_view",
+                )
+            )
+
+        # F5: surface hidden-upside levers as a claim-only selection when the
+        # optionality_signal on the unified output carries items. No chart is
+        # registered for it yet — the value_thesis SSE event is the surface —
+        # so we emit a chart-less selection with the lever magnitudes in
+        # supporting_evidence. The signal may be empty when the run didn't
+        # exercise HIDDEN_UPSIDE or the modules didn't populate magnitudes.
+        optionality = unified.optionality_signal
+        upside_items = list(optionality.hidden_upside_items)
+        if upside_items:
+            evidence: list[str] = []
+            for item in upside_items[:3]:
+                mag_bits: list[str] = []
+                if item.magnitude_usd is not None:
+                    mag_bits.append(f"${item.magnitude_usd:,.0f}")
+                if item.magnitude_pct is not None:
+                    mag_bits.append(f"{item.magnitude_pct*100:.1f}%")
+                mag = (" @ " + "/".join(mag_bits)) if mag_bits else ""
+                evidence.append(f"{item.source_module}.{item.kind}{mag}")
+            labels = ", ".join(item.label for item in upside_items[:3])
+            selections.append(
+                RepresentationSelection(
+                    claim=f"Hidden upside levers: {labels}.",
+                    claim_type=ClaimType.HIDDEN_UPSIDE,
+                    supporting_evidence=evidence,
+                    chart_id=None,
+                    source_view=None,
                 )
             )
 

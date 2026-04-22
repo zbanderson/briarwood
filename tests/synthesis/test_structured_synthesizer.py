@@ -174,5 +174,76 @@ class StructuredSynthesizerTests(unittest.TestCase):
         self.assertEqual(result["interaction_trace"]["total_count"], 8)
 
 
+class OptionalitySignalTests(unittest.TestCase):
+    """F5: hidden-upside signal populates from renovation / ARV / unit-income
+    module outputs. The synthesizer reads typed fields we know those modules
+    emit today; if a module reshapes its output, this test breaks loudly
+    instead of silently dropping the signal."""
+
+    def _base(self) -> tuple[dict, dict, dict]:
+        ps, outputs, trace = _build(context_normal())
+        return ps, outputs, trace
+
+    def test_empty_when_no_upside_modules_present(self) -> None:
+        ps, outputs, trace = self._base()
+        result = build_unified_output(
+            property_summary=ps,
+            parser_output=_parser_output_dict(),
+            module_results=outputs,
+            interaction_trace=trace,
+        )
+        signal = result["optionality_signal"]
+        self.assertEqual(signal["hidden_upside_items"], [])
+
+    def test_renovation_spread_surfaces_as_hidden_upside_item(self) -> None:
+        ps, outputs, trace = self._base()
+        outputs["renovation_impact"] = {
+            "data": {
+                "summary": "Full-gut reno underwrite.",
+                "metrics": {
+                    "gross_value_creation": 180_000,
+                    "net_value_creation": 125_000,
+                    "roi_pct": 42.0,
+                    "renovation_budget": 55_000,
+                },
+            },
+            "confidence": 0.72,
+        }
+        result = build_unified_output(
+            property_summary=ps,
+            parser_output=_parser_output_dict(),
+            module_results=outputs,
+            interaction_trace=trace,
+        )
+        items = result["optionality_signal"]["hidden_upside_items"]
+        kinds = {item["kind"] for item in items}
+        self.assertIn("renovation_spread", kinds)
+        reno_item = next(i for i in items if i["kind"] == "renovation_spread")
+        self.assertEqual(reno_item["source_module"], "renovation_impact")
+        self.assertAlmostEqual(reno_item["magnitude_usd"], 125_000.0)
+
+    def test_unit_income_offset_surfaces_as_hidden_upside_item(self) -> None:
+        ps, outputs, trace = self._base()
+        outputs["unit_income_offset"] = {
+            "data": {
+                "summary": "Detached ADU is rent-ready.",
+                "offset_snapshot": {
+                    "additional_unit_income_value": 48_000,
+                    "additional_unit_count": 1,
+                    "back_house_monthly_rent": 2_400,
+                },
+            },
+            "confidence": 0.6,
+        }
+        result = build_unified_output(
+            property_summary=ps,
+            parser_output=_parser_output_dict(),
+            module_results=outputs,
+            interaction_trace=trace,
+        )
+        items = result["optionality_signal"]["hidden_upside_items"]
+        self.assertTrue(any(i["kind"] == "unit_income" for i in items))
+
+
 if __name__ == "__main__":
     unittest.main()

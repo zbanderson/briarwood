@@ -86,6 +86,32 @@ class RouterTests(unittest.TestCase):
         self.assertIn(ModuleName.CONFIDENCE, decision.selected_modules)
         self.assertGreaterEqual(len(decision.core_questions), 1)
 
+    def test_hidden_upside_focus_pulls_in_renovation_and_arv_for_flip(self) -> None:
+        # F5: RENOVATE_THEN_SELL universe owns RENOVATION_IMPACT / ARV_MODEL
+        # / RESALE_SCENARIO — hidden_upside focus should surface them even at
+        # decision depth, where they aren't in the depth baseline.
+        modules = filter_modules_by_depth_and_focus(
+            intent_type=IntentType.RENOVATE_THEN_SELL,
+            analysis_depth=AnalysisDepth.DECISION,
+            question_focus=["hidden_upside"],
+        )
+
+        self.assertIn(ModuleName.RENOVATION_IMPACT, modules)
+        self.assertIn(ModuleName.ARV_MODEL, modules)
+        self.assertIn(ModuleName.RESALE_SCENARIO, modules)
+
+    def test_hidden_upside_focus_pulls_in_unit_income_for_house_hack(self) -> None:
+        # F5: HOUSE_HACK_MULTI_UNIT universe owns UNIT_INCOME_OFFSET; hidden
+        # upside should keep it selected and never silently drop it.
+        modules = filter_modules_by_depth_and_focus(
+            intent_type=IntentType.HOUSE_HACK_MULTI_UNIT,
+            analysis_depth=AnalysisDepth.DECISION,
+            question_focus=["hidden_upside"],
+        )
+
+        self.assertIn(ModuleName.UNIT_INCOME_OFFSET, modules)
+        self.assertIn(ModuleName.VALUATION, modules)
+
 
 if __name__ == "__main__":
     unittest.main()

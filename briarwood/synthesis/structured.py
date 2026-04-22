@@ -84,6 +84,7 @@ def build_unified_output(
         next_checks=next_checks,
         bridges=bridges,
     )
+    optionality_signal = _optionality_signal(outputs, bridges, primary_value_source)
 
     return {
         "recommendation": recommendation,
@@ -112,6 +113,7 @@ def build_unified_output(
         "why_this_stance": why_this_stance,
         "what_changes_my_view": what_changes_my_view,
         "interaction_trace": interaction_trace,
+        "optionality_signal": optionality_signal,
     }
 
 
@@ -350,6 +352,117 @@ def _primary_value_source(bridges: dict[str, dict[str, Any]]) -> str:
     rec = bridges.get("primary_value_source") or {}
     adj = rec.get("adjustments") or {}
     return str(adj.get("primary_value_source") or "unknown")
+
+
+def _optionality_signal(
+    outputs: dict[str, dict[str, Any]],
+    bridges: dict[str, dict[str, Any]],
+    primary_value_source: str,
+) -> dict[str, Any]:
+    """F5: build a structured hidden-upside signal from module outputs.
+
+    Reads renovation_impact, arv_model, and unit_income_offset — the three
+    module families hinted when CoreQuestion.HIDDEN_UPSIDE is in play — and
+    emits a typed item per populated lever. ``primary_source`` echoes the
+    bridge classification so the Representation Agent can tell a story
+    ("current value anchors but upside comes from X"). Returns an empty-ish
+    signal when no module carries a material magnitude.
+    """
+
+    items: list[dict[str, Any]] = []
+
+    reno = outputs.get("renovation_impact") or {}
+    reno_data = reno.get("data") or {}
+    reno_metrics = reno_data.get("metrics") or {}
+    gross = _float(reno_metrics.get("gross_value_creation"))
+    net = _float(reno_metrics.get("net_value_creation"))
+    roi = _float(reno_metrics.get("roi_pct"))
+    if net is not None and abs(net) > 1000:
+        items.append(
+            {
+                "kind": "renovation_spread",
+                "source_module": "renovation_impact",
+                "label": "Renovation value creation",
+                "magnitude_usd": net,
+                "magnitude_pct": (roi / 100.0) if roi is not None else None,
+                "confidence": reno.get("confidence"),
+                "rationale": reno_data.get("summary")
+                or (
+                    f"Net value creation ${net:,.0f} on a ${_float(reno_metrics.get('renovation_budget')) or 0:,.0f} budget."
+                ),
+            }
+        )
+
+    arv = outputs.get("arv_model") or {}
+    arv_data = arv.get("data") or {}
+    snap = arv_data.get("arv_snapshot") or {}
+    renovated = _float(snap.get("renovated_bcv"))
+    current = _float(snap.get("current_bcv"))
+    arv_gross = _float(snap.get("gross_value_creation"))
+    if renovated is not None and current is not None and (arv_gross or renovated != current):
+        spread = arv_gross if arv_gross is not None else (renovated - current)
+        items.append(
+            {
+                "kind": "after_repair_value",
+                "source_module": "arv_model",
+                "label": "After-repair value lift",
+                "magnitude_usd": spread,
+                "magnitude_pct": (spread / current) if current else None,
+                "confidence": arv.get("confidence"),
+                "rationale": arv_data.get("summary"),
+            }
+        )
+
+    unit = outputs.get("unit_income_offset") or {}
+    unit_data = unit.get("data") or {}
+    offset = unit_data.get("offset_snapshot") or {}
+    add_income = _float(offset.get("additional_unit_income_value"))
+    unit_count = offset.get("additional_unit_count")
+    back_rent = _float(offset.get("back_house_monthly_rent"))
+    if add_income is not None and abs(add_income) > 1000:
+        items.append(
+            {
+                "kind": "unit_income",
+                "source_module": "unit_income_offset",
+                "label": (
+                    f"Accessory unit income ({unit_count})"
+                    if unit_count
+                    else "Accessory unit income"
+                ),
+                "magnitude_usd": add_income,
+                "magnitude_pct": None,
+                "confidence": unit.get("confidence"),
+                "rationale": unit_data.get("summary"),
+            }
+        )
+    elif back_rent is not None and back_rent > 0:
+        # Fallback: raw back-house rent when valuation impact isn't isolated.
+        annualized = back_rent * 12
+        items.append(
+            {
+                "kind": "unit_income",
+                "source_module": "unit_income_offset",
+                "label": "Back-house rent stream",
+                "magnitude_usd": annualized,
+                "magnitude_pct": None,
+                "confidence": unit.get("confidence"),
+                "rationale": unit_data.get("summary"),
+            }
+        )
+
+    # Summary: leave empty when no levers are populated so the UI can hide the
+    # card entirely rather than render a shell.
+    if not items:
+        summary: str | None = None
+    else:
+        parts = [item["label"] for item in items]
+        summary = "Hidden upside levers: " + ", ".join(parts)
+
+    return {
+        "primary_source": primary_value_source or "unknown",
+        "hidden_upside_items": items,
+        "summary": summary,
+    }
 
 
 def _what_must_be_true(bridges: dict[str, dict[str, Any]]) -> list[str]:

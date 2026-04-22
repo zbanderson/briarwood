@@ -131,11 +131,13 @@ INTENT_TO_QUESTIONS: dict[IntentType, tuple[CoreQuestion, ...]] = {
         CoreQuestion.WHERE_IS_VALUE,
         CoreQuestion.BEST_PATH,
         CoreQuestion.WHAT_COULD_GO_WRONG,
+        CoreQuestion.HIDDEN_UPSIDE,
     ),
     IntentType.HOUSE_HACK_MULTI_UNIT: (
         CoreQuestion.SHOULD_I_BUY,
         CoreQuestion.FUTURE_INCOME,
         CoreQuestion.BEST_PATH,
+        CoreQuestion.HIDDEN_UPSIDE,
     ),
 }
 """Default question emphasis for each intent type."""
@@ -259,6 +261,19 @@ QUESTION_FOCUS_TO_MODULE_HINTS: dict[CoreQuestion, tuple[ModuleName, ...]] = {
         ModuleName.RESALE_SCENARIO,
         ModuleName.OPPORTUNITY_COST,
     ),
+    # F5: hidden upside as a first-class question. Modules here surface
+    # repositioning, renovation, and rentable-unit value that don't show up
+    # when the conversation stays anchored on current-value ("what's it
+    # worth?"). The primary_value_source bridge classifies which of these
+    # actually drives value for the subject; the Representation Agent then
+    # composes an ``OptionalitySignal`` from the populated module outputs.
+    CoreQuestion.HIDDEN_UPSIDE: (
+        ModuleName.VALUATION,
+        ModuleName.RENOVATION_IMPACT,
+        ModuleName.ARV_MODEL,
+        ModuleName.UNIT_INCOME_OFFSET,
+        ModuleName.RESALE_SCENARIO,
+    ),
 }
 """Question-driven module hints for targeted synthesis and routing."""
 
@@ -338,6 +353,45 @@ class EngineOutput(BaseModel):
         return self.outputs.get(key)
 
 
+class HiddenUpsideItem(BaseModel):
+    """F5: a single non-current-value value driver surfaced as hidden upside.
+
+    Each item names the *kind* of upside (renovation_spread, unit_income,
+    repositioning, optionality), the *source module* that produced it, a
+    short human label, and the dollar/percent magnitude the module computed.
+    Kept intentionally permissive — not every module reports both magnitude
+    forms, and future modules may add kinds without a schema migration.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    source_module: str
+    label: str
+    magnitude_usd: float | None = None
+    magnitude_pct: float | None = None
+    confidence: float | None = None
+    rationale: str | None = None
+
+
+class OptionalitySignal(BaseModel):
+    """F5: structured hidden-upside signal consumed by the Representation
+    Agent and surfaced in the ``value_thesis`` SSE event.
+
+    ``primary_source`` is the bridge-classified value driver ("current_value",
+    "income", "repositioning", "optionality", "scarcity"). ``hidden_upside_items``
+    enumerates concrete levers that aren't reflected in the ask-vs-fair-value
+    frame — each carries provenance back to its source module so the UI can
+    cite it without re-reading module outputs.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    primary_source: str = "unknown"
+    hidden_upside_items: list[HiddenUpsideItem] = Field(default_factory=list)
+    summary: str | None = None
+
+
 class UnifiedIntelligenceOutput(BaseModel):
     """Final synthesized decision response shown to the user.
 
@@ -373,6 +427,10 @@ class UnifiedIntelligenceOutput(BaseModel):
     why_this_stance: list[str] = Field(default_factory=list)
     what_changes_my_view: list[str] = Field(default_factory=list)
     interaction_trace: dict[str, Any] = Field(default_factory=dict)
+    # F5: structured hidden-upside signal composed from module outputs +
+    # the primary_value_source bridge. Optional — defaults to an empty
+    # signal so existing synthesizers keep validating.
+    optionality_signal: OptionalitySignal = Field(default_factory=OptionalitySignal)
 
 
 class RoutingDecision(BaseModel):
@@ -396,12 +454,14 @@ __all__ = [
     "DecisionType",
     "EngineOutput",
     "ExitOption",
+    "HiddenUpsideItem",
     "INTENT_TO_MODULES",
     "INTENT_TO_QUESTIONS",
     "IntentType",
     "ModuleName",
     "ModulePayload",
     "OccupancyType",
+    "OptionalitySignal",
     "ParserOutput",
     "QUESTION_FOCUS_TO_MODULE_HINTS",
     "RoutingDecision",

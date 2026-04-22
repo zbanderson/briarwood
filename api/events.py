@@ -28,7 +28,8 @@ EVENT_TOWN_SUMMARY = "town_summary"
 EVENT_COMPS_PREVIEW = "comps_preview"
 EVENT_RISK_PROFILE = "risk_profile"
 EVENT_VALUE_THESIS = "value_thesis"
-EVENT_CMA_TABLE = "cma_table"
+EVENT_VALUATION_COMPS = "valuation_comps"
+EVENT_MARKET_SUPPORT_COMPS = "market_support_comps"
 EVENT_STRATEGY_PATH = "strategy_path"
 EVENT_RENT_OUTLOOK = "rent_outlook"
 EVENT_TRUST_SUMMARY = "trust_summary"
@@ -36,6 +37,7 @@ EVENT_RESEARCH_UPDATE = "research_update"
 EVENT_MODULES_RAN = "modules_ran"
 EVENT_VERIFIER_REPORT = "verifier_report"
 EVENT_GROUNDING_ANNOTATIONS = "grounding_annotations"
+EVENT_PARTIAL_DATA_WARNING = "partial_data_warning"
 
 
 def text_delta(content: str) -> dict[str, Any]:
@@ -181,9 +183,26 @@ def value_thesis(payload: dict[str, Any]) -> dict[str, Any]:
     return {"type": EVENT_VALUE_THESIS, **payload}
 
 
-def cma_table(payload: dict[str, Any]) -> dict[str, Any]:
-    """Dedicated comp table showing which comps fed fair value and why."""
-    return {"type": EVENT_CMA_TABLE, **payload}
+def valuation_comps(payload: dict[str, Any]) -> dict[str, Any]:
+    """Comps that actually fed the fair value computation.
+
+    F2 split: sourced from the valuation module's ``comparable_sales``
+    output (``comps_used``). Each row carries ``feeds_fair_value`` provenance
+    so the UI can label these as the evidence behind the price read — not
+    market-context comps. Never populated from live Zillow market search.
+    """
+    return {"type": EVENT_VALUATION_COMPS, "source": "valuation_module", **payload}
+
+
+def market_support_comps(payload: dict[str, Any]) -> dict[str, Any]:
+    """Live market comps for context, not fair-value evidence.
+
+    F2 split: sourced from ``get_cma()`` which prefers live Zillow listings
+    with a saved-comp fallback. These rows support the user's read of the
+    current market but did not feed Briarwood's fair value. Always labeled
+    as market support in the UI so the provenance is unambiguous.
+    """
+    return {"type": EVENT_MARKET_SUPPORT_COMPS, "source": "live_market", **payload}
 
 
 def strategy_path(payload: dict[str, Any]) -> dict[str, Any]:
@@ -247,6 +266,28 @@ def verifier_report(payload: dict[str, Any]) -> dict[str, Any]:
     user-facing UI surfacing them. Step 5 keeps this advisory-only — Step 7
     introduces strict mode behind `BRIARWOOD_STRICT_REGEN`."""
     return {"type": EVENT_VERIFIER_REPORT, **payload}
+
+
+def partial_data_warning(
+    section: str,
+    reason: str,
+    *,
+    verdict_reliable: bool = True,
+) -> dict[str, Any]:
+    """F7: surface a non-core enrichment failure to the UI.
+
+    Emitted when a best-effort enrichment (town context, CMA preview, session
+    load, etc.) raises but the core decision can still stream. `section` is a
+    short machine-readable tag (e.g. ``"town_summary"``). `reason` is a short
+    human-readable cause. ``verdict_reliable`` is False only when the failure
+    affects the core decision itself — the UI tones the banner accordingly.
+    """
+    return {
+        "type": EVENT_PARTIAL_DATA_WARNING,
+        "section": section,
+        "reason": reason,
+        "verdict_reliable": bool(verdict_reliable),
+    }
 
 
 def encode_sse(event: dict[str, Any]) -> str:

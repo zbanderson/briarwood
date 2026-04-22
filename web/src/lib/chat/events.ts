@@ -110,6 +110,17 @@ export type ChartSpec =
   | RentBurnChartSpec
   | RentRampChartSpec
   | ValueOpportunityChartSpec;
+export type VerdictTrustSummary = {
+  confidence?: number | null;
+  band?: string | null;
+  field_completeness?: number | null;
+  estimated_reliance?: number | null;
+  contradiction_count?: number | null;
+  blocked_thesis_warnings?: string[];
+  trust_flags?: string[];
+  why_this_stance?: string[];
+  what_changes_my_view?: string[];
+};
 export type VerdictEvent = {
   type: "verdict";
   address?: string | null;
@@ -127,6 +138,12 @@ export type VerdictEvent = {
   trust_flags: string[];
   what_must_be_true: string[];
   key_risks: string[];
+  // F10: surface the full decision view the backend already projects.
+  trust_summary?: VerdictTrustSummary | null;
+  why_this_stance?: string[];
+  what_changes_my_view?: string[];
+  contradiction_count?: number | null;
+  blocked_thesis_warnings?: string[];
   overrides_applied: Record<string, unknown>;
 };
 
@@ -232,6 +249,20 @@ export type ValueThesisCompRow = {
   selected_by?: string | null;
   feeds_fair_value?: boolean | null;
 };
+export type HiddenUpsideItem = {
+  kind: string;
+  source_module: string;
+  label: string;
+  magnitude_usd?: number | null;
+  magnitude_pct?: number | null;
+  confidence?: number | null;
+  rationale?: string | null;
+};
+export type OptionalitySignal = {
+  primary_source?: string | null;
+  hidden_upside_items: HiddenUpsideItem[];
+  summary?: string | null;
+};
 export type ValueThesisEvent = {
   type: "value_thesis";
   address?: string | null;
@@ -255,10 +286,33 @@ export type ValueThesisEvent = {
   net_opportunity_delta_pct?: number | null;
   risk_adjusted_fair_value?: number | null;
   required_discount?: number | null;
+  // F5: hidden upside levers surfaced as a first-class signal.
+  optionality_signal?: OptionalitySignal | null;
 };
 
-export type CmaTableEvent = {
-  type: "cma_table";
+/**
+ * F2: comps that actually fed the fair value computation. Sourced from the
+ * valuation module's ``comparable_sales.comps_used`` — never live market.
+ * The ``source`` discriminator is stamped server-side so TS can narrow on it
+ * even though ``CmaTableEvent`` no longer exists.
+ */
+export type ValuationCompsEvent = {
+  type: "valuation_comps";
+  source: "valuation_module";
+  address?: string | null;
+  town?: string | null;
+  state?: string | null;
+  summary?: string | null;
+  rows: ValueThesisCompRow[];
+};
+
+/**
+ * F2: live market comps for context, NOT fair-value evidence. Sourced from
+ * ``get_cma()`` which prefers live Zillow listings with a saved-comp fallback.
+ */
+export type MarketSupportCompsEvent = {
+  type: "market_support_comps";
+  source: "live_market";
   address?: string | null;
   town?: string | null;
   state?: string | null;
@@ -323,6 +377,13 @@ export type TrustSummaryEvent = {
   trust_flags: string[];
   why_this_stance?: string[];
   what_changes_my_view?: string[];
+};
+
+export type PartialDataWarningEvent = {
+  type: "partial_data_warning";
+  section: string;              // e.g. "town_summary", "cma_preview", "session_load"
+  reason: string;               // short human-readable cause
+  verdict_reliable: boolean;    // true if the core decision still stands
 };
 
 export type ResearchUpdateEvent = {
@@ -410,10 +471,12 @@ export type ChatEvent =
   | CompsPreviewEvent
   | RiskProfileEvent
   | ValueThesisEvent
-  | CmaTableEvent
+  | ValuationCompsEvent
+  | MarketSupportCompsEvent
   | StrategyPathEvent
   | RentOutlookEvent
   | TrustSummaryEvent
+  | PartialDataWarningEvent
   | ResearchUpdateEvent
   | ModulesRanEvent
   | VerifierReportEvent

@@ -137,7 +137,11 @@ def _load_or_create_session(conversation_id: str | None) -> Session:
     fresh Session keyed to the same id is returned and saved on first use.
 
     Clears `last_verifier_report` so stale reports from the previous turn don't
-    leak into the current one — the handler repopulates it if an LLM runs."""
+    leak into the current one — the handler repopulates it if an LLM runs.
+
+    F7: if on-disk session state fails to decode, we surface the fall-back via
+    `session.last_partial_data_warnings` (the SSE stream then emits a
+    partial_data_warning) instead of silently starting fresh."""
     if not conversation_id:
         return Session()
     path = SESSION_DIR / f"{conversation_id}.json"
@@ -147,9 +151,20 @@ def _load_or_create_session(conversation_id: str | None) -> Session:
         except (json.JSONDecodeError, KeyError) as exc:
             print(f"[session] load failed for {conversation_id}: {exc}; starting fresh", flush=True)
             session = Session(session_id=conversation_id)
+            session.last_partial_data_warnings.append(
+                {
+                    "section": "session_load",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "verdict_reliable": True,
+                }
+            )
     else:
         session = Session(session_id=conversation_id)
+    # Preserve any warnings accumulated above — clear_response_views wipes them
+    # so they must be re-applied after.
+    pending_warnings = list(session.last_partial_data_warnings)
     session.clear_response_views()
+    session.last_partial_data_warnings = pending_warnings
     return session
 
 
@@ -1977,6 +1992,16 @@ async def _decision_stream_impl(
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))
 
+    # F7: surface any non-core enrichment failures (town summary, CMA, etc.)
+    # as explicit banners instead of silently degrading. Emitted before the
+    # primary events so the UI renders them above the verdict card.
+    for warning in list(session.last_partial_data_warnings):
+        yield events.partial_data_warning(
+            str(warning.get("section") or "unknown"),
+            str(warning.get("reason") or ""),
+            verdict_reliable=bool(warning.get("verdict_reliable", True)),
+        )
+
     for ev in primary_events:
         yield ev
 
@@ -2275,6 +2300,16 @@ async def _dispatch_stream_impl(
             events.comparison_table(
                 _comparison_table_from_view(session.last_comparison_view)
             )
+        )
+
+    # F7: surface enrichment failures for generic tier dispatch too. Anything
+    # collected in `session.last_partial_data_warnings` (by handlers or by the
+    # session loader) gets a banner before the primary cards.
+    for warning in list(session.last_partial_data_warnings):
+        yield events.partial_data_warning(
+            str(warning.get("section") or "unknown"),
+            str(warning.get("reason") or ""),
+            verdict_reliable=bool(warning.get("verdict_reliable", True)),
         )
 
     for ev in primary_events:

@@ -463,6 +463,40 @@ def _cma_rows_from_result(cma_result: CMAResult | None) -> list[dict[str, object
     return [_comp_row_from_cma(comp) for comp in (cma_result.comps if cma_result else [])]
 
 
+def _build_market_support_view(
+    view: "PropertyView | PropertyBrief | None",
+    cma_result: CMAResult | None,
+    *,
+    address: str | None = None,
+    town: str | None = None,
+    state: str | None = None,
+) -> dict[str, object] | None:
+    """F2: package the live-market comps from get_cma into a dedicated view.
+
+    These rows are market-context evidence, explicitly NOT what fed fair
+    value. Returned None when get_cma produced no usable comps, so the
+    UI simply omits the card rather than showing an empty table.
+
+    Browse callers pass a ``PropertyBrief``; decision callers pass a
+    ``PropertyView``. Both expose ``address``/``town``/``state``.
+    """
+    if cma_result is None:
+        return None
+    comps = _cma_rows_from_result(cma_result)
+    if not comps:
+        return None
+    resolved_address = address if address is not None else getattr(view, "address", None)
+    resolved_town = town if town is not None else getattr(view, "town", None)
+    resolved_state = state if state is not None else getattr(view, "state", None)
+    return {
+        "address": resolved_address,
+        "town": resolved_town,
+        "state": resolved_state,
+        "comp_selection_summary": cma_result.comp_selection_summary,
+        "comps": comps,
+    }
+
+
 def _build_comps_preview(
     pid: str,
     view: "PropertyView",
@@ -655,53 +689,12 @@ def _build_browse_value_thesis(
     *,
     cma_result: CMAResult | None = None,
 ) -> dict[str, object]:
-    cma_rows = _cma_rows_from_result(cma_result)
-    if cma_rows:
-        comps = [
-            {
-                "property_id": comp.get("property_id"),
-                "address": comp.get("address"),
-                "beds": comp.get("beds"),
-                "baths": comp.get("baths"),
-                "ask_price": comp.get("ask_price") or comp.get("price"),
-                "blocks_to_beach": comp.get("blocks_to_beach"),
-                "source_label": comp.get("source_label") or "Live market comp",
-                "selected_by": "briarwood",
-                "feeds_fair_value": True,
-                "inclusion_reason": comp.get("selection_rationale")
-                or comp.get("inclusion_reason")
-                or "Market comp ranked toward the subject's price and layout.",
-                "source_summary": comp.get("source_summary")
-                or (cma_result.comp_selection_summary if cma_result else None)
-                or "Live market comp selected for same-town market support.",
-            }
-            for comp in cma_rows
-            if comp.get("property_id") != brief.property_id
-        ]
-        comp_selection_summary = cma_result.comp_selection_summary if cma_result else None
-    else:
-        comps = [
-            {
-                "property_id": comp.get("property_id"),
-                "address": comp.get("address"),
-                "beds": comp.get("beds"),
-                "baths": comp.get("baths"),
-                "ask_price": comp.get("ask_price") or comp.get("price"),
-                "blocks_to_beach": comp.get("blocks_to_beach"),
-                "source_label": "Saved comp",
-                "selected_by": "briarwood",
-                "feeds_fair_value": None,
-                "inclusion_reason": "Nearby saved listing ranked toward the subject's price and layout.",
-                "source_summary": "Context comp from Briarwood's nearby saved listings.",
-            }
-            for comp in neighbors[:4]
-            if comp.get("property_id") != brief.property_id
-        ]
-        comp_selection_summary = (
-            f"Nearby {brief.town or 'local'} saved listings ranked toward the subject's price and layout."
-            if comps
-            else None
-        )
+    # F2: browse does not run the routed valuation pipeline, so we have no
+    # comps that actually fed fair value. Leave `comps` empty here — live
+    # market comps and saved-neighbor rows are surfaced separately via
+    # `last_market_support_view` so the UI can label them honestly.
+    comps: list[dict[str, object]] = []
+    comp_selection_summary: str | None = None
     return {
         "address": brief.address,
         "town": brief.town,
@@ -741,17 +734,39 @@ def _build_decision_value_thesis(
     *,
     cma_result: CMAResult | None = None,
 ) -> dict[str, object]:
-    comps = _cma_rows_from_result(cma_result)
-    comp_selection_summary = cma_result.comp_selection_summary if cma_result and comps else None
-    if not comps:
-        fallback_comps = _build_comps_preview(pid, view, cma_result=None)
-        comps = list((fallback_comps or {}).get("comps") or [])
-        if comps:
-            comp_selection_summary = "Saved Briarwood comps ranked by matching layout and price."
+    # F2: value_thesis.comps must be the comps that actually fed the fair
+    # value computation. Pull them from the valuation module's output via
+    # get_value_thesis, not from cma_result (which is live market support).
+    comps: list[dict[str, object]] = []
+    comp_selection_summary: str | None = None
+    try:
+        thesis = get_value_thesis(pid, overrides=view.overrides_applied or None)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("valuation-module comps unavailable for %s: %s", pid, exc)
+        thesis = None
+    if isinstance(thesis, dict):
+        raw_comps = thesis.get("comps")
+        if isinstance(raw_comps, list):
+            comps = [dict(row) for row in raw_comps if isinstance(row, dict)]
+        summary = thesis.get("comp_selection_summary")
+        if isinstance(summary, str) and summary.strip():
+            comp_selection_summary = summary
     unified = dict(view.unified or {})
     value_drivers = list(unified.get("key_value_drivers") or [])
     net_delta_pct = -view.ask_premium_pct if isinstance(view.ask_premium_pct, (int, float)) else None
     valuation_x_risk = dict((unified.get("valuation_x_risk") or {}).get("adjustments") or {})
+    # F5: carry the structured optionality_signal through to the value_thesis
+    # view so the SSE projector can surface hidden upside levers. The signal
+    # is computed by synthesis.structured.build_unified_output — when it's
+    # missing (older runs, modules that didn't fire) we fall back to a
+    # zero-item signal so the UI renders nothing rather than a broken card.
+    optionality = unified.get("optionality_signal")
+    if not isinstance(optionality, dict):
+        optionality = {
+            "primary_source": view.primary_value_source or "unknown",
+            "hidden_upside_items": [],
+            "summary": None,
+        }
     return {
         "address": view.address,
         "town": view.town,
@@ -776,6 +791,7 @@ def _build_decision_value_thesis(
         "required_discount": valuation_x_risk.get("required_discount"),
         "comp_selection_summary": comp_selection_summary,
         "comps": comps,
+        "optionality_signal": optionality,
     }
 
 
@@ -1088,6 +1104,17 @@ def _populate_browse_slots(
         neighbors,
         cma_result=cma_result,
     )
+    try:
+        session.last_market_support_view = _build_market_support_view(
+            None,
+            cma_result,
+            address=brief.address,
+            town=brief.town,
+            state=brief.state,
+        )
+    except Exception as exc:
+        logger.warning("browse market support build failed for %s: %s", pid, exc)
+        session.last_market_support_view = None
 
     facts = summary or {}
     if projection:
@@ -1380,22 +1407,31 @@ def handle_decision(
 
     # Spoon-feed the first DECISION response with town context + comp preview
     # so the user doesn't need two follow-ups to get the full picture. Both
-    # calls are file-backed and fast; failures degrade silently.
+    # calls are file-backed and fast; individual enrichment failures don't
+    # block the core decision, but F7 requires surfacing each one to the UI
+    # via `session.last_partial_data_warnings` rather than swallowing silently.
+    def _record_partial(section: str, exc: BaseException) -> None:
+        reason = f"{type(exc).__name__}: {exc}".strip(": ")
+        logger.warning("%s build failed: %s", section, exc)
+        session.last_partial_data_warnings.append(
+            {"section": section, "reason": reason, "verdict_reliable": True}
+        )
+
     try:
         session.last_town_summary = _build_town_summary(view.town, view.state)
     except Exception as exc:
-        logger.warning("town summary build failed: %s", exc)
         session.last_town_summary = None
+        _record_partial("town_summary", exc)
     try:
         cma_result = get_cma(pid, overrides=overrides)
     except Exception as exc:
-        logger.warning("decision CMA build failed: %s", exc)
         cma_result = None
+        _record_partial("cma", exc)
     try:
         session.last_comps_preview = _build_comps_preview(pid, view, cma_result=cma_result)
     except Exception as exc:
-        logger.warning("comps preview build failed: %s", exc)
         session.last_comps_preview = None
+        _record_partial("comps_preview", exc)
     try:
         session.last_value_thesis_view = _build_decision_value_thesis(
             pid,
@@ -1403,8 +1439,13 @@ def handle_decision(
             cma_result=cma_result,
         )
     except Exception as exc:
-        logger.warning("decision value thesis build failed: %s", exc)
         session.last_value_thesis_view = None
+        _record_partial("value_thesis", exc)
+    try:
+        session.last_market_support_view = _build_market_support_view(view, cma_result)
+    except Exception as exc:
+        session.last_market_support_view = None
+        _record_partial("market_support_comps", exc)
 
     # Populate the scenario view so the first DECISION response can emit a
     # bull/base/bear table + fan chart inline. Failures here must not block
@@ -1426,7 +1467,7 @@ def handle_decision(
         except ChartUnavailable:
             pass
     except Exception as exc:
-        logger.warning("decision projection failed for %s: %s", pid, exc)
+        _record_partial("projection", exc)
 
     def _finalize(response: str) -> str:
         _remember_surface_output(
@@ -2879,9 +2920,12 @@ def handle_edge(
     ask = thesis.get("ask_price")
     fair = thesis.get("fair_value_base")
     prem = thesis.get("premium_discount_pct")
+    # F2: value_thesis.comps must only be comps that fed fair value (valuation
+    # module's comps_used). Live-market CMA rows are surfaced separately via
+    # `last_market_support_view` so the UI can label each panel honestly.
     thesis_comps = list(thesis.get("comps") or [])
     cma_comps = [_comp_row_from_cma(comp) for comp in (cma_result.comps if cma_result else [])]
-    comps = thesis_comps or cma_comps
+    comps = thesis_comps
 
     edge_facts = _load_property_facts(pid)
     session.last_value_thesis_view = {
@@ -2904,11 +2948,22 @@ def handle_edge(
         "blocked_thesis_warnings": list(thesis.get("blocked_thesis_warnings") or []),
         "risk_adjusted_fair_value": thesis.get("risk_adjusted_fair_value"),
         "required_discount": thesis.get("required_discount"),
-        "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
+        "comp_selection_summary": thesis.get("comp_selection_summary"),
         "comps": list(comps),
     }
+    try:
+        session.last_market_support_view = _build_market_support_view(
+            None,
+            cma_result,
+            address=edge_facts.get("address"),
+            town=edge_facts.get("town"),
+            state=edge_facts.get("state"),
+        )
+    except Exception as exc:
+        logger.warning("edge market support build failed for %s: %s", pid, exc)
+        session.last_market_support_view = None
     if (cma_mode or comp_set_mode or entry_point_mode) and cma_result is not None:
-        session.last_comps_preview = _comps_preview_from_cma(pid, ask, comps)
+        session.last_comps_preview = _comps_preview_from_cma(pid, ask, comps or cma_comps)
 
     if comp_set_mode:
         fallback_lines = [
@@ -3029,7 +3084,11 @@ def handle_edge(
         comp_summary = thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None)
         if comp_summary:
             lines.append(f"Comp context: {comp_summary}")
-        lines.extend(_format_cma_comp_lines(comps))
+        # F2: value_thesis comps are the valuation-module set. For CMA-mode
+        # narrative we still want to list the live market comps when that is
+        # what the user asked about — those rows live on cma_result, not thesis.
+        narrative_comps = comps or cma_comps
+        lines.extend(_format_cma_comp_lines(narrative_comps))
         return "\n".join(lines) + chart_line
 
     system = load_prompt("edge")

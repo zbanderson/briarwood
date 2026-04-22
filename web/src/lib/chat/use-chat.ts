@@ -12,7 +12,9 @@ import type {
   ListingsEvent,
   MapEvent,
   ModuleAttribution,
-  CmaTableEvent,
+  PartialDataWarningEvent,
+  ValuationCompsEvent,
+  MarketSupportCompsEvent,
   RentOutlookEvent,
   ResearchUpdateEvent,
   RiskProfileEvent,
@@ -22,6 +24,7 @@ import type {
   TownSummaryEvent,
   ValueThesisEvent,
   VerdictEvent,
+  VerifierReportEvent,
 } from "./events";
 
 export type ChatRole = "user" | "assistant";
@@ -42,7 +45,8 @@ export type ChatMessage = {
   compsPreview?: CompsPreviewEvent;
   riskProfile?: RiskProfileEvent;
   valueThesis?: ValueThesisEvent;
-  cmaTable?: CmaTableEvent;
+  valuationComps?: ValuationCompsEvent;
+  marketSupportComps?: MarketSupportCompsEvent;
   strategyPath?: StrategyPathEvent;
   rentOutlook?: RentOutlookEvent;
   trustSummary?: TrustSummaryEvent;
@@ -51,6 +55,10 @@ export type ChatMessage = {
   groundingAnchors?: GroundingAnchor[];
   ungroundedDeclaration?: boolean;
   critic?: CriticTelemetry;
+  // F10: keep the full verifier report so the UI can show a reasoning toggle.
+  verifierReport?: VerifierReportEvent;
+  // F7: degradation notices emitted when a non-core enrichment fails.
+  partialDataWarnings?: PartialDataWarningEvent[];
   isStreaming?: boolean;
 };
 
@@ -273,10 +281,17 @@ export function useChat({
             ),
           );
           break;
-        case "cma_table":
+        case "valuation_comps":
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, cmaTable: event } : m,
+              m.id === assistantMsgId ? { ...m, valuationComps: event } : m,
+            ),
+          );
+          break;
+        case "market_support_comps":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, marketSupportComps: event } : m,
             ),
           );
           break;
@@ -347,16 +362,39 @@ export function useChat({
         case "tool_result":
           // Surface in a side-panel later (Phase 3.5). No-op for now.
           break;
-        case "verifier_report":
-          if (event.critic) {
-            const criticPayload = event.critic;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId ? { ...m, critic: criticPayload } : m,
-              ),
-            );
-          }
+        case "verifier_report": {
+          const reportPayload = event;
+          const criticPayload = event.critic;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    verifierReport: reportPayload,
+                    ...(criticPayload ? { critic: criticPayload } : {}),
+                  }
+                : m,
+            ),
+          );
           break;
+        }
+        case "partial_data_warning": {
+          const warning = event;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    partialDataWarnings: [
+                      ...(m.partialDataWarnings ?? []),
+                      warning,
+                    ],
+                  }
+                : m,
+            ),
+          );
+          break;
+        }
         case "grounding_annotations":
           setMessages((prev) =>
             prev.map((m) =>

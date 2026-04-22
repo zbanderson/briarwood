@@ -14,7 +14,7 @@ import { TownSummaryCard } from "./town-summary-card";
 import { CompsPreviewCard } from "./comps-preview-card";
 import { RiskProfileCard } from "./risk-profile-card";
 import { ValueThesisCard } from "./value-thesis-card";
-import { CmaTableCard } from "./cma-table-card";
+import { CompsTableCard } from "./cma-table-card";
 import { StrategyPathCard } from "./strategy-path-card";
 import { RentOutlookCard } from "./rent-outlook-card";
 import { TrustSummaryCard } from "./trust-summary-card";
@@ -112,7 +112,8 @@ function AssistantMessage({
   const compsPreview = message.compsPreview;
   const riskProfile = message.riskProfile;
   const valueThesis = message.valueThesis;
-  const cmaTable = message.cmaTable;
+  const valuationComps = message.valuationComps;
+  const marketSupportComps = message.marketSupportComps;
   const strategyPath = message.strategyPath;
   const rentOutlook = message.rentOutlook;
   const trustSummary = message.trustSummary;
@@ -120,11 +121,19 @@ function AssistantMessage({
   const modulesRan = message.modulesRan ?? [];
   const anchors = message.groundingAnchors ?? [];
   const muted = message.ungroundedDeclaration === true;
-  const showCompPreview = Boolean(compsPreview && !valueThesis && !cmaTable);
+  const partialWarnings = message.partialDataWarnings ?? [];
+  const verifierReport = message.verifierReport;
+  const showCompPreview = Boolean(
+    compsPreview && !valueThesis && !valuationComps && !marketSupportComps,
+  );
 
   return (
     <div className="flex">
       <div className="w-full text-[15px] leading-7 text-[var(--color-text)]">
+        {partialWarnings.length > 0 && (
+          <PartialDataBanner warnings={partialWarnings} />
+        )}
+
         {verdict && <VerdictCard verdict={verdict} />}
 
         {showDots ? (
@@ -150,7 +159,12 @@ function AssistantMessage({
 
         {valueThesis && <EntryPointCard thesis={valueThesis} />}
 
-        {valueThesis && <ValueThesisCard thesis={valueThesis} hideCompStory={Boolean(cmaTable)} />}
+        {valueThesis && (
+          <ValueThesisCard
+            thesis={valueThesis}
+            hideCompStory={Boolean(valuationComps || marketSupportComps)}
+          />
+        )}
         {valueThesis && onPrompt && (
           <InlinePrompt
             prompt="What would change your value view?"
@@ -186,11 +200,24 @@ function AssistantMessage({
           />
         )}
 
-        {cmaTable && <CmaTableCard table={cmaTable} />}
-        {cmaTable && onPrompt && (
+        {valuationComps && (
+          <CompsTableCard table={valuationComps} variant="valuation" />
+        )}
+        {valuationComps && onPrompt && (
           <InlinePrompt
             prompt="Which comps actually fed fair value?"
-            label="Drill into the CMA"
+            label="Drill into fair-value comps"
+            onPick={onPrompt}
+          />
+        )}
+
+        {marketSupportComps && (
+          <CompsTableCard table={marketSupportComps} variant="market_support" />
+        )}
+        {marketSupportComps && onPrompt && (
+          <InlinePrompt
+            prompt="How does the live market look around here?"
+            label="Drill into market support"
             onPick={onPrompt}
           />
         )}
@@ -259,11 +286,109 @@ function AssistantMessage({
 
         {modulesRan.length > 0 && <ModuleBadges modules={modulesRan} />}
 
+        {verifierReport && <VerifierReasoningPanel report={verifierReport} />}
+
         {message.critic && (
           <CriticPanel critic={message.critic} shipped={message.content} />
         )}
       </div>
     </div>
+  );
+}
+
+function PartialDataBanner({
+  warnings,
+}: {
+  warnings: NonNullable<ChatMessage["partialDataWarnings"]>;
+}) {
+  const [open, setOpen] = useState(false);
+  const allReliable = warnings.every((w) => w.verdict_reliable);
+  const tone = allReliable
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+    : "border-rose-500/30 bg-rose-500/10 text-rose-100";
+  const summary = allReliable
+    ? `Some context couldn't load (${warnings.length}) — core verdict still reliable.`
+    : `Some data couldn't load (${warnings.length}) — verdict may be affected.`;
+  return (
+    <div
+      className={cn(
+        "mt-3 rounded-lg border px-3 py-2 text-[12px]",
+        tone,
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={open}
+      >
+        <span>{summary}</span>
+        <span aria-hidden className="text-[11px] opacity-70">
+          {open ? "Hide" : "Details"}
+        </span>
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1 text-[12px] opacity-90">
+          {warnings.map((w, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="font-mono uppercase tracking-wider opacity-70">
+                {w.section}
+              </span>
+              <span>— {w.reason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function VerifierReasoningPanel({
+  report,
+}: {
+  report: NonNullable<ChatMessage["verifierReport"]>;
+}) {
+  const hasViolations = report.violations.length > 0;
+  return (
+    <details className="mt-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] p-2 text-xs text-[var(--color-text-muted)]">
+      <summary className="cursor-pointer select-none font-mono">
+        verifier: {report.sentences_with_violations}/{report.sentences_total} flagged
+        {report.ungrounded_declaration ? " · ungrounded" : ""}
+        {report.anchor_count > 0 ? ` · ${report.anchor_count} anchors` : ""}
+        {report.tier ? ` · ${report.tier}` : ""}
+      </summary>
+      <div className="mt-2 space-y-2 font-mono">
+        {hasViolations ? (
+          <ul className="space-y-1">
+            {report.violations.map((v, i) => (
+              <li key={i}>
+                <div className="text-[var(--color-text-faint)]">
+                  {v.kind} · {v.value}
+                </div>
+                <div>{v.reason}</div>
+                {v.sentence && (
+                  <div className="opacity-75">“{v.sentence}”</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-[var(--color-text-faint)]">no violations.</div>
+        )}
+        {report.anchors && report.anchors.length > 0 && (
+          <div>
+            <div className="text-[var(--color-text-faint)]">anchors</div>
+            <ul className="space-y-0.5">
+              {report.anchors.map((a, i) => (
+                <li key={i}>
+                  {a.module}.{a.field} = {a.value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

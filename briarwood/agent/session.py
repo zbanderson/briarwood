@@ -43,6 +43,7 @@ class Session:
     last_comps_preview: dict[str, object] | None = None
     last_risk_view: dict[str, object] | None = None
     last_value_thesis_view: dict[str, object] | None = None
+    last_market_support_view: dict[str, object] | None = None
     last_strategy_view: dict[str, object] | None = None
     last_rent_outlook_view: dict[str, object] | None = None
     last_research_view: dict[str, object] | None = None
@@ -51,6 +52,10 @@ class Session:
     last_surface_narrative: str | None = None
     last_visual_advice: dict[str, object] | None = None
     last_verifier_report: dict[str, object] | None = None
+    # F7: per-turn "this enrichment failed" notices. Each entry:
+    # {"section": str, "reason": str, "verdict_reliable": bool}.
+    # Cleared alongside other per-turn views in `clear_response_views`.
+    last_partial_data_warnings: list[dict[str, object]] = field(default_factory=list)
     turns: list[Turn] = field(default_factory=list)
 
     def clear_response_views(self) -> None:
@@ -69,6 +74,7 @@ class Session:
         self.last_comps_preview = None
         self.last_risk_view = None
         self.last_value_thesis_view = None
+        self.last_market_support_view = None
         self.last_strategy_view = None
         self.last_rent_outlook_view = None
         self.last_research_view = None
@@ -77,6 +83,7 @@ class Session:
         self.last_surface_narrative = None
         self.last_visual_advice = None
         self.last_verifier_report = None
+        self.last_partial_data_warnings = []
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
         self.turns.append(Turn(user=user, assistant=assistant, answer_type=answer_type))
@@ -114,6 +121,7 @@ class Session:
             last_comps_preview=data.get("last_comps_preview"),
             last_risk_view=data.get("last_risk_view"),
             last_value_thesis_view=data.get("last_value_thesis_view"),
+            last_market_support_view=data.get("last_market_support_view"),
             last_strategy_view=data.get("last_strategy_view"),
             last_rent_outlook_view=data.get("last_rent_outlook_view"),
             last_research_view=data.get("last_research_view"),
@@ -122,5 +130,6 @@ class Session:
             last_surface_narrative=data.get("last_surface_narrative"),
             last_visual_advice=data.get("last_visual_advice"),
             last_verifier_report=data.get("last_verifier_report"),
+            last_partial_data_warnings=list(data.get("last_partial_data_warnings") or []),
             turns=turns,
         )
