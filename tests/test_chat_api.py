@@ -101,5 +101,47 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(store.added[-1][2], "First reply.")
 
 
+class ClassifyTurnMissingLLMTests(unittest.TestCase):
+    """NEW-V-010: when ``default_client()`` returns None (no provider
+    configured), ``classify_turn`` must return None so the chat endpoint
+    can emit an explicit LLM-unavailable error instead of silently running
+    the LOOKUP default or the echo fallback."""
+
+    def test_classify_turn_returns_none_when_get_llm_returns_none(self) -> None:
+        from api import pipeline_adapter
+
+        with patch("api.pipeline_adapter.get_llm", return_value=None):
+            result = pipeline_adapter.classify_turn("Should I buy 123 Main?")
+        self.assertIsNone(result)
+
+    @unittest.skipIf(TestClient is None or app is None, "fastapi is not installed in this environment")
+    def test_chat_endpoint_emits_error_and_done_when_classifier_returns_none(
+        self,
+    ) -> None:
+        """No exception, no decision → explicit error event, no echo stream.
+        Prior behavior routed to _echo_stream (mock listings); the new
+        behavior surfaces configuration failure to the user."""
+        store = _FakeStore()
+        with (
+            patch("api.main.get_store", return_value=store),
+            patch("api.main.classify_turn", return_value=None),
+            patch("api.main._echo_stream") as mocked_echo,
+        ):
+            client = TestClient(app)
+            with client.stream(
+                "POST",
+                "/api/chat",
+                json={"messages": [{"role": "user", "content": "Should I buy 123 Main?"}]},
+            ) as response:
+                body = "".join(response.iter_text())
+
+        self.assertEqual(response.status_code, 200)
+        mocked_echo.assert_not_called()
+        payloads = _parse_sse_frames(body)
+        event_types = [payload["type"] for payload in payloads]
+        self.assertIn(events.EVENT_ERROR, event_types)
+        self.assertEqual(event_types[-1], events.EVENT_DONE)
+
+
 if __name__ == "__main__":
     unittest.main()

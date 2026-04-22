@@ -290,13 +290,28 @@ async def chat(req: ChatRequest) -> StreamingResponse:
         # COMPARISON / RESEARCH / VISUALIZE / CHITCHAT) flows through the
         # generic dispatch_stream. _echo_stream is now only a fallback for
         # router failures.
+        classify_raised = False
         try:
             decision = classify_turn(last.content)
         except Exception as exc:  # noqa: BLE001 — router fail → echo fallback
             decision = None
+            classify_raised = True
             yield events.encode_sse(
                 events.error(f"router classify failed, using echo: {exc}")
             )
+
+        # NEW-V-010: classify_turn returns None (no exception) when no LLM
+        # provider is configured. Surface that as an explicit error and stop;
+        # do NOT fall through to _echo_stream, which serves mock listings.
+        if decision is None and not classify_raised:
+            yield events.encode_sse(
+                events.error(
+                    "LLM service unavailable — check configuration "
+                    "(OPENAI_API_KEY / ANTHROPIC_API_KEY)."
+                )
+            )
+            yield events.encode_sse(events.done())
+            return
 
         if decision is not None:
             print(

@@ -121,8 +121,17 @@ def _geocode(address: str) -> tuple[float | None, float | None]:
     return (float(lat) if lat is not None else None, float(lng) if lng is not None else None)
 
 
-def classify_turn(text: str) -> RouterDecision:
-    return classify(text, client=get_llm())
+def classify_turn(text: str) -> RouterDecision | None:
+    """Classify a user turn. Returns ``None`` when no LLM provider is
+    configured so the caller can surface an explicit "LLM unavailable"
+    error rather than silently degrading to the LOOKUP default
+    (NEW-V-010). Router exceptions remain a separate fallback path owned
+    by the caller; this guard only covers the no-key configuration gap.
+    """
+    client = get_llm()
+    if client is None:
+        return None
+    return classify(text, client=client)
 
 
 # ---------- Session continuity ----------
