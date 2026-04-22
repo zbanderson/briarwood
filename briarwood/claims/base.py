@@ -52,3 +52,4 @@ class SurfacedInsight(BaseModel):
     headline: str
     reason: str
     supporting_fields: list[str]
+    scenario_id: str | None = None
