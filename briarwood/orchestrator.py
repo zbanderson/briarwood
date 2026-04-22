@@ -32,6 +32,36 @@ _SYNTHESIS_OUTPUT_CACHE: dict[str, UnifiedIntelligenceOutput] = {}
 _SCOPED_MODULE_OUTPUT_CACHE: dict[str, dict[str, Any]] = {}
 _DEFAULT_SCOPED_REGISTRY: dict[str, ModuleSpec] | None = None
 
+# F3: bump when the cache key shape or hashed fact set changes. Old entries
+# carry the previous version in their key and silently stop matching.
+_CACHE_KEY_VERSION = "v2"
+
+# Structural property facts that must be part of the cache key: if the user
+# edits any of these (e.g., corrects sqft, changes purchase_price), the
+# cached routing / module / synthesis outputs are no longer valid even when
+# property_id and the parser-output assumptions are unchanged.
+_CACHE_KEY_PROPERTY_FACTS: tuple[str, ...] = (
+    "property_type",
+    "beds",
+    "baths",
+    "sqft",
+    "lot_size",
+    "year_built",
+    "purchase_price",
+    "taxes",
+    "monthly_hoa",
+    "has_back_house",
+    "adu_type",
+    "adu_sqft",
+    "has_additional_units",
+    "condition_profile",
+    "capex_lane",
+    "strategy_intent",
+    "hold_period_years",
+    "risk_tolerance",
+    "days_on_market",
+)
+
 
 class ModuleRunner(Protocol):
     """Callable boundary for Briarwood-native module execution."""
@@ -113,15 +143,49 @@ def build_property_summary(property_data: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def _normalize_fact_fingerprint(property_data: Mapping[str, Any]) -> dict[str, Any]:
+    """F3: project the structural property facts that must invalidate the cache.
+
+    Numbers are coerced to float when possible so that ``3`` and ``3.0``
+    collapse to the same fingerprint. ``None`` / missing fields are normalized
+    to ``None`` so absence reads the same on every call.
+    """
+
+    def _coerce(value: Any) -> Any:
+        if isinstance(value, bool) or value is None or isinstance(value, str):
+            return value
+        if isinstance(value, (int, float)):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return value
+        if isinstance(value, (list, tuple)):
+            return [_coerce(item) for item in value]
+        if isinstance(value, Mapping):
+            return {str(k): _coerce(v) for k, v in sorted(value.items())}
+        return value
+
+    return {field: _coerce(property_data.get(field)) for field in _CACHE_KEY_PROPERTY_FACTS}
+
+
 def build_cache_key(
     property_data: dict[str, Any],
     parser_output: ParserOutput,
 ) -> str:
-    """Build a lightweight cache key from stable routing and assumption inputs."""
+    """Build a lightweight cache key from stable routing and assumption inputs.
+
+    F3: includes a hashed fingerprint of structural property facts (beds, sqft,
+    taxes, etc.) and a schema version literal so edits to the property record
+    or to the cache shape itself invalidate cleanly. Previously the key was
+    property_id + parser assumptions only, which meant two different fact sets
+    for the same property_id would collide and return stale results.
+    """
 
     property_id = str(property_data.get("property_id") or property_data.get("address") or "unknown-property")
     assumptions = _extract_execution_assumptions(property_data, parser_output)
+    fact_fingerprint = _normalize_fact_fingerprint(property_data)
     payload = {
+        "_version": _CACHE_KEY_VERSION,
         "property_id": property_id,
         "intent_type": parser_output.intent_type.value,
         "analysis_depth": parser_output.analysis_depth.value,
@@ -132,9 +196,10 @@ def build_cache_key(
         "has_additional_units": parser_output.has_additional_units,
         "renovation_plan": parser_output.renovation_plan,
         "assumptions": assumptions,
+        "property_facts": fact_fingerprint,
     }
     digest = hashlib.sha1(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
-    return digest
+    return f"{_CACHE_KEY_VERSION}:{digest}"
 
 
 def _build_parse_cache_key(

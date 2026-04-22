@@ -1,0 +1,255 @@
+{
+  "session_id": "a707bad6d485",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1611 River Road, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1590000.0,
+      "beds": 5,
+      "baths": 4.0,
+      "sqft": 2469,
+      "property_type": "MULTI_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1611-River-Rd-Belmar-NJ-07719/39225462_zpid/",
+      "external_id": "39225462",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1708 A Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1195000.0,
+      "beds": 5,
+      "baths": 2.0,
+      "sqft": 1440,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1708-A-St-Belmar-NJ-07719/39225114_zpid/",
+      "external_id": "39225114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 749000.0,
+      "beds": 2,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "CONDO",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/103-2nd-Ave-UNIT-A3-Belmar-NJ-07719/39223261_zpid/",
+      "external_id": "39223261",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "105 11th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 3999999.0,
+      "beds": 5,
+      "baths": 5.0,
+      "sqft": 3977,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/105-11th-Ave-Belmar-NJ-07719/325562278_zpid/",
+      "external_id": "325562278",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "301 10th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 2699900.0,
+      "beds": 6,
+      "baths": 4.0,
+      "sqft": 3792,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/301-10th-Ave-Belmar-NJ-07719/331325114_zpid/",
+      "external_id": "331325114",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "517 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 1275000.0,
+      "beds": 5,
+      "baths": 3.0,
+      "sqft": 2590,
+      "property_type": "MULTI_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/517-14th-Ave-Belmar-NJ-07719/39224844_zpid/",
+      "external_id": "39224844",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {}
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {}
+  },
+  "selected_search_result": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": 767000.0,
+    "bear_value": null,
+    "stress_value": null,
+    "risk_flags": [
+      "flood_medium",
+      "high_property_taxes",
+      "higher_vacancy"
+    ],
+    "trust_flags": [],
+    "key_risks": [],
+    "total_penalty": 0.217,
+    "confidence_tier": "strong"
+  },
+  "last_value_thesis_view": null,
+  "last_market_support_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {
+    "risk": {
+      "title": "Risk Assessment for 1008 14th Avenue",
+      "summary": "This property has notable risk factors including medium flood risk and high property taxes.",
+      "companion": "Consider this alongside market trends for a comprehensive view of investment potential.",
+      "preferred_surface": "card_first"
+    }
+  },
+  "last_verifier_report": {
+    "tier": "risk",
+    "sentences_total": 3,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": false,
+    "anchor_count": 1,
+    "anchors": [
+      {
+        "module": "RiskProfile",
+        "field": "risk_flags",
+        "value": "flood_medium, high_property_taxes, higher_vacancy"
+      }
+    ],
+    "violations": [],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 0,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "last_representation_plan": null,
+  "last_partial_data_warnings": [
+    {
+      "section": "representation_plan",
+      "reason": "dropped 2 chart selection(s): value_drivers:No evidence of key value drivers available.; no supporting evidence cited; risk_composition:No evidence of key risks available.; no supporting evidence cited",
+      "verdict_reliable": true
+    }
+  ],
+  "turns": [
+    {
+      "user": "what are the properties for sale in belmar nj",
+      "assistant": "Found 8 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "A price reduction by this percentage would significantly enhance the investment appeal.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "What would change your value view?",
+      "assistant": "The primary concern that could change our value view is the medium risk of flooding, which could significantly impact the property's future value. Additionally, the property faces high taxes and potential for higher vacancy rates, which could further affect returns. There's currently no bear or stress case value, and since there are no key risks detected that would lead to a walk-away scenario, the ask price of $767,000 remains viable for now.",
+      "answer_type": "risk"
+    }
+  ]
+}

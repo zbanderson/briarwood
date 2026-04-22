@@ -12,7 +12,6 @@ from briarwood.inputs.property_loader import (
 )
 from briarwood.listing_intake.parsers import ZillowTextParser, ZillowUrlParser
 from briarwood.listing_intake.service import ListingIntakeService
-from briarwood.runner import run_report_from_listing_text
 from briarwood.schemas import EvidenceMode, InputCoverageStatus
 
 
@@ -106,16 +105,11 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertIn("sqft", result.missing_fields)
         self.assertIn("price_per_sqft", result.missing_fields)
 
-    def test_listing_text_can_run_through_report_pipeline(self) -> None:
+    def test_listing_text_loads_into_property_input_for_pipeline(self) -> None:
         with open("data/sample_zillow_listing_belmar.txt") as file_handle:
             source = file_handle.read()
 
         property_input = load_property_from_listing_text(
-            source,
-            property_id="belmar-001",
-            source_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/?",
-        )
-        report = run_report_from_listing_text(
             source,
             property_id="belmar-001",
             source_url="https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/?",
@@ -134,10 +128,6 @@ class ListingIntakeTests(unittest.TestCase):
         self.assertEqual(property_input.coverage_for("school_signal").status, InputCoverageStatus.SOURCED)
         self.assertEqual(property_input.coverage_for("rent_estimate").status, InputCoverageStatus.ESTIMATED)
         self.assertIn(property_input.coverage_for("comp_support").status, {InputCoverageStatus.ESTIMATED, InputCoverageStatus.SOURCED})
-        self.assertEqual(report.property_id, "belmar-001")
-        self.assertIn("cost_valuation", report.module_results)
-        self.assertIn("town_county_outlook", report.module_results)
-        self.assertEqual(report.property_input.source_metadata.evidence_mode, EvidenceMode.LISTING_ASSISTED)
 
     def test_json_loader_infers_listing_assisted_when_listing_fields_are_present(self) -> None:
         property_input = load_property_from_json("data/sample_property.json")

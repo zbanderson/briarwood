@@ -82,14 +82,26 @@ class RenderChartTests(unittest.TestCase):
             self.assertIn("Monthly obligation", body)
 
 
+class _VisualizeLLM:
+    """Scripted LLM that always returns VISUALIZE — simulates the LLM seeing
+    a chart-command phrase and routing correctly (post-plan C2 the router no
+    longer caches visualize keywords)."""
+
+    def complete(self, *, system, user, max_tokens=400):  # pragma: no cover
+        raise AssertionError("router should use complete_structured")
+
+    def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+        return schema(answer_type=AnswerType.VISUALIZE, reason="scripted-visualize")
+
+
 class VisualizeRouterTests(unittest.TestCase):
     def test_show_value_picture_routes_to_visualize(self) -> None:
-        decision = classify("show me the value picture on 526-west-end-ave")
+        decision = classify("show me the value picture on 526-west-end-ave", client=_VisualizeLLM())
         self.assertEqual(decision.answer_type, AnswerType.VISUALIZE)
         self.assertIn("526-west-end-ave", decision.target_refs)
 
     def test_chart_keyword_routes_to_visualize(self) -> None:
-        decision = classify("can you chart the verdict gauge for 526-west-end-ave")
+        decision = classify("can you chart the verdict gauge for 526-west-end-ave", client=_VisualizeLLM())
         self.assertEqual(decision.answer_type, AnswerType.VISUALIZE)
 
     def test_lookup_shape_does_not_route_to_visualize(self) -> None:

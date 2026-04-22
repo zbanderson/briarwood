@@ -22,7 +22,6 @@ from briarwood.local_intelligence.normalize import normalize_source_documents
 from briarwood.local_intelligence.reconcile import reconcile_signals
 from briarwood.local_intelligence.summarize import build_town_summary
 from briarwood.local_intelligence.storage import JsonLocalSignalStore
-from briarwood.dash_app.view_models import build_town_pulse_view_model_from_payload
 from briarwood.modules.local_intelligence import LocalIntelligenceModule
 from briarwood.schemas import PropertyInput
 
@@ -554,19 +553,6 @@ class LocalIntelligenceTests(unittest.TestCase):
         self.assertTrue(result.payload.projects)
         self.assertTrue(any(project.status == "approved" for project in result.payload.projects))
         self.assertTrue(result.payload.narrative)
-
-    def test_town_pulse_view_model_renders_from_current_payload_flow(self) -> None:
-        result = LocalIntelligenceModule().run(sample_property())
-        pulse = build_town_pulse_view_model_from_payload(result.payload, town="Belmar", state="NJ")
-
-        self.assertIsNotNone(pulse)
-        assert pulse is not None
-        self.assertEqual(pulse.section_title, "Town Pulse")
-        self.assertTrue(pulse.key_signals)
-        self.assertLessEqual(len(pulse.key_signals), 4)
-        self.assertIn(pulse.confidence_label, {"Low", "Medium", "High"})
-        self.assertTrue(any(item.source_type for item in pulse.key_signals))
-        self.assertTrue(any(item.source_date_text for item in pulse.key_signals))
 
     def test_local_intelligence_handles_missing_documents(self) -> None:
         property_input = sample_property()

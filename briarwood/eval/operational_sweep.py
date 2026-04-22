@@ -102,7 +102,7 @@ def run_operational_sweep() -> dict[str, Any]:
 
 def _environment_checks() -> list[EnvironmentCheck]:
     checks: list[EnvironmentCheck] = []
-    for package in ("pydantic", "openai", "dash", "plotly", "weasyprint", "pypdf"):
+    for package in ("pydantic", "openai", "plotly", "pypdf", "fastapi"):
         installed = importlib.util.find_spec(package) is not None
         note = ""
         if package == "pydantic" and not installed:

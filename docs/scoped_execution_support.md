@@ -14,7 +14,7 @@ If a routed path needs any module that is not yet implemented in the scoped regi
 
 ## Current Supported Modules
 
-These modules have real scoped runners today:
+These modules have real scoped runners today (see `briarwood/execution/registry.py`):
 
 - `valuation`
 - `carry_cost`
@@ -24,48 +24,19 @@ These modules have real scoped runners today:
 - `hold_to_rent`
 - `unit_income_offset`
 - `legal_confidence`
-
-## Current Unsupported Modules
-
-These modules still use clean registry stubs and trigger fallback when required:
-
 - `resale_scenario`
 - `rental_option`
 - `renovation_impact`
 - `arv_model`
 - `margin_sensitivity`
+- `opportunity_cost`
+- `town_development_index`
 
 ## Fully Scoped Intents And Depths Today
 
 Fully scoped means every selected module and dependency for that routed path is supported in the V2 registry.
 
-Currently fully scoped:
-
-- `buy_decision` + `snapshot`
-- `buy_decision` + `decision`
-- direct routed runs whose selected modules stay within the supported set above
-
-Partially supported but not fully scoped at the intent level:
-
-- `owner_occupant_then_rent`
-  Because it still requires `rental_option`
-- `house_hack_multi_unit`
-  Some differentiated modules are scoped (`unit_income_offset`, `legal_confidence`, `rent_stabilization`), but full routed coverage still depends on `rental_option`
-- `owner_occupant_short_hold`
-  Still depends on `resale_scenario`
-- `renovate_then_sell`
-  Still depends on `renovation_impact`, `arv_model`, and `margin_sensitivity`
-
-## Paths That Still Use Fallback
-
-Legacy fallback is used whenever the routed module set includes an unsupported module.
-
-Common fallback cases:
-
-- short-hold resale paths
-- owner-occupant then rent paths that need `rental_option`
-- renovate-then-sell paths
-- any deep-dive run that expands into unsupported renovation or resale modules
+With the full module set now registered, every routed intent/depth combination runs through the scoped executor by default. The legacy fallback remains as a safety net for validation failures or registry-bypass scenarios, not for missing modules.
 
 ## Known Legacy Coupling
 
@@ -84,21 +55,8 @@ Known coupling areas:
 - `hold_to_rent`
   Is a thin composite of prior scoped outputs, not yet a fully native standalone module
 
-## Next Modules To Decouple
-
-Highest-value next modules:
-
-1. `rental_option`
-   This unlocks full scoped support for owner-occupant-then-rent and most house-hack routed paths
-2. `resale_scenario`
-   This unlocks short-hold decision paths without legacy fallback
-3. `renovation_impact`
-   This is the first step toward scoped renovation execution
-4. `arv_model`
-5. `margin_sensitivity`
-
 ## Practical Summary
 
-Today, Briarwood V2 scoped execution covers the buy-decision core plus rent durability, hold-to-rent packaging, extra-unit offset evidence, and legality-confidence evidence.
+Briarwood V2 scoped execution now covers the buy-decision core, rent durability, hold-to-rent packaging, extra-unit offset evidence, legality-confidence evidence, resale and rental-option paths, renovation-heavy paths (`renovation_impact` + `arv_model` + `margin_sensitivity`), and forward-looking modules (`opportunity_cost`, `town_development_index`).
 
-It does not yet fully replace the legacy engine for resale, rental-option, or renovation-heavy paths.
+Legacy fallback is no longer expected for any routed intent — every module referenced by the router has a concrete runner in the registry. Remaining work in this area is decoupling runners from legacy module classes, not filling missing coverage.

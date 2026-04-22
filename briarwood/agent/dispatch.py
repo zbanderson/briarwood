@@ -379,6 +379,70 @@ def _decision_view_to_dict(view: "PropertyView") -> dict[str, object]:
     }
 
 
+# Per-process cache of (town, state) tuples that have already auto-fetched
+# town research this run. Prevents refetching on every DECISION turn for a
+# cached town. Reset on process restart — the signal store itself persists.
+_AUTO_TOWN_FETCH_SEEN: set[tuple[str, str]] = set()
+
+
+def _maybe_auto_fetch_town_research(
+    *,
+    town: str | None,
+    state: str | None,
+    session: Session,
+    record_partial,
+) -> None:
+    """Synchronously trigger town research when the store has no signals.
+
+    Gated on ``BRIARWOOD_ENABLE_AUTO_TOWN_RESEARCH`` and a per-process seen
+    cache. Bounded to a short wall-clock budget so the collector cannot
+    stall the DECISION turn. Timeouts/failures are recorded as partial-data
+    warnings rather than bubbled.
+    """
+    import os
+
+    if not town or not state:
+        return
+    flag = os.environ.get("BRIARWOOD_ENABLE_AUTO_TOWN_RESEARCH", "").strip().lower()
+    if flag not in {"1", "true", "yes"}:
+        return
+    key = (town.strip().lower(), state.strip().lower())
+    if key in _AUTO_TOWN_FETCH_SEEN:
+        return
+
+    try:
+        from briarwood.local_intelligence.storage import JsonLocalSignalStore
+        store = JsonLocalSignalStore()
+        existing = store.load_town_signals(town=town, state=state)
+    except Exception as exc:
+        record_partial("town_research_auto_fetch", exc)
+        _AUTO_TOWN_FETCH_SEEN.add(key)
+        return
+
+    if existing:
+        _AUTO_TOWN_FETCH_SEEN.add(key)
+        return
+
+    _AUTO_TOWN_FETCH_SEEN.add(key)
+    try:
+        from briarwood.agent.tools import research_town
+        research_town(town=town, state=state, budget_seconds=2.0)
+    except Exception as exc:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "town_research_auto_fetch",
+                "reason": f"{type(exc).__name__}: {exc}".strip(": "),
+                "verdict_reliable": True,
+            }
+        )
+        return
+
+    try:
+        session.last_town_summary = _build_town_summary(town, state)
+    except Exception as exc:
+        record_partial("town_summary", exc)
+
+
 def _build_town_summary(town: str | None, state: str | None) -> dict[str, object] | None:
     """Build a lightweight town summary from market aggregates + seeded intel.
 
@@ -1346,6 +1410,13 @@ def handle_lookup(
         return _listing_history_lookup_response(pid)
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "lookup_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         addr = summary.get("address", pid)
         price = summary.get("ask_price")
         price_s = _money(price)
@@ -1422,6 +1493,12 @@ def handle_decision(
     except Exception as exc:
         session.last_town_summary = None
         _record_partial("town_summary", exc)
+    _maybe_auto_fetch_town_research(
+        town=view.town,
+        state=view.state,
+        session=session,
+        record_partial=_record_partial,
+    )
     try:
         cma_result = get_cma(pid, overrides=overrides)
     except Exception as exc:
@@ -1533,6 +1610,13 @@ def handle_decision(
             presentation_payload = None
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "decision_summary_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         if _is_value_question(text) and isinstance(view.fair_value_base, (int, float)):
             range_bits: list[str] = []
             if isinstance(view.value_low, (int, float)) and isinstance(view.value_high, (int, float)):
@@ -1615,6 +1699,11 @@ def handle_decision(
         return _finalize(cleaned)
 
     system = load_prompt("decision_summary")
+    key_risks = list(view.key_risks or [])
+    why_this_stance = list(view.why_this_stance or [])
+    what_changes_my_view = list(view.what_changes_my_view or [])
+    blocked_thesis_warnings = list(view.blocked_thesis_warnings or [])
+    contradiction_count = view.contradiction_count
     summary_inputs = {
         "overrides_applied": dict(view.overrides_applied) or {},
         "decision_stance": stance,
@@ -1626,6 +1715,11 @@ def handle_decision(
         "ask_premium_pct": view.ask_premium_pct,
         "trust_flags": list(flags),
         "what_must_be_true": list(view.what_must_be_true),
+        "key_risks": key_risks,
+        "why_this_stance": why_this_stance,
+        "what_changes_my_view": what_changes_my_view,
+        "contradiction_count": contradiction_count,
+        "blocked_thesis_warnings": blocked_thesis_warnings,
         "research_update": research_lines,
     }
     user = (
@@ -1640,6 +1734,11 @@ def handle_decision(
         f"ask_premium_pct: {view.ask_premium_pct}\n"
         f"trust_flags: {flags}\n"
         f"what_must_be_true: {list(view.what_must_be_true)}\n"
+        f"why_this_stance: {why_this_stance}\n"
+        f"key_risks: {key_risks}\n"
+        f"what_changes_my_view: {what_changes_my_view}\n"
+        f"contradiction_count: {contradiction_count}\n"
+        f"blocked_thesis_warnings: {blocked_thesis_warnings}\n"
         f"research_update: {' | '.join(research_lines) or 'none'}"
     )
     cleaned, report = complete_and_verify(
@@ -2441,6 +2540,13 @@ def handle_projection(
         return "\n".join(lines) + chart_line
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "projection_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         lines = [
             f"Most likely outcome: Briarwood's base case lands near {money(base)} over the next five years versus today's {basis_label} of {money(ask)}.",
             f"Upside case: {money(bull)} ({_delta(bull)}).",
@@ -2829,6 +2935,13 @@ def handle_risk(
         return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "downside_risk_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         lines = [f"Biggest downside check for {pid}:"]
         if risk_flags:
             lines.append(f"The main risk drivers are {', '.join(risk_flags)}.")
@@ -3067,6 +3180,13 @@ def handle_edge(
         return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "value_thesis_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         lines = [f"Plain-English value read for {pid}:"]
         lines.append(
             f"The asking price is {money(ask)} versus a fair-value anchor around {money(fair)}"
@@ -3177,6 +3297,13 @@ def handle_strategy(
     money = lambda v: f"${v:,.0f}" if isinstance(v, (int, float)) else "n/a"
 
     if llm is None:
+        session.last_partial_data_warnings.append(
+            {
+                "section": "strategy_narration",
+                "reason": "llm_unavailable",
+                "verdict_reliable": True,
+            }
+        )
         lines = [f"Best way to play {pid} right now:"]
         if fit.get("best_path"):
             lines.append(f"The strongest path is {fit['best_path']}.")

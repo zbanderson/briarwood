@@ -6,9 +6,11 @@ from unittest.mock import patch
 
 from api import events
 from api.pipeline_adapter import (
+    _assert_valuation_module_comps,
     _native_risk_chart,
     _to_listing_from_facts,
     _track_modules,
+    _valuation_comps_from_view,
     _verdict_from_view,
     browse_stream,
     decision_stream,
@@ -101,7 +103,13 @@ class PipelineAdapterContractTests(unittest.TestCase):
                 )
             )
 
-        event_types = [event["type"] for event in emitted]
+        # partial_data_warning banners (F7 / NF1) may ride ahead of the core
+        # cards — they are meta-events about reliability, not content. Strip
+        # them before asserting the core-card ordering contract.
+        content_events = [
+            event for event in emitted if event["type"] != events.EVENT_PARTIAL_DATA_WARNING
+        ]
+        event_types = [event["type"] for event in content_events]
         self.assertEqual(
             event_types[:3],
             [events.EVENT_VERDICT, events.EVENT_TOWN_SUMMARY, events.EVENT_COMPS_PREVIEW],
@@ -110,14 +118,14 @@ class PipelineAdapterContractTests(unittest.TestCase):
         self.assertGreater(event_types.index(events.EVENT_SCENARIO_TABLE), first_text_index)
         scenario_chart_index = next(
             idx
-            for idx, event in enumerate(emitted)
+            for idx, event in enumerate(content_events)
             if event["type"] == events.EVENT_CHART and event.get("kind") == "scenario_fan"
         )
         self.assertGreater(scenario_chart_index, first_text_index)
-        self.assertIsNotNone(emitted[scenario_chart_index].get("spec"))
-        scenario_table = next(event for event in emitted if event["type"] == events.EVENT_SCENARIO_TABLE)
+        self.assertIsNotNone(content_events[scenario_chart_index].get("spec"))
+        scenario_table = next(event for event in content_events if event["type"] == events.EVENT_SCENARIO_TABLE)
         self.assertEqual(scenario_table.get("basis_label"), "entry basis")
-        self.assertEqual(emitted[scenario_chart_index]["spec"].get("basis_label"), "entry basis")
+        self.assertEqual(content_events[scenario_chart_index]["spec"].get("basis_label"), "entry basis")
 
     def test_decision_stream_emits_value_thesis_risk_strategy_rent_when_views_populated(self) -> None:
         """Regression pin for audit finding 1.5.3: _decision_stream_impl used to
@@ -312,6 +320,8 @@ class PipelineAdapterContractTests(unittest.TestCase):
                 {"property_id": "comp-2", "address": "1600 L Street", "price": 899000},
             ],
         }
+        # F2: browse does not run the valuation module, so comps must be
+        # empty here. Live-market comps go into last_market_support_view below.
         session.last_value_thesis_view = {
             "address": "1008 14th Avenue, Belmar, NJ 07719",
             "town": "Belmar",
@@ -324,14 +334,20 @@ class PipelineAdapterContractTests(unittest.TestCase):
             "value_drivers": ["walkable Belmar location"],
             "key_value_drivers": ["walkable Belmar location"],
             "what_must_be_true": ["Carry costs need to pencil."],
-            "comp_selection_summary": "Nearby saved listings ranked toward the subject.",
+            "comp_selection_summary": None,
+            "comps": [],
+        }
+        session.last_market_support_view = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "comp_selection_summary": "Live Zillow market comps ranked toward the subject.",
             "comps": [
                 {
                     "property_id": "comp-1",
                     "address": "1302 L Street",
                     "ask_price": 850000,
-                    "source_label": "Saved comp",
-                    "feeds_fair_value": True,
+                    "source_label": "Live market comp",
                 }
             ],
         }
@@ -426,17 +442,19 @@ class PipelineAdapterContractTests(unittest.TestCase):
             )
 
         event_types = [event["type"] for event in emitted]
-        self.assertEqual(
-            event_types[:6],
-            [
-                events.EVENT_TOWN_SUMMARY,
-                events.EVENT_COMPS_PREVIEW,
-                events.EVENT_VALUE_THESIS,
-                events.EVENT_CMA_TABLE,
-                events.EVENT_STRATEGY_PATH,
-                events.EVENT_RENT_OUTLOOK,
-            ],
-        )
+        # F2: browse has no valuation-module output, so valuation_comps must
+        # NOT be emitted here. Live market comps surface as market_support_comps.
+        self.assertNotIn(events.EVENT_VALUATION_COMPS, event_types)
+        self.assertIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
+        expected_head = [
+            events.EVENT_TOWN_SUMMARY,
+            events.EVENT_COMPS_PREVIEW,
+            events.EVENT_VALUE_THESIS,
+            events.EVENT_MARKET_SUPPORT_COMPS,
+            events.EVENT_STRATEGY_PATH,
+            events.EVENT_RENT_OUTLOOK,
+        ]
+        self.assertEqual(event_types[: len(expected_head)], expected_head)
         first_text_index = event_types.index(events.EVENT_TEXT_DELTA)
         self.assertGreater(event_types.index(events.EVENT_SCENARIO_TABLE), first_text_index)
         self.assertIn(events.EVENT_LISTINGS, event_types)
@@ -485,6 +503,8 @@ class PipelineAdapterContractTests(unittest.TestCase):
                 {"property_id": "comp-2", "address": "1600 L Street", "price": 899000},
             ],
         }
+        # F2: browse does not run the valuation module, so comps must be
+        # empty here. Live-market comps go into last_market_support_view below.
         session.last_value_thesis_view = {
             "address": "1008 14th Avenue, Belmar, NJ 07719",
             "town": "Belmar",
@@ -497,14 +517,20 @@ class PipelineAdapterContractTests(unittest.TestCase):
             "value_drivers": ["walkable Belmar location"],
             "key_value_drivers": ["walkable Belmar location"],
             "what_must_be_true": ["Carry costs need to pencil."],
-            "comp_selection_summary": "Nearby saved listings ranked toward the subject.",
+            "comp_selection_summary": None,
+            "comps": [],
+        }
+        session.last_market_support_view = {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "comp_selection_summary": "Live Zillow market comps ranked toward the subject.",
             "comps": [
                 {
                     "property_id": "comp-1",
                     "address": "1302 L Street",
                     "ask_price": 850000,
-                    "source_label": "Saved comp",
-                    "feeds_fair_value": True,
+                    "source_label": "Live market comp",
                 }
             ],
         }
@@ -576,17 +602,19 @@ class PipelineAdapterContractTests(unittest.TestCase):
             )
 
         event_types = [event["type"] for event in emitted]
-        self.assertEqual(
-            event_types[:6],
-            [
-                events.EVENT_TOWN_SUMMARY,
-                events.EVENT_COMPS_PREVIEW,
-                events.EVENT_VALUE_THESIS,
-                events.EVENT_CMA_TABLE,
-                events.EVENT_STRATEGY_PATH,
-                events.EVENT_RENT_OUTLOOK,
-            ],
-        )
+        # F2: browse has no valuation-module output, so valuation_comps must
+        # NOT be emitted here. Live market comps surface as market_support_comps.
+        self.assertNotIn(events.EVENT_VALUATION_COMPS, event_types)
+        self.assertIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
+        expected_head = [
+            events.EVENT_TOWN_SUMMARY,
+            events.EVENT_COMPS_PREVIEW,
+            events.EVENT_VALUE_THESIS,
+            events.EVENT_MARKET_SUPPORT_COMPS,
+            events.EVENT_STRATEGY_PATH,
+            events.EVENT_RENT_OUTLOOK,
+        ]
+        self.assertEqual(event_types[: len(expected_head)], expected_head)
         first_text_index = event_types.index(events.EVENT_TEXT_DELTA)
         self.assertGreater(event_types.index(events.EVENT_SCENARIO_TABLE), first_text_index)
         self.assertIn("value_opportunity", [event.get("kind") for event in emitted if event["type"] == events.EVENT_CHART])
@@ -796,11 +824,10 @@ class VerdictFromViewTests(unittest.TestCase):
         self.assertEqual(payload["trust_summary"], {})
 
     def test_legacy_decision_engine_labels_are_rejected(self) -> None:
-        """AUDIT O.7: briarwood.decision_engine emits BUY / LEAN BUY / NEUTRAL
-        / LEAN PASS / AVOID — a separate vocabulary used only by the Dash and
-        reports stack. The new SSE pipeline must never render those as a
-        stance. Any such label triggers the validation fallback, same path
-        as any other shape drift."""
+        """Guard against legacy-vocabulary shape drift: if some upstream helper
+        ever emits BUY / LEAN BUY / NEUTRAL / LEAN PASS / AVOID, the stance
+        validator must reject it and fall back to the empty verdict, same path
+        as any other unknown stance label."""
         for legacy_label in ("BUY", "LEAN BUY", "NEUTRAL", "LEAN PASS", "AVOID"):
             view = self._full_view()
             view["decision_stance"] = legacy_label
@@ -1036,6 +1063,104 @@ class GroundingAnchorAttributionTests(unittest.TestCase):
         contributed = value_thesis[0]["contributed_to"]
         self.assertIn(events.EVENT_VALUE_THESIS, contributed)
         self.assertIn("narrative", contributed)
+
+
+class ValuationCompsProvenanceTests(unittest.TestCase):
+    """F2 contract guard: ``valuation_comps`` events must only carry comps
+    that actually fed the fair value computation. Live-market rows, saved
+    neighbor context comps, and anything without a valuation-module provenance
+    flag must never reach that event — otherwise the UI card ("Comps that fed
+    fair value") would be a lie.
+
+    These tests pin the contract two ways:
+    1. Emission guard (``_assert_valuation_module_comps``) rejects bad rows.
+    2. Source projection (``_valuation_comps_from_view``) returns ``None``
+       when the view has no comps, so no event is emitted at all.
+    """
+
+    _VALUATION_ROW = {
+        "property_id": "saved-1202-m-street",
+        "address": "1202 M Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "ask_price": 735000.0,
+        "source_label": "Saved comp",
+        "selected_by": "valuation",
+        "feeds_fair_value": True,
+    }
+    _LIVE_MARKET_ROW = {
+        "property_id": "1302-l-street",
+        "address": "1302 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "ask_price": 850000.0,
+        "source_label": "Live market comp",
+        "selected_by": "briarwood",
+        # hallmark of a non-valuation row: feeds_fair_value flag is absent
+        # (a valuation-module row ALWAYS sets it True, per _selected_comp_rows)
+    }
+
+    def test_guard_accepts_valuation_module_rows(self) -> None:
+        payload = {"rows": [dict(self._VALUATION_ROW)]}
+        # does not raise
+        _assert_valuation_module_comps(payload)
+
+    def test_guard_rejects_live_market_row_without_feeds_fair_value(self) -> None:
+        payload = {"rows": [dict(self._LIVE_MARKET_ROW)]}
+        with self.assertRaises(AssertionError) as ctx:
+            _assert_valuation_module_comps(payload)
+        self.assertIn("feeds_fair_value", str(ctx.exception))
+
+    def test_guard_rejects_row_with_feeds_fair_value_false(self) -> None:
+        row = dict(self._VALUATION_ROW)
+        row["feeds_fair_value"] = False
+        payload = {"rows": [row]}
+        with self.assertRaises(AssertionError):
+            _assert_valuation_module_comps(payload)
+
+    def test_guard_rejects_non_dict_row(self) -> None:
+        payload = {"rows": ["not a dict"]}
+        with self.assertRaises(AssertionError):
+            _assert_valuation_module_comps(payload)
+
+    def test_valuation_projection_returns_none_on_empty_view(self) -> None:
+        # Browse populates value_thesis_view without comps; we must not emit
+        # a valuation_comps event in that case.
+        view = {"address": "x", "town": "y", "state": "NJ", "comps": []}
+        self.assertIsNone(_valuation_comps_from_view(view))
+
+    def test_valuation_projection_preserves_rows_and_summary(self) -> None:
+        view = {
+            "address": "1008 14th Avenue",
+            "town": "Belmar",
+            "state": "NJ",
+            "comp_selection_summary": "Saved comps ranked toward subject.",
+            "comps": [dict(self._VALUATION_ROW)],
+        }
+        payload = _valuation_comps_from_view(view)
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload["summary"], "Saved comps ranked toward subject.")
+        self.assertEqual(payload["rows"][0]["property_id"], "saved-1202-m-street")
+        # And the guard must accept what the projection produced.
+        _assert_valuation_module_comps(payload)
+
+    def test_valuation_comps_event_source_is_valuation_module(self) -> None:
+        """Every valuation_comps event must carry the ``source`` literal so
+        downstream consumers (UI, telemetry) can discriminate it from the
+        market_support_comps event without peeking at row shape."""
+        event = events.valuation_comps(
+            {"rows": [dict(self._VALUATION_ROW)], "summary": "foo"}
+        )
+        self.assertEqual(event["type"], events.EVENT_VALUATION_COMPS)
+        self.assertEqual(event["source"], "valuation_module")
+
+    def test_market_support_comps_event_source_is_live_market(self) -> None:
+        event = events.market_support_comps(
+            {"rows": [dict(self._LIVE_MARKET_ROW)], "summary": "foo"}
+        )
+        self.assertEqual(event["type"], events.EVENT_MARKET_SUPPORT_COMPS)
+        self.assertEqual(event["source"], "live_market")
+
 
 
 if __name__ == "__main__":

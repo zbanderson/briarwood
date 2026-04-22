@@ -1,5 +1,14 @@
 # STATE_OF_1.0
 
+> **Historical context (as of 2026-04-22).** Entries referencing
+> `briarwood.dash_app`, `briarwood.projections.legacy_verdict`,
+> `briarwood.decision_engine`, `briarwood.runner`, `briarwood.runner_legacy`,
+> `briarwood.reports`, `briarwood.scorecard`, `briarwood.deal_curve`,
+> `run_dash.py`, and `app.py` are preserved for audit trail — those modules
+> were deleted as part of the verdict-path consolidation. The canonical
+> verdict now flows through `briarwood.synthesis.structured` via
+> `briarwood.runner_routed` into the FastAPI + Next.js chat surface.
+
 Single-file status document for the 1.0 consolidation work. Friday's
 retro reads from this file; keep each dated section factual and
 short. When a section is not yet filled in, leave the

@@ -2,10 +2,11 @@
 
 This package formerly housed a parallel verdict stack (`Pipeline`,
 `UnifiedIntelligenceAgent`, `DecisionAgent`, `FeedbackLogger`,
-`ScenarioModelAdapter`). Those modules were deleted 2026-04-20 as part of
-the verdict-path consolidation; the canonical verdict now lives in
-``briarwood/synthesis/structured.py`` and projects to legacy display
-shapes via ``briarwood/projections/legacy_verdict.py``.
+`ScenarioModelAdapter`). The canonical verdict now lives in
+``briarwood/synthesis/structured.py`` and flows through the routed
+runner + FastAPI adapter; the parallel Dash/tear-sheet rendering
+stack and its legacy projector were removed as part of the
+verdict-path consolidation.
 
 What remains here is shared infrastructure used by the routed stack and
 other active code paths:

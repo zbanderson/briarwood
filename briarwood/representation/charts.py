@@ -218,3 +218,27 @@ register(
     ),
     _render_rent_ramp,
 )
+
+
+def _render_hidden_upside_band(_inputs: dict[str, Any]) -> dict[str, Any] | None:
+    """Prose-only chart: HIDDEN_UPSIDE claims render through the
+    `HiddenUpsideBlock` React card rather than an SSE chart event. Registered
+    so the Representation Agent and chart-id validator can reference a
+    concrete spec for this claim type — returning ``None`` is the contract
+    for "no event to emit."""
+    return None
+
+
+register(
+    ChartSpec(
+        id="hidden_upside_band",
+        name="Hidden upside",
+        description=(
+            "Marker spec for HIDDEN_UPSIDE claims. UI renders via the "
+            "HiddenUpsideBlock card; no standalone chart event is emitted."
+        ),
+        required_inputs=[],
+        claim_types=["hidden_upside"],
+    ),
+    _render_hidden_upside_band,
+)

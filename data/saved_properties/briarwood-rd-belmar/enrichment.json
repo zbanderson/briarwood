@@ -8,13 +8,13 @@
     "address": "1223 Briarwood Rd, Belmar, NJ 07719",
     "label": "1223 Briarwood Rd",
     "ask_price": 674200.0,
-    "bcv": 777693.14,
+    "bcv": 774805.44,
     "pricing_view": "appears undervalued",
     "confidence": 0.7,
     "comp_trust": "Public Record Matched",
     "missing_input_count": 5,
     "is_hybrid_valuation": false,
-    "timestamp": "2026-04-17T13:16:16"
+    "timestamp": "2026-04-21T19:47:05"
   },
   "source_coverage": {
     "address": "user_supplied",
@@ -42,7 +42,179 @@
     ],
     "missing_input_count": 5
   },
-  "google": {},
+  "google": {
+    "geocode": {
+      "formatted_address": "1223 Briarwood Rd, Belmar, NJ 07719, USA",
+      "latitude": 40.1771721,
+      "longitude": -74.0351573,
+      "place_id": "ChIJw9eKrwgowokRjQjOvj8-UDU",
+      "types": [
+        "premise",
+        "street_address"
+      ],
+      "town": "Belmar",
+      "state": "NJ",
+      "county": "Monmouth",
+      "zip_code": "07719"
+    },
+    "nearby_places": {
+      "places": [
+        {
+          "place_id": "ChIJaUbq6_WHwYkRD962kmK1AU0",
+          "name": "ShopRite of Belmar",
+          "address": "1732 NJ-35, Belmar, NJ 07719, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.1696816,
+          "longitude": -74.04469259999999,
+          "distance_meters": 1162,
+          "rating": 3.9,
+          "user_rating_count": 1037,
+          "google_maps_uri": "https://maps.google.com/?cid=5548915650870042127&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+          "name": "Belmar",
+          "address": "Belmar, NJ 07719, USA",
+          "primary_type": "train_station",
+          "latitude": 40.180367,
+          "longitude": -74.02746739999999,
+          "distance_meters": 744,
+          "rating": 4,
+          "user_rating_count": 24,
+          "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJNWDm0eYnwokRlkehC1z6yQs",
+          "name": "St. Rose High School",
+          "address": "607 7th Ave, Belmar, NJ 07719, USA",
+          "primary_type": "secondary_school",
+          "latitude": 40.181906,
+          "longitude": -74.02368129999999,
+          "distance_meters": 1108,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=849485277975103382&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+          "name": "Maclearie Park",
+          "address": "905 NJ-35, Belmar, NJ 07719, USA",
+          "primary_type": "park",
+          "latitude": 40.1788472,
+          "longitude": -74.035854,
+          "distance_meters": 195,
+          "rating": 4.6,
+          "user_rating_count": 608,
+          "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJRebeHQEowokRGs3wrZJ6VW0",
+          "name": "Matt's Farm Market & Garden Center",
+          "address": "1740 NJ-71, Belmar, NJ 07719, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.1697438,
+          "longitude": -74.0330408,
+          "distance_meters": 845,
+          "rating": 4.8,
+          "user_rating_count": 182,
+          "google_maps_uri": "https://maps.google.com/?cid=7878337893556604186&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+          "name": "Academy Charter High School",
+          "address": "1725 Main St, Belmar, NJ 07719, USA",
+          "primary_type": "secondary_school",
+          "latitude": 40.1712428,
+          "longitude": -74.0278285,
+          "distance_meters": 907,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+          "name": "Supersavers Market",
+          "address": "1210 Main St, Belmar, NJ 07719, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.1766522,
+          "longitude": -74.02627629999999,
+          "distance_meters": 757,
+          "rating": 4.4,
+          "user_rating_count": 133,
+          "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJWen7GgCIwYkRb4uXAvH4PHQ",
+          "name": "Marucci Memorial Park",
+          "address": "300 South Blvd, Spring Lake, NJ 07762, USA",
+          "primary_type": "park",
+          "latitude": 40.165427,
+          "longitude": -74.0290698,
+          "distance_meters": 1405,
+          "rating": 4.6,
+          "user_rating_count": 122,
+          "google_maps_uri": "https://maps.google.com/?cid=8375843121016572783&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        }
+      ],
+      "type_counts": {
+        "grocery_store": 3,
+        "train_station": 1,
+        "secondary_school": 2,
+        "park": 2
+      },
+      "nearest_by_type": {
+        "grocery_store": {
+          "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+          "name": "Supersavers Market",
+          "address": "1210 Main St, Belmar, NJ 07719, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.1766522,
+          "longitude": -74.02627629999999,
+          "distance_meters": 757,
+          "rating": 4.4,
+          "user_rating_count": 133,
+          "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "train_station": {
+          "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+          "name": "Belmar",
+          "address": "Belmar, NJ 07719, USA",
+          "primary_type": "train_station",
+          "latitude": 40.180367,
+          "longitude": -74.02746739999999,
+          "distance_meters": 744,
+          "rating": 4,
+          "user_rating_count": 24,
+          "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "secondary_school": {
+          "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+          "name": "Academy Charter High School",
+          "address": "1725 Main St, Belmar, NJ 07719, USA",
+          "primary_type": "secondary_school",
+          "latitude": 40.1712428,
+          "longitude": -74.0278285,
+          "distance_meters": 907,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "park": {
+          "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+          "name": "Maclearie Park",
+          "address": "905 NJ-35, Belmar, NJ 07719, USA",
+          "primary_type": "park",
+          "latitude": 40.1788472,
+          "longitude": -74.035854,
+          "distance_meters": 195,
+          "rating": 4.6,
+          "user_rating_count": 608,
+          "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        }
+      }
+    },
+    "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1771721%2C-74.0351573&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+  },
   "attom": {
     "property_detail": {
       "address": "1223 BRIARWOOD RD, BELMAR, NJ 07719",
@@ -84,8 +256,7 @@
   },
   "town_intelligence": null,
   "warnings": [
-    "Google Maps enrichment unavailable: GOOGLE_MAPS_API_KEY is not configured.",
     "ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
   ],
-  "fetched_at": "2026-04-17T13:21:12"
+  "fetched_at": "2026-04-22T08:59:14"
 }

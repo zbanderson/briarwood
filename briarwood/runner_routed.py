@@ -38,9 +38,9 @@ from briarwood.settings import CostValuationSettings
 from briarwood.runner_common import (
     RoutedAnalysisResult,
     _prepare_property_input,
+    build_engine,
     validate_property_input,
 )
-from briarwood.runner_legacy import build_engine
 
 logger = logging.getLogger(__name__)
 

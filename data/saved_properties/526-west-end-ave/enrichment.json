@@ -43,7 +43,205 @@
     ],
     "missing_input_count": 8
   },
-  "google": {},
+  "google": {
+    "geocode": {},
+    "nearby_places": {
+      "places": [
+        {
+          "place_id": "ChIJ86iMo9UnwokRUMBw_NRd8M0",
+          "name": "Stop & Shop",
+          "address": "116 NJ-35, Neptune City, NJ 07753, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.202649799999996,
+          "longitude": -74.0280848,
+          "distance_meters": 1105,
+          "rating": 4.2,
+          "user_rating_count": 988,
+          "google_maps_uri": "https://maps.google.com/?cid=14839463941535481936&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJNWDm0eYnwokRlkehC1z6yQs",
+          "name": "St. Rose High School",
+          "address": "607 7th Ave, Belmar, NJ 07719, USA",
+          "primary_type": "secondary_school",
+          "latitude": 40.181906,
+          "longitude": -74.02368129999999,
+          "distance_meters": 1492,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=849485277975103382&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJLVV1dtonwokR_Y6guAB6LuY",
+          "name": "Bradley Beach",
+          "address": "Bradley Beach, NJ 07720, USA",
+          "primary_type": "train_station",
+          "latitude": 40.20375,
+          "longitude": -74.01889,
+          "distance_meters": 977,
+          "rating": 4.4,
+          "user_rating_count": 16,
+          "google_maps_uri": "https://maps.google.com/?cid=16586328621168234237&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJc_7n13cowokRLgkN4e7wUlI",
+          "name": "Memorial Park",
+          "address": "1-41 Riverview Ave, Neptune City, NJ 07753, USA",
+          "primary_type": "park",
+          "latitude": 40.19373590000001,
+          "longitude": -74.0303795,
+          "distance_meters": 909,
+          "rating": 4.7,
+          "user_rating_count": 330,
+          "google_maps_uri": "https://maps.google.com/?cid=5932068567968975150&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJmQEOHM0nwokRY97vZSmGVKg",
+          "name": "Bradley Beach Elementary School",
+          "address": "515 Brinley Ave, Bradley Beach, NJ 07720, USA",
+          "primary_type": "primary_school",
+          "latitude": 40.202197,
+          "longitude": -74.01564499999999,
+          "distance_meters": 876,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=12129467208777588323&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJ66MeHMEnwokRvzMWqklHskk",
+          "name": "Belmar's Natural Beach Area",
+          "address": "Belmar, NJ 07719, USA",
+          "primary_type": "nature_preserve",
+          "latitude": 40.1863224,
+          "longitude": -74.0097722,
+          "distance_meters": 1286,
+          "rating": 4.7,
+          "user_rating_count": 498,
+          "google_maps_uri": "https://maps.google.com/?cid=5310385292335002559&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJbw8E2uYnwokRoqAMl5TYpWM",
+          "name": "St. Rose Grammar School",
+          "address": "605 6th Ave, Belmar, NJ 07719, USA",
+          "primary_type": "school",
+          "latitude": 40.18282,
+          "longitude": -74.02297,
+          "distance_meters": 1380,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=7180383313613070498&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        {
+          "place_id": "ChIJOSEcdNsnwokRsVJrMu-Kis4",
+          "name": "Avon-By-The-Sea Public School",
+          "address": "505 Lincoln Ave, Avon-By-The-Sea, NJ 07717, USA",
+          "primary_type": "primary_school",
+          "latitude": 40.190307499999996,
+          "longitude": -74.02091759999999,
+          "distance_meters": 529,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=14882860678546936497&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        }
+      ],
+      "type_counts": {
+        "grocery_store": 1,
+        "secondary_school": 1,
+        "train_station": 1,
+        "park": 1,
+        "primary_school": 2,
+        "nature_preserve": 1,
+        "school": 1
+      },
+      "nearest_by_type": {
+        "grocery_store": {
+          "place_id": "ChIJ86iMo9UnwokRUMBw_NRd8M0",
+          "name": "Stop & Shop",
+          "address": "116 NJ-35, Neptune City, NJ 07753, USA",
+          "primary_type": "grocery_store",
+          "latitude": 40.202649799999996,
+          "longitude": -74.0280848,
+          "distance_meters": 1105,
+          "rating": 4.2,
+          "user_rating_count": 988,
+          "google_maps_uri": "https://maps.google.com/?cid=14839463941535481936&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "secondary_school": {
+          "place_id": "ChIJNWDm0eYnwokRlkehC1z6yQs",
+          "name": "St. Rose High School",
+          "address": "607 7th Ave, Belmar, NJ 07719, USA",
+          "primary_type": "secondary_school",
+          "latitude": 40.181906,
+          "longitude": -74.02368129999999,
+          "distance_meters": 1492,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=849485277975103382&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "train_station": {
+          "place_id": "ChIJLVV1dtonwokR_Y6guAB6LuY",
+          "name": "Bradley Beach",
+          "address": "Bradley Beach, NJ 07720, USA",
+          "primary_type": "train_station",
+          "latitude": 40.20375,
+          "longitude": -74.01889,
+          "distance_meters": 977,
+          "rating": 4.4,
+          "user_rating_count": 16,
+          "google_maps_uri": "https://maps.google.com/?cid=16586328621168234237&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "park": {
+          "place_id": "ChIJc_7n13cowokRLgkN4e7wUlI",
+          "name": "Memorial Park",
+          "address": "1-41 Riverview Ave, Neptune City, NJ 07753, USA",
+          "primary_type": "park",
+          "latitude": 40.19373590000001,
+          "longitude": -74.0303795,
+          "distance_meters": 909,
+          "rating": 4.7,
+          "user_rating_count": 330,
+          "google_maps_uri": "https://maps.google.com/?cid=5932068567968975150&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "primary_school": {
+          "place_id": "ChIJOSEcdNsnwokRsVJrMu-Kis4",
+          "name": "Avon-By-The-Sea Public School",
+          "address": "505 Lincoln Ave, Avon-By-The-Sea, NJ 07717, USA",
+          "primary_type": "primary_school",
+          "latitude": 40.190307499999996,
+          "longitude": -74.02091759999999,
+          "distance_meters": 529,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=14882860678546936497&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "nature_preserve": {
+          "place_id": "ChIJ66MeHMEnwokRvzMWqklHskk",
+          "name": "Belmar's Natural Beach Area",
+          "address": "Belmar, NJ 07719, USA",
+          "primary_type": "nature_preserve",
+          "latitude": 40.1863224,
+          "longitude": -74.0097722,
+          "distance_meters": 1286,
+          "rating": 4.7,
+          "user_rating_count": 498,
+          "google_maps_uri": "https://maps.google.com/?cid=5310385292335002559&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        },
+        "school": {
+          "place_id": "ChIJbw8E2uYnwokRoqAMl5TYpWM",
+          "name": "St. Rose Grammar School",
+          "address": "605 6th Ave, Belmar, NJ 07719, USA",
+          "primary_type": "school",
+          "latitude": 40.18282,
+          "longitude": -74.02297,
+          "distance_meters": 1380,
+          "rating": null,
+          "user_rating_count": null,
+          "google_maps_uri": "https://maps.google.com/?cid=7180383313613070498&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+        }
+      }
+    },
+    "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1949884%2C-74.0198027&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+  },
   "attom": {
     "property_detail": {
       "address": "526 W END AVE, AVON BY THE SEA, NJ 07717",
@@ -85,8 +283,7 @@
   },
   "town_intelligence": null,
   "warnings": [
-    "Google Maps enrichment unavailable: GOOGLE_MAPS_API_KEY is not configured.",
     "ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
   ],
-  "fetched_at": "2026-04-17T13:21:05"
+  "fetched_at": "2026-04-22T08:59:03"
 }

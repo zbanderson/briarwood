@@ -2,340 +2,49 @@
   "signals": [
     {
       "affected_dimensions": [
-        "neighborhood_quality",
-        "amenity_trajectory",
+        "future_supply",
         "home_values"
       ],
-      "canonical_key": null,
-      "confidence": 0.92,
-      "created_at": "2026-04-17T17:16:55.247921Z",
-      "evidence_excerpt": "The proposal for 500 River Road residential project with 12 units was denied after traffic concern and parking issue were discussed.",
-      "facts": [
-        "Signal classified as amenity.",
-        "Source type: zoning board minutes.",
-        "Status read as rejected.",
-        "Document references approximately 12 units.",
-        "Location referenced: 500 River Road."
-      ],
-      "first_seen_at": "2026-04-17T17:16:55.247927Z",
-      "id": "sig-025be82937ad",
-      "impact_direction": "negative",
-      "impact_magnitude": 3,
-      "inference": "This may create downside pressure or execution risk if the concern persists.",
-      "last_seen_at": "2026-04-17T17:16:55.247927Z",
-      "last_transition_at": null,
-      "metadata": {
-        "location": "500 River Road",
-        "units": 12
-      },
-      "occurrence_count": 1,
-      "previous_status": null,
-      "reconciliation_status": null,
-      "signal_type": "amenity",
-      "source_date": "2026-02-25T00:00:00Z",
-      "source_document_id": "doc-297f24e40a30",
-      "source_type": "zoning_board_minutes",
-      "source_url": null,
-      "state": "NJ",
-      "status": "rejected",
-      "time_horizon": "medium_term",
-      "title": "500 River Road residential project with 12 units was denied after traffic concer",
-      "town": "Belmar",
-      "updated_at": "2026-04-17T17:16:55.247921Z"
-    },
-    {
-      "affected_dimensions": [
-        "future_supply",
-        "home_values",
-        "rent_growth"
-      ],
       "canonical_key": "tsk-457c92a39da2714f",
-      "confidence": 0.92,
-      "created_at": "2026-04-17T17:16:55.247894Z",
-      "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved. Board members found the project consistent with the master plan.",
+      "confidence": 0.82,
+      "created_at": "2026-04-22T12:57:06.438367Z",
+      "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
       "facts": [
         "Existing signal for the same project.",
-        "The document states 24 residential units were approved.",
-        "Signal classified as supply.",
-        "Source type: planning board minutes.",
-        "Status read as approved.",
-        "Document references approximately 24 units.",
-        "Location referenced: 1201 Main Street."
+        "The document states 24 residential units were approved."
       ],
       "first_seen_at": "2026-02-11T00:00:00Z",
-      "id": "sig-71254b879dc4",
-      "impact_direction": "positive",
+      "id": "sig-07b025575b6d",
+      "impact_direction": "mixed",
       "impact_magnitude": 4,
-      "inference": "This may influence future supply and pricing dynamics if the 24-unit pipeline reaches delivery. This may add moderate supply. Earlier extraction run.",
-      "last_seen_at": "2026-04-17T17:16:55.247927Z",
+      "inference": "This may add moderate supply. Earlier extraction run.",
+      "last_seen_at": "2026-04-22T12:57:06.438386Z",
       "last_transition_at": null,
       "metadata": {
         "location": "1201 Main Street",
         "related_source_document_ids": [
-          "fixture-minutes-001",
-          "doc-5b47002292f8",
-          "older-doc"
+          "older-doc",
+          "fixture-minutes-001"
         ],
         "source_type_history": [
           "planning_board_minutes"
         ],
         "units": 24
       },
-      "occurrence_count": 3,
+      "occurrence_count": 2,
       "previous_status": null,
-      "reconciliation_status": null,
+      "reconciliation_status": "updated",
       "signal_type": "supply",
       "source_date": "2026-02-11T00:00:00Z",
-      "source_document_id": "doc-5b47002292f8",
+      "source_document_id": "fixture-minutes-001",
       "source_type": "planning_board_minutes",
       "source_url": null,
       "state": "NJ",
       "status": "approved",
       "time_horizon": "medium_term",
-      "title": "1201 Main Street mixed-use redevelopment with 24 residential units was approved",
+      "title": "1201 Main Street redevelopment plan",
       "town": "Belmar",
-      "updated_at": "2026-04-17T17:16:55.247927Z"
-    },
-    {
-      "affected_dimensions": [
-        "regulatory_risk",
-        "liquidity"
-      ],
-      "canonical_key": null,
-      "confidence": 0.92,
-      "created_at": "2026-04-17T21:05:21.171159Z",
-      "evidence_excerpt": "BOROUGH OF BELMAR PLANNING BOARD NOTICE OF PLANNING BOARD MEETING CONCERNING THE AMENDED HOUSING ELEMENT AND FAIR SHARE PLAN OF THE BOROUGH\u2019S MASTER PLAN PLEASE TAKE NOTICE that on February 26, 2026 at 7:00 p.m., in accordance with the Municipal Land Use Law, more particularly N.J.S.A. 40:55D-13, the Planning Board of the Borough of Belmar, County of Monmouth, State of New Jersey, at its regular meeting, will conduct a public hearing and take action on the Amended Housing Element and Fair Share Plan (\u201cHEFSP\u201d) of the Borough\u2019s Master Plan, dated February, 2026, in connection with a proceeding known as, In the Matter of the Application of the Borough of Belmar Municipal Corporation of the State of New Jersey Declaratory Judgment Action, bearing Docket No. MON-L-655-23, pending in the Superior Court before the Honorable Linda Grasso Jones, J.S.C., Law Division, Monmouth County (the \u201cDJ Action\u201d). This proceeding involves litigation filed by the Borough of Belmar pursuant to the New Jersey Supreme Court\u2019s March 10, 2015 decision in the matter of In re N.J.A.C. 5:96 & N.J.A.C. 5:97, 221 N.J. 1 (2015). As part of the settlement and resolution of the DJ Action, the Borough\u2019s Planning Consultant, Leon S. Avakian Inc., (the \u201cPlanning Consultant\u201d) prepared the Housing Element and Fair Share Plan (the \u201cOriginal HEFSP\u201d), an element of the Borough\u2019s Master Plan, in which it identified specific sites and compliance mechanisms to address the Borough\u2019s housing obligations that present a realistic opportunity for the development of housing affordable to very low, low and moderate income households. The Original HEFSP also delineates the actions taken, and to be taken, by the Borough to satisfy its Fourth Round affordable housing responsibilities under applicable laws. The Borough\u2019s Fourth Round affordable housing obligation was determined by the New Jersey Department of Community Affairs to be a present need or rehabilitation component of 0 affordable units and a prospective need or new construction obligation of 43 units. The Borough\u2019s Realistic Development Potential is 14 as determined pursuant to the Fair Housing Act, N.J.S.A. 52:27D-301, et seq., the substantive, applicable regulations, the New Jersey Supreme Court\u2019s March 10, 2015 decision in the matter of In re N.J.A.C. 5:96 & N.J.A.C. 5:97, 221 N.J. 1 (2015), and other applicable laws. The Borough Planning Board adopted the Original HEFSP on June 16, 2025. Following subsequent negotiations with Fair Share Housing Center, as part of the settlement and resolution of the DJ Action, the Planning Consultant prepared an amendment to the Original HEFSP (the \u201cAmended HEFSP\u201d). Following public comment, the Planning Board shall consider adoption of the Amended HEFSP by way of resolution. The Amended HEFSP was prepared in accordance with N.J.S.A. 40:55D-28(b)(3) of the MLUL and the mandatory requirements of a Housing Element under the New Jersey Fair Housing Act, N.J.S.A. 52:27D-301 to -329.20, and the Administrative Office of the Courts Directive #14-24. A copy of the Amended HEFSP, and any other relevant documents, are on file and available for public inspection and/or photocopying (at requestor\u2019s expense) during normal business hours, beginning on February 12, 2026, in the Borough Clerk\u2019s office located at 601 Main 675521.1 Street, Belmar, New Jersey 07719 and is posted on the Borough\u2019s website. Any interested person may appear and be heard at the time of the Planning Board Meeting on February 26, 2026, to discuss and offer comments on the HEFSP in accordance with the rules of the Planning Board.",
-      "facts": [
-        "Signal classified as regulation change.",
-        "Source type: planning board minutes.",
-        "Status read as approved.",
-        "Document references approximately 43 units.",
-        "Location referenced: 7:00 p."
-      ],
-      "first_seen_at": "2026-04-17T21:05:21.173014Z",
-      "id": "sig-cc2731ce002d",
-      "impact_direction": "positive",
-      "impact_magnitude": 5,
-      "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-17T21:05:21.173014Z",
-      "last_transition_at": null,
-      "metadata": {
-        "location": "7:00 p",
-        "units": 43
-      },
-      "occurrence_count": 1,
-      "previous_status": null,
-      "reconciliation_status": null,
-      "signal_type": "regulation_change",
-      "source_date": null,
-      "source_document_id": "doc-4dacf7f3c85b",
-      "source_type": "planning_board_minutes",
-      "source_url": null,
-      "state": "NJ",
-      "status": "approved",
-      "time_horizon": "long_term",
-      "title": "the Borough of Belmar Municipal Corporation of the State of New Jersey Declarato",
-      "town": "Belmar",
-      "updated_at": "2026-04-17T21:05:21.171159Z"
-    },
-    {
-      "affected_dimensions": [
-        "neighborhood_quality",
-        "amenity_trajectory",
-        "home_values"
-      ],
-      "canonical_key": null,
-      "confidence": 0.75,
-      "created_at": "2026-04-17T17:20:42.022254Z",
-      "evidence_excerpt": "[![Belmar Municipal]() ![Belmar Municipal]()](/) **P: 732-681-3700** **F: 732-681-3434** **General Inquiries** [**info@belmar.com**](mailto:info@belmar.com) **Belmar Municipal Building** **601 Main Street, Belmar, NJ 07719** [![Belmar Municipal]() ![Belmar Municipal]()](/) **P: 732-681-3700** **F: 732-681-3434** **General Inquiries** [**info@belmar.com**](mailto:info@belmar.com) **Belmar Municipal Building** **601 Main Street, Belmar, NJ 07719** * [Home](/) * [Government](#) + [Directory](/government/directory) + [Forms & Applications](/government/forms) + [Mayor & Council](/government/mayor) + [Meeting Documents](/government/meeting-documents-2/) + [Municipal Code](https://www.ecode360.com/BE4028) + [Open Public Records Act](https://belmarborough.nextrequest.com/) + [Public Notices](/government/public-notices) + [Redevelopment & Affordable Housing](/government/housing-information) * [Departments](#) + [Administration](/departments/administrator) + [Bureau of Fire Prevention](/departments/fire-prevention) + [Community Development](/departments/community-development) - [Code Enforcement](/departments/community-development/code-enforcement) - [Construction](/departments/community-development/construction) - [Housing](/departments/community-development/housing) + [Public Works](/departments/dpw) + [Emergency Medical Services](/departments/ems) + [Finance](/departments/finance) + [Fire Department](/departments/fire) + [Human Resources](/departments/hr) + [Library](https://belmarlibrary.org/) + [Marina](https://www.belmarmanuttimarina.com/) + [Municipal Clerk](/departments/clerk) + [Municipal Court](/departments/court) + [Recreation](/departments/recreation) + [Taxes](/departments/assessor) + [Vital Statistics](/departments/vital-statistics) + [Water / Sewer](/departments/water-sewer) * [Boards](#) + [ADA Committee](/boards/ada-committee) + [Belmar Historical Society](/boards/historic) + [Belmar Housing Authority](https://www.belmarhousingauthority.com/) + [Environmental Commission](/boards/environmental) + [Harbor Commission](https://www.belmarmanuttimarina.com/belmar-harbor-commission) + [Planning Board](/boards/planning) + [Shade Tree Commission](/boards/tree) + [Zoning Board of Adjustment](/boards/zone) * [Residents](#) + [About Us](/resident/about) + [Belmar Arts Council](https://www.belmararts.org/) + [Belmar Historical Society](https://www.belmarhistoricalsociety.org/) + [Calendar](/resident/calendar) + [Census Information](https://nj.gov/state/census.shtml) + [Complaints](/residents-page-list/360-complaints) + [Dog Licensing](/resident/dog-licensing) + [Get Belmar Alerts](/resident/alerts) + [Newsletters](/government/documents/newsletters) + [Property Information Map](https://www.sdlportal.com/towns/nj/monmouth/belmar/search?utm_campaign=website&utm_medium=email&utm_source=sendgrid.com) + [Pyanoe Plaza Brick Paver Project](/resident/pyanoe-plaza-brick-paver-project) + [Social Services](/resident/social-services) + [Taylor Pavilion/Gazebo Rental](/resident/taylor-pavilion-gazebo-rental) * [Tourism](#) + [Accommodations](/visitor/accommodations) + [Advertise with Belmar](/visitor/advertise-with-belmar) + [Belmar Tourism Commission](/visitor/belmar-tourism) + [Dining](/visitor/dining) + [Events](/visitor/events) + [Parking Rules & Paid Parking](/visitor/parking-rules-paid-parking) + [Services](/visitor/services) + [Shopping](/visitor/shopping) * [Beach](https://belmarbeachnj.com/) * [Police](https://belmarpolice.com/) # Planning Board ### Who We Are **The Planning Board consists of 9 members and 2 alternates.** **Douglas Kovats, Esq.** Planning Board Attorney **April Claudio** Planning Board Secretary No item found! # General Information No item found! The Planning Board hears applications for sub-divisions, site plans, as well as applications for the Seaport Redevelopment and Transit Village. Homeowners within 200 feet of properties being reviewed by the Planning Board are notified of an application and are welcome to voice opinions, concerns or support during the public comment portion of the meeting. The Planning Board is also responsible for the Belmar Master Plan. Any questions please call 732-681-3700 ext. 225 **Meetings** The Planning Board meets on the 3rd Monday of every month unless otherwise noted. Meetings begin at 7:00 pm and are held in the courtroom in the municipal building. ###### Upcoming Planning Board Meetings 20 Apr [Planning Board Meeting](/resident/calendar/planning-board-meeting-2-1776726000) 7:00 pm 18 May [Planning Board Meeting](/resident/calendar/planning-board-meeting-2-1779145200) 7:00 pm 15 Jun [Planning Board Meeting](/resident/calendar/planning-board-meeting-2-1781564400) 7:00 pm 20 Jul [Planning Board Meeting](/resident/calendar/planning-board-meeting-2-1784588400) 7:00 pm 17 Aug [Planning Board Meeting](/resident/calendar/planning-board-meeting-2-1787007600) 7:00 pm [Meeting Documents](/government/meeting-documents-2/planning-board-meetings/) **Notice: The Borough of Belmar does not accept wire transfers or other electronic payments. All planning/zoning board application fees and escrow deposits must be paid by checks payable to \u201cBorough of Belmar\u201d and delivered to the Board Secretary, Borough of Belmar Municipal Building, Belmar Municipal Building 601 Main Street, Belmar, NJ 07719.** **Anyone who receives a request purporting to require a wire transfer or other electronic payment to the Borough of Belmar should immediately contact the Board Secretary by phone at 732-681-3700 ext. 225 , because it is a scam.** * [Home](/) * [Government](#) + [Directory](/government/directory) + [Forms & Applications](/government/forms) + [Mayor & Council](/government/mayor) + [Meeting Documents](/government/meeting-documents-2/) + [Municipal Code](https://www.ecode360.com/BE4028) + [Open Public Records Act](https://belmarborough.nextrequest.com/) + [Public Notices](/government/public-notices) + [Redevelopment & Affordable Housing](/government/housing-information) * [Departments](#) + [Administration](/departments/administrator) + [Bureau of Fire Prevention](/departments/fire-prevention) + [Community Development](/departments/community-development) - [Code Enforcement](/departments/community-development/code-enforcement) - [Construction](/departments/community-development/construction) - [Housing](/departments/community-development/housing) + [Public Works](/departments/dpw) + [Emergency Medical Services](/departments/ems) + [Finance](/departments/finance) + [Fire Department](/departments/fire) + [Human Resources](/departments/hr) + [Library](https://belmarlibrary.org/) + [Marina](https://www.belmarmanuttimarina.com/) + [Municipal Clerk](/departments/clerk) + [Municipal Court](/departments/court) + [Recreation](/departments/recreation) + [Taxes](/departments/assessor) + [Vital Statistics](/departments/vital-statistics) + [Water / Sewer](/departments/water-sewer) * [Boards](#) + [ADA Committee](/boards/ada-committee) + [Belmar Historical Society](/boards/historic) + [Belmar Housing Authority](https://www.belmarhousingauthority.com/) + [Environmental Commission](/boards/environmental) + [Harbor Commission](https://www.belmarmanuttimarina.com/belmar-harbor-commission) + [Planning Board](/boards/planning) + [Shade Tree Commission](/boards/tree) + [Zoning Board of Adjustment](/boards/zone) * [Residents](#) + [About Us](/resident/about) + [Belmar Arts Council](https://www.belmararts.org/) + [Belmar Historical Society](https://www.belmarhistoricalsociety.org/) + [Calendar](/resident/calendar) + [Census Information](https://nj.gov/state/census.shtml) + [Complaints](/residents-page-list/360-complaints) + [Dog Licensing](/resident/dog-licensing) + [Get Belmar Alerts](/resident/alerts) + [Newsletters](/government/documents/newsletters) + [Property Information Map](https://www.sdlportal.com/towns/nj/monmouth/belmar/search?utm_campaign=website&utm_medium=email&utm_source=sendgrid.com) + [Pyanoe Plaza Brick Paver Project](/resident/pyanoe-plaza-brick-paver-project) + [Social Services](/resident/social-services) + [Taylor Pavilion/Gazebo Rental](/resident/taylor-pavilion-gazebo-rental) * [Tourism](#) + [Accommodations](/visitor/accommodations) + [Advertise with Belmar](/visitor/advertise-with-belmar) + [Belmar Tourism Commission](/visitor/belmar-tourism) + [Dining](/visitor/dining) + [Events](/visitor/events) + [Parking Rules & Paid Parking](/visitor/parking-rules-paid-parking) + [Services](/visitor/services) + [Shopping](/visitor/shopping) * [Beach](https://belmarbeachnj.com/) * [Police](https://belmarpolice.com/)",
-      "facts": [
-        "Signal classified as infrastructure.",
-        "Source type: planning board minutes.",
-        "Status read as completed.",
-        "Location referenced: 601 Main Street.",
-        "Status read as mentioned.",
-        "Source type: ordinance.",
-        "Source type: other.",
-        "Source type: zoning board minutes."
-      ],
-      "first_seen_at": "2026-04-17T17:20:42.024677Z",
-      "id": "sig-d13ee97e4d42",
-      "impact_direction": "positive",
-      "impact_magnitude": 4,
-      "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-19T12:43:01.526582Z",
-      "last_transition_at": "2026-04-19T12:43:01.526582Z",
-      "metadata": {
-        "location": "601 Main Street",
-        "related_source_document_ids": [
-          "doc-3533cdf048d9",
-          "doc-f51e109310a7",
-          "doc-2b12a0ce7184",
-          "doc-2a6bc94046e6",
-          "doc-59fc9a3d6cd1",
-          "doc-c8ef7f7fe8b3",
-          "doc-55ce5d5239ab",
-          "doc-079621d0bdd5",
-          "doc-629c6aa1ea08",
-          "doc-c3162d713465",
-          "doc-300d33279ea1"
-        ],
-        "source_type_history": [
-          "planning_board_minutes",
-          "zoning_board_minutes",
-          "other",
-          "ordinance"
-        ]
-      },
-      "occurrence_count": 78,
-      "previous_status": "completed",
-      "reconciliation_status": "status_transition",
-      "signal_type": "infrastructure",
-      "source_date": null,
-      "source_document_id": "doc-3533cdf048d9",
-      "source_type": "planning_board_minutes",
-      "source_url": null,
-      "state": "NJ",
-      "status": "completed",
-      "time_horizon": "near_term",
-      "title": "601 Main Street",
-      "town": "Belmar",
-      "updated_at": "2026-04-19T12:43:01.526582Z"
-    },
-    {
-      "affected_dimensions": [
-        "regulatory_risk",
-        "future_supply"
-      ],
-      "canonical_key": null,
-      "confidence": 0.75,
-      "created_at": "2026-04-17T20:52:34.234214Z",
-      "evidence_excerpt": "[![Belmar Municipal]() ![Belmar Municipal]()](/) **P: 732-681-3700** **F: 732-681-3434** **General Inquiries** [**info@belmar.com**](mailto:info@belmar.com) **Belmar Municipal Building** **601 Main Street, Belmar, NJ 07719** [![Belmar Municipal]() ![Belmar Municipal]()](/) **P: 732-681-3700** **F: 732-681-3434** **General Inquiries** [**info@belmar.com**](mailto:info@belmar.com) **Belmar Municipal Building** **601 Main Street, Belmar, NJ 07719** * [Home](/) * [Government](#) + [Directory](/government/directory) + [Forms & Applications](/government/forms) + [Mayor & Council](/government/mayor) + [Meeting Documents](/government/meeting-documents-2/) + [Municipal Code](https://www.ecode360.com/BE4028) + [Open Public Records Act](https://belmarborough.nextrequest.com/) + [Public Notices](/government/public-notices) + [Redevelopment & Affordable Housing](/government/housing-information) * [Departments](#) + [Administration](/departments/administrator) + [Bureau of Fire Prevention](/departments/fire-prevention) + [Community Development](/departments/community-development) - [Code Enforcement](/departments/community-development/code-enforcement) - [Construction](/departments/community-development/construction) - [Housing](/departments/community-development/housing) + [Public Works](/departments/dpw) + [Emergency Medical Services](/departments/ems) + [Finance](/departments/finance) + [Fire Department](/departments/fire) + [Human Resources](/departments/hr) + [Library](https://belmarlibrary.org/) + [Marina](https://www.belmarmanuttimarina.com/) + [Municipal Clerk](/departments/clerk) + [Municipal Court](/departments/court) + [Recreation](/departments/recreation) + [Taxes](/departments/assessor) + [Vital Statistics](/departments/vital-statistics) + [Water / Sewer](/departments/water-sewer) * [Boards](#) + [ADA Committee](/boards/ada-committee) + [Belmar Historical Society](/boards/historic) + [Belmar Housing Authority](https://www.belmarhousingauthority.com/) + [Environmental Commission](/boards/environmental) + [Harbor Commission](https://www.belmarmanuttimarina.com/belmar-harbor-commission) + [Planning Board](/boards/planning) + [Shade Tree Commission](/boards/tree) + [Zoning Board of Adjustment](/boards/zone) * [Residents](#) + [About Us](/resident/about) + [Belmar Arts Council](https://www.belmararts.org/) + [Belmar Historical Society](https://www.belmarhistoricalsociety.org/) + [Calendar](/resident/calendar) + [Census Information](https://nj.gov/state/census.shtml) + [Complaints](/residents-page-list/360-complaints) + [Dog Licensing](/resident/dog-licensing) + [Get Belmar Alerts](/resident/alerts) + [Newsletters](/government/documents/newsletters) + [Property Information Map](https://www.sdlportal.com/towns/nj/monmouth/belmar/search?utm_campaign=website&utm_medium=email&utm_source=sendgrid.com) + [Pyanoe Plaza Brick Paver Project](/resident/pyanoe-plaza-brick-paver-project) + [Social Services](/resident/social-services) + [Taylor Pavilion/Gazebo Rental](/resident/taylor-pavilion-gazebo-rental) * [Tourism](#) + [Accommodations](/visitor/accommodations) + [Advertise with Belmar](/visitor/advertise-with-belmar) + [Belmar Tourism Commission](/visitor/belmar-tourism) + [Dining](/visitor/dining) + [Events](/visitor/events) + [Parking Rules & Paid Parking](/visitor/parking-rules-paid-parking) + [Services](/visitor/services) + [Shopping](/visitor/shopping) * [Beach](https://belmarbeachnj.com/) * [Police](https://belmarpolice.com/) # Zoning Board ### Who We Are **Kevin E. Kennedy, Esq** Zoning Board Attorney **April Claudio** Zoning Board Secretary ###### Upcoming Zoning Board Meetings 23 Apr [Zoning Board of Adjustment Meeting](/resident/calendar/zoning-board-of-adjustment-meeting-2-1776981600) 04.23.2026 6:00 pm 28 May [Zoning Board of Adjustment Meeting](/resident/calendar/zoning-board-of-adjustment-meeting-2-1780005600) 05.28.2026 6:00 pm 25 Jun [Zoning Board of Adjustment Meeting](/resident/calendar/zoning-board-of-adjustment-meeting-2-1782424800) 06.25.2026 6:00 pm 23 Jul [Zoning Board of Adjustment Meeting](/resident/calendar/zoning-board-of-adjustment-meeting-2-1784844000) 07.23.2026 6:00 pm 27 Aug [Zoning Board of Adjustment Meeting](/resident/calendar/zoning-board-of-adjustment-meeting-2-1787868000) 08.27.2026 6:00 pm [Meeting Documents](/government/meeting-documents-2/board-of-adjustment-meetings) [Zoning Forms & Documents](/government/forms/zoning-department) **Notice: The Borough of Belmar does not accept wire transfers or other electronic payments. All planning/zoning board application fees and escrow deposits must be paid by checks payable to \u201cBorough of Belmar\u201d and delivered to the Board Secretary, Borough of Belmar Municipal Building, Belmar Municipal Building 601 Main Street, Belmar, NJ 07719.** **Anyone who receives a request purporting to require a wire transfer or other electronic payment to the Borough of Belmar should immediately contact the Board Secretary by phone at 732-681-3700 ext. 225 , because it is a scam.** No item found! # General Information No item found! The Board of Adjustment is responsible for reviewing variance applications, hearing appeals of the decisions of the zoning officer, and ruling on such other matters as the law allows. Property owners within 200 feet of properties that are the subject of applications before the Board of Adjustment are notified of the application. All plans and application documents are on file with the Board Secretary and are available for inspection and review during normal business hours at least 10 days prior to the hearing on the application. All taxpayers, residents and other interested parties are welcome to voice opinions, concerns or support during the public comment portion of the hearing on the application. **For questions please contact the secretary at 732-681-3700 ext. 225.** **Who We Are** The Board of Adjustment consists of 7 members and 2-4 alternates. The Board of Adjustment Attorney is Kevin Kennedy, Esq. The Board of Adjustment Secretary is April Claudio. **Meetings** The Board of Adjustment meets on the 4th Thursday of every month unless otherwise noted. Meetings begin at 6:00 PM in the courtroom in the municipal building. * [Home](/) * [Government](#) + [Directory](/government/directory) + [Forms & Applications](/government/forms) + [Mayor & Council](/government/mayor) + [Meeting Documents](/government/meeting-documents-2/) + [Municipal Code](https://www.ecode360.com/BE4028) + [Open Public Records Act](https://belmarborough.nextrequest.com/) + [Public Notices](/government/public-notices) + [Redevelopment & Affordable Housing](/government/housing-information) * [Departments](#) + [Administration](/departments/administrator) + [Bureau of Fire Prevention](/departments/fire-prevention) + [Community Development](/departments/community-development) - [Code Enforcement](/departments/community-development/code-enforcement) - [Construction](/departments/community-development/construction) - [Housing](/departments/community-development/housing) + [Public Works](/departments/dpw) + [Emergency Medical Services](/departments/ems) + [Finance](/departments/finance) + [Fire Department](/departments/fire) + [Human Resources](/departments/hr) + [Library](https://belmarlibrary.org/) + [Marina](https://www.belmarmanuttimarina.com/) + [Municipal Clerk](/departments/clerk) + [Municipal Court](/departments/court) + [Recreation](/departments/recreation) + [Taxes](/departments/assessor) + [Vital Statistics](/departments/vital-statistics) + [Water / Sewer](/departments/water-sewer) * [Boards](#) + [ADA Committee](/boards/ada-committee) + [Belmar Historical Society](/boards/historic) + [Belmar Housing Authority](https://www.belmarhousingauthority.com/) + [Environmental Commission](/boards/environmental) + [Harbor Commission](https://www.belmarmanuttimarina.com/belmar-harbor-commission) + [Planning Board](/boards/planning) + [Shade Tree Commission](/boards/tree) + [Zoning Board of Adjustment](/boards/zone) * [Residents](#) + [About Us](/resident/about) + [Belmar Arts Council](https://www.belmararts.org/) + [Belmar Historical Society](https://www.belmarhistoricalsociety.org/) + [Calendar](/resident/calendar) + [Census Information](https://nj.gov/state/census.shtml) + [Complaints](/residents-page-list/360-complaints) + [Dog Licensing](/resident/dog-licensing) + [Get Belmar Alerts](/resident/alerts) + [Newsletters](/government/documents/newsletters) + [Property Information Map](https://www.sdlportal.com/towns/nj/monmouth/belmar/search?utm_campaign=website&utm_medium=email&utm_source=sendgrid.com) + [Pyanoe Plaza Brick Paver Project](/resident/pyanoe-plaza-brick-paver-project) + [Social Services](/resident/social-services) + [Taylor Pavilion/Gazebo Rental](/resident/taylor-pavilion-gazebo-rental) * [Tourism](#) + [Accommodations](/visitor/accommodations) + [Advertise with Belmar](/visitor/advertise-with-belmar) + [Belmar Tourism Commission](/visitor/belmar-tourism) + [Dining](/visitor/dining) + [Events](/visitor/events) + [Parking Rules & Paid Parking](/visitor/parking-rules-paid-parking) + [Services](/visitor/services) + [Shopping](/visitor/shopping) * [Beach](https://belmarbeachnj.com/) * [Police](https://belmarpolice.com/)",
-      "facts": [
-        "Signal classified as zoning change.",
-        "Source type: zoning board minutes.",
-        "Status read as completed.",
-        "Location referenced: 601 Main Street."
-      ],
-      "first_seen_at": "2026-04-17T20:52:34.235406Z",
-      "id": "sig-4fa28faec47b",
-      "impact_direction": "positive",
-      "impact_magnitude": 4,
-      "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-18T10:28:35.134339Z",
-      "last_transition_at": null,
-      "metadata": {
-        "location": "601 Main Street",
-        "related_source_document_ids": [
-          "doc-6cf55a28e43b"
-        ],
-        "source_type_history": [
-          "zoning_board_minutes"
-        ]
-      },
-      "occurrence_count": 22,
-      "previous_status": null,
-      "reconciliation_status": null,
-      "signal_type": "zoning_change",
-      "source_date": null,
-      "source_document_id": "doc-6cf55a28e43b",
-      "source_type": "zoning_board_minutes",
-      "source_url": null,
-      "state": "NJ",
-      "status": "completed",
-      "time_horizon": "near_term",
-      "title": "601 Main Street",
-      "town": "Belmar",
-      "updated_at": "2026-04-18T10:28:35.134339Z"
-    },
-    {
-      "affected_dimensions": [
-        "regulatory_risk",
-        "liquidity"
-      ],
-      "canonical_key": null,
-      "confidence": 0.65,
-      "created_at": "2026-04-17T20:52:34.234478Z",
-      "evidence_excerpt": "# [Chapter 40 Development Regulations](/35398589#35398589) [REDEVELOPMENT PLANS & MASTER PLAN](https://www.ecode360.com/documents/pub/BE4028/Comprehensive_Plans/) [Zoning Map](/user/file/clerk@belmar.com/570514134.pdf) [MINOR LAND USE APPLICATION FORM](http://www.belmar.com/useruploads/files/minor_land_use_2020-2.pdf) | Title | Adopted | Subject | Affects | | --- | --- | --- | --- | | [Ord. No. 2026-03 pdf](/BE4028/laws/LF2620942.pdf \"Ord. No. 2026-03\") | 2026-03-10 | Development Regulations Amendment | [Ch 40](/35398589#35398589) | | [Ord. No. 2026-04 pdf](/BE4028/laws/LF2620943.pdf \"Ord. No. 2026-04\") | 2026-03-10 | Development Regulations Amendment | [Ch 40](/35398589#35398589) | ![](/images/pdf.gif) ![](/images/pdf.gif) ![](/images/pdf.gif) ![eCode360: Get a Professional Subscription](/legacy//images/ecode360-subscription-badge-green.svg)",
-      "facts": [
-        "Signal classified as regulation change.",
-        "Source type: planning board minutes.",
-        "Status read as approved."
-      ],
-      "first_seen_at": "2026-04-17T20:52:34.235406Z",
-      "id": "sig-fd4754a435dd",
-      "impact_direction": "positive",
-      "impact_magnitude": 4,
-      "inference": "This may support local quality, demand, or liquidity if implementation follows through.",
-      "last_seen_at": "2026-04-17T21:14:23.264309Z",
-      "last_transition_at": null,
-      "metadata": {
-        "related_source_document_ids": [
-          "doc-d58115d3a029"
-        ],
-        "source_type_history": [
-          "planning_board_minutes"
-        ]
-      },
-      "occurrence_count": 6,
-      "previous_status": null,
-      "reconciliation_status": null,
-      "signal_type": "regulation_change",
-      "source_date": null,
-      "source_document_id": "doc-d58115d3a029",
-      "source_type": "planning_board_minutes",
-      "source_url": null,
-      "state": "NJ",
-      "status": "approved",
-      "time_horizon": "long_term",
-      "title": "Ord. No. 2026-03",
-      "town": "Belmar",
-      "updated_at": "2026-04-17T21:14:23.264309Z"
-    },
-    {
-      "affected_dimensions": [
-        "regulatory_risk",
-        "future_supply"
-      ],
-      "canonical_key": null,
-      "confidence": 0.45,
-      "created_at": "2026-04-17T21:05:21.169628Z",
-      "evidence_excerpt": "BOROUGH OF BELMAR PLANNING BOARD SPECIAL MEETING MARCH 4, 2026 7:00 PM AGENDA: \u2022 Reading of Notice of Meeting \u2022 Pledge of Allegiance to the Flag \u2022 Roll Call \u2022 Workshop Discussion \u2022 Applications: None \u2022 Ordinance creating Mixed Use Overlay Zone 2 (MU-O2) \u2022 Ordinance creating State Route 35 Affordable Housing Overlay Zone (SR25-AH) \u2022 Affordable Housing Ordinance \u2022 Amended Housing Element and Fair Share Plan",
-      "facts": [
-        "Signal classified as zoning change.",
-        "Source type: ordinance.",
-        "Status read as mentioned."
-      ],
-      "first_seen_at": "2026-04-17T21:05:21.173014Z",
-      "id": "sig-affaf44030f7",
-      "impact_direction": "neutral",
-      "impact_magnitude": 3,
-      "inference": null,
-      "last_seen_at": "2026-04-19T12:43:01.526582Z",
-      "last_transition_at": null,
-      "metadata": {
-        "related_source_document_ids": [
-          "doc-c7ef0338196e",
-          "doc-6fd5f0be6e22"
-        ],
-        "source_type_history": [
-          "ordinance"
-        ]
-      },
-      "occurrence_count": 4,
-      "previous_status": null,
-      "reconciliation_status": "unchanged",
-      "signal_type": "zoning_change",
-      "source_date": null,
-      "source_document_id": "doc-c7ef0338196e",
-      "source_type": "ordinance",
-      "source_url": null,
-      "state": "NJ",
-      "status": "mentioned",
-      "time_horizon": "long_term",
-      "title": "BOROUGH OF BELMAR PLANNING BOARD SPECIAL",
-      "town": "Belmar",
-      "updated_at": "2026-04-19T12:43:01.526582Z"
+      "updated_at": "2026-04-22T12:57:06.438386Z"
     }
   ],
   "state": "NJ",

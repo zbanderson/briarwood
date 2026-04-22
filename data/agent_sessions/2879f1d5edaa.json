@@ -1,0 +1,85 @@
+{
+  "session_id": "2879f1d5edaa",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": null,
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": null,
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": 767000.0,
+    "bear_value": null,
+    "stress_value": null,
+    "risk_flags": [
+      "flood_medium",
+      "high_property_taxes",
+      "higher_vacancy"
+    ],
+    "trust_flags": [],
+    "key_risks": [],
+    "total_penalty": 0.217,
+    "confidence_tier": "strong"
+  },
+  "last_value_thesis_view": null,
+  "last_market_support_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {
+    "risk": {
+      "title": "Risk Assessment for 1008 14th Avenue",
+      "summary": "This property in Belmar, NJ, faces medium flood risk and high property taxes, impacting its overall risk profile.",
+      "companion": "Consider this alongside the property's financial metrics and local market trends for a comprehensive view.",
+      "preferred_surface": "table_first"
+    }
+  },
+  "last_verifier_report": {
+    "tier": "risk",
+    "sentences_total": 4,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": false,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 0,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "last_partial_data_warnings": [],
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th ave, belmar, nj",
+      "assistant": "Decision: This property appears attractive but is currently priced above fair value. \nWhy: The asking price of $767,000 is a 6.04% premium over the estimated fair value of $720,643.75. \nNext move: Consider making an offer within the risk-adjusted price band, rather than at the asking price.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "The current asking price is $767,000, which is about 6.04% higher than the estimated fair value of $720,643.75. This premium suggests that the market is expecting a slightly stronger valuation than what the numbers indicate, so negotiating down could provide better value.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "the problem is that the property as structural issues, it would essentially just be a purchase for the land",
+      "assistant": "The biggest concern is the medium flood risk, which could lead to potential future damage or costly repairs. Additionally, the property faces high property taxes and a higher vacancy rate, which could strain your finances. The ask price is $767,000, and without any reported bear or stress case values, it's unclear how much worse the situation could get financially. A deal like this would be a walk-away if the structural issues worsen or if repair costs end up exceeding your expectations.",
+      "answer_type": "risk"
+    }
+  ]
+}

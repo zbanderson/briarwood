@@ -12,7 +12,10 @@ import unittest
 from briarwood.agent.router import AnswerType, RouterClassification, classify
 
 
-# Only patterns that should hit the CACHE (no LLM needed).
+# Cache rules are narrow by design (post-plan C2): only chitchat greetings
+# and explicit compare strings short-circuit without the LLM. Every other
+# intent (decision, projection, search, browse, risk, edge, ...) routes
+# through the LLM so the classifier generates training signal.
 CACHE_CANNED: list[tuple[str, AnswerType]] = [
     # chitchat (stand-alone greetings)
     ("hi", AnswerType.CHITCHAT),
@@ -21,25 +24,6 @@ CACHE_CANNED: list[tuple[str, AnswerType]] = [
     ("Compare 526-west-end-ave vs 119-4th-ave-avon-by-the-sea-nj-07717", AnswerType.COMPARISON),
     ("526-west-end-ave vs 119-4th-ave-avon-by-the-sea-nj-07717", AnswerType.COMPARISON),
     ("Which one is better, 526-west-end-ave or 304-14th-ave?", AnswerType.COMPARISON),
-    # decision (explicit decisive verbs only)
-    ("Should I buy 526-west-end-ave?", AnswerType.DECISION),
-    ("Is this a good deal?", AnswerType.DECISION),
-    ("Underwrite 526-west-end-ave for me", AnswerType.DECISION),
-    ("Worth buying at 1.5M?", AnswerType.DECISION),
-    # projection (explicit renovation / resale / capex scenario)
-    ("What if we invested 100k into it?", AnswerType.PROJECTION),
-    ("If we renovated it, what could we sell it for?", AnswerType.PROJECTION),
-    ("What's the ARV on 526-west-end-ave?", AnswerType.PROJECTION),
-    # search (explicit imperatives)
-    ("Show me listings in Avon", AnswerType.SEARCH),
-    ("Find me properties near the beach", AnswerType.SEARCH),
-    ("Look for similar homes", AnswerType.SEARCH),
-    ("What are the homes for sale in Belmar NJ", AnswerType.SEARCH),
-    # browse (explicit opinion-solicit about a specific property)
-    ("What do you think of 1008 14th Ave, Belmar, NJ", AnswerType.BROWSE),
-    ("Tell me about 1008 14th Avenue, Belmar, NJ 07719", AnswerType.BROWSE),
-    ("What do you think of 526-west-end-ave?", AnswerType.BROWSE),
-    ("Your take on 526-west-end-ave?", AnswerType.BROWSE),
 ]
 
 
@@ -55,6 +39,24 @@ LLM_CANNED: list[tuple[str, AnswerType]] = [
     ("How close is 526 to the beach?", AnswerType.MICRO_LOCATION),
     ("What does 526 become over 5 years?", AnswerType.PROJECTION),
     ("How much could 526 rent for?", AnswerType.RENT_LOOKUP),
+    # Decision phrasing now routes through the LLM (was cached).
+    ("Should I buy 526-west-end-ave?", AnswerType.DECISION),
+    ("Is this a good deal?", AnswerType.DECISION),
+    ("Underwrite 526-west-end-ave for me", AnswerType.DECISION),
+    # Projection scenarios now routed through the LLM (was cached). Note:
+    # entries that contain a price literal ("100k") or renovation+sell
+    # phrasing fire the what-if / projection override paths and short-
+    # circuit before the LLM — not relevant here.
+    ("What's the ARV on 526-west-end-ave?", AnswerType.PROJECTION),
+    # Search imperatives now routed through the LLM (was cached).
+    ("Show me listings in Avon", AnswerType.SEARCH),
+    ("Find me properties near the beach", AnswerType.SEARCH),
+    ("Look for similar homes", AnswerType.SEARCH),
+    # Browse phrasing now routed through the LLM (was cached).
+    ("What do you think of 1008 14th Ave, Belmar, NJ", AnswerType.BROWSE),
+    ("Tell me about 1008 14th Avenue, Belmar, NJ 07719", AnswerType.BROWSE),
+    ("What do you think of 526-west-end-ave?", AnswerType.BROWSE),
+    ("Your take on 526-west-end-ave?", AnswerType.BROWSE),
 ]
 
 
@@ -147,12 +149,6 @@ class LLMClassifyTests(unittest.TestCase):
 
 
 class PrecedenceTests(unittest.TestCase):
-    def test_explicit_decision_beats_browse_phrasing(self) -> None:
-        """Cache rules scan before the LLM: decision verb wins when both
-        browse-style and decisive phrasing appear in the same turn."""
-        decision = classify("What do you think of 526-west-end-ave? Should I buy?")
-        self.assertIs(decision.answer_type, AnswerType.DECISION)
-
     def test_price_override_short_circuits_to_decision(self) -> None:
         decision = classify("what if I bought 526-west-end-ave at 1.3M?")
         self.assertIs(decision.answer_type, AnswerType.DECISION)

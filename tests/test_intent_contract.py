@@ -8,8 +8,9 @@ contract is threaded into the analysis router, the analysis router's
 ``core_questions`` must cover every question the chat tier declared —
 otherwise the two tiers drift on intent.
 
-These tests pin that invariant. They use cache-routed inputs so no LLM is
-required (unit test, not integration).
+These tests pin that invariant. Browse/decision phrasing is LLM-routed
+post-plan C2 — a scripted LLM is injected so the unit test doesn't depend
+on the live classifier.
 """
 
 from __future__ import annotations
@@ -55,15 +56,30 @@ class IntentContractSchemaTests(unittest.TestCase):
         self.assertEqual(high.confidence, 1.0)
 
 
+class _ScriptedLLM:
+    def __init__(self, answer_type: AnswerType):
+        self._answer_type = answer_type
+
+    def complete(self, **_k):  # pragma: no cover
+        raise AssertionError("router should use complete_structured")
+
+    def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+        return schema(answer_type=self._answer_type, reason="scripted")
+
+
 class ChatRouterEmitsContractTests(unittest.TestCase):
     def test_classify_always_populates_intent_contract(self) -> None:
-        decision = classify("Should I buy 526-west-end-ave?")
+        decision = classify(
+            "Should I buy 526-west-end-ave?", client=_ScriptedLLM(AnswerType.DECISION)
+        )
         self.assertIsNotNone(decision.intent_contract)
         self.assertIsInstance(decision.intent_contract, IntentContract)
         self.assertEqual(decision.intent_contract.answer_type, decision.answer_type.value)
 
     def test_classify_browse_emits_should_i_buy_only(self) -> None:
-        decision = classify("What do you think of 526-west-end-ave?")
+        decision = classify(
+            "What do you think of 526-west-end-ave?", client=_ScriptedLLM(AnswerType.BROWSE)
+        )
         self.assertIs(decision.answer_type, AnswerType.BROWSE)
         self.assertEqual(
             list(decision.intent_contract.core_questions),

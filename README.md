@@ -287,70 +287,28 @@ Optional fields like `vacancy_rate`, `days_on_market`, `year_built`, `school_rat
 
 ## Run
 
-```bash
-python3 app.py
-```
-
-Run a different property:
+The canonical surface is the FastAPI + Next.js chat stack. Start the API:
 
 ```bash
-python3 app.py data/sample_property.json
+uvicorn api.main:app --reload
 ```
 
-Override a couple of assumptions without editing code:
+And the web app:
 
 ```bash
-python3 app.py data/sample_property.json --loan-term-years 15 --default-vacancy-rate 0.08
+cd web && npm install && npm run dev
 ```
 
-Generate an MVP tear sheet HTML:
-
-```bash
-python3 app.py data/sample_property.json --html-out outputs/tear_sheet.html
-```
-
-Use the runner directly in Python:
+Run the analysis pipeline directly in Python via the routed runner:
 
 ```python
-from briarwood.runner import run_report
-from briarwood.settings import CostValuationSettings
+from briarwood.inputs.property_loader import load_property_from_json
+from briarwood.runner_routed import run_routed_report
 
-report = run_report(
-    "data/sample_property.json",
-    cost_settings=CostValuationSettings(
-        loan_term_years=15,
-        default_vacancy_rate=0.08,
-    ),
-)
+property_input = load_property_from_json("data/sample_property.json")
+result = run_routed_report(property_input)
 
-print(report.module_results["cost_valuation"].metrics)
-```
-
-Render a tear sheet in Python:
-
-```python
-from briarwood.runner import run_report, write_report_html
-
-report = run_report("data/sample_property.json")
-write_report_html(report, "outputs/tear_sheet.html")
-```
-
-Sample tear sheet summary format:
-
-```text
-Briarwood Tear Sheet
-property: 17 Cedar Lane
-
-[header]
-stance: Constructive
-subtitle: Constructive stance based on current underwriting, with $176,220 scenario spread.
-
-[conclusion]
-ask_price: 895,000
-base_value: 952,350
-bull_value: 1,022,560
-bear_value: 846,340
-summary: Base value sits at 6.4% versus ask, with downside to bear of -5.4% and upside to bull of 14.3%.
+print(result.unified_output.decision_stance)
 ```
 
 ## Test

@@ -52,6 +52,7 @@ class Session:
     last_surface_narrative: str | None = None
     last_visual_advice: dict[str, object] | None = None
     last_verifier_report: dict[str, object] | None = None
+    last_representation_plan: dict[str, object] | None = None
     # F7: per-turn "this enrichment failed" notices. Each entry:
     # {"section": str, "reason": str, "verdict_reliable": bool}.
     # Cleared alongside other per-turn views in `clear_response_views`.
@@ -83,6 +84,7 @@ class Session:
         self.last_surface_narrative = None
         self.last_visual_advice = None
         self.last_verifier_report = None
+        self.last_representation_plan = None
         self.last_partial_data_warnings = []
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
@@ -130,6 +132,7 @@ class Session:
             last_surface_narrative=data.get("last_surface_narrative"),
             last_visual_advice=data.get("last_visual_advice"),
             last_verifier_report=data.get("last_verifier_report"),
+            last_representation_plan=data.get("last_representation_plan"),
             last_partial_data_warnings=list(data.get("last_partial_data_warnings") or []),
             turns=turns,
         )

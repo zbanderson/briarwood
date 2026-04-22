@@ -264,25 +264,6 @@ class UserFeedbackRecordTests(unittest.TestCase):
         self.assertIn("user-feedback-no", record["tags"])
 
 
-class DecisionCardFeedbackRenderTests(unittest.TestCase):
-    def test_decision_card_includes_feedback_prompt(self) -> None:
-        from briarwood.dash_app.unified_view import DecisionCardViewModel, render_decision_card
-        vm = DecisionCardViewModel(
-            decision="buy",
-            decision_label="BUY",
-            recommendation="Buy.",
-            best_path="Proceed.",
-            confidence=0.72,
-            confidence_label="Moderate",
-        )
-        card = render_decision_card(vm)
-        text = _flatten_text(card)
-        self.assertIn("Was this helpful?", text)
-        self.assertIn("Yes", text)
-        self.assertIn("Partially", text)
-        self.assertIn("No", text)
-
-
 class RouterLearnedKeywordsTests(unittest.TestCase):
     def test_merge_learned_keywords_at_import(self) -> None:
         """Verify the router's _merge_learned_keywords loads without error."""
@@ -317,17 +298,6 @@ class RouterLearnedKeywordsTests(unittest.TestCase):
                 if test_keyword in existing.get("buy_decision", []):
                     existing["buy_decision"].remove(test_keyword)
                     _LEARNED_KEYWORDS_PATH.write_text(json.dumps(existing))
-
-
-def _flatten_text(node: object) -> str:
-    if node is None:
-        return ""
-    if isinstance(node, str):
-        return node
-    children = getattr(node, "children", None)
-    if isinstance(children, (list, tuple)):
-        return " ".join(_flatten_text(child) for child in children)
-    return _flatten_text(children)
 
 
 if __name__ == "__main__":

@@ -160,6 +160,7 @@ class RepresentationAgent:
         *,
         user_question: str,
         module_views: Mapping[str, Mapping[str, Any] | None],
+        session: Any = None,
     ) -> RepresentationPlan:
         """Produce a RepresentationPlan for this verdict.
 
@@ -167,6 +168,11 @@ class RepresentationAgent:
         `last_risk_view`, ...) to the underlying dicts. None / missing
         views are tolerated — the agent will simply not pick charts that
         depend on them.
+
+        `session` is optional. When provided, exhaustion of the LLM retry
+        budget is recorded to ``session.last_partial_data_warnings`` as a
+        ``representation_plan`` breadcrumb so the UI can surface the
+        deterministic-fallback path instead of silently swapping plans.
         """
         clean_views: dict[str, dict[str, Any]] = {
             key: dict(view)
@@ -174,7 +180,7 @@ class RepresentationAgent:
             if isinstance(view, Mapping)
         }
 
-        plan = self._plan_via_llm(unified, user_question, clean_views)
+        plan = self._plan_via_llm(unified, user_question, clean_views, session=session)
         if plan is None or not plan.selections:
             plan = self._deterministic_plan(unified, clean_views)
 
@@ -223,31 +229,67 @@ class RepresentationAgent:
         unified: UnifiedIntelligenceOutput,
         user_question: str,
         module_views: dict[str, dict[str, Any]],
+        *,
+        session: Any = None,
     ) -> RepresentationPlan | None:
         if self._llm is None:
             return None
 
-        try:
-            payload = {
-                "user_question": user_question,
-                "verdict": _verdict_digest(unified),
-                "module_views": _views_digest(module_views),
-                "registered_charts": [spec.model_dump() for spec in all_specs()],
-                "known_source_views": list(KNOWN_SOURCE_VIEWS),
-                "claim_types": [c.value for c in ClaimType],
-            }
-            response = self._llm.complete_structured(
-                system=_SYSTEM_PROMPT,
-                user=json.dumps(payload, default=str),
-                schema=RepresentationPlan,
-                model=self._model,
-                max_tokens=1200,
-            )
-        except Exception as exc:
-            _logger.warning("representation LLM call failed: %s", exc)
-            return None
+        payload = {
+            "user_question": user_question,
+            "verdict": _verdict_digest(unified),
+            "module_views": _views_digest(module_views),
+            "registered_charts": [spec.model_dump() for spec in all_specs()],
+            "known_source_views": list(KNOWN_SOURCE_VIEWS),
+            "claim_types": [c.value for c in ClaimType],
+        }
+        user_body = json.dumps(payload, default=str)
 
-        return response
+        last_exc: Exception | None = None
+        for attempt in (1, 2):
+            system = _SYSTEM_PROMPT
+            if attempt == 2:
+                system = (
+                    _SYSTEM_PROMPT
+                    + "\n\nPrevious attempt failed. Return only a valid "
+                    "RepresentationPlan JSON object that matches the declared "
+                    "schema — no prose, no wrapping, no extra keys."
+                )
+            try:
+                response = self._llm.complete_structured(
+                    system=system,
+                    user=user_body,
+                    schema=RepresentationPlan,
+                    model=self._model,
+                    max_tokens=1200,
+                )
+            except Exception as exc:
+                last_exc = exc
+                _logger.warning(
+                    "representation LLM call failed (attempt %d): %s", attempt, exc
+                )
+                response = None
+
+            if response is not None:
+                return response
+
+        # Both attempts failed. Record a breadcrumb only when a real exception
+        # propagated — complete_structured swallows transport failures + schema
+        # drift into None and logs them itself, so leaving those as silent
+        # deterministic fallback avoids spurious banners on local runs with no
+        # API key. Exception-path retries are the "LLM is broken" signal worth
+        # surfacing to the UI.
+        if session is not None and last_exc is not None:
+            warnings = getattr(session, "last_partial_data_warnings", None)
+            if isinstance(warnings, list):
+                warnings.append(
+                    {
+                        "section": "representation_plan",
+                        "reason": f"{type(last_exc).__name__}: {last_exc}",
+                        "verdict_reliable": True,
+                    }
+                )
+        return None
 
     # ------------------------------------------------------------------
     # Deterministic fallback
@@ -443,7 +485,7 @@ class RepresentationAgent:
                     claim=f"Hidden upside levers: {labels}.",
                     claim_type=ClaimType.HIDDEN_UPSIDE,
                     supporting_evidence=evidence,
-                    chart_id=None,
+                    chart_id="hidden_upside_band",
                     source_view=None,
                 )
             )

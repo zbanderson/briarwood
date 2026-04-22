@@ -24,6 +24,7 @@ decisive.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -32,6 +33,8 @@ from pydantic import BaseModel, ConfigDict
 
 from briarwood.agent.llm import LLMClient
 from briarwood.intent_contract import IntentContract, build_contract_from_answer_type
+
+logger = logging.getLogger(__name__)
 
 
 class AnswerType(str, Enum):
@@ -78,7 +81,11 @@ class RouterDecision:
 # Anything semantically subtle is the LLM's job, not the cache's.
 
 _CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
-    # Stand-alone greeting/thanks — must be the whole message.
+    # Stand-alone greeting/thanks — must be the whole message. Only CHITCHAT
+    # and explicit COMPARISON shortcut the LLM — every other intent routes
+    # through the LLM so it generates training signal and adapts to phrasing
+    # drift. Removed rules (decision verb, renovation scenario, search
+    # imperative, visualize keyword) are all handled by the LLM prompt.
     (
         AnswerType.CHITCHAT,
         re.compile(
@@ -98,61 +105,6 @@ _CACHE_RULES: tuple[tuple[AnswerType, re.Pattern[str], str], ...] = (
         ),
         "compare/vs keyword",
     ),
-    # Explicit decisive verbs — buy/pass/underwrite call, not opinion-solicit.
-    (
-        AnswerType.DECISION,
-        re.compile(
-            r"\b(should i (?:buy|pass|offer)"
-            r"|underwrite"
-            r"|worth (?:it|buying)"
-            r"|go/no-?go"
-            r"|is this a (?:buy|deal|good deal|bad deal|good|bad))\b",
-            re.IGNORECASE,
-        ),
-        "decision verb",
-    ),
-    # Explicit renovation / resale / capex scenario questions.
-    (
-        AnswerType.PROJECTION,
-        re.compile(
-            r"\b("
-            r"what if (?:we|i) invest(?:ed|ing)?\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?"
-            r"|invest(?:ed|ing)?\s+\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|mm|mil|million|thousand)?\s+(?:into|in)\s+(?:it|this)"
-            r"|if (?:we|i) renovat(?:e|ed)"
-            r"|renovat(?:e|ed|ion).*(?:sell|resale|arv|after repair value)"
-            r"|what could (?:we|i) sell (?:it|this) for"
-            r"|turn around and sell"
-            r"|\barv\b"
-            r"|after repair value"
-            r"|resale value"
-            r"|flip (?:it|this)"
-            r")\b",
-            re.IGNORECASE,
-        ),
-        "renovation/resale scenario",
-    ),
-    # Explicit search imperative — "find me X", "show me listings/properties".
-    (
-        AnswerType.SEARCH,
-        re.compile(
-            r"\b(find me|search for|look for|"
-            r"show me (?:properties|listings|homes|houses|options|similar|other|nearby|more)|"
-            r"what(?:'s| is| are)? (?:the )?(?:homes|houses|properties|listings)\s+(?:are\s+)?(?:listed\s+)?for sale|"
-            r"(?:homes|houses|properties|listings)\s+(?:are\s+)?(?:listed\s+)?for sale\s+in)\b",
-            re.IGNORECASE,
-        ),
-        "search imperative",
-    ),
-    # Explicit chart/plot command — render instruction, unambiguous.
-    (
-        AnswerType.VISUALIZE,
-        re.compile(
-            r"\b(chart|plot|visuali[sz]e|graph|gauge"
-            r"|show (?:me )?(?:the )?(?:value picture|verdict|gauge))\b",
-            re.IGNORECASE,
-        ),
-        "visualize keyword",
-    ),
 )
 
 
@@ -162,21 +114,20 @@ _ADDRESS_LIKE_RE = re.compile(
     r"pkwy|parkway|ct|court|pl|place|ter|terrace|hwy|highway|cir|circle|way)\b",
     re.IGNORECASE,
 )
-_EXPLICIT_BROWSE_RE = re.compile(
-    r"\b(?:what do you think of|your take on|thoughts on|tell me about)\b",
-    re.IGNORECASE,
-)
 
 
 def _cache_classify(text: str) -> tuple[AnswerType, str] | None:
-    """Return (answer_type, reason) for the first matching cache rule, or None."""
+    """Return (answer_type, reason) for the first matching cache rule, or None.
+
+    The cache is deliberately narrow — only greetings and explicit compare
+    strings short-circuit. Every other intent (decision, search, projection,
+    visualize, browse, risk, edge, strategy, rent_lookup, micro_location,
+    research) goes to the LLM so the classifier generates training signal
+    and adapts to phrasing drift.
+    """
     for answer_type, pattern, reason in _CACHE_RULES:
         if pattern.search(text):
             return answer_type, reason
-    if _EXPLICIT_BROWSE_RE.search(text) and (
-        _PROPERTY_ID_RE.search(text) or _ADDRESS_LIKE_RE.search(text)
-    ):
-        return AnswerType.BROWSE, "browse phrasing"
     return None
 
 
@@ -257,15 +208,23 @@ class RouterClassification(BaseModel):
 
 
 def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
-    try:
+    """Classify via LLM with one retry. `complete_structured` already returns
+    `None` on any failure (transport, empty, invalid JSON, schema), so the
+    retry covers all of those uniformly; the second attempt usually succeeds
+    when the first was a transient transport/timeout blip. Persistent schema
+    mismatches fail twice and fall through to the caller's default."""
+    result: RouterClassification | None = None
+    for attempt in (1, 2):
         result = client.complete_structured(
             system=_LLM_SYSTEM,
             user=text,
             schema=RouterClassification,
             max_tokens=80,
         )
-    except Exception:
-        return None
+        if result is not None:
+            break
+        if attempt == 1:
+            logger.info("router LLM classify returned None; retrying once")
     if result is None:
         return None
     guess = result.answer_type
@@ -347,6 +306,11 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
                 llm_suggestion=llm_guess,
             )
 
+    logger.warning(
+        "router fallthrough to LOOKUP default (client=%s, text=%r)",
+        "present" if client is not None else "missing",
+        text[:120],
+    )
     return RouterDecision(
         answer_type=AnswerType.LOOKUP,
         confidence=0.3,

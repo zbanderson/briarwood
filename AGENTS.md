@@ -10,9 +10,10 @@ Relevant repo areas:
 
 - `briarwood/router.py` and `briarwood/routing_schema.py`: routing contracts and rules
 - `briarwood/orchestrator.py`: routing and synthesis orchestration boundary
-- `briarwood/dash_app/`: orchestration, routing, and decision-first presentation
+- `briarwood/runner_routed.py` and `briarwood/runner_common.py`: routed analysis entrypoints
+- `api/` and `web/`: FastAPI + Next.js chat surface (canonical UI)
 - `docs/current_docs_index.md`: preferred documentation starting point
-- `briarwood/decision_engine.py` and `briarwood/decision_model/`: Briarwood-native decision and scoring logic
+- `briarwood/synthesis/structured.py` and `briarwood/decision_model/`: Briarwood-native decision and scoring logic
 - `briarwood/modules/` and `briarwood/agents/`: deterministic analysis modules
 - `briarwood/local_intelligence/`: structured extraction and synthesis boundary
 - `tests/`: unit coverage, including decision-first views and agent behavior
@@ -78,7 +79,7 @@ All numeric and analytical logic must remain in Briarwood-native Python modules.
 - Avoid hidden magic, implicit side effects, and over-abstraction.
 - Wrap legacy logic before rewriting it.
 - Add docstrings to public functions and core classes.
-- Preserve backward compatibility where practical, especially around current Dash flows, saved-property artifacts, and report builders.
+- Preserve backward compatibility where practical, especially around saved-property artifacts and the FastAPI/SSE contract.
 - Prefer current docs over historical docs when they conflict.
 - Treat `AUDIT_REPORT.md`, `BRIARWOOD-AUDIT.md`, `UX-ASSESSMENT.md`, and `analysis/*.md` as historical context unless a current doc explicitly marks them as authoritative.
 
@@ -95,8 +96,8 @@ All numeric and analytical logic must remain in Briarwood-native Python modules.
 For this repo, start with focused `unittest` runs such as:
 
 ```bash
-python3 -m unittest tests.test_quick_decision
-python3 -m unittest tests.test_decision_engine
+python3 -m unittest tests.test_orchestrator
+python3 -m unittest tests.test_routing_behavior
 python3 -m unittest discover -s tests
 ```
 

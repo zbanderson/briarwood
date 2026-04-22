@@ -54,6 +54,84 @@ class OrchestratorTests(unittest.TestCase):
             build_cache_key(property_data, parser_output),
         )
 
+    def _fact_parser(self) -> ParserOutput:
+        return ParserOutput(
+            intent_type="buy_decision",
+            analysis_depth="snapshot",
+            question_focus=["should_i_buy"],
+            occupancy_type="unknown",
+            exit_options=["unknown"],
+            confidence=0.75,
+            missing_inputs=[],
+        )
+
+    def test_build_cache_key_changes_when_structural_facts_change(self) -> None:
+        """F3: same property_id + same parser assumptions but different
+        structural facts (beds, sqft, taxes, year_built, ...) must produce a
+        different cache key. Prior to the fact fingerprint being added, the
+        orchestrator would return stale synthesis/module results when a user
+        corrected the record for the same property_id."""
+        parser_output = self._fact_parser()
+        base = {
+            "property_id": "prop-1",
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1_800,
+            "lot_size": 6_000,
+            "year_built": 1958,
+            "taxes": 12_500,
+            "purchase_price": 750_000,
+        }
+
+        baseline_key = build_cache_key(base, parser_output)
+
+        mutations = [
+            ("beds", 4),
+            ("baths", 2.5),
+            ("sqft", 2_000),
+            ("lot_size", 7_200),
+            ("year_built", 1972),
+            ("taxes", 14_000),
+            ("purchase_price", 825_000),
+            ("property_type", "condo"),
+            ("has_additional_units", True),
+        ]
+        for field, new_value in mutations:
+            mutated = dict(base)
+            mutated[field] = new_value
+            mutated_key = build_cache_key(mutated, parser_output)
+            self.assertNotEqual(
+                mutated_key,
+                baseline_key,
+                f"cache key must miss when '{field}' changes ({base.get(field)!r} -> {new_value!r})",
+            )
+
+    def test_build_cache_key_carries_schema_version_prefix(self) -> None:
+        """F3: the cache key ships the schema version as a literal prefix so
+        bumps invalidate every cached entry mass-wise without needing to clear
+        the dicts by hand."""
+        parser_output = self._fact_parser()
+        key = build_cache_key({"property_id": "prop-1", "beds": 3}, parser_output)
+        # Shape: "<version>:<40-char sha1 hex>" — verify the prefix and that
+        # the tail is a full hex digest.
+        self.assertTrue(key.startswith("v2:"), key)
+        tail = key.split(":", 1)[1]
+        self.assertEqual(len(tail), 40)
+        int(tail, 16)  # will raise if not hex
+
+    def test_build_cache_key_ignores_unrelated_property_fields(self) -> None:
+        """Fields outside the fingerprint (e.g., listing description, source
+        URL) must not cause spurious cache misses."""
+        parser_output = self._fact_parser()
+        base = {"property_id": "prop-1", "beds": 3, "sqft": 1_800}
+        with_noise = dict(base)
+        with_noise["listing_description"] = "Charming two-story with updated kitchen"
+        with_noise["source_url"] = "https://example.com/listings/prop-1"
+        self.assertEqual(
+            build_cache_key(base, parser_output),
+            build_cache_key(with_noise, parser_output),
+        )
+
     def test_run_briarwood_analysis_requires_synthesizer(self) -> None:
         with self.assertRaises(ValueError):
             run_briarwood_analysis(property_data={"property_id": "prop-1"}, user_input="Should I buy this?")

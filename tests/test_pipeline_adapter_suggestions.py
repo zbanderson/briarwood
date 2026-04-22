@@ -113,11 +113,21 @@ class SlotDerivedChipsTests(unittest.TestCase):
         chips = _slot_derived_chips(s)
         self.assertIn("What are the key value drivers?", chips)
 
-    def test_cma_rows_add_fair_value_chip(self) -> None:
+    def test_valuation_comps_add_fair_value_chip(self) -> None:
         s = _session()
-        s.last_cma_table = {"rows": [{"address": "1302 L Street"}]}
+        s.last_value_thesis_view = {
+            "comps": [{"address": "1302 L Street", "feeds_fair_value": True}],
+        }
         chips = _slot_derived_chips(s)
         self.assertIn("Which comps actually fed fair value?", chips)
+
+    def test_market_support_comps_add_market_chip(self) -> None:
+        s = _session()
+        s.last_market_support_view = {
+            "comps": [{"address": "1302 L Street", "source_label": "Live market comp"}],
+        }
+        chips = _slot_derived_chips(s)
+        self.assertIn("How does the live market look around here?", chips)
 
     def test_multiple_slots_produce_multiple_chips(self) -> None:
         s = _session()

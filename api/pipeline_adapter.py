@@ -592,11 +592,10 @@ class _DecisionView(BaseModel):
     @field_validator("decision_stance")
     @classmethod
     def _stance_must_be_known(cls, value: str | None) -> str | None:
-        """AUDIT O.7: reject legacy decision-engine labels (BUY / LEAN BUY /
-        NEUTRAL / LEAN PASS / AVOID from briarwood.decision_engine, used only
-        by the Dash + reports stack). If one ever appears on the session view,
-        surface it as a validation error so the projector falls back to an
-        empty verdict rather than letting an unknown vocabulary reach the UI."""
+        """Reject stance strings outside the routed `DecisionStance` vocabulary.
+        Guards against shape drift (e.g. an upstream helper emitting a legacy
+        BUY/LEAN BUY/NEUTRAL/LEAN PASS/AVOID label) so the projector fails
+        loudly rather than letting an unknown vocabulary reach the UI."""
         if value is None:
             return None
         allowed = {s.value for s in DecisionStance}
@@ -1275,6 +1274,7 @@ def _representation_charts(
             unified,
             user_question=user_question,
             module_views=module_views,
+            session=session,
         )
     except Exception as exc:
         _logger.warning("representation agent failed: %s", exc)
@@ -1282,19 +1282,41 @@ def _representation_charts(
 
     market_view = module_views.get("last_market_support_view")
     raw_events = agent.render_events(plan, module_views, market_view=market_view)
+    from briarwood.representation.charts import get_spec as _get_chart_spec
     patched: list[dict[str, Any]] = []
     for ev in raw_events:
         kind = ev.get("kind") or ""
+        if _get_chart_spec(kind) is None:
+            _logger.warning(
+                "chart kind %r not in registry — advisor patch skipped", kind
+            )
         section = _CHART_ID_TO_ADVICE_SECTION.get(kind, kind)
         patched_event = _apply_chart_advice(ev, visual_advice, section)
         patched.append(patched_event if patched_event is not None else ev)
     selections = [s.model_dump(mode="json") for s in plan.selections]
-    try:
-        session.last_representation_plan = {"selections": selections}
-    except Exception:
-        # session dataclass may not declare this slot yet; it is advisory
-        # telemetry only and doesn't need to persist to land the feature.
-        pass
+
+    # NF1: warn when the LLM nominated chart selections that postprocessing had
+    # to reject (drift signal). Skipped when the deterministic fallback was
+    # used (llm is None) — its flagged placeholders are expected, not drift.
+    if llm is not None:
+        drift_reasons: list[str] = []
+        for s in plan.selections:
+            if not s.flagged:
+                continue
+            claim = getattr(s, "claim_type", None)
+            claim_label = claim.value if hasattr(claim, "value") else str(claim or "?")
+            drift_reasons.append(f"{claim_label}:{s.flag_reason or 'flagged'}")
+        if drift_reasons:
+            session.last_partial_data_warnings.append(
+                {
+                    "section": "representation_plan",
+                    "reason": f"dropped {len(drift_reasons)} chart selection(s): "
+                    + "; ".join(drift_reasons),
+                    "verdict_reliable": True,
+                }
+            )
+
+    session.last_representation_plan = {"selections": selections}
     return patched, selections
 
 
