@@ -694,8 +694,8 @@ def _valuation_comps_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
     """Project the valuation-module comps (comps that fed fair value) from the
     value_thesis view. F2: these are the ``comparable_sales`` module's
     ``comps_used`` rows, NOT live Zillow market comps. Every row must carry
-    valuation-module provenance — enforced at emission by
-    ``_assert_valuation_module_comps``.
+    valuation-module provenance — filtered at emission by
+    ``_sanitize_valuation_module_comps``.
     """
     rows = list(view.get("comps") or [])
     if not rows:
@@ -728,9 +728,13 @@ def _market_support_comps_from_view(view: dict[str, Any] | None) -> dict[str, An
     }
 
 
-def _assert_valuation_module_comps(payload: dict[str, Any]) -> None:
-    """Raise AssertionError if any row in a valuation_comps payload did not
-    originate from the valuation module's ``comps_used`` set.
+def _sanitize_valuation_module_comps(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
+    """Filter out valuation_comps rows that did not originate from the
+    valuation module's ``comps_used`` set. Returns the cleaned payload (or
+    ``None`` if every row was dropped) along with a drift flag the caller
+    can use to emit a ``partial_data_warning``.
 
     F2 contract guard: the valuation_comps event promises rows that fed the
     fair value computation. ``briarwood.agent.tools._selected_comp_rows``
@@ -739,21 +743,40 @@ def _assert_valuation_module_comps(payload: dict[str, Any]) -> None:
     (provenance can override, but falls back to True). Any row without that
     flag is either a live-market context comp or a browse-path neighbor —
     neither belongs in this event.
+
+    Historically this guard raised ``AssertionError`` and aborted the
+    stream. NEW-V-007 softened it: a single drifted row now triggers a
+    logged warning and a user-visible banner instead of killing the
+    response, because the verdict itself remains reliable — we just don't
+    want to render an un-trusted comp alongside it.
     """
     rows = payload.get("rows") or []
+    good_rows: list[dict[str, Any]] = []
+    drift = False
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
-            raise AssertionError(
-                f"valuation_comps row {index} is not a dict: {row!r}"
+            _logger.warning(
+                "valuation_comps row %d is not a dict: %r", index, row
             )
+            drift = True
+            continue
         if row.get("feeds_fair_value") is not True:
-            raise AssertionError(
-                "valuation_comps event must only carry comps that fed the fair "
-                f"value computation; row {index} has feeds_fair_value="
-                f"{row.get('feeds_fair_value')!r} (source_label="
-                f"{row.get('source_label')!r}, selected_by="
-                f"{row.get('selected_by')!r})."
+            _logger.warning(
+                "valuation_comps row %d provenance drift: feeds_fair_value=%r "
+                "(source_label=%r, selected_by=%r)",
+                index,
+                row.get("feeds_fair_value"),
+                row.get("source_label"),
+                row.get("selected_by"),
             )
+            drift = True
+            continue
+        good_rows.append(row)
+    if not good_rows:
+        return None, drift
+    cleaned = dict(payload)
+    cleaned["rows"] = good_rows
+    return cleaned, drift
 
 
 def _scenario_table_from_view(view: dict[str, Any]) -> dict[str, Any]:
@@ -1729,8 +1752,19 @@ async def _browse_stream_impl(
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
-            _assert_valuation_module_comps(valuation_payload)
-            primary_events.append(events.valuation_comps(valuation_payload))
+            valuation_payload, drift = _sanitize_valuation_module_comps(
+                valuation_payload
+            )
+            if drift:
+                primary_events.append(
+                    events.partial_data_warning(
+                        "valuation_comps",
+                        "provenance_drift",
+                        verdict_reliable=True,
+                    )
+                )
+            if valuation_payload is not None:
+                primary_events.append(events.valuation_comps(valuation_payload))
         market_payload = _market_support_comps_from_view(
             session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
         )
@@ -1985,8 +2019,19 @@ async def _decision_stream_impl(
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
-            _assert_valuation_module_comps(valuation_payload)
-            primary_events.append(events.valuation_comps(valuation_payload))
+            valuation_payload, drift = _sanitize_valuation_module_comps(
+                valuation_payload
+            )
+            if drift:
+                primary_events.append(
+                    events.partial_data_warning(
+                        "valuation_comps",
+                        "provenance_drift",
+                        verdict_reliable=True,
+                    )
+                )
+            if valuation_payload is not None:
+                primary_events.append(events.valuation_comps(valuation_payload))
         market_payload = _market_support_comps_from_view(
             session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
         )
@@ -2241,8 +2286,19 @@ async def _dispatch_stream_impl(
         primary_events.append(events.value_thesis(session.last_value_thesis_view))
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
-            _assert_valuation_module_comps(valuation_payload)
-            primary_events.append(events.valuation_comps(valuation_payload))
+            valuation_payload, drift = _sanitize_valuation_module_comps(
+                valuation_payload
+            )
+            if drift:
+                primary_events.append(
+                    events.partial_data_warning(
+                        "valuation_comps",
+                        "provenance_drift",
+                        verdict_reliable=True,
+                    )
+                )
+            if valuation_payload is not None:
+                primary_events.append(events.valuation_comps(valuation_payload))
         market_payload = _market_support_comps_from_view(
             session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
         )

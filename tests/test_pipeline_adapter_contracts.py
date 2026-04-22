@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 from api import events
 from api.pipeline_adapter import (
-    _assert_valuation_module_comps,
     _native_risk_chart,
+    _sanitize_valuation_module_comps,
     _to_listing_from_facts,
     _track_modules,
     _valuation_comps_from_view,
@@ -1073,7 +1073,10 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
     fair value") would be a lie.
 
     These tests pin the contract two ways:
-    1. Emission guard (``_assert_valuation_module_comps``) rejects bad rows.
+    1. Emission filter (``_sanitize_valuation_module_comps``) drops bad rows
+       and reports drift so the stream can surface a ``partial_data_warning``
+       (NEW-V-007: the guard used to raise; softened so a single stray row
+       no longer aborts the whole response).
     2. Source projection (``_valuation_comps_from_view``) returns ``None``
        when the view has no comps, so no event is emitted at all.
     """
@@ -1102,26 +1105,50 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
 
     def test_guard_accepts_valuation_module_rows(self) -> None:
         payload = {"rows": [dict(self._VALUATION_ROW)]}
-        # does not raise
-        _assert_valuation_module_comps(payload)
+        cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertFalse(drift)
+        self.assertIsNotNone(cleaned)
+        self.assertEqual(len(cleaned["rows"]), 1)
 
-    def test_guard_rejects_live_market_row_without_feeds_fair_value(self) -> None:
-        payload = {"rows": [dict(self._LIVE_MARKET_ROW)]}
-        with self.assertRaises(AssertionError) as ctx:
-            _assert_valuation_module_comps(payload)
-        self.assertIn("feeds_fair_value", str(ctx.exception))
+    def test_guard_drops_live_market_row_without_feeds_fair_value(self) -> None:
+        payload = {
+            "rows": [dict(self._VALUATION_ROW), dict(self._LIVE_MARKET_ROW)],
+        }
+        cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertTrue(drift)
+        self.assertIsNotNone(cleaned)
+        # Only the valuation-module row survives.
+        self.assertEqual(len(cleaned["rows"]), 1)
+        self.assertEqual(cleaned["rows"][0]["selected_by"], "valuation")
 
-    def test_guard_rejects_row_with_feeds_fair_value_false(self) -> None:
+    def test_guard_drops_row_with_feeds_fair_value_false(self) -> None:
         row = dict(self._VALUATION_ROW)
         row["feeds_fair_value"] = False
         payload = {"rows": [row]}
-        with self.assertRaises(AssertionError):
-            _assert_valuation_module_comps(payload)
+        cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertTrue(drift)
+        # All rows dropped → no payload, but verdict itself is still reliable.
+        self.assertIsNone(cleaned)
 
-    def test_guard_rejects_non_dict_row(self) -> None:
-        payload = {"rows": ["not a dict"]}
-        with self.assertRaises(AssertionError):
-            _assert_valuation_module_comps(payload)
+    def test_guard_drops_non_dict_row(self) -> None:
+        payload = {"rows": ["not a dict", dict(self._VALUATION_ROW)]}
+        cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertTrue(drift)
+        self.assertIsNotNone(cleaned)
+        self.assertEqual(len(cleaned["rows"]), 1)
+
+    def test_guard_preserves_non_row_payload_fields(self) -> None:
+        payload = {
+            "address": "1008 14th Avenue",
+            "town": "Belmar",
+            "state": "NJ",
+            "summary": "Saved comps ranked toward subject.",
+            "rows": [dict(self._VALUATION_ROW)],
+        }
+        cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertFalse(drift)
+        self.assertEqual(cleaned["address"], "1008 14th Avenue")
+        self.assertEqual(cleaned["summary"], "Saved comps ranked toward subject.")
 
     def test_valuation_projection_returns_none_on_empty_view(self) -> None:
         # Browse populates value_thesis_view without comps; we must not emit
@@ -1141,8 +1168,9 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
         self.assertIsNotNone(payload)
         self.assertEqual(payload["summary"], "Saved comps ranked toward subject.")
         self.assertEqual(payload["rows"][0]["property_id"], "saved-1202-m-street")
-        # And the guard must accept what the projection produced.
-        _assert_valuation_module_comps(payload)
+        # And the filter must pass what the projection produced.
+        _cleaned, drift = _sanitize_valuation_module_comps(payload)
+        self.assertFalse(drift)
 
     def test_valuation_comps_event_source_is_valuation_module(self) -> None:
         """Every valuation_comps event must carry the ``source`` literal so
