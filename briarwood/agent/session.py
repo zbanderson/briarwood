@@ -57,6 +57,12 @@ class Session:
     # {"section": str, "reason": str, "verdict_reliable": bool}.
     # Cleared alongside other per-turn views in `clear_response_views`.
     last_partial_data_warnings: list[dict[str, object]] = field(default_factory=list)
+    # Claim-object pipeline (plan §10): events emitted by a successful claim
+    # render, and — when the Editor rejects a candidate claim — the
+    # single-shot rejection payload the SSE adapter surfaces so the legacy
+    # fallback is observable.
+    last_claim_events: list[dict[str, object]] = field(default_factory=list)
+    last_claim_rejected: dict[str, object] | None = None
     turns: list[Turn] = field(default_factory=list)
 
     def clear_response_views(self) -> None:
@@ -86,6 +92,8 @@ class Session:
         self.last_verifier_report = None
         self.last_representation_plan = None
         self.last_partial_data_warnings = []
+        self.last_claim_events = []
+        self.last_claim_rejected = None
 
     def record(self, user: str, assistant: str, answer_type: str) -> None:
         self.turns.append(Turn(user=user, assistant=assistant, answer_type=answer_type))
@@ -134,5 +142,7 @@ class Session:
             last_verifier_report=data.get("last_verifier_report"),
             last_representation_plan=data.get("last_representation_plan"),
             last_partial_data_warnings=list(data.get("last_partial_data_warnings") or []),
+            last_claim_events=list(data.get("last_claim_events") or []),
+            last_claim_rejected=data.get("last_claim_rejected"),
             turns=turns,
         )

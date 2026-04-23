@@ -432,6 +432,16 @@ export type PartialDataWarningEvent = {
   verdict_reliable: boolean;    // true if the core decision still stands
 };
 
+// Advisory event from the claim-object pipeline (phase 3 wedge). Emitted when
+// the Editor rejects a candidate claim and dispatch falls back to the legacy
+// body. UI ignores this today; logs and telemetry consume it so rejection
+// rates are observable without changing the user-facing stream.
+export type ClaimRejectedEvent = {
+  type: "claim_rejected";
+  archetype: string;            // e.g. "verdict_with_comparison"
+  failures: string[];           // Editor check failure messages
+};
+
 export type ResearchUpdateEvent = {
   type: "research_update";
   town: string;
@@ -524,6 +534,7 @@ export type ChatEvent =
   | RentOutlookEvent
   | TrustSummaryEvent
   | PartialDataWarningEvent
+  | ClaimRejectedEvent
   | ResearchUpdateEvent
   | ModulesRanEvent
   | VerifierReportEvent

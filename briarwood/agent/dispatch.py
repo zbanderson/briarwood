@@ -1806,6 +1806,84 @@ def handle_lookup(
 # ---------- DECISION ----------
 
 
+def _maybe_handle_via_claim(
+    text: str,
+    decision: RouterDecision,
+    session: Session,
+    llm: LLMClient | None,
+    *,
+    pid: str,
+) -> str | None:
+    """Phase 3 wedge entry point.
+
+    Returns the rendered prose when the claim path both (a) was enabled for
+    this property and (b) produced a claim the Editor accepted. Returns None
+    in every other case — including Editor rejection — so the caller falls
+    through to the legacy body. On rejection we also populate
+    ``session.last_claim_rejected`` so the SSE adapter can surface the
+    rejection without changing the wire contract the UI consumes.
+    """
+    from briarwood.claims.archetypes import Archetype
+    from briarwood.claims.pipeline import build_claim_for_property
+    from briarwood.claims.representation import render_claim
+    from briarwood.claims.routing import map_to_archetype
+    from briarwood.editor import edit_claim
+    from briarwood.feature_flags import claims_enabled_for
+    from briarwood.value_scout import scout_claim
+
+    if not claims_enabled_for(pid):
+        return None
+
+    parser_output = getattr(decision, "parser_output", None)
+    question_focus = getattr(parser_output, "question_focus", None)
+    archetype = map_to_archetype(
+        decision.answer_type,
+        list(question_focus) if question_focus else None,
+        has_pinned_listing=True,
+    )
+    if archetype != Archetype.VERDICT_WITH_COMPARISON:
+        return None
+
+    try:
+        claim = build_claim_for_property(pid, user_text=text)
+    except Exception as exc:
+        logger.warning("claims pipeline build failed: %s", exc)
+        return None
+
+    insight = scout_claim(claim)
+    if insight is not None:
+        claim = claim.model_copy(
+            update={
+                "surfaced_insight": insight,
+                "comparison": claim.comparison.model_copy(
+                    update={"emphasis_scenario_id": insight.scenario_id}
+                ),
+            }
+        )
+
+    verdict_label = claim.verdict.label
+    result = edit_claim(claim)
+    if not result.passed:
+        logger.info(
+            "claim rejected for pid=%s failures=%s", pid, result.failures
+        )
+        session.last_claim_rejected = {
+            "archetype": archetype.value,
+            "verdict_label": verdict_label,
+            "failures": list(result.failures),
+        }
+        return None
+
+    try:
+        rendered = render_claim(claim, llm=llm)
+    except Exception as exc:
+        logger.warning("claim rendering failed: %s", exc)
+        return None
+
+    session.last_claim_events = list(rendered.events)
+    return rendered.prose
+
+
 def handle_decision(
     text: str, decision: RouterDecision, session: Session, llm: LLMClient | None
 ) -> str:
@@ -1831,6 +1909,16 @@ def handle_decision(
                 session.current_property_id = None
                 return _format_live_listing_decision(result)
             return "Which property should I underwrite?"
+
+    # Phase 3 wedge: feature-flagged claim-object pipeline. Rolls back by
+    # flipping BRIARWOOD_CLAIMS_ENABLED to false — no branch here if the flag
+    # is off. On any path failure we fall through to the legacy body below
+    # (unchanged) so the wedge can never block a response.
+    claim_response = _maybe_handle_via_claim(text, decision, session, llm, pid=pid)
+    if claim_response is not None:
+        session.current_property_id = pid
+        return claim_response
+
     analysis_overrides, user_overrides = _analysis_overrides(
         text,
         pid=pid,

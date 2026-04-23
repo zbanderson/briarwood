@@ -2127,6 +2127,15 @@ async def _decision_stream_impl(
     projection_secondary: list[dict[str, Any]] = []
     native_projection_chart_emitted = False
 
+    # Phase 3 wedge: when the claim-object pipeline handled this turn, it
+    # populated session.last_claim_events with its chart + suggestions. Emit
+    # those as primary events; legacy card gates (verdict/town_summary/…)
+    # remain on their respective session views, which are None on the claim
+    # path, so nothing double-emits.
+    claim_events = list(session.last_claim_events or [])
+    if claim_events:
+        primary_events.extend(claim_events)
+
     if isinstance(session.last_decision_view, dict):
         primary_events.append(events.verdict(_verdict_from_view(session.last_decision_view)))
 
@@ -2205,6 +2214,17 @@ async def _decision_stream_impl(
             str(warning.get("section") or "unknown"),
             str(warning.get("reason") or ""),
             verdict_reliable=bool(warning.get("verdict_reliable", True)),
+        )
+
+    # Phase 3 wedge: advisory claim-rejected event. Emitted when the claim
+    # pipeline built a candidate but the Editor failed it and we fell back
+    # to the legacy body. Dev tooling / telemetry can observe rejection
+    # rates without the user-facing UI changing shape.
+    if isinstance(session.last_claim_rejected, dict):
+        rejected = session.last_claim_rejected
+        yield events.claim_rejected(
+            str(rejected.get("archetype") or "unknown"),
+            [str(f) for f in (rejected.get("failures") or [])],
         )
 
     for ev in primary_events:

@@ -38,6 +38,7 @@ EVENT_MODULES_RAN = "modules_ran"
 EVENT_VERIFIER_REPORT = "verifier_report"
 EVENT_GROUNDING_ANNOTATIONS = "grounding_annotations"
 EVENT_PARTIAL_DATA_WARNING = "partial_data_warning"
+EVENT_CLAIM_REJECTED = "claim_rejected"
 
 
 def text_delta(content: str) -> dict[str, Any]:
@@ -295,6 +296,24 @@ def partial_data_warning(
         "section": section,
         "reason": reason,
         "verdict_reliable": bool(verdict_reliable),
+    }
+
+
+def claim_rejected(
+    archetype: str,
+    failures: list[str],
+) -> dict[str, Any]:
+    """Editor rejected a claim before it could reach the user.
+
+    Emitted when the claim-object pipeline produces a claim that fails the
+    Editor's pass/fail validation. The wedge falls back to the legacy
+    handler and surfaces this event so dev tooling can observe rejection
+    rates without the user-facing stream changing shape.
+    """
+    return {
+        "type": EVENT_CLAIM_REJECTED,
+        "archetype": archetype,
+        "failures": list(failures),
     }
 
 
