@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from briarwood.execution.context import ExecutionContext
-from briarwood.modules.cost_valuation import CostValuationModule
+from briarwood.modules.ownership_economics import OwnershipEconomicsModule
 from briarwood.modules.scoped_common import (
     build_property_input_from_context,
     module_payload_from_error,
@@ -13,9 +13,9 @@ def run_carry_cost(context: ExecutionContext) -> dict[str, object]:
     """Run Briarwood's ownership-carry underwriting through a scoped wrapper."""
     try:
         property_input = build_property_input_from_context(context)
-        result = CostValuationModule().run(property_input)
+        result = OwnershipEconomicsModule().run(property_input)
         assumptions_used = {
-            "legacy_module": "CostValuationModule",
+            "legacy_module": "OwnershipEconomicsModule",
             "property_id": property_input.property_id,
             "uses_full_engine_report": False,
         }

@@ -319,7 +319,7 @@ python3 -m unittest discover -s tests
 
 ## How Cost / Valuation Works
 
-The cost / valuation module lives in [`briarwood/modules/cost_valuation.py`](/Users/zachanderson/projects/briarwood/briarwood/modules/cost_valuation.py). Its assumptions live in [`briarwood/settings.py`](/Users/zachanderson/projects/briarwood/briarwood/settings.py).
+The ownership-economics module lives in [`briarwood/modules/ownership_economics.py`](briarwood/modules/ownership_economics.py) (renamed from `cost_valuation.py` / `CostValuationModule` in Handoff 2a Piece 5A, 2026-04-24). Its assumptions live in [`briarwood/settings.py`](briarwood/settings.py).
 
 ### Inputs used
 

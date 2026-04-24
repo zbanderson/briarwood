@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # existing dataclass pipeline is preserved — this model only inspects the
 # fields that caused real-world issues (out-of-range numerics and typo'd
 # enums) and fails loudly before the engine sees nonsense. Rate fields allow
-# either 0..1 or 0..100 because cost_valuation._normalize_percent accepts
+# either 0..1 or 0..100 because ownership_economics._normalize_percent accepts
 # both forms.
 _FLOOD_VALUES = {None, "none", "low", "medium", "high"}
 
@@ -123,7 +123,7 @@ class _PropertyInputValidationModel(BaseModel):
     @field_validator("down_payment_percent", "interest_rate", "vacancy_rate")
     @classmethod
     def _rate_range(cls, value: float | None) -> float | None:
-        # Accept either 0..1 or 0..100 form (cost_valuation normalizes).
+        # Accept either 0..1 or 0..100 form (ownership_economics normalizes).
         if value is not None and not 0 <= value <= 100:
             raise ValueError("rate out of range (0..100)")
         return value

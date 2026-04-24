@@ -10,8 +10,8 @@ from briarwood.settings import CostValuationSettings, DEFAULT_COST_VALUATION_SET
 from briarwood.utils import safe_divide
 
 
-class CostValuationModule:
-    name = "cost_valuation"
+class OwnershipEconomicsModule:
+    name = "ownership_economics"
 
     def __init__(
         self,

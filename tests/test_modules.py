@@ -4,7 +4,7 @@ from pathlib import Path
 
 from briarwood.modules.bull_base_bear import BullBaseBearModule
 from briarwood.modules.comparable_sales import ComparableSalesModule
-from briarwood.modules.cost_valuation import CostValuationModule
+from briarwood.modules.ownership_economics import OwnershipEconomicsModule
 from briarwood.modules.current_value import CurrentValueModule
 from briarwood.modules.hybrid_value import HybridValueModule
 from briarwood.modules.income_support import IncomeSupportModule
@@ -58,7 +58,7 @@ class ModuleTests(unittest.TestCase):
             ComparableSalesModule(),
             HybridValueModule(),
             CurrentValueModule(),
-            CostValuationModule(),
+            OwnershipEconomicsModule(),
             IncomeSupportModule(),
             RentalEaseModule(),
             BullBaseBearModule(),
@@ -78,8 +78,8 @@ class ModuleTests(unittest.TestCase):
             self.assertIsNotNone(result.section_evidence)
             self.assertIn(result.section_evidence.evidence_mode, {EvidenceMode.PUBLIC_RECORD, EvidenceMode.LISTING_ASSISTED, EvidenceMode.MLS_CONNECTED})
 
-    def test_cost_valuation_returns_underwriting_metrics(self) -> None:
-        result = CostValuationModule().run(sample_property())
+    def test_ownership_economics_returns_underwriting_metrics(self) -> None:
+        result = OwnershipEconomicsModule().run(sample_property())
 
         self.assertIn("cap_rate", result.metrics)
         self.assertIn("monthly_mortgage_payment", result.metrics)
@@ -94,8 +94,8 @@ class ModuleTests(unittest.TestCase):
         self.assertGreaterEqual(result.score, 0.0)
         self.assertLessEqual(result.score, 100.0)
 
-    def test_cost_valuation_accepts_configurable_settings(self) -> None:
-        module = CostValuationModule(
+    def test_ownership_economics_accepts_configurable_settings(self) -> None:
+        module = OwnershipEconomicsModule(
             settings=CostValuationSettings(
                 loan_term_years=15,
                 default_vacancy_rate=0.08,
