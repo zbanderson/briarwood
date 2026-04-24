@@ -713,6 +713,71 @@ through the dead aggregator today.
 
 ## Execution record
 
+### Handoff 4 — 2026-04-24 — 2 of 3 DEPRECATE decisions executed; 1 reclassified as KEEP
+
+Executed sequentially (simplest → hardest), with DECISIONS.md amendments
+superseding two plan entries where grep verification contradicted the
+original classification.
+
+1. **value_finder** (entry 14) — DEPRECATE executed. Commit `7f89b0e`.
+   Zero production callers verified; module + test file deleted;
+   TOOL_REGISTRY / ARCHITECTURE_CURRENT / GAP_ANALYSIS entries removed;
+   stale disambiguation references in `value_scout`, `hybrid_value_scoped`,
+   and `README_hybrid_value` cleaned up.
+
+2. **calculate_final_score** (entry 15) — DEPRECATE executed with amended
+   scope. Commit `63fbcb8`. The entry's "Scope limit" paragraph claimed
+   the `_score_*` helpers had active callers and should remain. Grep
+   verification during execution found zero non-aggregator, non-test
+   callers — the entire scoring chain was dead code. Amendment recorded
+   in [DECISIONS.md](DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 15
+   scope-limit paragraph corrected." Deleted: the aggregator, all 20+
+   `_score_*` helpers, all 5 `_calculate_*` category builders, all
+   supporting dataclasses (`FinalScore` / `CategoryScore` / `SubFactorScore`),
+   the entirety of `lens_scoring.py`, and both dead-code test files
+   (`test_decision_model.py`, `test_scoring_group2.py`). Preserved:
+   `estimate_comp_renovation_premium` + `extract_scoring_metrics` +
+   utility helpers (~200 lines in `scoring.py`), alive via
+   `components.py`. Also removed orphaned `$400/sqft`
+   `replacement_cost_per_sqft` constant from `scoring_config.py`.
+   ~2,203 lines removed across 4 files.
+
+3. **bull_base_bear** (entry 6) — **RECLASSIFIED as KEEP-as-internal-helper.**
+   Commit `838dc4e`. Entry 6's DEPRECATE premise ("replaced by
+   resale_scenario") was based on a misread of a code comment at
+   `briarwood/agent/tools.py:1411`. Grep verification found that
+   `briarwood/modules/resale_scenario_scoped.py:30` invokes
+   `BullBaseBearModule().run(property_input)` as the core of its
+   implementation — the scoped wrapper *composes* `bull_base_bear`,
+   it does not replace it. Same pattern as `rental_ease`,
+   `risk_constraints`, `property_data_quality`, and `local_intelligence`
+   (the four existing KEEP-as-internal-helper decisions in this plan).
+   Amendment recorded in [DECISIONS.md](DECISIONS.md) 2026-04-24
+   "PROMOTION_PLAN.md entry 6 decision corrected." No code deletion —
+   the misleading comment was corrected, audit docs were updated, and
+   stale H3-era "(deprecating)" references in downstream READMEs and
+   module docstrings were cleaned up.
+
+**Plan tally update (post-H4 execution):**
+
+- Original (2026-04-24, Handoff 2b): 8 PROMOTE, 4 KEEP, 3 DEPRECATE
+- After Handoff 4: **8 PROMOTE, 5 KEEP, 2 DEPRECATE**
+
+The reclassification of entry 6 (bull_base_bear) moves it from the
+DEPRECATE column into the KEEP column. Entries 14 and 15 remain DEPRECATE
+and have been executed.
+
+OUT of scope and explicitly untouched: `property_data_quality`,
+`rental_ease`, `risk_constraints`, `local_intelligence` (KEEP-as-helper
+documentation — Handoff 5). CMA Engine B quality audit (own handoff).
+Town-intelligence elevation (own handoff).
+
+Also see [FOLLOW_UPS.md](FOLLOW_UPS.md) 2026-04-24 "Decision sessions
+should grep-verify caller claims in real time" — a process note
+recommending future decision sessions attach grep evidence to each
+classification that hinges on caller topology, to prevent the kind of
+mid-execution amendments seen here.
+
 ### Handoff 3 — 2026-04-24 — all 8 PROMOTE decisions realized (commit `37df9f8`)
 
 The 8 PROMOTE decisions listed in this plan were executed in the following
