@@ -70,7 +70,7 @@ def build_module_registry() -> dict[str, ModuleSpec]:
         ),
         ModuleSpec(
             name="risk_model",
-            depends_on=["valuation"],
+            depends_on=["valuation", "legal_confidence"],
             required_context_keys=["property_data"],
             optional_context_keys=["prior_outputs", "market_context"],
             runner=run_risk_model,
@@ -94,7 +94,7 @@ def build_module_registry() -> dict[str, ModuleSpec]:
         ),
         ModuleSpec(
             name="rental_option",
-            depends_on=["valuation"],
+            depends_on=[],
             required_context_keys=["property_data"],
             optional_context_keys=["prior_outputs", "market_context", "comp_context"],
             runner=run_rental_option,
