@@ -708,3 +708,56 @@ through the dead aggregator today.
   cleanup. Small; bundles with other deprecations.
 - **`calculate_final_score` deprecation cleanup** — aggregator removal
   + TOOL_REGISTRY cleanup. Small.
+
+---
+
+## Execution record
+
+### Handoff 3 — 2026-04-24 — all 8 PROMOTE decisions realized
+
+The 8 PROMOTE decisions listed in this plan were executed in the following
+sequence (dependency order, simplicity-first, disambiguation pairs adjacent):
+
+1. **strategy_classifier** (entry 13) — registration-only; added try/except
+   wrap + `ModuleSpec`.
+2. **market_value_history** (entry 4) — standalone scoped wrapper
+   `market_value_history_scoped.py`.
+3. **current_value** (entry 3) — standalone scoped wrapper
+   `current_value_scoped.py`; disambiguation README pair with `valuation`;
+   anti-recursion comment in `valuation.py`.
+4. **income_support** (entry 8) — standalone scoped wrapper
+   `income_support_scoped.py`; disambiguation README pair with `rental_option`;
+   anti-recursion comment in `rental_option_scoped.py`.
+5. **scarcity_support** (entry 7) — standalone scoped wrapper
+   `scarcity_support_scoped.py`; field-name stability on
+   `scarcity_support_score` preserved.
+6. **location_intelligence** (entry 11) — standalone scoped wrapper
+   `location_intelligence_scoped.py`; missing-input semantics preserved.
+7. **comparable_sales** (entry 1) — standalone scoped wrapper
+   `comparable_sales_scoped.py`; hybrid-decomposition field names preserved;
+   FOLLOW_UPS.md entry added for retiring `claims/pipeline.py:62-88` graft.
+8. **hybrid_value** (entry 2) — composite scoped wrapper
+   `hybrid_value_scoped.py` with canonical missing-priors contract;
+   `is_hybrid=False` short-circuit preserved as valid non-error payload.
+
+Each promotion added one `ModuleSpec` to `briarwood/execution/registry.py`,
+one new `README_<name>.md` under `briarwood/modules/`, and isolation +
+error-contract + registry-integration tests under `tests/modules/`. The
+`StrategyClassifier` test file was extended rather than duplicated.
+`ARCHITECTURE_CURRENT.md` Scoped table grew from 15 → 23 models; the
+Legacy table lost the 8 promoted rows. `TOOL_REGISTRY.md` blockers were
+cleared on each of the 8 entries and the entry-field was updated to the
+new scoped runner signature.
+
+The scoped registry now contains 23 models. The `test_every_scoped_module_appears_once`
+expected set was updated to match (it was already failing pre-H3 because
+`opportunity_cost` from a prior handoff was not in the expected set —
+that side-pollution is also resolved). Full test-suite baseline of
+29 pre-existing failures was held through all 8 promotions; no new failures
+introduced.
+
+OUT of scope and explicitly untouched: `bull_base_bear`, `value_finder`,
+and `calculate_final_score` DEPRECATE decisions (Handoff 4);
+`property_data_quality`, `rental_ease`, `risk_constraints`, and
+`local_intelligence` KEEP-as-helper documentation (Handoff 5); CMA Engine B
+quality audit (own handoff); town-intelligence elevation (own handoff).

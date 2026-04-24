@@ -123,3 +123,16 @@ Distinct from [DECISIONS.md](DECISIONS.md) (which captures product/architectural
 **Suggested fix:** Two-step audit. (1) Map every CMA surface the user can hit ("run a CMA" text, Properties UI panels, agent-tool callers) and confirm which engine each one uses. (2) For Engine B, decide whether to unify with Engine A's scoring / adjustment logic or to keep it as a distinct live-only summary with its own quality bar. Either way, define the quality invariants explicitly: minimum comp count, maximum distance, age cap, confidence floor, and behavior when live returns empty. Do NOT do this in Handoff 2b or Handoff 3 — scope it as its own handoff after promotion is complete.
 
 Surfaced during Handoff 2b — see [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 1 (`comparable_sales` → PROMOTE, Engine A only).
+
+---
+
+## 2026-04-24 — Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py
+
+**Severity:** Low — mechanical cleanup; no user-facing impact.
+
+**Files:**
+- [briarwood/claims/pipeline.py:62-88](briarwood/claims/pipeline.py#L62-L88) — the post-hoc graft that today instantiates `ComparableSalesModule()` because "the scoped execution registry doesn't surface comparable_sales as a top-level module."
+
+**Issue:** Handoff 3 added a scoped `comparable_sales` runner at [briarwood/modules/comparable_sales_scoped.py](briarwood/modules/comparable_sales_scoped.py) and registered it in [briarwood/execution/registry.py](briarwood/execution/registry.py). The graft in `claims/pipeline.py` is no longer necessary; it can route through the scoped tool to pick up the canonical error contract and planner integration.
+
+**Suggested fix:** Replace the direct `ComparableSalesModule()` instantiation at `claims/pipeline.py:62-88` with `run_comparable_sales(context)` (or the equivalent entry in whatever execution harness claims uses). Verify field-name stability — the graft currently reads the legacy payload shape directly, which is preserved by `module_payload_from_legacy_result`, so the migration is a field-access adjustment rather than a contract rewrite. Out of scope for Handoff 3 — surfaced during the `comparable_sales` promotion per [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 1 "Rules of Engagement — no drive-by fixes."

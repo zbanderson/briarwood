@@ -5,7 +5,11 @@ Rule-based, deterministic. Each test pins one rule.
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
+from briarwood.execution.context import ExecutionContext
+from briarwood.execution.planner import build_execution_plan
+from briarwood.execution.registry import build_module_registry
 from briarwood.modules.strategy_classifier import (
     PropertyStrategyType,
     classify_strategy,
@@ -123,6 +127,48 @@ class StrategyClassifierRunnerTests(unittest.TestCase):
         # occupancy is undeclared in the fixture → falls through to default.
         # The important contract: strategy is set and rationale is populated.
         self.assertTrue(payload.data["rationale"])
+
+
+class StrategyClassifierErrorContractTests(unittest.TestCase):
+    """Pins the canonical standalone error contract (DECISIONS.md 2026-04-24)."""
+
+    def test_classifier_exception_returns_fallback_payload(self) -> None:
+        with patch(
+            "briarwood.modules.strategy_classifier.classify_strategy",
+            side_effect=RuntimeError("boom"),
+        ):
+            payload = run_strategy_classifier(context_normal())
+        self.assertEqual(payload["mode"], "fallback")
+        self.assertEqual(payload["confidence"], 0.08)
+        self.assertEqual(payload["data"]["module_name"], "strategy_classifier")
+        self.assertTrue(
+            any("Strategy-classifier fallback" in w for w in payload["warnings"]),
+            f"warnings={payload['warnings']!r}",
+        )
+
+    def test_empty_context_returns_fallback_payload(self) -> None:
+        # build_property_input_from_context raises when property_data is empty;
+        # the wrapper's try/except must catch it and return a fallback.
+        empty_ctx = ExecutionContext(property_id="empty")
+        payload = run_strategy_classifier(empty_ctx)
+        self.assertEqual(payload["mode"], "fallback")
+        self.assertEqual(payload["confidence"], 0.08)
+
+
+class StrategyClassifierRegistryTests(unittest.TestCase):
+    def test_strategy_classifier_is_registered(self) -> None:
+        registry = build_module_registry()
+        self.assertIn("strategy_classifier", registry)
+        spec = registry["strategy_classifier"]
+        self.assertEqual(spec.depends_on, [])
+        self.assertEqual(spec.runner, run_strategy_classifier)
+        self.assertIn("property_data", spec.required_context_keys)
+
+    def test_strategy_classifier_resolves_in_plan(self) -> None:
+        registry = build_module_registry()
+        plan = build_execution_plan(["strategy_classifier"], registry)
+        self.assertIn("strategy_classifier", plan.ordered_modules)
+        self.assertEqual(plan.dependency_modules, [])
 
 
 if __name__ == "__main__":

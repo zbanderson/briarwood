@@ -27,7 +27,10 @@ from enum import Enum
 from typing import Any
 
 from briarwood.execution.context import ExecutionContext
-from briarwood.modules.scoped_common import build_property_input_from_context
+from briarwood.modules.scoped_common import (
+    build_property_input_from_context,
+    module_payload_from_error,
+)
 from briarwood.routing_schema import ModulePayload
 from briarwood.schemas import OccupancyStrategy, PropertyInput
 
@@ -245,35 +248,56 @@ def _is_scarcity_hold_signal(p: PropertyInput) -> bool:
 
 
 def run_strategy_classifier(context: ExecutionContext) -> dict[str, object]:
-    """Scoped-module entry point. Returns a ModulePayload dict."""
+    """Scoped-module entry point. Returns a ModulePayload dict.
 
-    property_input = build_property_input_from_context(context)
-    classification = classify_strategy(property_input)
-    payload = ModulePayload(
-        module_name="strategy_classifier",
-        summary=f"Strategy: {classification.strategy.value} (rule: {classification.rule_fired})",
-        score=classification.confidence,
-        confidence=classification.confidence,
-        data={
-            "module_name": "strategy_classifier",
-            "strategy": classification.strategy.value,
-            "rationale": list(classification.rationale),
-            "rule_fired": classification.rule_fired,
-            "candidates": [c.value for c in classification.candidates],
-            "classification": classification.to_dict(),
-        },
-        assumptions_used={
-            "classifier_version": "phase3/v1",
-            "property_id": property_input.property_id,
-            "deterministic": True,
-        },
-        warnings=(
-            [f"Strategy classified with confidence {classification.confidence:.2f}"]
-            if classification.confidence < 0.50
-            else []
-        ),
-    )
-    return payload.model_dump()
+    Error contract (DECISIONS.md 2026-04-24): standalone wrapper. Any
+    exception raised while building ``PropertyInput`` or classifying returns
+    ``module_payload_from_error`` (``mode="fallback"``, ``confidence=0.08``).
+    ``classify_strategy`` itself is deterministic and rule-only, but the
+    ``PropertyInput`` builder can raise on adversarial contexts.
+    """
+
+    try:
+        property_input = build_property_input_from_context(context)
+        classification = classify_strategy(property_input)
+        payload = ModulePayload(
+            module_name="strategy_classifier",
+            summary=f"Strategy: {classification.strategy.value} (rule: {classification.rule_fired})",
+            score=classification.confidence,
+            confidence=classification.confidence,
+            data={
+                "module_name": "strategy_classifier",
+                "strategy": classification.strategy.value,
+                "rationale": list(classification.rationale),
+                "rule_fired": classification.rule_fired,
+                "candidates": [c.value for c in classification.candidates],
+                "classification": classification.to_dict(),
+            },
+            assumptions_used={
+                "classifier_version": "phase3/v1",
+                "property_id": property_input.property_id,
+                "deterministic": True,
+            },
+            warnings=(
+                [f"Strategy classified with confidence {classification.confidence:.2f}"]
+                if classification.confidence < 0.50
+                else []
+            ),
+        )
+        return payload.model_dump()
+    except Exception as exc:  # noqa: BLE001
+        return module_payload_from_error(
+            module_name="strategy_classifier",
+            context=context,
+            summary="Strategy classification unavailable — inputs too sparse or malformed to classify.",
+            warnings=[f"Strategy-classifier fallback: {type(exc).__name__}: {exc}"],
+            assumptions_used={
+                "classifier_version": "phase3/v1",
+                "deterministic": True,
+                "fallback_reason": "sparse_or_malformed_inputs",
+            },
+            required_fields=["town", "state", "sqft", "beds"],
+        ).model_dump()
 
 
 __all__ = [

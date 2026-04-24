@@ -64,93 +64,169 @@ notes:
 
 ```yaml
 name: current_value
-path: briarwood/modules/current_value.py
-entry: CurrentValueModule().run(property_input, prior_results=None) -> ModuleResult
-intent_fit: [DECISION, BROWSE, LOOKUP]
+path: briarwood/modules/current_value_scoped.py       # scoped wrapper
+legacy_path: briarwood/modules/current_value.py        # wrapped CurrentValueModule engine
+entry: run_current_value(context: ExecutionContext) -> dict
+intent_fit: [RESEARCH, EDGE]                           # scenario/stress-test view; prefer `valuation` for DECISION/BROWSE/LOOKUP
 inputs:
-  property_input: PropertyInput                    # required
-  prior_results: dict[str, ModuleResult] | None    # optional; pre-computed upstream modules to avoid recomputation
+  property_data.purchase_price: float                  # recommended
+  property_data.sqft: int                              # required
+  property_data.beds: int                              # required
+  property_data.baths: float                           # required
+  property_data.town: str                              # required
+  property_data.state: str                             # required
 outputs:
-  briarwood_current_value: float
-  mispricing_pct: float
-  pricing_view: str                # "fair" | "undervalued" | "overvalued" | "unavailable"
-  confidence: float
-depends_on: [comparable_sales, market_value_history, income_support, hybrid_value]
+  data.legacy_payload.briarwood_current_value: float | None
+  data.legacy_payload.mispricing_pct: float | None
+  data.legacy_payload.pricing_view: str                # "fair" | "undervalued" | "overvalued" | "unavailable"
+  data.legacy_payload.value_low: float | None
+  data.legacy_payload.value_high: float | None
+  data.legacy_payload.all_in_basis: float | None
+  confidence: float                                    # pre-macro
+  assumptions_used.applies_macro_nudge: false         # distinguishing flag
+  assumptions_used.legacy_module: "CurrentValueModule"
+depends_on: []                                         # engine composes children in-process; anti-recursion
 invariants:
   - confidence in [0, 1]
-blockers_for_tool_use:
-  - Not in scoped execution registry. Consumed by scoped `valuation` wrapper, which is the callable entry.
-  - prior_results parameter is internal caching; exposing it as a tool input violates the orchestrator's cache semantics.
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08)
+  - applies_macro_nudge is always false — distinguishes from `valuation` which applies the HPI-momentum nudge
+  - Anti-recursion: valuation calls CurrentValueModule in-process; this tool does the same. Neither depends on the other.
+blockers_for_tool_use: []
 notes:
-  - Would need a scoped wrapper like briarwood/modules/valuation.py to become independently callable
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 3.
+  - Sibling to `valuation` — same engine, different contract. See README_current_value.md "When to call current_value vs. valuation" section for disambiguation rules.
+  - Payload field names under data.legacy_payload preserved from CurrentValueOutput so direct callers (bull_base_bear, teardown_scenario, renovation_scenario) can migrate without reshaping.
+  - See README_current_value.md for the full contract.
 ```
 
 ### comparable_sales
 
 ```yaml
 name: comparable_sales
-path: briarwood/modules/comparable_sales.py
-entry: ComparableSalesModule().run(property_input) -> ModuleResult
-intent_fit: [DECISION, BROWSE, COMPARISON, LOOKUP]
+path: briarwood/modules/comparable_sales_scoped.py      # scoped wrapper
+legacy_path: briarwood/modules/comparable_sales.py       # wrapped ComparableSalesModule
+entry: run_comparable_sales(context: ExecutionContext) -> dict
+intent_fit: [LOOKUP, COMPARISON, DECISION, BROWSE]
 inputs:
-  property_input: PropertyInput    # required
+  property_data.town: str                                # required
+  property_data.state: str                               # required
+  property_data.sqft: int                                # required (15% tolerance)
+  property_data.beds: int                                # required
+  property_data.baths: float                             # required
+  property_data.property_type: str                       # optional
+  property_data.lot_size: float                          # optional
+  property_data.year_built: int                          # optional
+  property_data.condition_profile: str                   # optional
+  property_data.capex_lane: str                          # optional
+  property_data.purchase_price: float                    # optional (listing-price anchor)
+  property_data.has_back_house: bool                     # optional (triggers hybrid)
+  property_data.adu_type: str                            # optional (triggers hybrid)
+  property_data.additional_units: list                   # optional
+  property_data.days_on_market: int                      # optional
+  property_data.manual_comp_inputs: list                 # optional
 outputs:
-  comparable_value: float
-  comp_count: int
-  comp_confidence: float
-  direct_value_range: object       # {low, midpoint, high}
-  comps_used: list[AdjustedComparable]
-depends_on: []                     # but internally calls briarwood/agents/comparable_sales
+  data.metrics.comparable_value: float
+  data.metrics.comp_count: int
+  data.metrics.comp_confidence: float                    # rounded outer
+  data.metrics.comp_confidence_score: float              # comp-match-quality weighted
+  data.metrics.direct_value_midpoint: float | None
+  data.metrics.blended_value_midpoint: float | None
+  data.legacy_payload.comparable_value: float
+  data.legacy_payload.comp_count: int
+  data.legacy_payload.confidence: float
+  data.legacy_payload.comps_used: list[AdjustedComparable]
+  data.legacy_payload.rejected_count: int
+  data.legacy_payload.direct_value_range: object        # {low, midpoint, high}
+  data.legacy_payload.income_adjusted_value_range: object
+  data.legacy_payload.location_adjustment_range: object
+  data.legacy_payload.lot_adjustment_range: object
+  data.legacy_payload.blended_value_range: object
+  data.legacy_payload.comp_confidence_score: float
+  data.legacy_payload.is_hybrid_valuation: bool          # load-bearing — read by hybrid_value
+  data.legacy_payload.primary_dwelling_value: float | None
+  data.legacy_payload.additional_unit_income_value: float | None
+  data.legacy_payload.additional_unit_count: int
+  data.legacy_payload.additional_unit_annual_income: float | None
+  data.legacy_payload.additional_unit_cap_rate: float    # 0.08 default (_DEFAULT_ADU_CAP_RATE)
+  data.legacy_payload.hybrid_valuation_note: str | None
+  confidence: float
+depends_on: []                                           # internally runs MarketValueHistoryModule + ComparableSalesAgent
 invariants:
-  - comp_count >= 0
-  - comps_used is a list (possibly empty)
-  - applies market friction discount for nonstandard products via is_nonstandard_product()
-blockers_for_tool_use:
-  - Not in scoped execution registry. See briarwood/claims/pipeline.py:62-88 for the post-hoc graft pattern currently used to make this callable in the claims path.
-  - Comment in claims/pipeline.py: "The scoped execution registry doesn't surface comparable_sales as a top-level module."
-  - Hybrid detection (_detect_hybrid_valuation, _build_hybrid_request) is baked into the run path; cross-tool composition with hybrid_value is implicit.
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08)
+  - comp_count >= 0; comps_used is always a list (possibly empty)
+  - Applies market_friction_discount for nonstandard products via is_nonstandard_product()
+  - Field names under data.legacy_payload preserved verbatim — read by hybrid_value (via prior_results) and unit_income_offset
+  - Hybrid detection baked into the run path; when is_hybrid_valuation=True, primary_dwelling_value and additional_unit_income_value are set
+blockers_for_tool_use: []
 notes:
-  - Data source: data/comps/sales_comps.json
-  - Hardcoded: 15% sqft tolerance for comp matching
-  - Cross-town comps TODO flagged in base_comp_selector.py
-  - Renovation premium TODO: estimate_comp_renovation_premium() not yet fed through
-  - Most architecturally load-bearing model not in the scoped registry — promotion is the highest-value Layer 2 unblock
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 1.
+  - **Engine A** (saved comps). Distinct from **Engine B** (get_cma at briarwood/agent/tools.py:1802, live-Zillow first, backs session.last_market_support_view). Engine B quality is its own handoff — see FOLLOW_UPS.md 2026-04-24 *Two comp engines*.
+  - Graft retirement: briarwood/claims/pipeline.py:62-88 ad-hoc instantiation now unnecessary; retirement tracked in FOLLOW_UPS.md (not in H3 scope).
+  - Data source: data/comps/sales_comps.json (shared with location_intelligence).
+  - Hardcoded: 15% sqft tolerance for comp matching; ADU cap rate 0.08; ADU expense ratio 0.30.
+  - Cross-town comps TODO flagged in base_comp_selector.py.
+  - Renovation premium TODO: estimate_comp_renovation_premium() not yet fed through.
+  - See README_comparable_sales.md for the full contract.
 ```
 
 ### hybrid_value
 
 ```yaml
 name: hybrid_value
-path: briarwood/modules/hybrid_value.py
-entry: HybridValueModule().run(property_input, prior_results) -> ModuleResult
-intent_fit: [DECISION, BROWSE]         # only meaningful for multi-unit / primary+ADU properties
+path: briarwood/modules/hybrid_value_scoped.py           # scoped composite wrapper
+legacy_path: briarwood/modules/hybrid_value.py            # wrapped HybridValueModule
+entry: run_hybrid_value(context: ExecutionContext) -> dict
+intent_fit: [RESEARCH, EDGE, DECISION, BROWSE]           # only meaningful for multi-unit / primary+ADU subjects
 inputs:
-  property_input: PropertyInput
-  prior_results: dict                  # expects comparable_sales and income_support outputs
+  property_data.town: str                                # required
+  property_data.state: str                               # required
+  property_data.sqft: int                                # required
+  property_data.beds: int                                # required
+  property_data.baths: float                             # required
+  property_data.has_back_house: bool                     # optional (drives hybrid detection)
+  property_data.adu_type: str                            # optional (drives hybrid detection)
+  property_data.additional_units: list                   # optional
+  property_data.back_house_monthly_rent: float           # optional
+  property_data.listing_description: str                 # optional
+  prior_outputs.comparable_sales: dict                   # required via depends_on; mode must not be error/fallback
+  prior_outputs.income_support: dict                     # required via depends_on; mode must not be error/fallback
 outputs:
-  is_hybrid: bool
-  reason: str
-  detected_primary_structure_type: str
-  detected_accessory_income_type: str
-  primary_house_value: float
-  rear_income_value: float             # capitalized rent
-  rear_income_method_used: str
-  optionality_premium_value: float
-  low_case_hybrid_value: float
-  base_case_hybrid_value: float
-  high_case_hybrid_value: float
-  market_friction_discount: float
-  market_feedback_adjustment: float
-  confidence: float
+  data.legacy_payload.is_hybrid: bool                    # valid zero-confidence answer when False (NOT error)
+  data.legacy_payload.reason: str
+  data.legacy_payload.detected_primary_structure_type: str | None
+  data.legacy_payload.detected_accessory_income_type: str | None
+  data.legacy_payload.primary_house_value: float | None
+  data.legacy_payload.primary_house_comp_confidence: float
+  data.legacy_payload.primary_house_comp_set: list[HybridCompEntry]
+  data.legacy_payload.rear_income_value: float | None    # capitalized rent
+  data.legacy_payload.rear_income_method_used: str | None
+  data.legacy_payload.rear_income_confidence: float
+  data.legacy_payload.optionality_premium_value: float | None
+  data.legacy_payload.optionality_reason: str
+  data.legacy_payload.low_case_hybrid_value: float | None
+  data.legacy_payload.base_case_hybrid_value: float | None
+  data.legacy_payload.high_case_hybrid_value: float | None
+  data.legacy_payload.market_friction_discount: float | None
+  data.legacy_payload.market_feedback_adjustment: float | None
+  data.legacy_payload.confidence: float
+  data.legacy_payload.notes: list[str]
+  data.legacy_payload.narrative: str
+  confidence: float | None                               # None only on missing-priors error
+  mode: str                                              # full/partial (happy), error (missing priors), fallback (exception)
+  missing_inputs: list[str]                              # populated on mode=error
 depends_on: [comparable_sales, income_support]
 invariants:
-  - is_hybrid=False means all valuation fields may be zero; orchestrator should not use them
-  - cap rate fixed at _DEFAULT_ADU_CAP_RATE = 0.08, expense ratio _ADU_EXPENSE_RATIO = 0.30
-blockers_for_tool_use:
-  - Not in scoped execution registry.
-  - prior_results is required — tool cannot run in isolation without upstream comparable_sales and income_support already having fired.
+  - Composite wrapper with canonical missing-priors contract: priors with mode in {"error","fallback"} treated as missing → module_payload_from_missing_prior (mode="error", confidence=None)
+  - is_hybrid=False short-circuit is a valid zero-confidence payload, NOT an error — consumers must key on data.legacy_payload.is_hybrid, not on mode
+  - comp_is_hybrid passthrough at hybrid_value.py:118-132 preserved — when comparable_sales already decomposed, primary + rear values are reused to avoid double-counting
+  - Never raises; internal exception → module_payload_from_error (mode="fallback", confidence=0.08)
+  - Cap rate 0.08, expense ratio 0.30 live in comparable_sales.py (shared constants)
+  - Applies evaluate_market_feedback() + market_friction_discount() via valuation_constraints
+blockers_for_tool_use: []
 notes:
-  - Applies evaluate_market_feedback() and market_friction_discount() via valuation_constraints
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 2.
+  - In-process dep re-computation: HybridValueModule.run() invoked without prior_results kwarg because ExecutionContext.prior_outputs holds scoped payload dicts, not typed ModuleResult objects. The legacy module re-runs its comparable_sales + income_support deps in-process. The missing-priors gate is about refusing to run on degraded upstream, not about avoiding redundant compute.
+  - See README_hybrid_value.md for the full contract.
 ```
 
 ### ownership_economics
@@ -193,21 +269,36 @@ notes:
 
 ```yaml
 name: market_value_history
-path: briarwood/modules/market_value_history.py
-entry: MarketValueHistoryModule().run(property_input) -> ModuleResult
-intent_fit: [DECISION, BROWSE, LOOKUP, RESEARCH]
+path: briarwood/modules/market_value_history_scoped.py          # scoped wrapper
+legacy_path: briarwood/modules/market_value_history.py           # wrapped MarketValueHistoryModule
+entry: run_market_value_history(context: ExecutionContext) -> dict
+intent_fit: [RESEARCH, BROWSE, PROJECTION, DECISION]
 inputs:
-  property_input: PropertyInput
+  property_data.town: str                  # required
+  property_data.state: str                 # required
+  property_data.county: str                # optional, fallback geography
 outputs:
-  history_points: list[HistoryPoint]   # {year, estimated_value, last_sale_price, confidence}
-  current_value_synthesized: float     # from trajectory
+  data.metrics.source_name: str            # provider label (Zillow ZHVI)
+  data.metrics.geography_name: str         # resolved town/county
+  data.metrics.geography_type: str         # "town" | "county" | "metro"
+  data.metrics.current_value: float | None # USD; null when no coverage
+  data.metrics.one_year_change_pct: float | None
+  data.metrics.three_year_change_pct: float | None
+  data.metrics.history_points: int         # count of time-series points
+  data.legacy_payload.points: list[HistoryPoint]   # {month, value, confidence}
+  data.legacy_payload.summary: str
+  confidence: float
 depends_on: []
 invariants:
-  - history_points sorted by year ascending
-blockers_for_tool_use:
-  - Not in scoped execution registry.
+  - Geography-level; NOT property-specific. Consumers must not misread as property trend.
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08).
+  - geography_name/type populated when town+state provided, even if coverage is empty.
+blockers_for_tool_use: []
 notes:
-  - Consumed by current_value as trend context
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 4.
+  - Data source: data/market_history/zillow_zhvi_history.json via FileBackedZillowHistoryProvider.
+  - Consumed in-process by ComparableSalesModule, CurrentValueModule, bull_base_bear (legacy); those continue to instantiate MarketValueHistoryModule directly rather than reading the scoped tool's prior_outputs.
+  - See README_market_value_history.md for the full contract.
 ```
 
 ---
@@ -300,23 +391,36 @@ notes:
 
 ```yaml
 name: scarcity_support
-path: briarwood/modules/scarcity_support.py
-entry: ScarcitySupportModule().run(property_input) -> ModuleResult
-intent_fit: [DECISION, EDGE, RISK]
+path: briarwood/modules/scarcity_support_scoped.py      # scoped wrapper
+legacy_path: briarwood/modules/scarcity_support.py       # wrapped ScarcitySupportModule
+entry: run_scarcity_support(context: ExecutionContext) -> dict
+intent_fit: [RESEARCH, MICRO_LOCATION, BROWSE, DECISION]
 inputs:
-  property_input: PropertyInput
+  property_data.town: str                                # required
+  property_data.state: str                               # required
+  property_data.county: str                              # optional fallback
+  property_data.property_type: str                       # optional
 outputs:
-  scarcity_support_score: float    # 0-1
+  data.metrics.scarcity_support_score: float             # 0-100, load-bearing key
+  data.metrics.scarcity_label: str                       # categorical
+  data.metrics.buyer_takeaway: str
+  data.legacy_payload.demand_consistency_score: float    # 0-1
+  data.legacy_payload.location_scarcity_score: float
+  data.legacy_payload.land_scarcity_score: float
+  data.legacy_payload.scarcity_score: float
+  data.legacy_payload.demand_drivers: list[str]
+  data.legacy_payload.scarcity_notes: list[str]
   confidence: float
-  supply_classification: str       # "scarce" | "moderate" | "abundant"
-  premium_attribution: dict        # {location, condition, size, unique_feature}
 depends_on: []
 invariants:
-  - scarcity_support_score in [0, 1]
-blockers_for_tool_use:
-  - Not in scoped execution registry.
+  - Geography-driven: signal describes town/segment, not the subject property
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08)
+  - scarcity_support_score field name preserved verbatim — read by decision_model (6 sites), lens_scoring (2), town_x_scenario, valuation_x_town, rental_ease agent, bull_base_bear (deprecating)
+blockers_for_tool_use: []
 notes:
-  - Signals: inventory depth, price momentum, DOM vs cohort
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 7.
+  - Internal: TownCountyDataService + ScarcitySupportScorer. Implementation-private.
+  - See README_scarcity_support.md for the full contract.
 ```
 
 ---
@@ -465,32 +569,52 @@ notes:
 
 ```yaml
 name: income_support
-path: briarwood/modules/income_support.py
-entry: IncomeSupportModule().run(property_input) -> ModuleResult
-intent_fit: [RENT_LOOKUP, DECISION, STRATEGY]
+path: briarwood/modules/income_support_scoped.py       # scoped wrapper
+legacy_path: briarwood/modules/income_support.py        # wrapped IncomeSupportModule engine
+entry: run_income_support(context: ExecutionContext) -> dict
+intent_fit: [RENT_LOOKUP, LOOKUP]                       # prefer `rental_option` for STRATEGY / composite answers
 inputs:
-  property_input: PropertyInput
+  property_data.purchase_price: float                   # required
+  property_data.estimated_monthly_rent: float           # recommended (RentContextAgent estimates if absent)
+  property_data.down_payment_percent: float             # recommended
+  property_data.interest_rate: float                    # recommended
+  property_data.loan_term_years: int                    # recommended
+  property_data.taxes: float                            # optional
+  property_data.insurance: float                        # optional
+  property_data.monthly_hoa: float                      # optional
+  property_data.sqft: int                               # required (by PropertyInput)
+  property_data.beds: int                               # required
+  property_data.baths: float                            # required
+  property_data.town: str                               # recommended
+  property_data.state: str                              # recommended
 outputs:
-  effective_monthly_rent: float
-  rent_source_type: str            # "actual" | "estimated" | "fallback"
-  gross_monthly_cost: float
-  income_support_ratio: float
-  price_to_rent: float
-  rent_support_classification: str
-  monthly_cash_flow: float
-  downside_burden: float
-  carrying_cost_complete: bool
-  financing_complete: bool
+  data.legacy_payload.income_support_ratio: float | None
+  data.legacy_payload.rent_coverage: float | None
+  data.legacy_payload.price_to_rent: float | None
+  data.legacy_payload.monthly_cash_flow: float | None
+  data.legacy_payload.effective_monthly_rent: float | None
+  data.legacy_payload.gross_monthly_cost: float | None
+  data.legacy_payload.rent_support_classification: str
+  data.legacy_payload.price_to_rent_classification: str
+  data.legacy_payload.rent_source_type: str             # "actual" | "estimated" | "fallback" | "unavailable"
+  data.legacy_payload.carrying_cost_complete: bool
+  data.legacy_payload.financing_complete: bool
   confidence: float
-depends_on: []
+  assumptions_used.exposes_raw_underwriting_signal: true  # distinguishing flag
+  assumptions_used.legacy_module: "IncomeSupportModule"
+depends_on: []                                          # anti-recursion — engine composes in-process
 invariants:
-  - confidence 0.0 with rent_source_type="unavailable" when purchase_price missing
-blockers_for_tool_use:
-  - Not in scoped execution registry.
-  - Requires down_payment_percent, interest_rate, loan_term_years in property_input — partial inputs return a degraded result.
+  - confidence in [0, 1]
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08)
+  - rent_source_type is never null; missing rent → "unavailable"
+  - Field names under data.legacy_payload preserved unchanged — risk_bar / evidence / comp_intelligence / rental_ease / hybrid_value read by key
+  - Anti-recursion: rental_option calls IncomeSupportModule in-process; this tool does the same. Neither depends on the other.
+blockers_for_tool_use: []
 notes:
-  - Backed by briarwood/agents/income/IncomeAgent
-  - RentContextAgent parses unit rents; UnitRentEstimator estimates when absent
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 8.
+  - Sibling to `rental_option` — same engine, different contract. See README_income_support.md "When to call income_support vs. rental_option" for disambiguation rules.
+  - Backed by briarwood/agents/income/IncomeAgent. RentContextAgent parses unit rents; UnitRentEstimator estimates when absent.
+  - See README_income_support.md for the full contract.
 ```
 
 ### rental_ease
@@ -825,22 +949,43 @@ notes:
 
 ```yaml
 name: location_intelligence
-path: briarwood/modules/location_intelligence.py
-entry: LocationIntelligenceModule().run(property_input) -> ModuleResult
-intent_fit: [MICRO_LOCATION, EDGE]
+path: briarwood/modules/location_intelligence_scoped.py   # scoped wrapper
+legacy_path: briarwood/modules/location_intelligence.py    # wrapped LocationIntelligenceModule
+entry: run_location_intelligence(context: ExecutionContext) -> dict
+intent_fit: [MICRO_LOCATION, RESEARCH, BROWSE, EDGE]
 inputs:
-  property_input: PropertyInput
+  property_data.town: str                                  # required
+  property_data.state: str                                 # required
+  property_data.latitude: float                            # recommended
+  property_data.longitude: float                           # recommended
+  property_data.landmark_points: dict[str, list[Point]]    # recommended (beach / downtown / park / train / ski)
+  property_data.zone_flags: list[str]                      # optional
+  property_data.purchase_price: float                      # required (anchor)
+  property_data.sqft: int                                  # required
 outputs:
-  walkability_score: float
-  transit_score: float
-  amenities_score: float
-  desirability_index: float
+  data.metrics.location_score: float                       # 0-1
+  data.metrics.scarcity_score: float                       # 0-1
+  data.metrics.primary_category: str                       # beach | downtown | park | train | ski
+  data.legacy_payload.subject_ppsf: float | None
+  data.legacy_payload.location_premium_pct: float | None
+  data.legacy_payload.subject_relative_premium_pct: float | None
+  data.legacy_payload.category_results: list[LocationCategoryIntelligence]
+  data.legacy_payload.narratives: list[str]
+  data.legacy_payload.confidence_notes: list[str]
+  data.legacy_payload.missing_inputs: list[str]
+  data.legacy_payload.zone_flags: list[str]
+  confidence: float
 depends_on: []
-invariants: []
-blockers_for_tool_use:
-  - Not in scoped execution registry.
+invariants:
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08, fallback_reason="provider_or_geocode_error")
+  - Missing-input semantics preserved: confidence_notes + missing_inputs populated when coords / landmarks / geo comps are absent (legitimate low-confidence output, NOT wrapper-caught failure)
+  - location_score, scarcity_score in [0, 1]
+blockers_for_tool_use: []
 notes:
-  - Signals relative to town cohort
+  - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 11.
+  - Shares comp provider with comparable_sales (data/comps/sales_comps.json).
+  - First scoped tool covering MICRO_LOCATION intent family.
+  - See README_location_intelligence.md for the full contract.
 ```
 
 ### local_intelligence
@@ -878,7 +1023,7 @@ notes:
 ```yaml
 name: strategy_classifier
 path: briarwood/modules/strategy_classifier.py
-entry: run_strategy_classifier(context: ExecutionContext) -> dict
+entry: run_strategy_classifier(context: ExecutionContext) -> dict    # scoped-registry runner at line 247
 intent_fit: [STRATEGY, DECISION, BROWSE]
 inputs:
   property_data: dict
@@ -892,10 +1037,13 @@ depends_on: []
 invariants:
   - Deterministic; no LLM
   - confidence in [0, 1]
+  - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08) per canonical error contract
 blockers_for_tool_use: []
 notes:
+  - Registered in scoped execution registry as of Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 13.
   - Runs at Layer 2 (post-intake, pre-domain models) in current orchestration
   - Rule-based; extensively documented inline
+  - See README_strategy_classifier.md for the full contract
 ```
 
 ### value_finder

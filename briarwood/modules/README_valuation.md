@@ -8,6 +8,24 @@
 
 `valuation` produces Briarwood's fair-value estimate for a property — the anchor every downstream decision-tier question depends on. It returns the current value in dollars, the signed mispricing percentage versus the listing ask, a `pricing_view` label (`fair`, `undervalued`, `overvalued`, `unavailable`), and a confidence score. Under the hood it reuses the legacy `CurrentValueModule`, which composes four internal anchors (comparable sales, market-value history, income support, and hybrid primary-plus-accessory value) into a single reconciled number, then applies a bounded macro nudge (≤ 3%) on the county's HPI momentum to adjust confidence. Call this tool any time the user's intent needs "what is this worth?" — it is a prerequisite for `risk_model`, `resale_scenario`, `rental_option`, `arv_model`, and `opportunity_cost`.
 
+## When to call `valuation` vs. `current_value`
+
+`valuation` and `current_value` share the same engine. They exist as distinct scoped tools because they answer different questions.
+
+**Call `valuation` when:**
+- The user is asking "what is this worth?" and expects Briarwood's canonical number.
+- Any decision-tier verdict (buy, pass, offer price) depends on the fair-value anchor.
+- Risk, resale, rental-option, ARV, or opportunity-cost modules need their upstream valuation anchor (these depend on `valuation`, not `current_value`).
+
+**Call `current_value` when:**
+- You are running a scenario or stress test and must remove macro-side confidence effects.
+- You are comparing pre- and post-macro confidence deltas.
+- A downstream caller explicitly needs the unmodified engine output.
+
+**If unsure which applies, default to `valuation`.** The macro nudge is bounded (≤ 3%) and the user-facing number is what the product promises; `current_value` is a scenario/diagnostic tool, not a user-facing answer.
+
+**Anti-recursion:** `valuation` calls `CurrentValueModule` in-process at [valuation.py:25-30](valuation.py#L25-L30), NOT via the scoped `current_value` tool. This is deliberate — see [README_current_value.md](README_current_value.md#anti-recursion-contract) for the full contract.
+
 ## Location
 
 - **Entry point:** [briarwood/modules/valuation.py:15](valuation.py#L15) — `run_valuation(context: ExecutionContext) -> dict[str, object]`.
@@ -126,3 +144,4 @@ payload = run_valuation(context)
 
 ### 2026-04-24
 - Initial README created.
+- Added disambiguation section pointing at the `current_value` scoped tool introduced in Handoff 3. Reciprocal section lives in [README_current_value.md](README_current_value.md). Anti-recursion inline comment added at [valuation.py:25-30](valuation.py#L25-L30). Reference: [PROMOTION_PLAN.md](../../PROMOTION_PLAN.md) entry 3.

@@ -43,6 +43,15 @@ class ModelSystemAuditTests(unittest.TestCase):
             "unit_income_offset",
             "legal_confidence",
             "town_development_index",
+            "opportunity_cost",
+            "strategy_classifier",
+            "market_value_history",
+            "current_value",
+            "income_support",
+            "scarcity_support",
+            "location_intelligence",
+            "comparable_sales",
+            "hybrid_value",
         }
         self.assertEqual(set(names), expected)
         self.assertEqual(len(names), len(expected))

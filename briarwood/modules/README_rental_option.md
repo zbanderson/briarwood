@@ -8,6 +8,23 @@
 
 `rental_option` composes rental-absorption ease with income-support underwriting into a single rental-path payload. It runs `IncomeSupportModule` (price-to-rent, cash flow, DSCR-style signals) and `RentalEaseModule` (liquidity, demand depth, rent support, scarcity) on the same property, then applies a bounded confidence nudge (≤ 3%) using the county's `employment` macro signal. The output anchors the rent-as-an-option strategy answer: "if you rent instead of owner-occupying, how viable is that path?" Call this tool whenever the user's intent is a rent-focused lookup or strategy question; it is the dependency behind `rental_option → valuation` in the scoped DAG.
 
+## When to call `rental_option` vs. `income_support`
+
+`rental_option` and `income_support` share an engine (`IncomeSupportModule`). They exist as distinct scoped tools because they answer different questions.
+
+**Call `rental_option` when:**
+- The user is asking *"if you rent it instead of owner-occupying, how viable is that path?"* — a composite `STRATEGY` / `RENT_LOOKUP` answer.
+- The answer needs rent-absorption ease (liquidity, days-to-rent, demand depth) alongside the underwriting ratio.
+- The employment-macro confidence nudge should apply.
+
+**Call `income_support` when:**
+- The user is asking a `LOOKUP`-style underwriting question: *"what's the DSCR?"*, *"what's the rent coverage?"*, *"what's the price-to-rent?"*
+- A downstream module needs a raw income-support ratio without the rental-ease context.
+
+**If unsure which applies, default to `rental_option`.** The composite view is safer when intent is ambiguous; `income_support` is the narrower raw-ratio lookup.
+
+**Anti-recursion:** `rental_option` calls `IncomeSupportModule` in-process at [rental_option_scoped.py:26-32](rental_option_scoped.py#L26-L32), NOT via the scoped `income_support` tool. This is deliberate — see [README_income_support.md](README_income_support.md#anti-recursion-contract) for the full contract.
+
 ## Location
 
 - **Entry point:** [briarwood/modules/rental_option_scoped.py:16](rental_option_scoped.py#L16) — `run_rental_option(context: ExecutionContext) -> dict[str, object]`.
@@ -135,3 +152,4 @@ payload = run_rental_option(context)
 ### 2026-04-24
 - Initial README created.
 - Dependency change: removed `valuation` from `depends_on` at [registry.py:97](../execution/registry.py#L97). The declared dependency was never consumed by the runner or its helper chain (`RentalEaseModule`, `IncomeSupportModule`), and the full test suite remains green without the ordering constraint.
+- Added disambiguation section pointing at the `income_support` scoped tool introduced in Handoff 3. Reciprocal section lives in [README_income_support.md](README_income_support.md). Anti-recursion inline comment added at [rental_option_scoped.py:26-32](rental_option_scoped.py#L26-L32). Reference: [PROMOTION_PLAN.md](../../PROMOTION_PLAN.md) entry 8.

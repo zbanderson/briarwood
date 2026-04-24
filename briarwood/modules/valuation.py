@@ -24,6 +24,9 @@ def run_valuation(context: ExecutionContext) -> dict[str, object]:
 
     try:
         property_input = build_property_input_from_context(context)
+        # Anti-recursion: valuation calls CurrentValueModule in-process here,
+        # NOT via the scoped current_value tool — prevents double error-handling
+        # and circular registry dependencies. Reference: PROMOTION_PLAN.md entry 3.
         result = CurrentValueModule().run(property_input)
         macro_nudge = apply_macro_nudge(
             base_confidence=result.confidence,

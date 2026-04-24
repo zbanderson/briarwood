@@ -25,6 +25,10 @@ def run_rental_option(context: ExecutionContext) -> dict[str, object]:
 
     try:
         property_input = build_property_input_from_context(context)
+        # Anti-recursion: rental_option calls IncomeSupportModule in-process
+        # here, NOT via the scoped income_support tool — prevents double
+        # error-handling and circular registry dependencies. Reference:
+        # PROMOTION_PLAN.md entry 8.
         income_result = IncomeSupportModule().run(property_input)
         rental_ease_result = RentalEaseModule().run(property_input)
         macro_nudge = apply_macro_nudge(
