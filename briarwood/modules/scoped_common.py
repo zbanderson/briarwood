@@ -149,6 +149,59 @@ def module_payload_from_error(
     )
 
 
+def module_payload_from_missing_prior(
+    *,
+    module_name: str,
+    context: ExecutionContext | None = None,
+    missing: list[str],
+    summary: str | None = None,
+    assumptions_used: dict[str, Any] | None = None,
+    extra_data: dict[str, Any] | None = None,
+) -> ModulePayload:
+    """Return a typed error payload when required prior module outputs are missing.
+
+    Companion to ``module_payload_from_error``. Distinct from that helper because
+    missing-prior is a different signal: no computation was attempted, so the
+    caller gets ``mode="error"`` and ``confidence=None`` (not ``"fallback"`` /
+    0.08). Composite wrappers call this when ``prior_outputs`` lacks a required
+    upstream module output, or when the upstream's own ``mode`` is ``"error"``
+    or ``"fallback"`` (i.e. the prior degraded and cannot be used).
+
+    The shape mirrors ``opportunity_cost``'s existing missing-priors branch
+    (briarwood/modules/opportunity_cost.py) so trust gates can key on
+    ``mode in {"error","fallback"}`` uniformly across all scoped wrappers.
+    """
+
+    assumptions = dict(assumptions_used or {})
+    assumptions.setdefault("required_prior_modules", list(missing))
+
+    if summary is None:
+        summary = (
+            f"{module_name} unavailable — required prior module outputs missing: "
+            + ", ".join(missing)
+        )
+
+    return ModulePayload(
+        data={
+            "module_name": module_name,
+            "summary": summary,
+            "score": None,
+            "metrics": {},
+            **dict(extra_data or {}),
+        },
+        confidence=None,
+        assumptions_used=assumptions,
+        warnings=[f"Missing prior module output: {name}" for name in missing],
+        mode="error",
+        missing_inputs=list(missing),
+        estimated_inputs=[],
+        confidence_band=confidence_band(None),
+        module_name=module_name,
+        score=None,
+        summary=summary,
+    )
+
+
 def confidence_band(value: float | None) -> str:
     if value is None:
         return "Speculative"
@@ -367,5 +420,8 @@ def _normalize_field_provenance(raw_value: Any) -> dict[str, CanonicalFieldProve
 
 __all__ = [
     "build_property_input_from_context",
+    "confidence_band",
+    "module_payload_from_error",
     "module_payload_from_legacy_result",
+    "module_payload_from_missing_prior",
 ]

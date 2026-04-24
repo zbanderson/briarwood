@@ -341,54 +341,70 @@ def run_town_development_index(context: ExecutionContext) -> dict[str, object]:
     registry, loads each record from ``JsonMinutesStore``, and derives the
     composite signal. If no feed or record exists, returns a neutral payload
     with ``confidence=None`` so downstream nudges cleanly no-op.
+
+    Error contract (DECISIONS.md 2026-04-24): the existing ``_empty_payload``
+    branches for "no town/state" and "no feeds" remain the primary degraded
+    path — distinguishable by the ``warnings`` content. Unexpected internal
+    exceptions are caught and returned as a ``module_payload_from_error``
+    fallback (``mode="fallback"``, ``confidence=0.08``).
     """
 
-    town, state = _resolve_town_state(context)
-    if not town or not state:
-        return _empty_payload(reason="missing town/state in property_data").model_dump()
+    try:
+        town, state = _resolve_town_state(context)
+        if not town or not state:
+            return _empty_payload(reason="missing town/state in property_data").model_dump()
 
-    feeds = feeds_for_town(town=town, state=state)
-    if not feeds:
-        return _empty_payload(
-            reason=f"no registered minutes feeds for {town}, {state}",
-            town=town,
-            state=state,
+        feeds = feeds_for_town(town=town, state=state)
+        if not feeds:
+            return _empty_payload(
+                reason=f"no registered minutes feeds for {town}, {state}",
+                town=town,
+                state=state,
+            ).model_dump()
+
+        store = JsonMinutesStore()
+        boards: list[TownDevelopmentSignals] = []
+        for feed in feeds:
+            record = store.load(feed)
+            if record is None:
+                continue
+            signals = compute_town_development_index(record=record)
+            if signals.observations_used == 0:
+                continue
+            boards.append(signals)
+
+        if not boards:
+            return _empty_payload(
+                reason=f"no minute history loaded for {town}, {state}",
+                town=town,
+                state=state,
+            ).model_dump()
+
+        primary = _select_primary(boards)
+        payload = ModulePayload(
+            data={
+                **primary.to_data(),
+                "all_boards": [b.to_data() for b in boards],
+            },
+            confidence=_confidence_from_observations(primary.observations_used),
+            warnings=_warnings(primary),
+            assumptions_used={
+                "half_life_months": DEFAULT_HALF_LIFE_MONTHS,
+                "target_volume_per_month": DEFAULT_TARGET_VOLUME_PER_MONTH,
+                "feeds_considered": [f.slug for f in feeds],
+                "boards_with_data": [b.board for b in boards],
+            },
+        )
+        return payload.model_dump()
+    except Exception as exc:  # noqa: BLE001
+        from briarwood.modules.scoped_common import module_payload_from_error
+        return module_payload_from_error(
+            module_name="town_development_index",
+            context=context,
+            summary="Town development index unavailable — internal failure reading minutes feeds.",
+            warnings=[f"Town-development-index fallback: {type(exc).__name__}: {exc}"],
+            assumptions_used={"uses_full_engine_report": False, "fallback_reason": "internal_exception"},
         ).model_dump()
-
-    store = JsonMinutesStore()
-    boards: list[TownDevelopmentSignals] = []
-    for feed in feeds:
-        record = store.load(feed)
-        if record is None:
-            continue
-        signals = compute_town_development_index(record=record)
-        if signals.observations_used == 0:
-            continue
-        boards.append(signals)
-
-    if not boards:
-        return _empty_payload(
-            reason=f"no minute history loaded for {town}, {state}",
-            town=town,
-            state=state,
-        ).model_dump()
-
-    primary = _select_primary(boards)
-    payload = ModulePayload(
-        data={
-            **primary.to_data(),
-            "all_boards": [b.to_data() for b in boards],
-        },
-        confidence=_confidence_from_observations(primary.observations_used),
-        warnings=_warnings(primary),
-        assumptions_used={
-            "half_life_months": DEFAULT_HALF_LIFE_MONTHS,
-            "target_volume_per_month": DEFAULT_TARGET_VOLUME_PER_MONTH,
-            "feeds_considered": [f.slug for f in feeds],
-            "boards_with_data": [b.board for b in boards],
-        },
-    )
-    return payload.model_dump()
 
 
 def _resolve_town_state(context: ExecutionContext) -> tuple[str | None, str | None]:

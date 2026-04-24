@@ -8,6 +8,7 @@ from briarwood.modules.property_data_quality import PropertyDataQualityModule
 from briarwood.modules.scoped_common import (
     build_property_input_from_context,
     confidence_band,
+    module_payload_from_error,
     module_payload_from_legacy_result,
 )
 from briarwood.pipeline.triage import load_model_weights
@@ -19,83 +20,97 @@ def run_confidence(context: ExecutionContext) -> dict[str, object]:
     Trust now reflects property completeness, contradictions, comp quality,
     prior-model agreement, legal certainty, scenario fragility, and reliance
     on estimated/defaulted inputs.
+
+    Error contract (DECISIONS.md 2026-04-24): internal exceptions are caught
+    and returned as a ``module_payload_from_error`` fallback. This module is
+    the trust rollup; its prior-output reads already tolerate absence, so
+    the only failure mode is an internal exception.
     """
 
-    property_input = build_property_input_from_context(context)
-    dq_result = PropertyDataQualityModule().run(property_input)
-    dq_confidence = float(dq_result.confidence) if dq_result.confidence is not None else None
+    try:
+        property_input = build_property_input_from_context(context)
+        dq_result = PropertyDataQualityModule().run(property_input)
+        dq_confidence = float(dq_result.confidence) if dq_result.confidence is not None else None
 
-    prior_confidences = _collect_prior_confidences(context.prior_outputs)
-    weights = load_model_weights() if prior_confidences else {}
-    aggregated = _weighted_mean(prior_confidences, weights) if prior_confidences else None
-    completeness = _field_completeness(context)
-    estimated_reliance = _estimated_reliance(context)
-    contradiction_count = _contradiction_count(context)
-    comp_quality = _comp_quality(context.prior_outputs)
-    model_agreement = _model_agreement(prior_confidences)
-    scenario_fragility = _scenario_fragility(context.prior_outputs)
-    legal_certainty = _legal_certainty(context.prior_outputs)
-    combined = _combine(
-        aggregated=aggregated,
-        anchor=dq_confidence,
-        completeness=completeness,
-        contradiction_count=contradiction_count,
-        comp_quality=comp_quality,
-        model_agreement=model_agreement,
-        scenario_fragility=scenario_fragility,
-        legal_certainty=legal_certainty,
-        estimated_reliance=estimated_reliance,
-    )
-
-    warnings: list[str] = []
-    if not prior_confidences:
-        warnings.append(
-            "Confidence module has no prior module outputs to aggregate — falling back to data-quality anchor."
-        )
-    if contradiction_count:
-        warnings.append(
-            f"Confidence reduced by {contradiction_count} contradictory property signal(s)."
-        )
-    if estimated_reliance >= 0.5:
-        warnings.append(
-            "Confidence reduced because this run relies heavily on estimated or defaulted inputs."
+        prior_confidences = _collect_prior_confidences(context.prior_outputs)
+        weights = load_model_weights() if prior_confidences else {}
+        aggregated = _weighted_mean(prior_confidences, weights) if prior_confidences else None
+        completeness = _field_completeness(context)
+        estimated_reliance = _estimated_reliance(context)
+        contradiction_count = _contradiction_count(context)
+        comp_quality = _comp_quality(context.prior_outputs)
+        model_agreement = _model_agreement(prior_confidences)
+        scenario_fragility = _scenario_fragility(context.prior_outputs)
+        legal_certainty = _legal_certainty(context.prior_outputs)
+        combined = _combine(
+            aggregated=aggregated,
+            anchor=dq_confidence,
+            completeness=completeness,
+            contradiction_count=contradiction_count,
+            comp_quality=comp_quality,
+            model_agreement=model_agreement,
+            scenario_fragility=scenario_fragility,
+            legal_certainty=legal_certainty,
+            estimated_reliance=estimated_reliance,
         )
 
-    payload = module_payload_from_legacy_result(
-        result=dq_result,
-        context=context,
-        assumptions_used={
-            "legacy_module": "PropertyDataQualityModule",
-            "property_id": property_input.property_id,
-            "uses_full_engine_report": False,
-            "prior_confidence_modules": sorted(prior_confidences.keys()),
-            "perf_log_weights_used": bool(weights),
-            "confidence_engine_version": "v2",
-        },
-        warnings=warnings,
-        extra_data={
-            "prior_module_confidences": prior_confidences,
-            "data_quality_confidence": round(dq_confidence, 4) if dq_confidence is not None else None,
-            "aggregated_prior_confidence": round(aggregated, 4) if aggregated is not None else None,
-            "field_completeness": round(completeness, 4),
-            "estimated_reliance": round(estimated_reliance, 4),
-            "contradiction_count": contradiction_count,
-            "comp_quality": round(comp_quality, 4),
-            "model_agreement": round(model_agreement, 4),
-            "scenario_fragility": round(scenario_fragility, 4),
-            "legal_certainty": round(legal_certainty, 4),
-            "combined_confidence": round(combined, 4) if combined is not None else None,
-        },
-        required_fields=["purchase_price", "sqft", "beds", "baths", "town", "state"],
-    )
-    if combined is not None:
-        payload = payload.model_copy(
-            update={
-                "confidence": round(combined, 4),
-                "confidence_band": confidence_band(combined),
-            }
+        warnings: list[str] = []
+        if not prior_confidences:
+            warnings.append(
+                "Confidence module has no prior module outputs to aggregate — falling back to data-quality anchor."
+            )
+        if contradiction_count:
+            warnings.append(
+                f"Confidence reduced by {contradiction_count} contradictory property signal(s)."
+            )
+        if estimated_reliance >= 0.5:
+            warnings.append(
+                "Confidence reduced because this run relies heavily on estimated or defaulted inputs."
+            )
+
+        payload = module_payload_from_legacy_result(
+            result=dq_result,
+            context=context,
+            assumptions_used={
+                "legacy_module": "PropertyDataQualityModule",
+                "property_id": property_input.property_id,
+                "uses_full_engine_report": False,
+                "prior_confidence_modules": sorted(prior_confidences.keys()),
+                "perf_log_weights_used": bool(weights),
+                "confidence_engine_version": "v2",
+            },
+            warnings=warnings,
+            extra_data={
+                "prior_module_confidences": prior_confidences,
+                "data_quality_confidence": round(dq_confidence, 4) if dq_confidence is not None else None,
+                "aggregated_prior_confidence": round(aggregated, 4) if aggregated is not None else None,
+                "field_completeness": round(completeness, 4),
+                "estimated_reliance": round(estimated_reliance, 4),
+                "contradiction_count": contradiction_count,
+                "comp_quality": round(comp_quality, 4),
+                "model_agreement": round(model_agreement, 4),
+                "scenario_fragility": round(scenario_fragility, 4),
+                "legal_certainty": round(legal_certainty, 4),
+                "combined_confidence": round(combined, 4) if combined is not None else None,
+            },
+            required_fields=["purchase_price", "sqft", "beds", "baths", "town", "state"],
         )
-    return payload.model_dump()
+        if combined is not None:
+            payload = payload.model_copy(
+                update={
+                    "confidence": round(combined, 4),
+                    "confidence_band": confidence_band(combined),
+                }
+            )
+        return payload.model_dump()
+    except Exception as exc:  # noqa: BLE001
+        return module_payload_from_error(
+            module_name="confidence",
+            context=context,
+            summary="Confidence rollup unavailable — internal failure combining trust signals.",
+            warnings=[f"Confidence fallback: {type(exc).__name__}: {exc}"],
+            assumptions_used={"uses_full_engine_report": False, "fallback_reason": "internal_exception"},
+        ).model_dump()
 
 
 def _collect_prior_confidences(prior_outputs: dict[str, Any]) -> dict[str, float]:

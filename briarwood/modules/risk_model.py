@@ -7,6 +7,7 @@ from briarwood.modules.macro_reader import apply_macro_nudge
 from briarwood.modules.risk_constraints import RiskConstraintsModule
 from briarwood.modules.scoped_common import (
     build_property_input_from_context,
+    module_payload_from_error,
     module_payload_from_legacy_result,
 )
 
@@ -23,61 +24,76 @@ def run_risk_model(context: ExecutionContext) -> dict[str, object]:
     valuation-premium signal alongside the property-attribute risk flags.
     When valuation is absent, falls back to legacy behavior so the module
     is safe to run out of order.
+
+    Error contract (DECISIONS.md 2026-04-24): internal exceptions are caught
+    and returned as a ``module_payload_from_error`` fallback
+    (``mode="fallback"``, ``confidence=0.08``). Missing ``legal_confidence``
+    is valid and is not a missing-priors case — the dampener is load-bearing
+    only when legal_conf is present.
     """
 
-    property_input = build_property_input_from_context(context)
-    result = RiskConstraintsModule().run(property_input)
-    legacy_confidence = result.confidence
+    try:
+        property_input = build_property_input_from_context(context)
+        result = RiskConstraintsModule().run(property_input)
+        legacy_confidence = result.confidence
 
-    bridge = _valuation_bridge(context, property_input)
-    legal_conf = _legal_confidence(context)
+        bridge = _valuation_bridge(context, property_input)
+        legal_conf = _legal_confidence(context)
 
-    adjusted_confidence = legacy_confidence
-    if bridge["premium_pct"] is not None and legacy_confidence is not None:
-        if bridge["premium_pct"] >= OVERPRICED_THRESHOLD:
-            adjusted_confidence = max(0.0, legacy_confidence - CONFIDENCE_STEP)
-        elif bridge["premium_pct"] <= UNDERPRICED_THRESHOLD:
-            adjusted_confidence = min(1.0, legacy_confidence + CONFIDENCE_STEP)
-        adjusted_confidence = round(adjusted_confidence, 4)
-    if legal_conf is not None and adjusted_confidence is not None and legal_conf < 0.5:
-        adjusted_confidence = max(0.0, round(adjusted_confidence - 0.08, 4))
+        adjusted_confidence = legacy_confidence
+        if bridge["premium_pct"] is not None and legacy_confidence is not None:
+            if bridge["premium_pct"] >= OVERPRICED_THRESHOLD:
+                adjusted_confidence = max(0.0, legacy_confidence - CONFIDENCE_STEP)
+            elif bridge["premium_pct"] <= UNDERPRICED_THRESHOLD:
+                adjusted_confidence = min(1.0, legacy_confidence + CONFIDENCE_STEP)
+            adjusted_confidence = round(adjusted_confidence, 4)
+        if legal_conf is not None and adjusted_confidence is not None and legal_conf < 0.5:
+            adjusted_confidence = max(0.0, round(adjusted_confidence - 0.08, 4))
 
-    macro_nudge = apply_macro_nudge(
-        base_confidence=adjusted_confidence,
-        context=context,
-        dimension="liquidity",
-        max_nudge=MACRO_MAX_NUDGE,
-    )
-    adjusted_confidence = macro_nudge.adjusted_confidence
+        macro_nudge = apply_macro_nudge(
+            base_confidence=adjusted_confidence,
+            context=context,
+            dimension="liquidity",
+            max_nudge=MACRO_MAX_NUDGE,
+        )
+        adjusted_confidence = macro_nudge.adjusted_confidence
 
-    payload = module_payload_from_legacy_result(
-        result=result,
-        assumptions_used={
-            "legacy_module": "RiskConstraintsModule",
-            "property_id": property_input.property_id,
-            "valuation_dependency_declared": True,
-            "valuation_dependency_used": bridge["premium_pct"] is not None,
-            "macro_context_used": macro_nudge.signal is not None,
-            "uses_full_engine_report": False,
-        },
-        extra_data={
-            "valuation_bridge": {
-                "fair_value_base": bridge["fair_value"],
-                "listed_price": bridge["listed_price"],
-                "premium_pct": bridge["premium_pct"],
-                "flag": bridge["flag"],
+        payload = module_payload_from_legacy_result(
+            result=result,
+            assumptions_used={
+                "legacy_module": "RiskConstraintsModule",
+                "property_id": property_input.property_id,
+                "valuation_dependency_declared": True,
+                "valuation_dependency_used": bridge["premium_pct"] is not None,
+                "macro_context_used": macro_nudge.signal is not None,
+                "uses_full_engine_report": False,
             },
-            "legal_confidence_signal": legal_conf,
-            "macro_nudge": macro_nudge.to_meta(),
-        },
-        warnings=list(bridge["warnings"]) + (
-            ["Legal confidence is low, so risk confidence is dampened."] if legal_conf is not None and legal_conf < 0.5 else []
-        ),
-        required_fields=["purchase_price", "sqft", "beds", "baths"],
-    )
-    if adjusted_confidence is not None:
-        payload = payload.model_copy(update={"confidence": adjusted_confidence})
-    return payload.model_dump()
+            extra_data={
+                "valuation_bridge": {
+                    "fair_value_base": bridge["fair_value"],
+                    "listed_price": bridge["listed_price"],
+                    "premium_pct": bridge["premium_pct"],
+                    "flag": bridge["flag"],
+                },
+                "legal_confidence_signal": legal_conf,
+                "macro_nudge": macro_nudge.to_meta(),
+            },
+            warnings=list(bridge["warnings"]) + (
+                ["Legal confidence is low, so risk confidence is dampened."] if legal_conf is not None and legal_conf < 0.5 else []
+            ),
+            required_fields=["purchase_price", "sqft", "beds", "baths"],
+        )
+        if adjusted_confidence is not None:
+            payload = payload.model_copy(update={"confidence": adjusted_confidence})
+        return payload.model_dump()
+    except Exception as exc:  # noqa: BLE001
+        return module_payload_from_error(
+            module_name="risk_model",
+            context=context,
+            summary="Risk model unavailable — internal failure while evaluating risk constraints.",
+            warnings=[f"Risk-model fallback: {type(exc).__name__}: {exc}"],
+            assumptions_used={"uses_full_engine_report": False, "fallback_reason": "internal_exception"},
+        ).model_dump()
 
 
 def _legal_confidence(context: ExecutionContext) -> float | None:

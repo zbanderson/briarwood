@@ -57,5 +57,28 @@ class LegalConfidenceIsolationTests(unittest.TestCase):
         self.assertLessEqual(conf, 0.65)
 
 
+class LegalConfidenceDegradedPathTests(unittest.TestCase):
+    """Pin the canonical error-contract behavior (DECISIONS.md 2026-04-24)."""
+
+    def test_internal_exception_returns_fallback_payload(self) -> None:
+        """When PropertyDataQualityModule raises, the wrapper must not propagate."""
+        from unittest.mock import patch
+
+        with patch(
+            "briarwood.modules.legal_confidence.PropertyDataQualityModule"
+        ) as mock_pdq:
+            mock_pdq.return_value.run.side_effect = RuntimeError("boom")
+            payload = run_legal_confidence(context_normal())
+
+        self.assertEqual(payload["mode"], "fallback")
+        self.assertAlmostEqual(payload["confidence"], 0.08)
+        self.assertEqual(payload["data"]["module_name"], "legal_confidence")
+        self.assertEqual(payload["data"]["metrics"], {})
+        self.assertTrue(
+            any("Legal-confidence fallback" in w for w in payload["warnings"]),
+            f"Expected canonical fallback prefix in warnings; got {payload['warnings']!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
