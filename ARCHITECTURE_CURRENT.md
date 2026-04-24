@@ -37,7 +37,7 @@ Inside [briarwood/](briarwood/), the directories that matter for the decision pi
 | [briarwood/representation/](briarwood/representation/) | Representation Agent + chart registry. |
 | [briarwood/interactions/](briarwood/interactions/) | Session state, persona inference, primary-value-source bridge. |
 | [briarwood/local_intelligence/](briarwood/local_intelligence/) | Town-level document and news signal extraction. |
-| [briarwood/decision_model/](briarwood/decision_model/) | Decision scoring config and `FinalScore` calculation. |
+| [briarwood/decision_model/](briarwood/decision_model/) | Post–Handoff-4, contains only metric-extraction helpers used by `components.py` (`estimate_comp_renovation_premium` + `extract_scoring_metrics`) plus `scoring_config` constants. The former `calculate_final_score` aggregator and `lens_scoring.py` were dead code and were deleted 2026-04-24. |
 | [briarwood/data_sources/](briarwood/data_sources/) | External API clients (Attom, SR1A, Google Maps, Zillow context). |
 | [briarwood/data_quality/](briarwood/data_quality/) | Input completeness and contradiction detection. |
 | [briarwood/feature_flags.py](briarwood/feature_flags.py) | Process-level feature flags, read once at import. |
@@ -106,7 +106,6 @@ These predate the scoped pattern and are callable only from within other modules
 | `PropertyDataQualityModule` | [briarwood/modules/property_data_quality.py](briarwood/modules/property_data_quality.py) | Completeness score, contradiction flags. Anchors `confidence`. |
 | `RenovationScenarioModule` | [briarwood/modules/renovation_scenario.py](briarwood/modules/renovation_scenario.py) | Legacy reno path (superseded by scoped `renovation_impact`). |
 | `TeardownScenarioModule` | [briarwood/modules/teardown_scenario.py](briarwood/modules/teardown_scenario.py) | Land-value + redevelopment scenario. |
-| `FinalScore` / `calculate_final_score` | [briarwood/decision_model/scoring.py](briarwood/decision_model/scoring.py) | Weighted 5-category scoring (`price_context` 15%, `economic_support` 30%, `optionality` 20%, `market_position` 20%, `risk_layer` 15%). **Defined but not invoked in current production synthesis.** |
 
 ### Sub-agents
 
@@ -218,7 +217,7 @@ File-path-cited, no editorial framing.
 ### Structural
 
 - **`ComparableSalesModule` is not in the scoped registry.** It's invoked only inside `CurrentValueModule`, `HybridValueModule`, `ArvModule`, `UnitIncomeOffsetModule`, and (since the claims wedge) via a post-hoc graft at [briarwood/claims/pipeline.py:62-88](briarwood/claims/pipeline.py#L62-L88). The comment at that graft is explicit: `"The scoped execution registry doesn't surface comparable_sales as a top-level module ... Running the module directly here fills that gap without editing briarwood/modules/."`
-- **`decision_model/scoring.py`'s `calculate_final_score` is defined but not invoked in production synthesis.** Current synthesis ([briarwood/synthesis/structured.py](briarwood/synthesis/structured.py)) uses different scoring logic. The 5-category weighted scorer and its tier mapping (Buy ≥3.30, Neutral ≥2.50, Avoid <2.50) are live code but dead paths.
+- **`decision_model/scoring.py`'s `calculate_final_score` was deleted 2026-04-24** (Handoff 4). It and its supporting chain (`FinalScore`/`CategoryScore`/`SubFactorScore` dataclasses, all `_calculate_*` category builders, all `_score_*` helpers, the entire `lens_scoring.py` file) had zero production callers and were removed. Production synthesis at [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) was never coupled to this path. The `estimate_comp_renovation_premium` function + its utility helpers were preserved — they are called 7× from `briarwood/components.py`. See DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected."
 - **`security_model.py` is a stub.** [briarwood/modules/security_model.py](briarwood/modules/security_model.py) has minimal implementation; no downstream consumers.
 - **Resolver has no state-aware disambiguation.** For ambiguous queries like "526 West End Ave" the saved-properties directory contains three colliding slugs (`526-w-end-ave-avon-by-the-sea-nj`, `526-w-end-ave-statesville-nc-28677`, `526-west-end-ave`). The token-overlap scorer at [briarwood/agent/resolver.py:92-160](briarwood/agent/resolver.py#L92-L160) correctly returns ambiguity (None + ranked candidates); the risk is that downstream callers consume `ranked[0]` instead of presenting the disambiguation prompt.
 

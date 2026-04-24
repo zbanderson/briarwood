@@ -415,7 +415,7 @@ depends_on: []
 invariants:
   - Geography-driven: signal describes town/segment, not the subject property
   - Never raises; on exception returns module_payload_from_error (mode="fallback", confidence=0.08)
-  - scarcity_support_score field name preserved verbatim — read by decision_model (6 sites), lens_scoring (2), town_x_scenario, valuation_x_town, rental_ease agent, bull_base_bear (deprecating)
+  - scarcity_support_score field name preserved verbatim — read by town_x_scenario, valuation_x_town, rental_ease agent, bull_base_bear (deprecating — Handoff 4). The former `decision_model/scoring.py` and `lens_scoring.py` readers were deleted in Handoff 4 alongside the dead `calculate_final_score` chain.
 blockers_for_tool_use: []
 notes:
   - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 7.
@@ -1052,35 +1052,4 @@ notes:
 
 Documented but not currently invoked in production synthesis paths.
 
-### decision_model/calculate_final_score
-
-```yaml
-name: decision_model_final_score
-path: briarwood/decision_model/scoring.py
-entry: calculate_final_score(report: AnalysisReport) -> FinalScore
-intent_fit: [DECISION]
-inputs:
-  report: AnalysisReport               # legacy structure with all module results + property input
-outputs:
-  score: float                         # 1.0 - 5.0
-  tier: str                            # "Buy" | "Neutral" | "Avoid"
-  action: str
-  narrative: str
-  category_scores:
-    price_context: CategoryScore       # 15% weight
-    economic_support: CategoryScore    # 30%
-    optionality: CategoryScore         # 20%
-    market_position: CategoryScore     # 20%
-    risk_layer: CategoryScore          # 15%
-depends_on: [current_value, comparable_sales, carry_cost, income_support, hybrid_value, town_county_outlook, scarcity_support, risk_constraints, legal_confidence]
-invariants:
-  - score in [1.0, 5.0]
-  - tier: score >= 3.30 Buy, >= 2.50 Neutral, < 2.50 Avoid
-blockers_for_tool_use:
-  - DEFINED BUT NOT INVOKED in current production synthesis.
-  - Current synthesis (briarwood/synthesis/structured.py) uses different scoring logic.
-  - Hardcoded $400/sqft replacement cost (TODO: make geography/property-type aware).
-notes:
-  - Live code, dead paths. Either wire in or remove.
-  - Recommendations engine (briarwood/recommendations.py) is still used for tier normalization, so any promotion here needs to align with that module.
-```
+_(The `decision_model/calculate_final_score` entry was removed in Handoff 4 on 2026-04-24. The aggregator, its dataclasses, all supporting helpers, and the entire `lens_scoring.py` module were deleted — zero production callers verified. See DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected" and PROMOTION_PLAN.md entry 15.)_

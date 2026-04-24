@@ -63,9 +63,8 @@ The runner returns `ModulePayload.model_dump()`. The key field `scarcity_support
   - [briarwood/modules/bull_base_bear.py:37](bull_base_bear.py#L37) — deprecating (see PROMOTION_PLAN.md entry 6).
   - [briarwood/interactions/town_x_scenario.py:40](../interactions/town_x_scenario.py#L40)
   - [briarwood/interactions/valuation_x_town.py:82-85](../interactions/valuation_x_town.py#L82-L85)
-  - [briarwood/decision_model/scoring.py:291-292, 702, 735, 1083, 1177](../decision_model/scoring.py#L291)
-  - [briarwood/decision_model/lens_scoring.py:165, 196](../decision_model/lens_scoring.py#L165)
   - [briarwood/agents/rental_ease/agent.py:74, 202, 287, 327](../agents/rental_ease/agent.py#L74)
+  - (Historical: `briarwood/decision_model/scoring.py` and `lens_scoring.py` also read this field. Both paths were deleted in Handoff 4 on 2026-04-24 alongside the `calculate_final_score` chain — see [DECISIONS.md](../../DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected.")
 
 ## Invariants
 

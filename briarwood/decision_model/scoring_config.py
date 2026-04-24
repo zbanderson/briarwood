@@ -252,9 +252,9 @@ class RiskSettings:
 
 @dataclass(slots=True)
 class DecisionModelSettings:
-    # Bug 6: replacement cost benchmark — extracted from hardcoded $400/sqft.
-    # TODO: make geography/property-type aware in a future iteration.
-    replacement_cost_per_sqft: float = 400.0
+    # NOTE: replacement_cost_per_sqft (was $400/sqft) was removed in Handoff 4
+    # alongside _score_replacement_cost — its only consumer. See DECISIONS.md
+    # 2026-04-24 "Replacement-cost tool does not exist" and the H4 amendment.
 
     # Comp confidence penalty thresholds for _critical_input_penalty.
     # When the comp layer's enriched confidence score is low, the scoring

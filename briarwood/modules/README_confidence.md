@@ -139,7 +139,7 @@ payload = run_confidence(context)
 
 - **Output field names drift from the audit docs** ([DECISIONS.md](../../DECISIONS.md) 2026-04-24 entry). The audit talks about `overall_confidence` and `component_breakdown`; in practice the top-level `confidence` serves as overall and `extra_data` serves as breakdown with different key names.
 - Weight loading via `load_model_weights` reads a JSONL performance log; absent or empty logs cause the weighted mean to degenerate to a uniform mean (each weight defaults to `1.0` in `_weighted_mean` at [confidence.py:123](confidence.py#L123)).
-- Historical audit cross-ref: [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges notes `calculate_final_score` is defined but not invoked in production synthesis. That is a distinct scoring path from this confidence rollup — do not confuse the two.
+- Historical audit cross-ref: `calculate_final_score` (the dead 5-category investment-scoring aggregator) was a distinct scoring path from this confidence rollup. It was deleted in Handoff 4 (2026-04-24) after verification of zero production callers — see [DECISIONS.md](../../DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected." This module's confidence rollup is unrelated and unaffected.
 - Tests: [tests/modules/test_confidence_isolated.py](../../tests/modules/test_confidence_isolated.py); comp-confidence behavior covered by [tests/test_comp_confidence_engine.py](../../tests/test_comp_confidence_engine.py).
 - No direct LLM calls; no cost.
 

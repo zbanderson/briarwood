@@ -20,12 +20,15 @@ def run_scarcity_support(context: ExecutionContext) -> dict[str, object]:
     Field-name stability. ``scarcity_support_score`` is read by key in multiple
     consumers — passing the payload through ``module_payload_from_legacy_result``
     preserves it verbatim. Current readers:
-      - briarwood/modules/bull_base_bear.py (deprecating)
+      - briarwood/modules/bull_base_bear.py (deprecating — Handoff 4)
       - briarwood/interactions/town_x_scenario.py
       - briarwood/interactions/valuation_x_town.py
-      - briarwood/decision_model/scoring.py (6 sites)
-      - briarwood/decision_model/lens_scoring.py
       - briarwood/agents/rental_ease/agent.py
+    (Historical reader ``briarwood/decision_model/lens_scoring.py`` was
+    deleted in Handoff 4 alongside ``calculate_final_score``. The former
+    ``scoring.py`` reads were part of that dead chain and were also
+    removed — see DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 15
+    scope-limit paragraph corrected.")
     """
     try:
         property_input = build_property_input_from_context(context)

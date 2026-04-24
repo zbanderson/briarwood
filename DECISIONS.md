@@ -369,3 +369,49 @@ should also be renamed to reflect its actual role (e.g.,
 
 Surfaced during Handoff 2b — see [PROMOTION_PLAN.md](PROMOTION_PLAN.md)
 entry 5 (`property_data_quality` → KEEP as internal helper).
+
+## 2026-04-24 — PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected
+
+Entry 15 of PROMOTION_PLAN.md deprecates `calculate_final_score` and
+its supporting types. The "Scope limit" paragraph claimed that the
+per-dimension scoring helpers (`_score_price_vs_comps`,
+`_score_ppsf_positioning`, `_score_historical_pricing`,
+`_score_scarcity_premium`, `_score_rent_support`,
+`_score_carry_efficiency`, `_score_downside_protection`, etc.) had
+active callers and should remain.
+
+That claim is factually wrong. Grep verification during Handoff 4
+planning found zero production callers for any `_score_*` helper
+outside of `calculate_final_score` itself and its sibling
+`_calculate_*` category builders. All helpers are reachable only
+through the dead aggregator.
+
+Additionally, `lens_scoring.py` in its entirety —
+`calculate_lens_scores`, `LensScores`, `LensDetail`,
+`_investor_lens`, `_owner_lens`, `_developer_lens`,
+`_risk_assessment` — has zero production callers and is dead code.
+
+The entry's "Additional cleanup" directive (retire the $400/sqft
+replacement-cost constant) is incompatible with keeping the
+`_score_*` helpers, because the constant is consumed only by
+`_score_replacement_cost`, which is one of those helpers.
+
+**Corrected scope for Handoff 4 deprecation work:**
+Delete the full dead chain — `calculate_final_score`, `FinalScore`,
+`CategoryScore`, `SubFactorScore`, `_conviction_adjustment`, all
+`_calculate_*` category builders, all `_score_*` helpers EXCEPT
+`estimate_comp_renovation_premium` and its utility helpers
+(`_get_metrics`, `_get_confidence`, `_get_payload`, `_prop`,
+`extract_scoring_metrics`, `_clamp`, `_lerp_score`, `_safe_ratio`)
+which are alive via `components.py`. Delete the entirety of
+`lens_scoring.py`. Delete `test_decision_model.py` and
+`test_scoring_group2.py` which test the dead chain.
+
+Approximate removal: ~2,300 lines across 4 files.
+
+Preserved: `estimate_comp_renovation_premium` and its utility helpers
+in `scoring.py` (~200 lines) remain in the file.
+
+This amendment supersedes the "Scope limit" paragraph in
+PROMOTION_PLAN.md entry 15 only. The deprecation decision itself is
+unchanged.
