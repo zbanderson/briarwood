@@ -1,0 +1,1005 @@
+{
+  "session_id": "78141af08a36",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": null,
+    "ask_price": 767000.0,
+    "beds": 3,
+    "baths": 1.0,
+    "sqft": null,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "1008-14th-ave-belmar-nj-07719",
+    "source": null
+  },
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": null,
+    "ask_price": 767000.0,
+    "beds": 3,
+    "baths": 1.0,
+    "sqft": null,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "1008-14th-ave-belmar-nj-07719",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": {
+    "pid": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "decision_stance": "buy_if_price_improves",
+    "primary_value_source": "unknown",
+    "ask_price": 767000.0,
+    "all_in_basis": 767000.0,
+    "fair_value_base": 720643.75,
+    "value_low": 637460.27,
+    "value_high": 803827.24,
+    "ask_premium_pct": 0.0604,
+    "basis_premium_pct": 0.0604,
+    "trust_flags": [],
+    "trust_summary": {
+      "confidence": 0.7485,
+      "band": "Moderate confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "what_must_be_true": [],
+    "key_risks": [],
+    "why_this_stance": [
+      "Current basis sits about 6.0% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 6.0% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "overrides_applied": {},
+    "lead_reason": "The all-in basis is running about 6.0% above Briarwood's fair-value read.",
+    "evidence_items": [
+      "Fair value is $720,644 against a working basis of $767,000.",
+      "Current basis sits about 6.0% above Briarwood's fair-value anchor.",
+      "Best current path: Make an offer inside the risk-adjusted band rather than at ask.."
+    ],
+    "next_step_teaser": "Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
+    "primary_chart_claim": "price_position"
+  },
+  "last_projection_view": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "ask_price": 767000.0,
+    "bull_case_value": 795946.0,
+    "base_case_value": 737726.0,
+    "bear_case_value": 685581.0,
+    "stress_case_value": 504451.0,
+    "spread": 110365.0,
+    "bull_total_adjustment_pct": 0.1045,
+    "base_total_adjustment_pct": 0.0237,
+    "bear_total_adjustment_pct": -0.0487,
+    "bull_growth_rate": 0.0377,
+    "base_growth_rate": -0.0382,
+    "bear_growth_rate": -0.1062,
+    "bcv_anchor": 720643.75,
+    "basis_label": "ask",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ"
+  },
+  "last_comparison_view": null,
+  "last_town_summary": {
+    "town": "Belmar",
+    "state": "NJ",
+    "median_price": 867500.0,
+    "median_ppsf": 515.87,
+    "sold_count": 320,
+    "confidence_raw": 0.72,
+    "confidence_tier": "strong",
+    "doc_count": 4,
+    "bullish_signals": [],
+    "bearish_signals": [],
+    "signal_items": [
+      {
+        "id": "sig-07b025575b6d",
+        "bucket": "watch",
+        "title": "1201 Main Street redevelopment plan",
+        "status": "approved",
+        "display_line": "1201 Main Street redevelopment plan (approved)",
+        "project_summary": "Approved supply item tied to 1201 Main Street redevelopment plan, covering about 24 units. Briarwood treats it as a watch item rather than a confirmed catalyst over the medium term, with likely effects on future_supply, home_values.",
+        "signal_type": "supply",
+        "location_label": "1201 Main Street",
+        "development_lat": 40.1771086,
+        "development_lng": -74.0274417,
+        "confidence": 0.82,
+        "facts": [
+          "Existing signal for the same project.",
+          "The document states 24 residential units were approved."
+        ],
+        "inference": "This may add moderate supply. Earlier extraction run.",
+        "evidence_excerpt": "Application for 1201 Main Street mixed-use redevelopment with 24 residential units was approved.",
+        "source_document_id": "fixture-minutes-001",
+        "source_title": "1201 Main Street redevelopment plan",
+        "source_type": "planning_board_minutes",
+        "source_url": null,
+        "source_date": "2026-02-11T00:00:00+00:00"
+      }
+    ]
+  },
+  "last_comps_preview": {
+    "subject_pid": "1008-14th-ave-belmar-nj-07719",
+    "subject_ask": 767000.0,
+    "count": 2,
+    "median_price": 824000.0,
+    "comps": [
+      {
+        "property_id": "39223261",
+        "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+        "beds": 2,
+        "baths": 1.0,
+        "sqft": null,
+        "price": 749000.0,
+        "premium_pct": -0.0235
+      },
+      {
+        "property_id": "39225096",
+        "address": "1600 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "sqft": null,
+        "price": 899000.0,
+        "premium_pct": 0.1721
+      }
+    ]
+  },
+  "last_risk_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": 767000.0,
+    "bear_value": 685581.0,
+    "stress_value": 504451.0,
+    "risk_flags": [
+      "flood_medium",
+      "high_property_taxes",
+      "higher_vacancy"
+    ],
+    "trust_flags": [],
+    "key_risks": [],
+    "total_penalty": 0.217,
+    "confidence_tier": "strong"
+  },
+  "last_value_thesis_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "ask_price": 767000.0,
+    "fair_value_base": 720643.75,
+    "value_low": 637460.27,
+    "value_high": 803827.24,
+    "premium_discount_pct": 0.0604,
+    "pricing_view": null,
+    "primary_value_source": "unknown",
+    "net_opportunity_delta_pct": -0.0604,
+    "value_drivers": [],
+    "key_value_drivers": [],
+    "what_must_be_true": [],
+    "why_this_stance": [
+      "Current basis sits about 6.0% above Briarwood's fair-value anchor."
+    ],
+    "what_changes_my_view": [
+      "A price improvement of about 6.0% would materially improve the setup.",
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "trust_summary": {
+      "confidence": 0.7485,
+      "band": "Moderate confidence",
+      "field_completeness": 0.7105,
+      "estimated_reliance": 0.3333,
+      "contradiction_count": 0,
+      "blocked_thesis_warnings": [],
+      "trust_flags": []
+    },
+    "contradiction_count": 0,
+    "blocked_thesis_warnings": [],
+    "risk_adjusted_fair_value": null,
+    "required_discount": null,
+    "comp_selection_summary": null,
+    "comps": [],
+    "optionality_signal": {
+      "primary_source": "unknown",
+      "hidden_upside_items": [],
+      "summary": null
+    }
+  },
+  "last_market_support_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "comp_selection_summary": "Live Zillow market comps ranked toward the subject's layout and price.",
+    "comps": [
+      {
+        "property_id": "39223261",
+        "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+        "beds": 2,
+        "baths": 1.0,
+        "ask_price": 749000.0,
+        "blocks_to_beach": null,
+        "source_label": "Live market comp",
+        "source_summary": "Live Zillow market comp used as a real-time pricing anchor."
+      },
+      {
+        "property_id": "39225096",
+        "address": "1600 L Street, Belmar, NJ 07719",
+        "beds": 3,
+        "baths": 2.0,
+        "ask_price": 899000.0,
+        "blocks_to_beach": null,
+        "source_label": "Live market comp",
+        "source_summary": "Live Zillow market comp used as a real-time pricing anchor."
+      }
+    ]
+  },
+  "last_strategy_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "best_path": "Make an offer inside the risk-adjusted band rather than at ask.",
+    "recommendation": "Buy if price improves \u2014 fundamentals support engagement, but current pricing leaves little margin.",
+    "pricing_view": "appears fully valued",
+    "primary_value_source": "unknown",
+    "rental_ease_label": "Fragile Rental Profile",
+    "rental_ease_score": 45.21,
+    "rent_support_score": 16.0,
+    "liquidity_score": 68.43,
+    "monthly_cash_flow": -3687.11,
+    "cash_on_cash_return": -0.2307,
+    "annual_noi": 1680.52
+  },
+  "last_rent_outlook_view": {
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "entry_basis": 767000.0,
+    "monthly_rent": 2352.0,
+    "effective_monthly_rent": 2210.88,
+    "rent_source_type": "provided",
+    "rental_ease_label": "Fragile Rental Profile",
+    "rental_ease_score": 45.21,
+    "annual_noi": 1680.52,
+    "horizon_years": 3,
+    "future_rent_low": 2211,
+    "future_rent_mid": 2416,
+    "future_rent_high": 2559,
+    "zillow_market_rent": 8000.0,
+    "zillow_rental_comp_count": 5,
+    "market_context_note": "Zillow's market rent signal around $8,000/mo looks like a different rental regime, so Briarwood kept the working rent anchored to the current provided estimate.",
+    "basis_to_rent_framing": "Current rent annualizes to roughly 3.5% of the current basis.",
+    "owner_occupy_then_rent": null,
+    "carry_offset_ratio": 0.375,
+    "break_even_rent": 5898,
+    "break_even_probability": 0.2,
+    "adjusted_rent_confidence": 0.45,
+    "rent_haircut_pct": 0.2,
+    "burn_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "rent_base": 2211,
+          "rent_bull": 2211,
+          "rent_bear": 2211,
+          "monthly_obligation": 5898
+        },
+        {
+          "year": 1,
+          "rent_base": 2277,
+          "rent_bull": 2321,
+          "rent_bear": 2233,
+          "monthly_obligation": 5898
+        },
+        {
+          "year": 2,
+          "rent_base": 2346,
+          "rent_bull": 2437,
+          "rent_bear": 2255,
+          "monthly_obligation": 5898
+        },
+        {
+          "year": 3,
+          "rent_base": 2416,
+          "rent_bull": 2559,
+          "rent_bear": 2278,
+          "monthly_obligation": 5898
+        }
+      ],
+      "title": "Rent burn chart",
+      "monthly_obligation": 5898
+    },
+    "ramp_chart_payload": {
+      "series": [
+        {
+          "year": 0,
+          "net_0": -3687,
+          "net_3": -3687,
+          "net_5": -3687
+        },
+        {
+          "year": 1,
+          "net_0": -3687,
+          "net_3": -3621,
+          "net_5": -3577
+        },
+        {
+          "year": 2,
+          "net_0": -3687,
+          "net_3": -3552,
+          "net_5": -3460
+        },
+        {
+          "year": 3,
+          "net_0": -3687,
+          "net_3": -3482,
+          "net_5": -3339
+        },
+        {
+          "year": 4,
+          "net_0": -3687,
+          "net_3": -3410,
+          "net_5": -3211
+        },
+        {
+          "year": 5,
+          "net_0": -3687,
+          "net_3": -3335,
+          "net_5": -3076
+        },
+        {
+          "year": 6,
+          "net_0": -3687,
+          "net_3": -3258,
+          "net_5": -2935
+        },
+        {
+          "year": 7,
+          "net_0": -3687,
+          "net_3": -3179,
+          "net_5": -2787
+        },
+        {
+          "year": 8,
+          "net_0": -3687,
+          "net_3": -3097,
+          "net_5": -2632
+        },
+        {
+          "year": 9,
+          "net_0": -3687,
+          "net_3": -3013,
+          "net_5": -2468
+        },
+        {
+          "year": 10,
+          "net_0": -3687,
+          "net_3": -2927,
+          "net_5": -2297
+        }
+      ],
+      "title": "Rent ramp and break-even",
+      "current_rent": 2211,
+      "monthly_obligation": 5898,
+      "today_cash_flow": -3687,
+      "break_even_years": {
+        "0": null,
+        "3": null,
+        "5": null
+      }
+    }
+  },
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "contract_type": "decision_summary",
+    "analysis_mode": "decision",
+    "cards": [
+      {
+        "key": "property_header",
+        "title": "Property",
+        "body": [
+          "1008 14th Avenue, Belmar, NJ 07719 \u2014 3bd/1.0ba \u2014 ask $767,000"
+        ],
+        "tone": "neutral"
+      },
+      {
+        "key": "purchase_brief",
+        "title": "Purchase Brief",
+        "body": [
+          "Immediate setup: buy if price improves. Ask is 6.0% above the fair value anchor.",
+          "What supports it: Make an offer inside the risk-adjusted band rather than at ask.",
+          "What could weaken confidence: no major trust flags were surfaced in the snapshot read.",
+          "Next best question: Lock the all-in basis including closing costs and any negotiated credits."
+        ],
+        "tone": "decision"
+      },
+      {
+        "key": "data_coverage",
+        "title": "Source Coverage",
+        "body": [
+          "SearchAPI/Zillow hydrated the live listing context.",
+          "ATTOM added structured sale history and ownership timing context.",
+          "Google Maps added geocode and nearby-place context.",
+          "Still missing: ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
+        ],
+        "tone": "supporting"
+      },
+      {
+        "key": "location_pulse",
+        "title": "Location Pulse",
+        "body": [
+          "Nearby place scan: 3 grocery store, 2 park, 2 secondary school."
+        ],
+        "tone": "supporting"
+      },
+      {
+        "key": "cma",
+        "title": "CMA",
+        "body": [
+          "Fair value anchor: $720,644",
+          "Range: $637,460 to $803,827",
+          "Live Zillow market comps ranked toward the subject's layout and price."
+        ],
+        "tone": "decision"
+      }
+    ],
+    "tables": [
+      {
+        "key": "source_coverage",
+        "title": "Source Coverage",
+        "columns": [
+          "category",
+          "status"
+        ],
+        "rows": [
+          {
+            "category": "address",
+            "status": "sourced"
+          },
+          {
+            "category": "beds_baths",
+            "status": "sourced"
+          },
+          {
+            "category": "comp_support",
+            "status": "missing"
+          },
+          {
+            "category": "financing_down_payment",
+            "status": "missing"
+          },
+          {
+            "category": "financing_interest_rate",
+            "status": "missing"
+          },
+          {
+            "category": "flood_risk",
+            "status": "missing"
+          },
+          {
+            "category": "hoa",
+            "status": "missing"
+          },
+          {
+            "category": "insurance_estimate",
+            "status": "missing"
+          },
+          {
+            "category": "liquidity_signal",
+            "status": "missing"
+          },
+          {
+            "category": "listing_history",
+            "status": "missing"
+          },
+          {
+            "category": "lot_size",
+            "status": "sourced"
+          },
+          {
+            "category": "market_history",
+            "status": "missing"
+          },
+          {
+            "category": "price_ask",
+            "status": "sourced"
+          },
+          {
+            "category": "rent_estimate",
+            "status": "missing"
+          },
+          {
+            "category": "sale_history",
+            "status": "missing"
+          },
+          {
+            "category": "scarcity_inputs",
+            "status": "missing"
+          },
+          {
+            "category": "school_signal",
+            "status": "missing"
+          },
+          {
+            "category": "sqft",
+            "status": "sourced"
+          },
+          {
+            "category": "taxes",
+            "status": "missing"
+          }
+        ]
+      },
+      {
+        "key": "cma_comps",
+        "title": "CMA Comps",
+        "columns": [
+          "address",
+          "beds",
+          "baths",
+          "ask_price",
+          "blocks_to_beach",
+          "selection_rationale"
+        ],
+        "rows": [
+          {
+            "address": "103 2nd Avenue #A3, Belmar, NJ 07719",
+            "beds": 2,
+            "baths": 1.0,
+            "ask_price": 749000.0,
+            "blocks_to_beach": null,
+            "selection_rationale": "live Zillow listing in the same market, filtered toward the subject's layout and price"
+          },
+          {
+            "address": "1600 L Street, Belmar, NJ 07719",
+            "beds": 3,
+            "baths": 2.0,
+            "ask_price": 899000.0,
+            "blocks_to_beach": null,
+            "selection_rationale": "live Zillow listing in the same market, filtered toward the subject's layout and price"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "key": "verdict_gauge",
+        "kind": "verdict_gauge",
+        "title": "Decision Stance",
+        "payload": {
+          "property_id": "1008-14th-ave-belmar-nj-07719"
+        }
+      },
+      {
+        "key": "value_opportunity",
+        "kind": "value_opportunity",
+        "title": "Ask vs Value",
+        "payload": {
+          "property_id": "1008-14th-ave-belmar-nj-07719"
+        }
+      },
+      {
+        "key": "risk_bar",
+        "kind": "risk_bar",
+        "title": "Risk Profile",
+        "payload": {
+          "property_id": "1008-14th-ave-belmar-nj-07719"
+        }
+      }
+    ],
+    "next_actions": [
+      "Lock the all-in basis including closing costs and any negotiated credits."
+    ],
+    "evidence": {
+      "enrichment": {
+        "property_id": "1008-14th-ave-belmar-nj-07719",
+        "address": "1008 14th Avenue, Belmar, NJ 07719",
+        "town": "Belmar",
+        "state": "NJ",
+        "summary": {
+          "property_id": "1008-14th-ave-belmar-nj-07719",
+          "address": "1008 14th Avenue, Belmar, NJ 07719",
+          "label": "1008 14th Avenue",
+          "town": "Belmar",
+          "state": "NJ",
+          "county": "Monmouth",
+          "beds": 3,
+          "baths": 1.0,
+          "ask_price": 767000.0,
+          "bcv": null,
+          "pricing_view": null,
+          "property_type": "Single Family Residence",
+          "source_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+          "confidence": null,
+          "comp_trust": "pending",
+          "missing_input_count": 0,
+          "is_hybrid_valuation": false,
+          "timestamp": "2026-04-17T22:02:54"
+        },
+        "source_coverage": {
+          "address": "sourced",
+          "price_ask": "sourced",
+          "beds_baths": "sourced",
+          "sqft": "sourced",
+          "lot_size": "sourced",
+          "taxes": "missing",
+          "hoa": "missing",
+          "sale_history": "missing",
+          "listing_history": "missing",
+          "rent_estimate": "missing",
+          "insurance_estimate": "missing",
+          "school_signal": "missing",
+          "flood_risk": "missing",
+          "liquidity_signal": "missing",
+          "market_history": "missing",
+          "scarcity_inputs": "missing",
+          "comp_support": "missing",
+          "financing_down_payment": "missing",
+          "financing_interest_rate": "missing"
+        },
+        "listing_source": {
+          "source_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+          "provenance": [
+            "zillow:https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/"
+          ],
+          "missing_input_count": 0
+        },
+        "google": {
+          "geocode": {
+            "formatted_address": "1008 14th Ave, Belmar, NJ 07719, USA",
+            "latitude": 40.1765245,
+            "longitude": -74.03363949999999,
+            "place_id": "ChIJLZjPgggowokRvr1BxjOdhBA",
+            "types": [
+              "premise",
+              "street_address"
+            ],
+            "town": "Belmar",
+            "state": "NJ",
+            "county": "Monmouth",
+            "zip_code": "07719"
+          },
+          "nearby_places": {
+            "places": [
+              {
+                "place_id": "ChIJaUbq6_WHwYkRD962kmK1AU0",
+                "name": "ShopRite of Belmar",
+                "address": "1732 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1696816,
+                "longitude": -74.04469259999999,
+                "distance_meters": 1209,
+                "rating": 3.9,
+                "user_rating_count": 1037,
+                "google_maps_uri": "https://maps.google.com/?cid=5548915650870042127&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+                "name": "Belmar",
+                "address": "Belmar, NJ 07719, USA",
+                "primary_type": "train_station",
+                "latitude": 40.180367,
+                "longitude": -74.02746739999999,
+                "distance_meters": 676,
+                "rating": 4,
+                "user_rating_count": 24,
+                "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJNWDm0eYnwokRlkehC1z6yQs",
+                "name": "St. Rose High School",
+                "address": "607 7th Ave, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.181906,
+                "longitude": -74.02368129999999,
+                "distance_meters": 1036,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=849485277975103382&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+                "name": "Maclearie Park",
+                "address": "905 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "park",
+                "latitude": 40.1788472,
+                "longitude": -74.035854,
+                "distance_meters": 320,
+                "rating": 4.6,
+                "user_rating_count": 608,
+                "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJRebeHQEowokRGs3wrZJ6VW0",
+                "name": "Matt's Farm Market & Garden Center",
+                "address": "1740 NJ-71, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1697438,
+                "longitude": -74.0330408,
+                "distance_meters": 756,
+                "rating": 4.8,
+                "user_rating_count": 182,
+                "google_maps_uri": "https://maps.google.com/?cid=7878337893556604186&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+                "name": "Academy Charter High School",
+                "address": "1725 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.1712428,
+                "longitude": -74.0278285,
+                "distance_meters": 767,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+                "name": "Supersavers Market",
+                "address": "1210 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1766522,
+                "longitude": -74.02627629999999,
+                "distance_meters": 626,
+                "rating": 4.4,
+                "user_rating_count": 133,
+                "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              {
+                "place_id": "ChIJWen7GgCIwYkRb4uXAvH4PHQ",
+                "name": "Marucci Memorial Park",
+                "address": "300 South Blvd, Spring Lake, NJ 07762, USA",
+                "primary_type": "park",
+                "latitude": 40.165427,
+                "longitude": -74.0290698,
+                "distance_meters": 1294,
+                "rating": 4.6,
+                "user_rating_count": 122,
+                "google_maps_uri": "https://maps.google.com/?cid=8375843121016572783&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              }
+            ],
+            "type_counts": {
+              "grocery_store": 3,
+              "train_station": 1,
+              "secondary_school": 2,
+              "park": 2
+            },
+            "nearest_by_type": {
+              "grocery_store": {
+                "place_id": "ChIJI94NEOMnwokREovGMqt515w",
+                "name": "Supersavers Market",
+                "address": "1210 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "grocery_store",
+                "latitude": 40.1766522,
+                "longitude": -74.02627629999999,
+                "distance_meters": 626,
+                "rating": 4.4,
+                "user_rating_count": 133,
+                "google_maps_uri": "https://maps.google.com/?cid=11301635566107790098&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "train_station": {
+                "place_id": "ChIJeW-NgOEnwokRZmchwSoJDn0",
+                "name": "Belmar",
+                "address": "Belmar, NJ 07719, USA",
+                "primary_type": "train_station",
+                "latitude": 40.180367,
+                "longitude": -74.02746739999999,
+                "distance_meters": 676,
+                "rating": 4,
+                "user_rating_count": 24,
+                "google_maps_uri": "https://maps.google.com/?cid=9011149983648409446&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "secondary_school": {
+                "place_id": "ChIJZ3WExf0nwokRU0Mjg2yWWtU",
+                "name": "Academy Charter High School",
+                "address": "1725 Main St, Belmar, NJ 07719, USA",
+                "primary_type": "secondary_school",
+                "latitude": 40.1712428,
+                "longitude": -74.0278285,
+                "distance_meters": 767,
+                "rating": null,
+                "user_rating_count": null,
+                "google_maps_uri": "https://maps.google.com/?cid=15373765670783370067&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              },
+              "park": {
+                "place_id": "ChIJu9F5Lw8owokR83_VxuHIaMY",
+                "name": "Maclearie Park",
+                "address": "905 NJ-35, Belmar, NJ 07719, USA",
+                "primary_type": "park",
+                "latitude": 40.1788472,
+                "longitude": -74.035854,
+                "distance_meters": 320,
+                "rating": 4.6,
+                "user_rating_count": 608,
+                "google_maps_uri": "https://maps.google.com/?cid=14296897889116717043&g_mp=Cilnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaE5lYXJieRACGAQgAA"
+              }
+            }
+          },
+          "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1765245%2C-74.03363949999999&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+        },
+        "attom": {
+          "property_detail": {
+            "address": "1008 14TH AVE, BELMAR, NJ 07719",
+            "baths": 1.0,
+            "beds": 3,
+            "garage_spaces": null,
+            "latitude": "40.176628",
+            "longitude": "-74.033619",
+            "lot_size": 0.155,
+            "property_type": "SFR",
+            "sqft": 960,
+            "stories": 2,
+            "year_built": 1928
+          },
+          "sale_history_snapshot": {
+            "complete_event_count": 0,
+            "first_sale_date": null,
+            "first_sale_price": null,
+            "history_confidence": 0.15,
+            "history_confidence_label": "thin",
+            "history_flags": [],
+            "history_span_years": null,
+            "last_sale_date": null,
+            "last_sale_price": null,
+            "most_recent_hold_years": null,
+            "repeat_sale_pairs": [],
+            "sale_count": 0,
+            "sale_history": [],
+            "source_surface": "snapshot"
+          },
+          "assessment_detail": {
+            "assessed_improvement": 87900,
+            "assessed_land": 214000,
+            "assessed_total": 301900,
+            "market_value": 301900,
+            "tax_amount": 4392.65,
+            "tax_year": 2024
+          }
+        },
+        "town_intelligence": null,
+        "warnings": [
+          "ATTOM rental_avm unavailable: HTTP 404 while calling ATTOM"
+        ],
+        "fetched_at": "2026-04-22T17:48:59"
+      },
+      "risk": {
+        "property_id": "1008-14th-ave-belmar-nj-07719",
+        "risk_flags": [
+          "flood_medium",
+          "high_property_taxes",
+          "higher_vacancy"
+        ],
+        "risk_count": 3,
+        "total_penalty": 21.7,
+        "total_credit": 0,
+        "flood_risk": "medium",
+        "trust_flags": [],
+        "key_risks": [],
+        "ask_price": 767000.0,
+        "bear_case_value": null,
+        "stress_case_value": null,
+        "decision_stance": "buy_if_price_improves"
+      },
+      "contract_type": "decision_summary",
+      "street_view_image_url": "https://maps.googleapis.com/maps/api/streetview?size=640x360&location=40.1765245%2C-74.03363949999999&fov=90&pitch=0&source=outdoor&return_error_code=true&key=AIzaSyAG5kcm1vojy4jyTRPIancb_0UvK8EKmZY"
+    }
+  },
+  "last_surface_narrative": "Buy only if the price improves. The current ask price of $767,000 is about 6.0% above Briarwood's fair value of $720,644, indicating it may be overpriced. The biggest risk to consider is a medium flood hazard. A price improvement of roughly 6.0% would significantly enhance the investment's appeal. Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
+  "last_visual_advice": {
+    "value": {
+      "title": "Valuation Overview",
+      "summary": "The ask price exceeds Briarwood's fair value by approximately 6.0%.",
+      "companion": "Consider the scenario analysis to understand potential future valuations.",
+      "preferred_surface": "chart_first"
+    },
+    "rent": {
+      "title": "Rental Potential Analysis",
+      "summary": "Current rent suggests a fragile rental profile with an annual yield of roughly 3.5%.",
+      "companion": "Pair this with the rent ramp chart to visualize future rental forecasts.",
+      "preferred_surface": "table_first"
+    },
+    "scenario": {
+      "title": "Scenario Valuation Projections",
+      "summary": "Valuation may range from $504,451 in a stress case to $795,946 in a bull case.",
+      "companion": "Use this alongside the risk assessment to weigh possible outcomes.",
+      "preferred_surface": "chart_first"
+    },
+    "risk": {
+      "title": "Risk Assessment Summary",
+      "summary": "Key risks include flooding, high property taxes, and potential vacancy increases.",
+      "companion": "Assess the rental analysis to understand how risks may impact cash flow.",
+      "preferred_surface": "card_first"
+    },
+    "trust": {
+      "title": "Confidence and Trust Metrics",
+      "summary": "Moderate confidence in the valuation is indicated by a reliance score of 33.33%.",
+      "companion": "Refer to the valuation overview for context regarding the reliability of these figures.",
+      "preferred_surface": "card_first"
+    }
+  },
+  "last_verifier_report": {
+    "tier": "decision_summary",
+    "sentences_total": 5,
+    "sentences_with_violations": 0,
+    "ungrounded_declaration": false,
+    "anchor_count": 0,
+    "anchors": [],
+    "violations": [],
+    "budget_exceeded": false,
+    "strict_regen": {
+      "enabled": true,
+      "sentences_stripped": 0,
+      "regen_attempted": false,
+      "threshold": 2
+    }
+  },
+  "last_representation_plan": {
+    "selections": [
+      {
+        "claim": "Current basis sits about 6.0% above Briarwood's fair-value anchor.",
+        "claim_type": "price_position",
+        "supporting_evidence": [
+          "last_decision_view.basis_premium_pct",
+          "last_decision_view.fair_value_base",
+          "last_decision_view.ask_price"
+        ],
+        "chart_id": "value_opportunity",
+        "source_view": "last_decision_view",
+        "flagged": false,
+        "flag_reason": null
+      },
+      {
+        "claim": "Potential price improvement of around 6.0% could create a more favorable investment scenario.",
+        "claim_type": "downside_risk",
+        "supporting_evidence": [
+          "last_decision_view.what_changes_my_view"
+        ],
+        "chart_id": null,
+        "source_view": "last_decision_view",
+        "flagged": true,
+        "flag_reason": "No specific risk evidence is recorded in views.; source_view missing required inputs: bull_case_value, base_case_value, bear_case_value"
+      }
+    ]
+  },
+  "last_partial_data_warnings": [
+    {
+      "section": "representation_plan",
+      "reason": "dropped 1 chart selection(s): downside_risk:No specific risk evidence is recorded in views.; source_view missing required inputs: bull_case_value, base_case_value, bear_case_value",
+      "verdict_reliable": true
+    }
+  ],
+  "turns": [
+    {
+      "user": "Underwrite this property.",
+      "assistant": "Buy only if the price improves. The current ask price of $767,000 is about 6.0% above Briarwood's fair value of $720,644, indicating it may be overpriced. The biggest risk to consider is a medium flood hazard. A price improvement of roughly 6.0% would significantly enhance the investment's appeal. Open the value chart next to see how the ask sits against Briarwood's fair-value anchor.",
+      "answer_type": "decision"
+    }
+  ]
+}

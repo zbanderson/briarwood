@@ -19,8 +19,10 @@ from briarwood.agent.tools import SAVED_PROPERTIES_DIR, ToolUnavailable
 from briarwood.claims.synthesis import build_verdict_with_comparison_claim
 from briarwood.claims.verdict_with_comparison import VerdictWithComparisonClaim
 from briarwood.inputs.property_loader import load_property_from_json
+from briarwood.modules.comparable_sales import ComparableSalesModule
 from briarwood.orchestrator import run_briarwood_analysis_with_artifacts
 from briarwood.runner_routed import _scoped_synthesizer
+from briarwood.schemas import PropertyInput
 
 
 def build_claim_for_property(
@@ -45,6 +47,7 @@ def build_claim_for_property(
 
     property_summary = artifacts["property_summary"]
     module_results = artifacts.get("module_results") or {}
+    _inject_comparable_sales(module_results, property_input)
     parser_output = artifacts["routing_decision"].parser_output.model_dump()
     interaction_trace = _extract_interaction_trace(artifacts)
 
@@ -54,6 +57,35 @@ def build_claim_for_property(
         module_results=module_results,
         interaction_trace=interaction_trace,
     )
+
+
+def _inject_comparable_sales(
+    module_results: dict[str, Any],
+    property_input: PropertyInput,
+) -> None:
+    """Run ComparableSalesModule and graft its output under ``outputs.comparable_sales``.
+
+    The scoped execution registry doesn't surface ``comparable_sales`` as a
+    top-level module (it's consumed internally by valuation), so the
+    synthesizer's expected path ``outputs["comparable_sales"].payload.comps_used``
+    is absent at runtime. Running the module directly here fills that gap
+    without editing ``briarwood/modules/``.
+    """
+    outputs = module_results.get("outputs")
+    if not isinstance(outputs, dict):
+        return
+    if isinstance(outputs.get("comparable_sales"), Mapping):
+        return
+    try:
+        result = ComparableSalesModule().run(property_input)
+    except Exception:
+        return
+    outputs["comparable_sales"] = {
+        "module_name": result.module_name,
+        "payload": result.payload,
+        "metrics": dict(result.metrics or {}),
+        "summary": result.summary,
+    }
 
 
 def _extract_interaction_trace(artifacts: Mapping[str, Any]) -> dict[str, Any]:

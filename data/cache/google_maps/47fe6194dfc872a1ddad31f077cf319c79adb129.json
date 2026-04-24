@@ -1,0 +1,127 @@
+{
+  "raw_payload": {
+    "results": [
+      {
+        "address_components": [
+          {
+            "long_name": "123",
+            "short_name": "123",
+            "types": [
+              "street_number"
+            ]
+          },
+          {
+            "long_name": "Main Street",
+            "short_name": "Main St",
+            "types": [
+              "route"
+            ]
+          },
+          {
+            "long_name": "Avon-by-the-Sea",
+            "short_name": "Avon-By-The-Sea",
+            "types": [
+              "locality",
+              "political"
+            ]
+          },
+          {
+            "long_name": "Monmouth County",
+            "short_name": "Monmouth County",
+            "types": [
+              "administrative_area_level_2",
+              "political"
+            ]
+          },
+          {
+            "long_name": "New Jersey",
+            "short_name": "NJ",
+            "types": [
+              "administrative_area_level_1",
+              "political"
+            ]
+          },
+          {
+            "long_name": "United States",
+            "short_name": "US",
+            "types": [
+              "country",
+              "political"
+            ]
+          },
+          {
+            "long_name": "07717",
+            "short_name": "07717",
+            "types": [
+              "postal_code"
+            ]
+          },
+          {
+            "long_name": "1005",
+            "short_name": "1005",
+            "types": [
+              "postal_code_suffix"
+            ]
+          }
+        ],
+        "formatted_address": "123 Main St, Avon-By-The-Sea, NJ 07717, USA",
+        "geometry": {
+          "bounds": {
+            "northeast": {
+              "lat": 40.1895858,
+              "lng": -74.0228743
+            },
+            "southwest": {
+              "lat": 40.1895013,
+              "lng": -74.0230857
+            }
+          },
+          "location": {
+            "lat": 40.1895438,
+            "lng": -74.0229834
+          },
+          "location_type": "ROOFTOP",
+          "viewport": {
+            "northeast": {
+              "lat": 40.1908892302915,
+              "lng": -74.0215633697085
+            },
+            "southwest": {
+              "lat": 40.1881912697085,
+              "lng": -74.02426133029151
+            }
+          }
+        },
+        "navigation_points": [
+          {
+            "location": {
+              "latitude": 40.1895107,
+              "longitude": -74.0228187
+            }
+          }
+        ],
+        "place_id": "ChIJybcFDNwnwokR2MT4D7kkvUc",
+        "types": [
+          "premise",
+          "street_address"
+        ]
+      }
+    ],
+    "status": "OK"
+  },
+  "normalized_payload": {
+    "formatted_address": "123 Main St, Avon-By-The-Sea, NJ 07717, USA",
+    "latitude": 40.1895438,
+    "longitude": -74.0229834,
+    "place_id": "ChIJybcFDNwnwokR2MT4D7kkvUc",
+    "types": [
+      "premise",
+      "street_address"
+    ],
+    "town": "Avon-by-the-Sea",
+    "state": "NJ",
+    "county": "Monmouth",
+    "zip_code": "07717"
+  },
+  "fetched_at": "2026-04-22T21:32:59Z"
+}

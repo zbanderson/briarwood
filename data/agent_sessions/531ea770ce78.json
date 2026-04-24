@@ -1,0 +1,105 @@
+{
+  "session_id": "531ea770ce78",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "1008-14th-ave-belmar-nj-07719",
+    "source": null
+  },
+  "last_live_listing_results": [],
+  "current_search_context": null,
+  "search_context": null,
+  "selected_search_result": {
+    "property_id": "1008-14th-ave-belmar-nj-07719",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": null,
+    "external_id": "1008-14th-ave-belmar-nj-07719",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_market_support_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {},
+  "last_verifier_report": null,
+  "last_representation_plan": null,
+  "last_partial_data_warnings": [],
+  "last_claim_events": [
+    {
+      "type": "chart",
+      "kind": "horizontal_bar_with_ranges",
+      "spec": {
+        "kind": "horizontal_bar_with_ranges",
+        "unit": "$/sqft",
+        "scenarios": [],
+        "emphasis_scenario_id": null
+      },
+      "supports_claim": "verdict_with_comparison"
+    },
+    {
+      "type": "suggestions",
+      "items": [
+        "What does the risk picture look like on this one?",
+        "How does this perform as a rental over a 5-year hold?",
+        "What would renovating this unlock in resale value?"
+      ]
+    }
+  ],
+  "last_claim_rejected": null,
+  "turns": [
+    {
+      "user": "what do you think of 1008 14th Ave, belmar, nj",
+      "assistant": "Decision: This property at 1008 14th Avenue in Belmar, NJ, looks expensive compared to its fair value. \nWhy: The asking price of $767,000 is about 6% higher than the fair value estimate of $720,644. \nNext move: Consider making an offer below the asking price to find a better deal.",
+      "answer_type": "browse"
+    },
+    {
+      "user": "is this a good deal?",
+      "assistant": "Our best estimate is priced $46,356 above fair market value (+6.4%). Here's how this property compares against recent sales of similar and upgraded configurations in the area. The analysis indicates that the property is overpriced relative to its fair market value. With a confidence level labeled as low, this suggests there's uncertainty in the assessment, possibly due to limited comparable sales data or market fluctuations. In this context, further insights could improve the evaluation, such as analyzing more comps or considering recent market trends.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "Our best estimate is priced $46,356 above fair market value (+6.4%). Here's how this property compares against recent sales of similar and upgraded configurations in the area. This property is currently priced above its fair market value, which suggests a potential overvaluation in the market. With a confidence level in this assessment classified as low, it indicates the need for further analysis to gather more supporting data. Consider obtaining additional comparable sales or indicators that may provide a clearer picture of the local market conditions before proceeding with any investment decision.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "should I buy this house?",
+      "assistant": "Our best estimate is priced $46,356 above fair market value (+6.4%). Here's how this property compares against recent sales of similar and upgraded configurations in the area. The investment opportunity is currently marked as overpriced with a low confidence level regarding this assessment. The basis for this label suggests that the asking price significantly exceeds fair market value, but further analysis would be required to understand the specific dynamics at play. This could include obtaining more comparable sales data or insights on market trends that may affect value perception.",
+      "answer_type": "decision"
+    }
+  ]
+}

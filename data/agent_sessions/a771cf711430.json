@@ -1,0 +1,130 @@
+{
+  "session_id": "a771cf711430",
+  "current_property_id": "1008-14th-ave-belmar-nj-07719",
+  "current_live_listing": {
+    "property_id": "39224749",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "last_live_listing_results": [
+    {
+      "address": "1008 14th Avenue, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 767000.0,
+      "beds": 3,
+      "baths": 1.0,
+      "sqft": 960,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+      "external_id": "39224749",
+      "source": "searchapi_zillow"
+    },
+    {
+      "address": "1600 L Street, Belmar, NJ 07719",
+      "town": "Belmar",
+      "state": "NJ",
+      "zip_code": "07719",
+      "ask_price": 899000.0,
+      "beds": 3,
+      "baths": 2.0,
+      "sqft": null,
+      "property_type": "SINGLE_FAMILY",
+      "listing_status": null,
+      "listing_url": "https://www.zillow.com/homedetails/1600-L-St-Belmar-NJ-07719/39225096_zpid/",
+      "external_id": "39225096",
+      "source": "searchapi_zillow"
+    }
+  ],
+  "current_search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "search_context": {
+    "town": "Belmar",
+    "state": "NJ",
+    "filters": {
+      "beds": 3,
+      "max_price": 900000.0
+    }
+  },
+  "selected_search_result": {
+    "property_id": "39224749",
+    "address": "1008 14th Avenue, Belmar, NJ 07719",
+    "town": "Belmar",
+    "state": "NJ",
+    "zip_code": "07719",
+    "ask_price": 767000,
+    "beds": 3,
+    "baths": 1,
+    "sqft": 960,
+    "property_type": null,
+    "listing_status": "active",
+    "listing_url": "https://www.zillow.com/homedetails/1008-14th-Ave-Belmar-NJ-07719/39224749_zpid/",
+    "external_id": "39224749",
+    "source": null
+  },
+  "promoted_property_id": null,
+  "promotion_error": null,
+  "last_answer_contract": null,
+  "last_analysis_mode": null,
+  "last_decision_view": null,
+  "last_projection_view": null,
+  "last_comparison_view": null,
+  "last_town_summary": null,
+  "last_comps_preview": null,
+  "last_risk_view": null,
+  "last_value_thesis_view": null,
+  "last_market_support_view": null,
+  "last_strategy_view": null,
+  "last_rent_outlook_view": null,
+  "last_research_view": null,
+  "last_trust_view": null,
+  "last_presentation_payload": null,
+  "last_surface_narrative": null,
+  "last_visual_advice": {},
+  "last_verifier_report": null,
+  "last_representation_plan": null,
+  "last_partial_data_warnings": [],
+  "last_claim_events": [],
+  "last_claim_rejected": null,
+  "turns": [
+    {
+      "user": "3BR homes under $900k in Belmar NJ with no HOA",
+      "assistant": "Found 2 live Zillow listing(s) for sale in Belmar, NJ:",
+      "answer_type": "search"
+    },
+    {
+      "user": "Analyze 1008 14th Avenue, Belmar, NJ 07719, Belmar, NJ",
+      "assistant": "Our best estimate is priced $46,356 above fair market value (+6.4%). Here's how this property compares against recent sales of similar and upgraded configurations in the area. This property is currently deemed overpriced, but it's important to note that the confidence in this assessment is low. This suggests that while the listing price is higher than expected values, the data may not fully support a strong definitive claim. For a more accurate appraisal, additional comparative analysis or updated market data could provide clearer insight.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "should I buy this house?",
+      "assistant": "Our best estimate is priced $46,356 above fair market value (+6.4%). Here's how this property compares against recent sales of similar and upgraded configurations in the area. This property is currently considered overpriced according to the analysis. The confidence in this verdict is low, indicating that there may be significant market fluctuations or limited comparable data affecting the valuation. Further investigation into recent sales or rental trends in the area could provide more clarity on its fair market value.",
+      "answer_type": "decision"
+    },
+    {
+      "user": "Show me the comp set",
+      "assistant": "",
+      "answer_type": "visualize"
+    }
+  ]
+}
