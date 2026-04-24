@@ -103,3 +103,23 @@ Distinct from [DECISIONS.md](DECISIONS.md) (which captures product/architectural
 **Issue:** `GAP_ANALYSIS.md` Layer 4 says the Representation Agent substantially exists, but its use is still gated around the claim-object path while legacy synthesis emits charts directly from handlers. That means chart selection quality and LLM-vs-deterministic fallback behavior differ by execution path.
 
 **Suggested fix:** Add a feature-flagged path that runs the Representation Agent for ordinary decision-tier turns after `UnifiedIntelligenceOutput` and module views are available. Start in shadow mode: compare selected charts to the currently emitted events, log mismatches, and only switch rendering once chart coverage is stable.
+
+---
+
+## 2026-04-24 — Two comp engines with divergent quality; CMA (Engine B) needs alpha-quality pass
+
+**Severity:** High — the user-facing CMA (`get_cma`) is a key platform surface and does not currently meet the quality bar the product owner wants.
+
+**Files:**
+- [briarwood/agent/tools.py:1802](briarwood/agent/tools.py#L1802) — `get_cma` (Engine B; live-first)
+- [briarwood/agent/tools.py:1834](briarwood/agent/tools.py#L1834) — `CMAResult` shape
+- [briarwood/modules/comparable_sales.py:35](briarwood/modules/comparable_sales.py#L35) — `ComparableSalesModule` (Engine A; fair-value anchor)
+- [briarwood/agents/comparable_sales/](briarwood/agents/comparable_sales/) — shared agent beneath Engine A (`ComparableSalesAgent`)
+- [briarwood/agent/dispatch.py:2636-2637](briarwood/agent/dispatch.py#L2636-L2637) — `_CMA_RE` trigger
+- [briarwood/agent/dispatch.py:3697-3699](briarwood/agent/dispatch.py#L3697-L3699) — separation rationale
+
+**Issue:** Briarwood has two comp paths that were easy to conflate during Handoff 2b discovery: (A) `ComparableSalesModule` — saved comps, drives fair-value, appears in `value_thesis.comps`; (B) `get_cma` — live-Zillow-preferred, drives the user-facing "CMA" feature, appears in `session.last_market_support_view`. The separation is documented in dispatch.py but the two paths have independent quality trajectories. Engine B in particular has known gaps: it rides on `_live_zillow_cma_candidates` quality, falls back silently to saved comps, and does not apply Engine A's scoring / adjustment logic (`_score_comp`, `_proximity_score`, `_recency_score`, `_data_quality_score`, location/lot/income-adjusted range bucketing) to live rows. Engine A's own TODOs in TOOL_REGISTRY.md (cross-town comps, renovation premium pass-through, 15% sqft tolerance) also apply to the fair-value path.
+
+**Suggested fix:** Two-step audit. (1) Map every CMA surface the user can hit ("run a CMA" text, Properties UI panels, agent-tool callers) and confirm which engine each one uses. (2) For Engine B, decide whether to unify with Engine A's scoring / adjustment logic or to keep it as a distinct live-only summary with its own quality bar. Either way, define the quality invariants explicitly: minimum comp count, maximum distance, age cap, confidence floor, and behavior when live returns empty. Do NOT do this in Handoff 2b or Handoff 3 — scope it as its own handoff after promotion is complete.
+
+Surfaced during Handoff 2b — see [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 1 (`comparable_sales` → PROMOTE, Engine A only).

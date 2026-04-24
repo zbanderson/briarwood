@@ -342,3 +342,30 @@ Piece 3 classification table): `legal_confidence`, `renovation_impact`,
 `arv_model`, `hold_to_rent`, `margin_sensitivity`, `risk_model`,
 `confidence`, `unit_income_offset`, `town_development_index`. The
 existing 6 canonical wrappers remain unchanged.
+
+## 2026-04-24 — property_data_quality output schema mismatch in audit docs
+
+ARCHITECTURE_CURRENT.md and TOOL_REGISTRY.md (entry at
+[TOOL_REGISTRY.md:40-61](TOOL_REGISTRY.md)) describe
+`property_data_quality` outputs as `completeness_score: float`,
+`contradiction_flags: list[str]`, and `confidence: float`. The actual
+implementation at
+[briarwood/modules/property_data_quality.py:49-68](briarwood/modules/property_data_quality.py#L49-L68)
+produces `property_tax_confirmed_flag`,
+`municipality_tax_context_flag`, `reassessment_risk_score`,
+`tax_burden_score`, `structural_data_quality_score`,
+`comp_eligibility_score`. No `completeness_score` or
+`contradiction_flags` fields exist anywhere in the payload. The module
+is a NJ-tax-and-comp-eligibility scorer (guarded on optional
+`NJTaxIntelligenceStore` via `BRIARWOOD_NJ_TAX_PATH` env var), not a
+generic property-data-quality scorer — the name and audit-doc
+description both overclaim.
+
+Same drift pattern as the nine entries reconciled in Handoff 2a
+Piece 6. TOOL_REGISTRY.md and ARCHITECTURE_CURRENT.md need their
+output schema rewritten against the code. Consider whether the module
+should also be renamed to reflect its actual role (e.g.,
+`nj_tax_quality` or `comp_eligibility`) as a separate follow-up.
+
+Surfaced during Handoff 2b — see [PROMOTION_PLAN.md](PROMOTION_PLAN.md)
+entry 5 (`property_data_quality` → KEEP as internal helper).
