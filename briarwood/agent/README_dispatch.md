@@ -1,0 +1,153 @@
+# agent/dispatch + orchestrator — Per-AnswerType Handlers + Routed Analysis Entry
+
+**Last Updated:** 2026-04-24
+**Layer:** Orchestration (Layer 2 — rule-based handler registry, not LLM-driven)
+**Status:** STABLE (the handler-registry pattern; the per-handler logic varies in maturity)
+
+## Purpose
+
+`briarwood/agent/dispatch.py` is the per-`AnswerType` handler registry that translates a router decision into per-tier work. Each of the 14 handlers (`handle_lookup`, `handle_decision`, etc.) hardcodes which specialty models run, in what order, and how their outputs are framed. `briarwood/orchestrator.py` is the single routed-analysis entry point every handler that needs the full module set ultimately calls: `run_briarwood_analysis_with_artifacts(property_data, user_input, synthesizer, ...)` validates the routing decision, drives the scoped executor through the planner, calls the injected synthesizer, and returns a unified artifact bundle. The two files form one narrative unit: dispatch decides what to call; the orchestrator decides what runs and in what order. There is no LLM-driven tool-use loop here — model selection is encoded in handler code, and the orchestrator raises `RoutingError` rather than falling back when scoped coverage is incomplete.
+
+## Location
+
+- **Dispatch root:** [briarwood/agent/dispatch.py](dispatch.py) (4538 LOC).
+- **Handler functions** (one per `AnswerType`, per the [router README](README_router.md)):
+  - [briarwood/agent/dispatch.py:1752](dispatch.py#L1752) — `handle_lookup`
+  - [briarwood/agent/dispatch.py:1887](dispatch.py#L1887) — `handle_decision`
+  - [briarwood/agent/dispatch.py:2361](dispatch.py#L2361) — `handle_search`
+  - [briarwood/agent/dispatch.py:2516](dispatch.py#L2516) — `handle_comparison`
+  - [briarwood/agent/dispatch.py:2557](dispatch.py#L2557) — `handle_research`
+  - [briarwood/agent/dispatch.py:2896](dispatch.py#L2896) — `handle_visualize`
+  - [briarwood/agent/dispatch.py:2922](dispatch.py#L2922) — `handle_rent_lookup`
+  - [briarwood/agent/dispatch.py:3130](dispatch.py#L3130) — `handle_projection`
+  - [briarwood/agent/dispatch.py:3412](dispatch.py#L3412) — `handle_micro_location`
+  - [briarwood/agent/dispatch.py:3473](dispatch.py#L3473) — `handle_risk`
+  - [briarwood/agent/dispatch.py:3654](dispatch.py#L3654) — `handle_edge`
+  - [briarwood/agent/dispatch.py:3921](dispatch.py#L3921) — `handle_strategy`
+  - [briarwood/agent/dispatch.py:4028](dispatch.py#L4028) — `handle_browse`
+  - [briarwood/agent/dispatch.py:4180](dispatch.py#L4180) — `handle_chitchat`
+- **Claim wedge inside dispatch:** `_maybe_handle_via_claim` at [briarwood/agent/dispatch.py:1809](dispatch.py#L1809) — the Phase 3 entry that lives inside the DECISION path (see [briarwood/claims/README.md](../claims/README.md) and [briarwood/editor/README.md](../editor/README.md)).
+- **Orchestrator root:** [briarwood/orchestrator.py](../orchestrator.py) (589 LOC).
+- **Routed analysis entry:** [briarwood/orchestrator.py:460](../orchestrator.py#L460) — `run_briarwood_analysis_with_artifacts(...)`.
+- **Convenience entry:** [briarwood/orchestrator.py:439](../orchestrator.py#L439) — `run_briarwood_analysis(...)` returns only the unified output.
+- **Cache-key construction:** [briarwood/orchestrator.py:171](../orchestrator.py#L171) — `build_cache_key(property_summary, parser_output, execution_mode=...)`.
+- **Tests:** [tests/agent/test_dispatch.py](../../tests/agent/test_dispatch.py); [tests/test_orchestrator.py](../../tests/test_orchestrator.py); [tests/claims/test_dispatch_branch.py](../../tests/claims/test_dispatch_branch.py).
+
+## Role in the Six-Layer Architecture
+
+- **This layer:** Orchestration (Layer 2) — but as a **rule-based handler registry**, not the LLM-driven tool-use loop the target architecture describes ([GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 2). Per the gap analysis: "What goes into the registry for a given turn is decided by handler code, not by an LLM reading a spec." The legacy/scoped split, the orchestrator's no-fallback policy, and the registry's missing semantics for "optional" / "user-type-dependent" dependencies are all named there as obstacles to closing the gap.
+- **Called by:** `api/pipeline_adapter.py` ([api/pipeline_adapter.py](../../api/pipeline_adapter.py)), which receives the `RouterDecision` from `briarwood.agent.router.classify` and then dispatches to a tier-specific stream (`search_stream`, `browse_stream`, `decision_stream`, or the generic `dispatch_stream`).
+- **Calls:**
+  - From dispatch: `briarwood.orchestrator.run_briarwood_analysis_with_artifacts` (most handlers); `briarwood.value_scout.scout_claim`, `briarwood.editor.edit_claim`, `briarwood.claims.pipeline.build_claim_for_property`, `briarwood.claims.representation.render_claim` (DECISION-tier wedge); `briarwood.feature_flags.claims_enabled_for`; `briarwood.claims.routing.map_to_archetype`. Many handlers also read session views populated by sibling handlers.
+  - From orchestrator: `briarwood.router.route_user_input` ([briarwood/router.py](../router.py)) for the analysis-tier router; the planner + executor in [briarwood/execution/](../execution/); the injected synthesizer (typically `_scoped_synthesizer` from [briarwood/runner_routed.py:104](../runner_routed.py#L104)).
+- **Returns to:** Caller (`api/pipeline_adapter.py`). Handlers return prose strings; the adapter chunks for SSE streaming. The orchestrator returns an artifact dict with keys `routing_decision`, `property_summary`, `module_results`, `unified_output` (and `interaction_trace` on fresh runs).
+- **Emits events:** Indirectly — the adapter projects each handler's output into the SSE event stream defined at [api/events.py](../../api/events.py).
+
+## LLM Usage
+
+Indirect — neither dispatch nor the orchestrator calls an LLM directly. Both invoke layers that do:
+- The DECISION wedge (`_maybe_handle_via_claim`) calls `render_claim` which uses an LLM for claim prose ([briarwood/claims/README.md](../claims/README.md)).
+- Many handlers compose prose via `briarwood/agent/composer.py::complete_and_verify`, which is LLM-backed (per [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) LLM Integrations table).
+
+## Inputs
+
+`run_briarwood_analysis_with_artifacts(property_data, user_input, llm_parser=None, synthesizer=None, scoped_registry=None, prior_context=None)`:
+
+| Input | Type | Source | Notes |
+|-------|------|--------|-------|
+| `property_data` | `dict[str, Any]` | Caller (handler / wedge) | Required; raises `TypeError` if not a dict. |
+| `user_input` | `str` | Router decision text | Required non-empty; raises `ValueError`. |
+| `llm_parser` | `Callable[[str], ParserOutput] \| None` | Caller | Optional; routes to `briarwood.router.route_user_input`'s default parser when `None`. |
+| `synthesizer` | `Synthesizer \| None` | Caller | **Required** despite the optional default; raises `ValueError` when `None`. Typically `_scoped_synthesizer`. |
+| `scoped_registry` | `dict[str, ModuleSpec] \| None` | Caller | Optional override; defaults to `_get_default_scoped_registry()` at [briarwood/orchestrator.py:230](../orchestrator.py#L230). |
+| `prior_context` | `list[dict[str, object]] \| None` | Caller | Conversation history for follow-up turns. |
+
+Each handler's signature is per-tier and not uniform — see the source for the exact shape. Most accept `RouterDecision` and a `Session` object plus tier-specific kwargs.
+
+## Outputs
+
+`run_briarwood_analysis_with_artifacts` returns a `dict[str, Any]` with at least:
+
+| Key | Type | Notes |
+|-----|------|-------|
+| `routing_decision` | `RoutingDecision` | From the analysis-tier router. |
+| `property_summary` | `dict[str, Any]` | Built by `build_property_summary` at [briarwood/orchestrator.py:94](../orchestrator.py#L94). |
+| `module_results` | `dict[str, Any]` | Wraps each scoped module's output under `outputs[module_name]`. |
+| `unified_output` | `UnifiedIntelligenceOutput` (or dict) | From the injected synthesizer. |
+| `interaction_trace` | `dict[str, Any]` | Present on fresh runs; absent on synthesis-cache hits per [briarwood/orchestrator.py:521-528](../orchestrator.py#L521-L528). |
+
+Handlers return `str` (prose) — the adapter chunks for streaming.
+
+## Dependencies on Other Modules
+
+- **From dispatch:** `briarwood.orchestrator`, `briarwood.feature_flags`, `briarwood.claims` (entire package), `briarwood.value_scout`, `briarwood.editor`, `briarwood.agent.session`, `briarwood.agent.router` (`RouterDecision`, `AnswerType`), `briarwood.agent.composer`, `briarwood.agent.resolver`, `briarwood.agent.tools`, `briarwood.agent.overrides`, `briarwood.interactions/*`, `briarwood.local_intelligence/*`, plus a wide surface of module-result accessors across `briarwood.modules`.
+- **From orchestrator:** `briarwood.router` (analysis-tier), `briarwood.routing_schema`, `briarwood.execution.context`, `briarwood.execution.planner`, `briarwood.execution.executor`, `briarwood.execution.registry` (`ModuleSpec`), `briarwood.pipeline.triage` (macro nudges).
+- **Coupled to:** every scoped-model README in `briarwood/modules/README_*.md` (handlers read those modules' outputs through `module_results`); the `Session` model in [briarwood/agent/session.py](session.py); the SSE event shapes in [api/events.py](../../api/events.py).
+
+## Invariants
+
+- The orchestrator validates `property_data is dict` and `user_input` non-empty before doing anything ([briarwood/orchestrator.py:482-487](../orchestrator.py#L482-L487)).
+- `synthesizer` is required — raising `ValueError` is the documented contract at [briarwood/orchestrator.py:488-492](../orchestrator.py#L488-L492).
+- **No fallback on scoped-registry coverage gap.** When `supports_scoped_execution` returns `False`, the orchestrator raises `RoutingError` at [briarwood/orchestrator.py:510-514](../orchestrator.py#L510-L514). The legacy `AnalysisEngine` fallback is deleted. This is `AUDIT_REPORT.md` F-004 (elevated in `VERIFICATION_REPORT.md`); see [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges. Implication: a router/registry mismatch is a hard failure for the entire analysis.
+- Synthesis output is cached by `build_cache_key(property_summary, parser_output, execution_mode)` at [briarwood/orchestrator.py:171](../orchestrator.py#L171); `execution_mode` was made required by commit `1c21bdb`. Cache hits skip the synthesizer and return a slimmer artifact dict (no `interaction_trace` at top level — claims pipeline recovery for this is at [briarwood/claims/pipeline.py:91-106](../claims/pipeline.py#L91-L106)).
+- The handler-registry pattern is the contract: every `AnswerType` value must have a `handle_*` function in `dispatch.py` (or be routed through the wedge / `_maybe_handle_via_claim`). Adding a new `AnswerType` without a handler is a runtime error.
+- The DECISION wedge at [briarwood/agent/dispatch.py:1809-1884](dispatch.py#L1809-L1884) returns `None` on any wedge failure (build raises, editor rejects, render raises), which causes the legacy DECISION path to run. The user-facing stream stays the same shape regardless.
+- The orchestrator never returns `None`. Either it produces a full artifact bundle or raises.
+
+## State & Side Effects
+
+- **Stateful via `Session`:** Most handlers mutate the `Session` instance to populate `last_*_view` slots used by the Representation Agent and SSE adapter.
+- **Caches:** `_ROUTING_DECISION_CACHE`, `_SYNTHESIS_OUTPUT_CACHE`, `_MODULE_RESULTS_CACHE` at module scope in `orchestrator.py`. Process-local; no eviction.
+- **Writes to disk:** indirectly via `briarwood/agent/feedback.py` for low-confidence router fallbacks; via the auto-fetch logic in `_maybe_auto_fetch_town_research` at [briarwood/agent/dispatch.py:612](dispatch.py#L612) for town research artifacts.
+- **Modifies session:** yes (extensively).
+- **Safe to call concurrently:** the orchestrator's caches are module-scope dicts and are not lock-protected. Concurrent identical-cache-key calls would race on dict insert (Python's GIL makes single inserts atomic, but the read-then-insert pattern is not).
+
+## Example Call
+
+```python
+from briarwood.orchestrator import run_briarwood_analysis_with_artifacts
+from briarwood.runner_routed import _scoped_synthesizer
+
+artifacts = run_briarwood_analysis_with_artifacts(
+    property_data={"address": "...", "town": "Montclair", "state": "NJ", ...},
+    user_input="Is this a buy at $850k?",
+    synthesizer=_scoped_synthesizer,
+)
+# artifacts["routing_decision"]    — RoutingDecision
+# artifacts["property_summary"]    — dict
+# artifacts["module_results"]      — dict[str, dict] with `outputs[module_name]` shape
+# artifacts["unified_output"]      — UnifiedIntelligenceOutput (or dict)
+# artifacts["interaction_trace"]   — present on fresh runs
+```
+
+```python
+from briarwood.agent.dispatch import handle_decision
+
+prose = handle_decision(text=user_text, decision=router_decision, session=session, llm=llm)
+# prose is the prose response (after wedge attempt + legacy fallback if needed).
+```
+
+## Known Rough Edges
+
+- **Audit count drift on handlers.** [DECISIONS.md](../../DECISIONS.md) entry "Dispatch handler count drift in audit docs" — the audit lists 8 handlers; there are 14, one per `AnswerType`.
+- **Hard failure on scoped-registry coverage gap.** [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → "No fallback on scoped-registry failure (`AUDIT_REPORT.md` F-004, elevated)." Cross-cutting: amplifies the impact of any module that raises (see [briarwood/modules/README_legal_confidence.md](../modules/README_legal_confidence.md), [briarwood/modules/README_renovation_impact.md](../modules/README_renovation_impact.md), [FOLLOW_UPS.md](../../FOLLOW_UPS.md)).
+- **Mock-listings fallback has no demo-mode gate.** [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges (`AUDIT_REPORT.md` F-001) — `api/main.py:334-335` falls through to `_echo_stream` when the router returns `None`, which can serve fabricated listings on provider failure. Not in this package directly, but the dispatch layer is where the gate would belong.
+- **Resolver state-aware disambiguation.** [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → "Resolver has no state-aware disambiguation." `_resolve_property_match` at [briarwood/agent/dispatch.py:255](dispatch.py#L255) is one of the consumers of the resolver and is positioned to surface ambiguity prompts to users.
+- **Handler maturity varies.** Some handlers (e.g., `handle_decision`, `handle_browse`) carry substantial logic; others (e.g., `handle_chitchat`) are essentially stubs. The README does not enumerate per-handler maturity — read the source for any handler before modifying it.
+- **`briarwood.router` (analysis-tier) is not the same as `briarwood.agent.router` (chat-tier).** The orchestrator imports the analysis-tier router; the chat-tier router is the one documented at [briarwood/agent/README_router.md](README_router.md). The `IntentContract` model bridges them — see [briarwood/intent_contract.py](../intent_contract.py).
+- **`prior_context` is plumbed through but not shaped.** `run_briarwood_analysis_with_artifacts` accepts `prior_context: list[dict[str, object]] | None` — the structure is conventional rather than typed.
+- **Adapter stream selection is outside this package.** Per [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Data Flow §4, `api/pipeline_adapter.py` decides between `search_stream`, `browse_stream`, `decision_stream`, or the generic `dispatch_stream` based on `AnswerType`. That adapter routing is upstream of the per-handler dispatch documented here.
+
+## Open Product Decisions
+
+(Pulled from [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 2; no dispatch-specific decisions invented here.)
+
+- **LLM-driven tool-use loop.** Replacing the rule-based handler registry with an orchestrating LLM that reads the tool registry and picks tools is the Layer 2 target. Significant complexity; blocked partly on the legacy/scoped promotion question.
+- **Legacy-to-scoped promotion.** Which legacy modules get promoted to scoped registry entries (`comparable_sales` is the obvious first). See [DECISIONS.md](../../DECISIONS.md) and the `claims/` README for the post-hoc graft pattern that exists today as a workaround.
+- **Optional / user-type-dependent dependencies.** The scoped registry's DAG pattern doesn't express these. The current handler-registry encodes them implicitly — moving to LLM-driven orchestration requires data-driven semantics.
+- **Where the no-fallback-on-coverage-gap policy lives going forward.** Today it's an orchestrator raise; the gap analysis frames it as a correctness requirement that raises the bar for any registry change.
+
+## Changelog
+
+### 2026-04-24
+- Initial README created.
