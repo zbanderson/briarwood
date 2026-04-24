@@ -97,7 +97,7 @@ These predate the scoped pattern and are callable only from within other modules
 
 | Model | File | Role |
 |-------|------|------|
-| `BullBaseBearModule` | [briarwood/modules/bull_base_bear.py](briarwood/modules/bull_base_bear.py) | Bull/base/bear scenario range. Runs inside scoped `resale_scenario`. |
+| `BullBaseBearModule` | [briarwood/modules/bull_base_bear.py](briarwood/modules/bull_base_bear.py) | Bull/base/bear scenario range engine. KEEP-as-internal-helper: wrapped by scoped `resale_scenario` ([briarwood/modules/resale_scenario_scoped.py:30](briarwood/modules/resale_scenario_scoped.py#L30)); also consumed by `teardown_scenario` via `prior_results`. Same pattern as `RentalEaseModule`, `RiskConstraintsModule`, `PropertyDataQualityModule`. Reclassified from DEPRECATE during Handoff 4 — see DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected." |
 | `RentalEaseModule` | [briarwood/modules/rental_ease.py](briarwood/modules/rental_ease.py) | Rental-absorption difficulty. Uses Zillow ZORI/ZORDI/ZORF. |
 | `TownCountyOutlookModule` | [briarwood/modules/town_county_outlook.py](briarwood/modules/town_county_outlook.py) | Town/county sentiment. Backed by `TownCountyAgent`. |
 | `RiskConstraintsModule` | [briarwood/modules/risk_constraints.py](briarwood/modules/risk_constraints.py) | Risk flag catalog (condition, title, flood, zoning). Feeds `bull_base_bear`. |

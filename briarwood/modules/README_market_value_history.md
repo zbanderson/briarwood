@@ -61,7 +61,7 @@ The runner returns `ModulePayload.model_dump()`. Metrics are populated from the 
 - **Benefits from (optional):** `property_summary`, `market_context`.
 - **Calls internally:** `MarketValueHistoryAgent` + `FileBackedZillowHistoryProvider`.
 - **Must not run concurrently with:** none.
-- **Downstream scoped consumers (in-process):** `CurrentValueModule` (transitively via `valuation`), `ComparableSalesModule`, `bull_base_bear` (deprecating). These consume the legacy module directly via `MarketValueHistoryModule()`; they do NOT read the scoped tool's `prior_outputs`.
+- **Downstream scoped consumers (in-process):** `CurrentValueModule` (transitively via `valuation`), `ComparableSalesModule`, `BullBaseBearModule` (KEEP-as-internal-helper behind scoped `resale_scenario`). These consume the legacy module directly via `MarketValueHistoryModule()`; they do NOT read the scoped tool's `prior_outputs`.
 
 ## Invariants
 

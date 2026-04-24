@@ -136,3 +136,26 @@ Surfaced during Handoff 2b — see [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 
 **Issue:** Handoff 3 added a scoped `comparable_sales` runner at [briarwood/modules/comparable_sales_scoped.py](briarwood/modules/comparable_sales_scoped.py) and registered it in [briarwood/execution/registry.py](briarwood/execution/registry.py). The graft in `claims/pipeline.py` is no longer necessary; it can route through the scoped tool to pick up the canonical error contract and planner integration.
 
 **Suggested fix:** Replace the direct `ComparableSalesModule()` instantiation at `claims/pipeline.py:62-88` with `run_comparable_sales(context)` (or the equivalent entry in whatever execution harness claims uses). Verify field-name stability — the graft currently reads the legacy payload shape directly, which is preserved by `module_payload_from_legacy_result`, so the migration is a field-access adjustment rather than a contract rewrite. Out of scope for Handoff 3 — surfaced during the `comparable_sales` promotion per [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 1 "Rules of Engagement — no drive-by fixes."
+
+---
+
+## 2026-04-24 — Decision sessions should grep-verify caller claims in real time
+
+**Severity:** Medium — process fix, not a code bug. Prevents amendments-during-execution of the kind seen twice in Handoff 4.
+
+**Files (evidence):**
+- [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 15 ("Scope limit" paragraph about `_score_*` helpers having active callers)
+- [PROMOTION_PLAN.md](PROMOTION_PLAN.md) entry 6 ("resale_scenario replaces bull_base_bear")
+- [DECISIONS.md](DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected"
+- [DECISIONS.md](DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected"
+
+**Issue:** Handoff 2b's conversational decision session produced a plan that holds up on most entries but had two factual caller-premises turn out to be wrong during Handoff 4 execution:
+
+1. **Entry 15 (`calculate_final_score` → DEPRECATE, scope-limit paragraph):** claimed `_score_*` helpers had active callers and should be preserved. Grep during H4-#2 execution found zero non-aggregator, non-test callers — the entire chain was dead code.
+2. **Entry 6 (`bull_base_bear` → DEPRECATE):** claimed `resale_scenario` replaces `bull_base_bear`. Grep during H4-#3 execution found `resale_scenario_scoped.py:30` invokes `BullBaseBearModule().run()` as the core of its implementation — the scoped wrapper *composes* `bull_base_bear`, it does not replace it. Correct classification is KEEP-as-internal-helper.
+
+Both amendments were required mid-execution. The pattern is specific: "plan claims X has/lacks callers → grep contradicts the claim." The failure mode is decision-by-reading versus decision-by-verification.
+
+**Suggested fix:** Future PROMOTION_PLAN-style decision sessions (or any handoff that classifies modules as DEPRECATE, KEEP-as-helper, PROMOTE based on caller topology) should systematically run grep-verification of caller claims *during the session*, not defer that verification to the execution handoff. Concretely: for each classification that hinges on "X has no active callers" or "X replaces Y" or "X is consumed only by Z," run a grep across `briarwood/`, `tests/`, `api/`, and `eval/` for the claimed relationship and attach the grep output (or a summary of it) to the plan entry as evidence. This surfaces false premises while the classification is still open for discussion, rather than forcing mid-execution amendments.
+
+This is not a criticism of Handoff 2b's specific judgment calls — those calls were mostly right and the two that weren't were judgment against the best information available at the time. The lesson is that decision-by-reading has a specific blind spot (callers the reader doesn't know about or forgets to check), and the fix is mechanical verification rather than more careful reading.

@@ -415,3 +415,63 @@ in `scoring.py` (~200 lines) remain in the file.
 This amendment supersedes the "Scope limit" paragraph in
 PROMOTION_PLAN.md entry 15 only. The deprecation decision itself is
 unchanged.
+
+## 2026-04-24 — PROMOTION_PLAN.md entry 6 decision corrected (bull_base_bear reclassified)
+
+Entry 6 of PROMOTION_PLAN.md classified `bull_base_bear` as DEPRECATE,
+citing a code comment at `briarwood/agent/tools.py:1411` that reads
+"resale_scenario module (which replaces bull_base_bear under scoped
+execution)."
+
+That framing is factually incorrect. Grep verification during Handoff 4
+execution found that `briarwood/modules/resale_scenario_scoped.py:30`
+invokes `BullBaseBearModule().run(property_input)` as the core of its
+implementation. The scoped `resale_scenario` tool does not replace
+`bull_base_bear` — it wraps it, adds bounded confidence nudges (macro
+HPI-momentum + town_development_index), and returns the result through
+the canonical error contract.
+
+Additional live production callers missed by the original entry:
+- `briarwood/modules/teardown_scenario.py:111-112` — reads
+  `prior_results["bull_base_bear"].metrics` actively
+- `briarwood/agent/tools.py:1723` — second fallback arm not in the
+  original deprecation list
+- `briarwood/runner_routed.py:32, 208, 288, 300, 314, 330` —
+  `BullBaseBearSettings` is a parameter across multiple entry-point
+  signatures, not just the `:222` tombstone
+- `briarwood/eval/model_quality/model_specs.py:24, 109, 113` — eval
+  spec instantiates directly
+- `tests/test_modules.py:5, 64, 110-111` — direct import and tests
+
+**Corrected classification:** KEEP as internal composition helper.
+
+This pattern matches four other KEEP decisions already in the plan:
+`rental_ease` (consumed by `rental_option` and `rent_stabilization`),
+`risk_constraints` (consumed by `risk_model`), `property_data_quality`
+(consumed by `confidence` and `legal_confidence`), and
+`local_intelligence` (consumed by `legal_confidence`). In each case,
+the module is not independently tool-shaped; it serves as the
+underlying engine for one or more scoped wrappers.
+
+**Handoff 4 scope change:**
+- Do not delete `bull_base_bear.py`, `BullBaseBearModule`, or
+  `BullBaseBearSettings`.
+- Do not migrate `decision_model/scoring.py` or `lens_scoring.py`
+  references (those files were deleted in Handoff 4 entry 15; this
+  is now moot).
+- Do not drop the `tools.py:1427` or `tools.py:1723` fallback arms
+  — they remain defensively useful.
+- DO correct the misleading comment at `briarwood/agent/tools.py:1411`
+  to accurately describe the wrap-not-replace relationship.
+- DO update `ARCHITECTURE_CURRENT.md`, `TOOL_REGISTRY.md`, and
+  `briarwood/modules/README_resale_scenario.md` to reflect that
+  `bull_base_bear` is a KEEP-as-internal-helper, not a deprecation
+  candidate.
+
+**Plan tally update:**
+- Original: 8 PROMOTE, 4 KEEP, 3 DEPRECATE
+- Corrected: 8 PROMOTE, 5 KEEP, 2 DEPRECATE
+
+This amendment supersedes entry 6 of PROMOTION_PLAN.md. The two
+completed deprecations from Handoff 4 (`value_finder`,
+`calculate_final_score`) are unaffected.

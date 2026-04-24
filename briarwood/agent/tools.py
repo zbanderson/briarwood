@@ -1408,7 +1408,12 @@ def get_projection(property_id: str, *, overrides: dict[str, Any] | None = None)
 
     Returns a dict with ask_price, {bull,base,bear}_case_value, stress_case_value,
     {bull,base,bear}_total_adjustment_pct, spread. Values come from the
-    resale_scenario module (which replaces bull_base_bear under scoped execution).
+    resale_scenario scoped wrapper, which composes BullBaseBearModule
+    internally and applies bounded confidence nudges (macro HPI-momentum +
+    town_development_index). BullBaseBearModule is a KEEP-as-internal-helper
+    per DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected" —
+    structurally identical to rental_ease/risk_constraints/property_data_quality,
+    which each back a scoped wrapper without being independently tool-shaped.
     """
     from briarwood.agent.overrides import inputs_with_overrides
     from briarwood.runner_routed import run_routed_report

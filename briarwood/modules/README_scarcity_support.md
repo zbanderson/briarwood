@@ -6,7 +6,7 @@
 
 ## Purpose
 
-`scarcity_support` produces a geography-level supply/optionality signal for a property's town or segment. It answers questions like *"how scarce is this segment?"* or *"is there inventory competition?"* by returning a bounded score (`scarcity_support_score`, 0–100), a categorical label (`scarcity_label`), and a buyer-facing narrative (`buyer_takeaway`). Under the hood it pulls town/county outlook data through `TownCountyDataService` and scores it with `ScarcitySupportScorer`. Call this tool when the user's intent involves supply dynamics, inventory competition, or optionality context — it is the standalone tool behind what `risk_model`, `bull_base_bear` (legacy), and several `decision_model` scoring paths consume today.
+`scarcity_support` produces a geography-level supply/optionality signal for a property's town or segment. It answers questions like *"how scarce is this segment?"* or *"is there inventory competition?"* by returning a bounded score (`scarcity_support_score`, 0–100), a categorical label (`scarcity_label`), and a buyer-facing narrative (`buyer_takeaway`). Under the hood it pulls town/county outlook data through `TownCountyDataService` and scores it with `ScarcitySupportScorer`. Call this tool when the user's intent involves supply dynamics, inventory competition, or optionality context — it is the standalone tool behind what `risk_model` and `BullBaseBearModule` (the engine behind scoped `resale_scenario`) consume today.
 
 ## Location
 
@@ -60,7 +60,7 @@ The runner returns `ModulePayload.model_dump()`. The key field `scarcity_support
 - **Calls internally:** `TownCountyDataService` + `ScarcitySupportScorer` at [briarwood/agents/scarcity/](../agents/scarcity/).
 - **Must not run concurrently with:** none.
 - **Downstream consumers (read `scarcity_support_score` by key):**
-  - [briarwood/modules/bull_base_bear.py:37](bull_base_bear.py#L37) — deprecating (see PROMOTION_PLAN.md entry 6).
+  - [briarwood/modules/bull_base_bear.py:37](bull_base_bear.py#L37) — KEEP-as-internal-helper behind scoped `resale_scenario`; reclassified from DEPRECATE in Handoff 4 ([DECISIONS.md](../../DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected").
   - [briarwood/interactions/town_x_scenario.py:40](../interactions/town_x_scenario.py#L40)
   - [briarwood/interactions/valuation_x_town.py:82-85](../interactions/valuation_x_town.py#L82-L85)
   - [briarwood/agents/rental_ease/agent.py:74, 202, 287, 327](../agents/rental_ease/agent.py#L74)

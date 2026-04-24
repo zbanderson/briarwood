@@ -366,7 +366,8 @@ notes:
 name: bull_base_bear
 path: briarwood/modules/bull_base_bear.py
 entry: BullBaseBearModule().run(property_input, prior_results) -> ModuleResult
-intent_fit: [DECISION, PROJECTION]
+classification: KEEP-as-internal-helper
+intent_fit: []                     # not a standalone tool — engine for resale_scenario
 inputs:
   property_input: PropertyInput
   prior_results: dict              # expects current_value, market_value_history, town_county_outlook, risk_constraints, scarcity_support
@@ -381,10 +382,18 @@ depends_on: [current_value, market_value_history, town_county_outlook, risk_cons
 invariants:
   - bear <= base <= bull
 blockers_for_tool_use:
-  - Not in scoped execution registry (scoped resale_scenario is the wrapper).
-  - prior_results required — cannot run in isolation.
+  - Not independently tool-shaped. Wrapped by scoped `resale_scenario` at briarwood/modules/resale_scenario_scoped.py:30, which adds bounded confidence nudges (macro HPI-momentum + town_development_index) and returns the result through the canonical error contract.
+  - Same structural pattern as `rental_ease` (behind `rental_option`/`rent_stabilization`), `risk_constraints` (behind `risk_model`), `property_data_quality` (behind `confidence`/`legal_confidence`), and `local_intelligence` (behind `legal_confidence`).
+  - prior_results parameter is internal composition; exposing it as a tool input would violate scoped-registry cache semantics.
+consumers:
+  - briarwood/modules/resale_scenario_scoped.py:30 — scoped wrapper entry
+  - briarwood/modules/teardown_scenario.py:111-112 — reads prior_results["bull_base_bear"].metrics.base_market_drift_pct
+  - briarwood/agent/tools.py:1427, 1723 — defensive fallback reads (kept)
+  - briarwood/runner_routed.py — BullBaseBearSettings is a parameter in the routed-report entry points
+  - briarwood/eval/model_quality/model_specs.py — eval spec instantiates directly
 notes:
   - BullBaseBearSettings from decision_model/scoring_config
+  - Reclassified from DEPRECATE to KEEP-as-internal-helper in Handoff 4 (2026-04-24). See DECISIONS.md "PROMOTION_PLAN.md entry 6 decision corrected." The plan's "replaced by resale_scenario" premise was a misread of a misleading code comment at tools.py:1411 (now corrected); resale_scenario wraps bull_base_bear rather than replacing it.
 ```
 
 ### scarcity_support

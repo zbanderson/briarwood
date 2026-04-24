@@ -130,7 +130,7 @@ payload = run_current_value(context)
 ## Notes
 
 - **Reversibility.** The two-tool split is deliberate and reversible. If the orchestrator never actually needs the pre-macro view, `current_value` can be de-registered in a future handoff without affecting `valuation` callers. The split was approved in [PROMOTION_PLAN.md](../../PROMOTION_PLAN.md) entry 3.
-- **Field-name stability.** Preserved so `bull_base_bear` (deprecating), `teardown_scenario`, and `renovation_scenario` — which currently instantiate `CurrentValueModule` directly — could migrate to this scoped runner without a contract rewrite.
+- **Field-name stability.** Preserved so `BullBaseBearModule` (KEEP-as-internal-helper behind scoped `resale_scenario`), `teardown_scenario`, and `renovation_scenario` — which currently instantiate `CurrentValueModule` directly — could migrate to this scoped runner without a contract rewrite.
 - Tests: [tests/modules/test_current_value_isolated.py](../../tests/modules/test_current_value_isolated.py) covers isolation, error contract, macro-isolation, and registry integration.
 - No direct LLM calls; no cost.
 

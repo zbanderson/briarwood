@@ -118,6 +118,7 @@ payload = run_resale_scenario(context)
 
 ## Notes
 
+- **`BullBaseBearModule` is a KEEP-as-internal-helper, not deprecating.** The scoped `resale_scenario` wrapper *composes* `BullBaseBearModule` — it does not replace it. This is the same pattern as `OwnershipEconomicsModule` behind `carry_cost`, `RentalEaseModule` behind `rental_option`, and `RiskConstraintsModule` behind `risk_model`. The scenario computation logic lives in `BullBaseBearModule`; the wrapper adds confidence nudges and the canonical error contract. See [DECISIONS.md](../../DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected."
 - **Town-development velocity affects confidence, not scenario values.** [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) describes this module as "Uses town_development_index velocity to project appreciation," which reads as if velocity biases the bull/base/bear values themselves. In the current code, velocity flows through `apply_dev_index_nudge` to adjust the *confidence* of the read only. Scenario values come from `BullBaseBearModule` outputs unchanged. Worth re-wording the audit doc when reconciling.
 - Tests: [tests/modules/test_resale_scenario_isolated.py](../../tests/modules/test_resale_scenario_isolated.py); macro context covered by [tests/modules/test_macro_context.py](../../tests/modules/test_macro_context.py); broader executor coverage in [tests/test_modules.py](../../tests/test_modules.py).
 - No direct LLM calls in the wrapper; cost is zero at this layer.
@@ -126,3 +127,4 @@ payload = run_resale_scenario(context)
 
 ### 2026-04-24
 - Initial README created.
+- Clarified that `BullBaseBearModule` is a KEEP-as-internal-helper after the Handoff 4 reclassification. Its prior "deprecating" framing in PROMOTION_PLAN.md entry 6 was based on a misread of `tools.py:1411`. See [DECISIONS.md](../../DECISIONS.md) 2026-04-24 "PROMOTION_PLAN.md entry 6 decision corrected."
