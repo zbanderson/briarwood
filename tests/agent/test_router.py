@@ -9,7 +9,13 @@ from __future__ import annotations
 
 import unittest
 
-from briarwood.agent.router import AnswerType, RouterClassification, classify
+from briarwood.agent.router import (
+    AnswerType,
+    PersonaType,
+    RouterClassification,
+    UseCaseType,
+    classify,
+)
 
 
 # Cache rules are narrow by design (post-plan C2): only chitchat greetings
@@ -76,7 +82,12 @@ class ScriptedLLM:
     def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
         self.calls.append(user)
         answer = self.routing.get(user, AnswerType.LOOKUP)
-        return schema(answer_type=answer, reason="scripted")
+        return schema(
+            answer_type=answer,
+            persona_type=PersonaType.UNKNOWN,
+            use_case_type=UseCaseType.UNKNOWN,
+            reason="scripted",
+        )
 
 
 class CacheRuleTests(unittest.TestCase):
@@ -118,6 +129,24 @@ class LLMClassifyTests(unittest.TestCase):
         self.assertIs(decision.llm_suggestion, AnswerType.BROWSE)
         self.assertEqual(decision.reason, "llm classify")
 
+    def test_llm_user_type_metadata_does_not_change_answer_type(self) -> None:
+        class InvestorLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+                raise AssertionError("router should use complete_structured")
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                return schema(
+                    answer_type=AnswerType.BROWSE,
+                    persona_type=PersonaType.INVESTOR,
+                    use_case_type=UseCaseType.RENTAL,
+                    reason="investment browse",
+                )
+
+        decision = classify("What do you think of this as a rental?", client=InvestorLLM())
+        self.assertIs(decision.answer_type, AnswerType.BROWSE)
+        self.assertIs(decision.user_type.persona_type, PersonaType.INVESTOR)
+        self.assertIs(decision.user_type.use_case_type, UseCaseType.RENTAL)
+
     def test_chitchat_guess_on_substantive_text_falls_back_to_browse(self) -> None:
         """LLMs sometimes dump real questions into chitchat. Safer default:
         BROWSE (quick read), not DECISION (full cascade)."""
@@ -127,7 +156,12 @@ class LLMClassifyTests(unittest.TestCase):
                 raise AssertionError("router should use complete_structured")
 
             def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
-                return schema(answer_type=AnswerType.CHITCHAT, reason="unclear")
+                return schema(
+                    answer_type=AnswerType.CHITCHAT,
+                    persona_type=PersonaType.UNKNOWN,
+                    use_case_type=UseCaseType.UNKNOWN,
+                    reason="unclear",
+                )
 
         decision = classify("ruminate on this property", client=ChitChatLLM())
         self.assertIs(decision.answer_type, AnswerType.BROWSE)
@@ -146,6 +180,20 @@ class LLMClassifyTests(unittest.TestCase):
         decision = classify("ruminate on this property", client=BadLLM())
         self.assertIs(decision.answer_type, AnswerType.LOOKUP)
         self.assertEqual(decision.reason, "default fallback")
+
+    def test_router_classification_schema_has_no_ref_sibling_defaults(self) -> None:
+        """OpenAI strict mode ignores siblings to `$ref`, so a Pydantic
+        `default` on an enum-typed field never reaches the API. Guard
+        against re-introducing a default on `persona_type`/`use_case_type`
+        (or any future `$ref` field) — that would silently mask LLM
+        non-compliance instead of failing validation and falling back.
+        """
+        schema = RouterClassification.model_json_schema()
+        offenders = [
+            name for name, prop in schema["properties"].items()
+            if "$ref" in prop and "default" in prop
+        ]
+        self.assertEqual(offenders, [], f"fields with $ref+default: {offenders}")
 
 
 class PrecedenceTests(unittest.TestCase):
@@ -174,6 +222,19 @@ class InfrastructureTests(unittest.TestCase):
         decision = classify("What do you think of 526?")
         self.assertIs(decision.answer_type, AnswerType.LOOKUP)
         self.assertEqual(decision.reason, "default fallback")
+
+    def test_rule_user_type_fallback_is_conservative(self) -> None:
+        decision = classify("Could we live in one unit and rent the back house?")
+        self.assertIs(decision.answer_type, AnswerType.LOOKUP)
+        self.assertIs(decision.user_type.use_case_type, UseCaseType.HOUSE_HACK)
+
+    def test_rule_user_type_covers_buyer_and_developer_signals(self) -> None:
+        buyer = classify("As a first-time buyer, could I live here with my family?")
+        developer = classify("Could a developer redevelop this lot?")
+        self.assertIs(buyer.user_type.persona_type, PersonaType.FIRST_TIME_BUYER)
+        self.assertIs(buyer.user_type.use_case_type, UseCaseType.OWNER_OCCUPANT)
+        self.assertIs(developer.user_type.persona_type, PersonaType.DEVELOPER)
+        self.assertIs(developer.user_type.use_case_type, UseCaseType.DEVELOPMENT)
 
 
 if __name__ == "__main__":

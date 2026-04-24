@@ -32,6 +32,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict
 
 from briarwood.agent.llm import LLMClient
+from briarwood.agent.llm_observability import complete_structured_observed
 from briarwood.intent_contract import IntentContract, build_contract_from_answer_type
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,35 @@ class AnswerType(str, Enum):
     CHITCHAT = "chitchat"
 
 
+class PersonaType(str, Enum):
+    FIRST_TIME_BUYER = "first_time_buyer"
+    INVESTOR = "investor"
+    DEVELOPER = "developer"
+    AGENT_OR_ADVISOR = "agent_or_advisor"
+    UNKNOWN = "unknown"
+
+
+class UseCaseType(str, Enum):
+    OWNER_OCCUPANT = "owner_occupant"
+    RENTAL = "rental"
+    FLIP = "flip"
+    HOUSE_HACK = "house_hack"
+    DEVELOPMENT = "development"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class UserType:
+    persona_type: PersonaType = PersonaType.UNKNOWN
+    use_case_type: UseCaseType = UseCaseType.UNKNOWN
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "persona_type": self.persona_type.value,
+            "use_case_type": self.use_case_type.value,
+        }
+
+
 @dataclass(frozen=True)
 class RouterDecision:
     answer_type: AnswerType
@@ -61,6 +91,7 @@ class RouterDecision:
     target_refs: list[str] = field(default_factory=list)
     reason: str = ""
     llm_suggestion: AnswerType | None = None  # set when LLM participated
+    user_type: UserType = field(default_factory=UserType)
     # F9: shared shape with the analysis router. Auto-populated from
     # ``answer_type`` + ``confidence`` in ``__post_init__`` unless the caller
     # supplies one (e.g. when rehydrating from a persisted decision).
@@ -137,8 +168,12 @@ def _extract_refs(text: str) -> list[str]:
 
 _LLM_SYSTEM = (
     "You are a triage classifier for a real-estate decision assistant. "
-    "Classify the user turn into EXACTLY ONE answer_type. "
-    "Respond with strict JSON: {\"answer_type\": <one>, \"reason\": <short>}. "
+    "Classify the user turn into EXACTLY ONE answer_type and also infer "
+    "telemetry-only user_type metadata. user_type must not change answer_type. "
+    "Respond with strict JSON: {\"answer_type\": <one>, "
+    "\"persona_type\": <one>, \"use_case_type\": <one>, \"reason\": <short>}. "
+    "persona_type values: first_time_buyer, investor, developer, agent_or_advisor, unknown. "
+    "use_case_type values: owner_occupant, rental, flip, house_hack, development, unknown. "
     "Types: "
     "lookup = factual retrieval about a known property (address, beds, price, year built). "
     "browse = browse-style first read on ONE specific property. Opinion-solicit phrasing with "
@@ -204,27 +239,77 @@ class RouterClassification(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     answer_type: AnswerType
+    persona_type: PersonaType
+    use_case_type: UseCaseType
     reason: str = ""
 
 
-def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
+_FIRST_TIME_RE = re.compile(r"\b(first[- ]time|starter home|my first)\b", re.IGNORECASE)
+_INVESTOR_RE = re.compile(r"\b(investor|investment|cap rate|noi|cash flow|rental)\b", re.IGNORECASE)
+_DEVELOPER_RE = re.compile(r"\b(developer|develop|redevelop|subdivide|zoning|entitle)\b", re.IGNORECASE)
+_ADVISOR_RE = re.compile(r"\b(my client|client asks|buyer client|listing client|agent|broker)\b", re.IGNORECASE)
+_OWNER_RE = re.compile(r"\b(live there|live in|for my family|primary home|owner[- ]occup|move in)\b", re.IGNORECASE)
+_HOUSE_HACK_RE = re.compile(r"\b(house hack|live.*rent|rent.*unit|back house|additional unit|adu)\b", re.IGNORECASE)
+_FLIP_RE = re.compile(r"\b(flip|renovate.*sell|fix.*sell|arv|after repair)\b", re.IGNORECASE)
+
+
+def _infer_user_type_rules(text: str) -> UserType:
+    persona = PersonaType.UNKNOWN
+    use_case = UseCaseType.UNKNOWN
+    if _ADVISOR_RE.search(text):
+        persona = PersonaType.AGENT_OR_ADVISOR
+    elif _DEVELOPER_RE.search(text):
+        persona = PersonaType.DEVELOPER
+    elif _INVESTOR_RE.search(text):
+        persona = PersonaType.INVESTOR
+    elif _FIRST_TIME_RE.search(text):
+        persona = PersonaType.FIRST_TIME_BUYER
+
+    if _HOUSE_HACK_RE.search(text):
+        use_case = UseCaseType.HOUSE_HACK
+    elif _DEVELOPER_RE.search(text):
+        use_case = UseCaseType.DEVELOPMENT
+    elif _FLIP_RE.search(text):
+        use_case = UseCaseType.FLIP
+    elif _INVESTOR_RE.search(text):
+        use_case = UseCaseType.RENTAL
+    elif _OWNER_RE.search(text) or persona is PersonaType.FIRST_TIME_BUYER:
+        use_case = UseCaseType.OWNER_OCCUPANT
+    return UserType(persona_type=persona, use_case_type=use_case)
+
+
+def _classification_user_type(result: RouterClassification, text: str) -> UserType:
+    inferred = _infer_user_type_rules(text)
+    persona = result.persona_type or PersonaType.UNKNOWN
+    use_case = result.use_case_type or UseCaseType.UNKNOWN
+    if persona is PersonaType.UNKNOWN:
+        persona = inferred.persona_type
+    if use_case is UseCaseType.UNKNOWN:
+        use_case = inferred.use_case_type
+    return UserType(persona_type=persona, use_case_type=use_case)
+
+
+def _llm_classify(text: str, client: LLMClient) -> RouterClassification | None:
     """Classify via LLM with one retry. `complete_structured` already returns
     `None` on any failure (transport, empty, invalid JSON, schema), so the
     retry covers all of those uniformly; the second attempt usually succeeds
     when the first was a transient transport/timeout blip. Persistent schema
     mismatches fail twice and fall through to the caller's default."""
-    result: RouterClassification | None = None
-    for attempt in (1, 2):
-        result = client.complete_structured(
+    result = complete_structured_observed(
+        surface="agent_router.classify",
+        schema=RouterClassification,
+        system=_LLM_SYSTEM,
+        user=text,
+        provider=client.__class__.__name__,
+        model=None,
+        max_attempts=2,
+        call=lambda: client.complete_structured(
             system=_LLM_SYSTEM,
             user=text,
             schema=RouterClassification,
-            max_tokens=80,
-        )
-        if result is not None:
-            break
-        if attempt == 1:
-            logger.info("router LLM classify returned None; retrying once")
+            max_tokens=120,
+        ),
+    )
     if result is None:
         return None
     guess = result.answer_type
@@ -232,8 +317,8 @@ def _llm_classify(text: str, client: LLMClient) -> AnswerType | None:
     # don't have a better bucket for. Default to BROWSE (quick read) unless
     # the text really is a greeting — safer than DECISION (full cascade).
     if guess is AnswerType.CHITCHAT and not _CHITCHAT_ONLY_RE.match(text):
-        return AnswerType.BROWSE
-    return guess
+        return result.model_copy(update={"answer_type": AnswerType.BROWSE})
+    return result
 
 
 def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
@@ -251,6 +336,7 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
         return RouterDecision(AnswerType.CHITCHAT, confidence=1.0, reason="empty input")
 
     refs = _extract_refs(text)
+    inferred_user_type = _infer_user_type_rules(text)
 
     # Cache rules run first — explicit commands (chart, compare, find me, should
     # I buy) shouldn't be short-circuited by incidental number parsing downstream.
@@ -262,6 +348,7 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
             confidence=0.9,
             target_refs=refs,
             reason=reason,
+            user_type=inferred_user_type,
         )
 
     # What-if price overrides are inherently decisions. Only consulted when
@@ -280,6 +367,7 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
                 confidence=0.75,
                 target_refs=refs,
                 reason="override with rent question",
+                user_type=inferred_user_type,
             )
         if _PROJECTION_OVERRIDE_HINT_RE.search(text):
             return RouterDecision(
@@ -287,23 +375,26 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
                 confidence=0.75,
                 target_refs=refs,
                 reason="override with projection question",
+                user_type=inferred_user_type,
             )
         return RouterDecision(
             answer_type=AnswerType.DECISION,
             confidence=0.7,
             target_refs=refs,
             reason="what-if price override",
+            user_type=inferred_user_type,
         )
 
     if client is not None:
-        llm_guess = _llm_classify(text, client)
-        if llm_guess is not None:
+        llm_result = _llm_classify(text, client)
+        if llm_result is not None:
             return RouterDecision(
-                answer_type=llm_guess,
+                answer_type=llm_result.answer_type,
                 confidence=0.6,
                 target_refs=refs,
                 reason="llm classify",
-                llm_suggestion=llm_guess,
+                llm_suggestion=llm_result.answer_type,
+                user_type=_classification_user_type(llm_result, text),
             )
 
     logger.warning(
@@ -316,4 +407,5 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
         confidence=0.3,
         target_refs=refs,
         reason="default fallback",
+        user_type=inferred_user_type,
     )

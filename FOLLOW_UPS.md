@@ -159,3 +159,30 @@ Both amendments were required mid-execution. The pattern is specific: "plan clai
 **Suggested fix:** Future PROMOTION_PLAN-style decision sessions (or any handoff that classifies modules as DEPRECATE, KEEP-as-helper, PROMOTE based on caller topology) should systematically run grep-verification of caller claims *during the session*, not defer that verification to the execution handoff. Concretely: for each classification that hinges on "X has no active callers" or "X replaces Y" or "X is consumed only by Z," run a grep across `briarwood/`, `tests/`, `api/`, and `eval/` for the claimed relationship and attach the grep output (or a summary of it) to the plan entry as evidence. This surfaces false premises while the classification is still open for discussion, rather than forcing mid-execution amendments.
 
 This is not a criticism of Handoff 2b's specific judgment calls — those calls were mostly right and the two that weren't were judgment against the best information available at the time. The lesson is that decision-by-reading has a specific blind spot (callers the reader doesn't know about or forgets to check), and the fix is mechanical verification rather than more careful reading.
+
+---
+
+## 2026-04-24 — Strip unreachable defensive fallback in `_classification_user_type`
+
+**Severity:** Low — dead code, not a bug. Deferred to keep the router-schema bug fix surgical.
+
+**Files:**
+- [briarwood/agent/router.py:283-284](briarwood/agent/router.py#L283-L284) — `persona = result.persona_type or PersonaType.UNKNOWN` and the analogous `use_case_type` line.
+
+**Issue:** After the 2026-04-24 `RouterClassification` schema fix (see DECISIONS.md same-dated entry), `persona_type` and `use_case_type` are required on the Pydantic model with no default. If the LLM omits either field, `schema.model_validate` raises `ValidationError` and `complete_structured` returns `None` before `_classification_user_type` is reached. The `or PersonaType.UNKNOWN` / `or UseCaseType.UNKNOWN` defensive guards in `_classification_user_type` can therefore never fire — a valid `RouterClassification` always carries a real enum value. The dead code was left in place to keep the bug-fix commit surgical, not because it still serves a purpose.
+
+**Suggested fix:** In a cleanup pass, reduce `_classification_user_type` to:
+
+```python
+def _classification_user_type(result: RouterClassification, text: str) -> UserType:
+    inferred = _infer_user_type_rules(text)
+    persona = result.persona_type
+    use_case = result.use_case_type
+    if persona is PersonaType.UNKNOWN:
+        persona = inferred.persona_type
+    if use_case is UseCaseType.UNKNOWN:
+        use_case = inferred.use_case_type
+    return UserType(persona_type=persona, use_case_type=use_case)
+```
+
+Verify by re-running `tests/agent/test_router.py` (all 14 tests should still pass).

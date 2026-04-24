@@ -10,7 +10,7 @@ from unittest.mock import patch
 from briarwood.agent.dispatch import handle_visualize
 from briarwood.agent import rendering as rendering_mod
 from briarwood.agent.rendering import ChartUnavailable, render_chart
-from briarwood.agent.router import AnswerType, RouterDecision, classify
+from briarwood.agent.router import AnswerType, PersonaType, RouterDecision, UseCaseType, classify
 from briarwood.agent.session import Session
 
 
@@ -91,7 +91,12 @@ class _VisualizeLLM:
         raise AssertionError("router should use complete_structured")
 
     def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
-        return schema(answer_type=AnswerType.VISUALIZE, reason="scripted-visualize")
+        return schema(
+            answer_type=AnswerType.VISUALIZE,
+            persona_type=PersonaType.UNKNOWN,
+            use_case_type=UseCaseType.UNKNOWN,
+            reason="scripted-visualize",
+        )
 
 
 class VisualizeRouterTests(unittest.TestCase):

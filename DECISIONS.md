@@ -475,3 +475,127 @@ underlying engine for one or more scoped wrappers.
 This amendment supersedes entry 6 of PROMOTION_PLAN.md. The two
 completed deprecations from Handoff 4 (`value_finder`,
 `calculate_final_score`) are unaffected.
+
+---
+
+## 2026-04-24 — RouterClassification schema fix — removed `$ref` + `default` sibling conflict
+
+`briarwood/agent/router.py::RouterClassification` was emitting a JSON
+schema that OpenAI's `strict: true` mode does not accept on enum-typed
+fields with defaults, causing every live query to fall through to the
+LOOKUP default. Fixed by removing the Pydantic-side defaults on
+`persona_type` and `use_case_type`; the regex fallback at
+`_classification_user_type` now handles the missing-classification case
+the way the class docstring at `router.py:237` already claims.
+
+### (a) Symptom
+
+Every live query through the chat router came back classified as
+`AnswerType.LOOKUP` with `reason="default fallback"` regardless of user
+intent. The warning at `router.py:400` (`router fallthrough to LOOKUP
+default (client=present, text=…)`) was firing on every turn. Unit tests
+passed because `ScriptedLLM`-style fakes constructed
+`RouterClassification` via `schema(answer_type=X, reason=Y)` and relied
+on the Python-side defaults for `persona_type`/`use_case_type` — a path
+the live LLM never takes.
+
+### (b) Root cause
+
+Pydantic v2 renders enum-typed fields as `$ref` pointers into `$defs`.
+When such a field also has a default, Pydantic emits the default as a
+sibling key alongside `$ref`:
+
+```json
+"persona_type": {
+  "$ref": "#/$defs/PersonaType",
+  "default": "unknown"
+}
+```
+
+OpenAI's `strict: true` JSON-schema validator follows draft-07 `$ref`
+semantics where siblings to `$ref` are ignored or rejected. In practice
+the Responses API rejects the schema outright, `responses.create` raises
+inside `OpenAIChatClient.complete_structured` at `briarwood/agent/llm.py:149-168`,
+the outer `except` returns `None`, and `_llm_classify` exhausts its two
+retries the same way. The router's `client-present → LOOKUP` fallthrough
+branch runs on every call. The primitive `reason: str = ""` field in the
+same model is not affected because primitives inline the default next to
+`type` (no `$ref`). The bug is specific to enum fields with defaults —
+both `persona_type` and `use_case_type` were newly added in the same
+branch that introduced it.
+
+### (c) Why Option 1 (remove defaults) over Option 2 (inline via `Literal`) or Option 3 (`model_validator`)
+
+- **Option 2 — replace `PersonaType` with `Literal["first_time_buyer", …]`
+  at the field site.** Would flatten the schema (no `$ref`, so a sibling
+  `default` becomes structurally legal) but forks the ontology. The
+  Python-side `PersonaType` enum still exists because `UserType` and
+  `_infer_user_type_rules` depend on it, and the enum values are already
+  repeated in the LLM prompt at `router.py:174-175`. Adding a third copy
+  is extra drift surface with no offsetting benefit.
+
+- **Option 3 — `@model_validator(mode='before')` that calls `setdefault`
+  on missing keys.** Would remove the schema default (fixing the API
+  contract) but re-introduce the silent-coercion behavior the bug was
+  masking. The whole point of running `strict: true` is to surface
+  partial LLM compliance as a validation failure so the regex fallback
+  at `_infer_user_type_rules` takes over. A `setdefault` validator
+  launders partial compliance back into "looks compliant," losing that
+  signal.
+
+- **Option 1 — remove the field-level defaults.** The only variant that
+  simultaneously (i) fixes the emitted JSON schema, (ii) aligns the
+  Pydantic contract with what `_force_all_required` at
+  `briarwood/agent/llm.py:27-45` already tells OpenAI (every property is
+  in `required`), and (iii) lets LLM non-compliance fail loudly so the
+  router falls back on the regex rules the code already relies on. The
+  only follow-on work is updating two test helpers that constructed
+  `RouterClassification` without the new fields (one in
+  `tests/test_intent_contract.py`, one in `tests/agent/test_rendering.py`,
+  plus the two already in `tests/agent/test_router.py`).
+
+### (d) Process observation — invisible to every prior handoff
+
+The schema bug was merged cleanly through multiple handoffs because no
+handoff in that sequence exercised the chat router against a real user
+query end-to-end. Every checkpoint relied on the unit-test suite, and
+every unit test constructed `RouterClassification` directly from a
+scripted LLM that used kwargs — a path that never renders the JSON
+schema, never sends it to OpenAI, and never takes the default branch
+the bug lived in. The production failure only shows up when
+`schema.model_json_schema()` is serialized and posted to `strict: true`,
+which happens only during a real provider call.
+
+This is the same class of blind spot catalogued in the 2026-04-24
+"Decision sessions should grep-verify caller claims in real time"
+entry in FOLLOW_UPS.md — decision-by-reading without mechanical
+verification. The analogous lesson for handoff completion: any handoff
+that claims to extend the live classifier contract needs a smoke test
+that hits the real `complete_structured` path at least once (against a
+staged provider, not a mock), because unit mocks cannot exercise the
+Pydantic-schema → provider-strict-validation boundary that is exactly
+where this bug lived. Cross-referenced as process evidence for that
+FOLLOW_UPS entry.
+
+### Fix artefacts
+
+- `briarwood/agent/router.py:242-243` — defaults removed from
+  `persona_type` and `use_case_type`.
+- `tests/agent/test_router.py` — `ScriptedLLM` and `ChitChatLLM` helpers
+  updated to pass the new fields explicitly; regression test
+  `test_router_classification_schema_has_no_ref_sibling_defaults`
+  added to `LLMClassifyTests`.
+- `tests/test_intent_contract.py` — `_ScriptedLLM` updated.
+- `tests/agent/test_rendering.py` — `_VisualizeLLM` updated.
+- FOLLOW_UPS.md — dated entry for stripping the now-unreachable
+  `or PersonaType.UNKNOWN` / `or UseCaseType.UNKNOWN` guards in
+  `_classification_user_type` (left in place this commit to keep the
+  bug-fix surgical).
+
+Baseline vs. post-fix test delta: 28 pre-existing failures on `main` at
+the start of this commit (unrelated to the router); 3 regressions
+introduced by Option 1 before the test-helper updates; 0 regressions
+after. 14/14 tests in `tests/agent/test_router.py` pass, including the
+new regression test. No product-level verification (live query against
+the chat router) was performed in this commit — that is the next manual
+step under controlled conditions.

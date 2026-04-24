@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import unittest
 
-from briarwood.agent.router import AnswerType, classify
+from briarwood.agent.router import AnswerType, PersonaType, UseCaseType, classify
 from briarwood.intent_contract import (
     ANSWER_TYPE_TO_CORE_QUESTIONS,
     IntentContract,
@@ -64,7 +64,12 @@ class _ScriptedLLM:
         raise AssertionError("router should use complete_structured")
 
     def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
-        return schema(answer_type=self._answer_type, reason="scripted")
+        return schema(
+            answer_type=self._answer_type,
+            persona_type=PersonaType.UNKNOWN,
+            use_case_type=UseCaseType.UNKNOWN,
+            reason="scripted",
+        )
 
 
 class ChatRouterEmitsContractTests(unittest.TestCase):
