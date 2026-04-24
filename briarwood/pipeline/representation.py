@@ -1,4 +1,9 @@
-"""Representation Agent — claims validation and evidence backing.
+"""Claim evidence validator — validates decision claims against per-model evidence.
+
+Renamed from ``RepresentationAgent`` in Handoff 2a Piece 5B (2026-04-24).
+Distinct from the chart-selection ``RepresentationAgent`` at
+``briarwood/representation/agent.py`` (the Layer-4 concept in
+``GAP_ANALYSIS.md``); this module does not plan charts.
 
 Consumes the Decision output + per-model evidence on the session and
 produces a claim-by-claim validation report:
@@ -62,8 +67,8 @@ class RepresentationResponse(BaseModel):
     summary: str = ""
 
 
-class RepresentationAgent:
-    name = "representation_agent"
+class ClaimEvidenceValidator:
+    name = "claim_evidence_validator"
 
     def __init__(self, llm_client: LLMClient | None = None) -> None:
         self._llm = llm_client
@@ -275,4 +280,4 @@ def _normalize_representation(
     return {"claims": normalized, "summary": summary}
 
 
-__all__ = ["RepresentationAgent"]
+__all__ = ["ClaimEvidenceValidator"]

@@ -1,9 +1,13 @@
-"""Tests for the Representation Agent (claims validation).
+"""Tests for the ClaimEvidenceValidator (decision-claims validation).
 
 Covers both the deterministic fallback path (no LLM wired) and the
 LLM-backed path with a stub client. After AUDIT 1.2.2 the LLM path goes
 through `complete_structured` + Pydantic, so fakes return either a
 validated `RepresentationResponse` or `None` to simulate strict-mode failure.
+
+Renamed from ``RepresentationAgent`` in Handoff 2a Piece 5B (2026-04-24) to
+disambiguate from the chart-selection ``RepresentationAgent`` at
+``briarwood/representation/agent.py``.
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from briarwood.pipeline.representation import (
-    RepresentationAgent,
+    ClaimEvidenceValidator,
     RepresentationClaim,
     RepresentationResponse,
 )
@@ -48,7 +52,7 @@ def test_deterministic_fallback_without_llm() -> None:
         },
     )
 
-    agent = RepresentationAgent(llm_client=None)
+    agent = ClaimEvidenceValidator(llm_client=None)
     result = agent.validate(session)
 
     assert result is session.representation
@@ -63,7 +67,7 @@ def test_no_claims_when_decision_empty() -> None:
     session = PipelineSession(raw_intent="test")
     session.decision = {"primary_recommendation": {"rationale": ""}, "scenarios": []}
 
-    agent = RepresentationAgent(llm_client=None)
+    agent = ClaimEvidenceValidator(llm_client=None)
     result = agent.validate(session)
 
     assert result["claims"] == []
@@ -109,7 +113,7 @@ def test_llm_happy_path_returns_structured_claims() -> None:
         model_outputs={"income_model": {"cap_rate": 0.065}},
     )
 
-    agent = RepresentationAgent(llm_client=llm)
+    agent = ClaimEvidenceValidator(llm_client=llm)
     result = agent.validate(session)
 
     assert llm.calls, "LLM should have been called"
@@ -129,7 +133,7 @@ def test_llm_failure_falls_back_to_deterministic() -> None:
         model_outputs={"income_model": {"cap_rate": 0.065, "purchase_price": 500000}},
     )
 
-    agent = RepresentationAgent(llm_client=llm)
+    agent = ClaimEvidenceValidator(llm_client=llm)
     result = agent.validate(session)
 
     assert llm.calls, "LLM should have been attempted"
@@ -157,7 +161,7 @@ def test_confidence_is_clamped_to_unit_interval() -> None:
     session = _session_with_decision(
         model_outputs={"income_model": {"cap_rate": 0.065}},
     )
-    result = RepresentationAgent(llm_client=llm).validate(session)
+    result = ClaimEvidenceValidator(llm_client=llm).validate(session)
     assert result["claims"][0]["confidence"] == 1.0
 
 
@@ -167,6 +171,6 @@ def test_empty_claims_synthesizes_unsupported_fallback() -> None:
     detect 'nothing usable' and escalate."""
     llm = _ScriptedLLM(RepresentationResponse(claims=[], summary=""))
     session = _session_with_decision()
-    result = RepresentationAgent(llm_client=llm).validate(session)
+    result = ClaimEvidenceValidator(llm_client=llm).validate(session)
     assert result["claims"], "fallback claims should be synthesized"
     assert all(c["supported"] is False for c in result["claims"])

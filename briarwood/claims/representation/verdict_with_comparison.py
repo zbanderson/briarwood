@@ -2,9 +2,10 @@
 
 Translates a validated ``VerdictWithComparisonClaim`` into user-facing
 prose plus the SSE events the UI renders (chart + suggestions). Inverts
-the control flow of the legacy RepresentationAgent — the claim dictates
-output shape, and the LLM's job is strictly to write prose around fixed
-structure.
+the control flow of the legacy claim-evidence validation path (see
+``briarwood/pipeline/representation.py::ClaimEvidenceValidator``, formerly
+named ``RepresentationAgent``) — the claim dictates output shape, and the
+LLM's job is strictly to write prose around fixed structure.
 
 Three sub-steps run in order:
 
