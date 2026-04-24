@@ -713,7 +713,7 @@ through the dead aggregator today.
 
 ## Execution record
 
-### Handoff 3 — 2026-04-24 — all 8 PROMOTE decisions realized
+### Handoff 3 — 2026-04-24 — all 8 PROMOTE decisions realized (commit `37df9f8`)
 
 The 8 PROMOTE decisions listed in this plan were executed in the following
 sequence (dependency order, simplicity-first, disambiguation pairs adjacent):
