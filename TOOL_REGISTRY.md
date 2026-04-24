@@ -1046,41 +1046,6 @@ notes:
   - See README_strategy_classifier.md for the full contract
 ```
 
-### value_finder
-
-```yaml
-name: value_finder
-path: briarwood/modules/value_finder.py
-entry: analyze_value_finder(asking_price, briarwood_value, comp_median, ...) -> ValueFinderOutput
-alt_entry: analyze_property_value_finder(report: AnalysisReport) -> PropertyValueFinderOutput
-intent_fit: [DECISION, BROWSE, EDGE]
-inputs:
-  asking_price: float
-  briarwood_value: float
-  comp_median: float
-  dom_history: dict
-  cut_history: dict
-outputs:
-  value_gap_pct: float                 # asking vs briarwood
-  comp_gap_pct: float                  # asking vs median comp
-  market_friction_score: float
-  cut_pressure_score: float
-  opportunity_signal: str              # "strong" | "moderate" | "weak"
-  pricing_posture: str                 # "overpriced" | "fair" | "underpriced"
-  dom_signal: str
-  evidence_strength: str               # "high" | "moderate" | "low"
-  confidence_note: str
-depends_on: []                         # inputs derived from current_value, comparable_sales, market history
-invariants:
-  - Deterministic; no LLM
-blockers_for_tool_use:
-  - Not in scoped execution registry.
-  - Signature takes already-computed values, not a property; effectively a derivation function, not a standalone tool.
-notes:
-  - NOT the same as value_scout (briarwood/value_scout/). This is deterministic value-gap analysis; value_scout does pattern-based insight surfacing.
-  - Often confused with value_scout in dispatch code
-```
-
 ---
 
 ## Non-production

@@ -6,7 +6,7 @@
 
 ## Purpose
 
-The Value Scout scans a fully-built `VerdictWithComparisonClaim` for non-obvious value angles the user did not explicitly ask about. It runs a registered set of pure-function patterns over the claim and returns the single strongest `SurfacedInsight` — a headline, a reason, the supporting field paths, and a `scenario_id` pointer — or `None` if no pattern matched. The Phase 3 wedge then grafts that insight onto the claim (via `claim.surfaced_insight` and `comparison.emphasis_scenario_id`) so the editor and the representation layer can treat it as part of the claim from that point forward. Today exactly one pattern is registered (`uplift_dominance`); the registry shape is multi-pattern so additional detectors can land without changing callers. **Note this is NOT the same as `briarwood/modules/value_finder.py`** — that is a deterministic value-gap analysis (`value_gap_pct`, `pricing_posture`, `opportunity_signal`), a specialty model rather than a pattern-based surfacer.
+The Value Scout scans a fully-built `VerdictWithComparisonClaim` for non-obvious value angles the user did not explicitly ask about. It runs a registered set of pure-function patterns over the claim and returns the single strongest `SurfacedInsight` — a headline, a reason, the supporting field paths, and a `scenario_id` pointer — or `None` if no pattern matched. The Phase 3 wedge then grafts that insight onto the claim (via `claim.surfaced_insight` and `comparison.emphasis_scenario_id`) so the editor and the representation layer can treat it as part of the claim from that point forward. Today exactly one pattern is registered (`uplift_dominance`); the registry shape is multi-pattern so additional detectors can land without changing callers.
 
 ## Location
 
@@ -117,9 +117,9 @@ Looks at non-subject scenarios (e.g., `renovated_same`, `renovated_plus_bath`) a
 - **Parallel vs. sequential firing.** Sequential keeps the wedge simple but loses the "two-steps-ahead" framing target-state describes. Parallel introduces ordering coordination with Synthesis and the Editor.
 - **Trigger discipline.** Even at one pattern, the Scout's "headline/reason" framing risks reading as a noisy upsell on every turn. Once more patterns land, a "one insight per turn" cap with a confidence threshold is open.
 - **Scoring across patterns.** The current "first non-null" selection works at one pattern. The shared scoring channel (`SurfacedInsight.score: float`? a per-pattern `select_strongest` function?) is undecided.
-- **Distinguish from `value_finder`.** The naming collision with [briarwood/modules/value_finder.py](../modules/value_finder.py) regularly confuses dispatch code. Renaming one — or merging concepts where possible — is open.
 
 ## Changelog
 
 ### 2026-04-24
 - Initial README created.
+- Removed "distinguish from `value_finder`" note — `value_finder` was deleted in Handoff 4 (PROMOTION_PLAN.md entry 14); the naming collision no longer exists.

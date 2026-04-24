@@ -98,8 +98,6 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 
 **Current state.** Partial. [briarwood/value_scout/](briarwood/value_scout/) exists with one pattern (`uplift_dominance` at [briarwood/value_scout/patterns/uplift_dominance.py](briarwood/value_scout/patterns/uplift_dominance.py)). `scout_claim(claim)` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) runs patterns and returns a `SurfacedInsight`. It runs **only inside the claim-object wedge**, not in parallel with the main analysis path.
 
-Separately, [briarwood/modules/value_finder.py](briarwood/modules/value_finder.py) is a deterministic value-gap analysis (`value_gap_pct`, `pricing_posture`, `opportunity_signal`). It's named similarly but does something different — it's a module, not a pattern surfacer.
-
 **Gap.**
 - Parallel-invocation machinery. Currently scout runs after claim synthesis, sequentially. Target-state says "parallel process" — needs to fire alongside Layer 2 orchestration, not after Layer 3 synthesis.
 - Pattern library is one entry. Target implies many: rent escalation break-even, optionality patterns, teardown arbitrage, scarcity premium, comp-spread widening, etc. Each pattern needs a trigger heuristic and a structured insight schema.

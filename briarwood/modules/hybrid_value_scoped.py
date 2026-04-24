@@ -67,8 +67,7 @@ def run_hybrid_value(context: ExecutionContext) -> dict[str, object]:
     ``optionality_premium_value``, ``low_case_hybrid_value``,
     ``base_case_hybrid_value``, ``high_case_hybrid_value``,
     ``market_friction_discount``, ``market_feedback_adjustment``,
-    ``confidence``. Readers: ``current_value``, ``risk_bar``, and
-    ``value_finder`` (deprecating).
+    ``confidence``. Readers: ``current_value`` and ``risk_bar``.
     """
     missing = _collect_missing_priors(
         context, ["comparable_sales", "income_support"]

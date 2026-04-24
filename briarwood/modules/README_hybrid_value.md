@@ -78,7 +78,6 @@ The runner returns `ModulePayload.model_dump()`. On the happy path, `data.legacy
 - **Must not run concurrently with:** none; but the missing-priors gate checks that both upstream modules produced clean output.
 - **Downstream consumers:**
   - [briarwood/modules/current_value.py:85-98](current_value.py#L85-L98) — applies hybrid adjustment to fair value.
-  - [briarwood/modules/value_finder.py:128-180](value_finder.py#L128-L180) — reads `has_hybrid_value` flag for screening. **Deprecating per PROMOTION_PLAN.md entry 14** — do not rely on.
   - [briarwood/risk_bar.py:116](../risk_bar.py#L116) — reads for risk narration.
 
 ## Invariants
@@ -138,7 +137,6 @@ payload = run_hybrid_value(context)
 ## Notes
 
 - **Composite wrapper semantics.** This is the canonical composite pattern: a missing-priors gate using `_collect_missing_priors`, followed by happy-path wrapping in try/except. Mirrors [arv_model_scoped.py](arv_model_scoped.py) and [hold_to_rent.py](hold_to_rent.py).
-- **`value_finder` is deprecating.** One consumer of this module is on the DEPRECATE list — do not build new code against `value_finder`. See [PROMOTION_PLAN.md](../../PROMOTION_PLAN.md) entry 14.
 - Tests: [tests/modules/test_hybrid_value_isolated.py](../../tests/modules/test_hybrid_value_isolated.py) covers happy path (hybrid + non-hybrid), missing-priors (both, single, degraded, non-dict), error contract, and registry integration.
 - No direct LLM calls.
 
