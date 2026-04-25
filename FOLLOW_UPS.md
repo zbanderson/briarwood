@@ -295,6 +295,40 @@ Out of scope for the immediate handoff — the immediate fix targeted only the p
 
 ---
 
+## 2026-04-25 — `in_active_context` is not safe under concurrent thread-pool callers
+
+**Severity:** Medium — blocks turning on parallel execution for the chat-tier consolidated path. `run_chat_tier_analysis` (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) currently defaults `parallel=False` because of this.
+
+**Files:**
+- [briarwood/agent/turn_manifest.py:332-336](briarwood/agent/turn_manifest.py#L332-L336) — `in_active_context`
+- [briarwood/execution/executor.py:444](briarwood/execution/executor.py#L444) — call site `pool.map(in_active_context(_run_one), level)`
+
+**Issue:** The decorator captures `ctx = contextvars.copy_context()` once at decoration time, then `wrapped(*args)` does `ctx.run(fn, *args)`. When the wrapped function is called from `pool.map(wrapped, level)` and the pool runs multiple workers concurrently, two workers attempt to enter the same `ctx` object and the second one raises `RuntimeError: cannot enter context: <Context> is already entered`. The bug is not exercised by any current production caller because `loop.run_in_executor(None, fn)` only fires one call per wrapper, and the existing `_execute_plan_parallel` callers use it with single-module dependency levels in their tests. The bug only fires when (a) `parallel=True` and (b) the dependency DAG contains a level with two or more independent modules — which is the case for every non-trivial module set in `briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`.
+
+**Suggested fix:** Capture the parent context's variables at decoration time as a list of `(ContextVar, value)` pairs, then create a fresh empty `contextvars.Context()` per call inside `wrapped`, set the captured vars inside that fresh context, and run `fn` there. Sketch:
+
+```python
+def in_active_context(fn):
+    snapshot = list(contextvars.copy_context().items())
+    @functools.wraps(fn)
+    def wrapped(*args, **kwargs):
+        ctx = contextvars.Context()
+        def _runner():
+            for var, value in snapshot:
+                var.set(value)
+            return fn(*args, **kwargs)
+        return ctx.run(_runner)
+    return wrapped
+```
+
+Add a regression test under `tests/agent/test_turn_manifest.py` that decorates a single function and runs it concurrently from multiple threads (or via `pool.map(wrapped, ['a', 'b', 'c'])`), asserts no `RuntimeError`, and asserts the manifest ContextVar is visible inside each worker.
+
+**When this lands:** Flip `run_chat_tier_analysis(...)`'s `parallel` default to `True` in [briarwood/orchestrator.py](briarwood/orchestrator.py) and update the docstring + the Cycle 2 / Cycle 3 verification notes in [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md). Cross-ref this entry from the plan.
+
+Surfaced during 2026-04-25 Cycle 2 implementation (commit landing `run_chat_tier_analysis`).
+
+---
+
 ## 2026-04-24 — Strip unreachable defensive fallback in `_classification_user_type`
 
 **Severity:** Low — dead code, not a bug. Deferred to keep the router-schema bug fix surgical.

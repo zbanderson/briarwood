@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import unittest
 
+from briarwood.agent.router import AnswerType
+from briarwood.execution.module_sets import ANSWER_TYPE_MODULE_SETS
 from briarwood.orchestrator import (
     _sanitize_for_synthesis,
     build_cache_key,
     build_property_summary,
     run_briarwood_analysis,
     run_briarwood_analysis_with_artifacts,
+    run_chat_tier_analysis,
     supports_scoped_execution,
 )
 from briarwood.routing_schema import (
@@ -406,6 +409,164 @@ class OrchestratorTests(unittest.TestCase):
         )
 
         self.assertEqual(result.decision, DecisionType.BUY)
+
+
+class RunChatTierAnalysisTests(unittest.TestCase):
+    """Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md.
+
+    These tests pin the consolidated chat-tier orchestrator entry. They
+    use the real default scoped registry — modules with sparse fixture
+    data fall through to the canonical error contract
+    (DECISIONS.md 2026-04-24 "Scoped wrapper error contract") and
+    produce ``mode in {"error","fallback"}`` payloads. Tests assert
+    plan shape + module-set membership rather than payload content.
+    """
+
+    def _property(self) -> dict[str, object]:
+        return {
+            "property_id": "prop-chat-tier",
+            "address": "1 Test St",
+            "town": "Belmar",
+            "state": "NJ",
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1400,
+            "purchase_price": 750000,
+        }
+
+    def test_browse_runs_full_first_read_cascade(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.BROWSE,
+            user_input="What do you think of this?",
+        )
+
+        self.assertEqual(artifact["answer_type"], "browse")
+        self.assertIsNotNone(artifact["unified_output"])
+        modules_run = set(artifact["modules_run"])
+        # The full first-read set is expected to land — these are the
+        # modules the audit's live trace flagged as dormant for chat-tier
+        # traffic. Cycle 2's reason for existing.
+        self.assertIn("comparable_sales", modules_run)
+        self.assertIn("location_intelligence", modules_run)
+        self.assertIn("strategy_classifier", modules_run)
+        self.assertIn("arv_model", modules_run)
+        # Expansion may add transitive dependencies; the user-selected
+        # set must be a subset of what actually ran.
+        self.assertTrue(
+            ANSWER_TYPE_MODULE_SETS[AnswerType.BROWSE].issubset(modules_run)
+        )
+
+    def test_projection_runs_only_projection_subset(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.PROJECTION,
+            user_input="What if we got it for $660 and rented it?",
+        )
+
+        self.assertEqual(artifact["answer_type"], "projection")
+        modules_run = set(artifact["modules_run"])
+        self.assertTrue(
+            ANSWER_TYPE_MODULE_SETS[AnswerType.PROJECTION].issubset(modules_run)
+        )
+        # Risk-only modules must NOT have been pulled in for a projection.
+        self.assertNotIn("risk_model", modules_run)
+        self.assertNotIn("legal_confidence", modules_run)
+
+    def test_risk_runs_risk_subset(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.RISK,
+            user_input="What could go wrong here?",
+        )
+
+        modules_run = set(artifact["modules_run"])
+        self.assertTrue(
+            ANSWER_TYPE_MODULE_SETS[AnswerType.RISK].issubset(modules_run)
+        )
+        self.assertIn("risk_model", modules_run)
+        # Rent-path modules must not run for a risk turn.
+        self.assertNotIn("rental_option", modules_run)
+        self.assertNotIn("hold_to_rent", modules_run)
+
+    def test_lookup_short_circuits_with_no_cascade(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.LOOKUP,
+            user_input="What is the asking price?",
+        )
+
+        self.assertEqual(artifact["answer_type"], "lookup")
+        self.assertEqual(artifact["modules_run"], [])
+        self.assertEqual(artifact["module_results"], {"outputs": {}, "trace": []})
+        self.assertIsNone(artifact["unified_output"])
+        self.assertEqual(artifact["skipped_reason"], "no_cascade_for_answer_type")
+
+    def test_chitchat_short_circuits_like_lookup(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.CHITCHAT,
+            user_input="hi",
+        )
+
+        self.assertEqual(artifact["modules_run"], [])
+        self.assertEqual(artifact["skipped_reason"], "no_cascade_for_answer_type")
+
+    def test_each_module_runs_at_most_once_per_turn(self) -> None:
+        """The 2026-04-25 audit's headline finding was 33 module-execution
+        events across 5+ plans for ONE chat turn (`valuation` ran 5x,
+        `risk_model` 4x fresh, etc.). Cycle 2 turns that into one plan
+        per turn — verify no duplication in ``modules_run``."""
+
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.BROWSE,
+            user_input="What do you think of this?",
+        )
+
+        modules_run = artifact["modules_run"]
+        self.assertEqual(
+            len(modules_run),
+            len(set(modules_run)),
+            f"Each module must appear once in the consolidated plan; got {modules_run}",
+        )
+
+    def test_explicit_parser_output_overrides_synthesized_default(self) -> None:
+        explicit = ParserOutput(
+            intent_type="renovate_then_sell",
+            analysis_depth="scenario",
+            question_focus=["where_is_value", "hidden_upside"],
+            occupancy_type="investor",
+            exit_options=["sell", "redevelop"],
+            hold_period_years=2.0,
+            renovation_plan=True,
+            has_additional_units=False,
+            confidence=0.82,
+            missing_inputs=[],
+        )
+
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.EDGE,
+            user_input="Where is the value here?",
+            parser_output=explicit,
+        )
+
+        self.assertEqual(artifact["parser_output"]["intent_type"], "renovate_then_sell")
+        self.assertEqual(artifact["parser_output"]["analysis_depth"], "scenario")
+        self.assertEqual(artifact["parser_output"]["confidence"], 0.82)
+
+    def test_synthesized_parser_output_carries_answer_type_intent_focus(self) -> None:
+        artifact = run_chat_tier_analysis(
+            property_data=self._property(),
+            answer_type=AnswerType.RISK,
+            user_input="What could go wrong?",
+        )
+
+        parser = artifact["parser_output"]
+        self.assertEqual(parser["intent_type"], "buy_decision")
+        self.assertEqual(parser["analysis_depth"], "decision")
+        self.assertIn("what_could_go_wrong", parser["question_focus"])
 
 
 if __name__ == "__main__":

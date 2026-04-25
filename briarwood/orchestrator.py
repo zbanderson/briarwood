@@ -10,14 +10,18 @@ from typing import Any, Protocol
 from briarwood.execution.context import ExecutionContext
 from briarwood.execution.executor import execute_plan
 from briarwood.execution.macro_context import resolve_macro_context
+from briarwood.execution.module_sets import modules_for_answer_type
 from briarwood.execution.normalization import normalize_execution_inputs
 from briarwood.execution.planner import ExecutionPlan, build_execution_plan
 from briarwood.execution.registry import ModuleSpec, build_module_registry
 from briarwood.interactions import InteractionTrace, run_all_bridges
 from briarwood.router import RoutingError, normalize_text, route_user_input
 from briarwood.routing_schema import (
+    AnalysisDepth,
     EngineOutput,
+    IntentType,
     ModuleName,
+    OccupancyType,
     ParserOutput,
     RoutingDecision,
     UnifiedIntelligenceOutput,
@@ -603,6 +607,198 @@ def run_briarwood_analysis_with_artifacts(
     }
 
 
+_CHAT_TIER_DEFAULT_PARSER_BY_ANSWER_TYPE: dict[str, dict[str, Any]] = {
+    "browse": {
+        "intent_type": IntentType.BUY_DECISION,
+        "analysis_depth": AnalysisDepth.SNAPSHOT,
+        "question_focus": [],
+    },
+    "decision": {
+        "intent_type": IntentType.BUY_DECISION,
+        "analysis_depth": AnalysisDepth.DECISION,
+        "question_focus": ["should_i_buy"],
+    },
+    "projection": {
+        "intent_type": IntentType.OWNER_OCCUPANT_THEN_RENT,
+        "analysis_depth": AnalysisDepth.SCENARIO,
+        "question_focus": ["future_income"],
+    },
+    "risk": {
+        "intent_type": IntentType.BUY_DECISION,
+        "analysis_depth": AnalysisDepth.DECISION,
+        "question_focus": ["what_could_go_wrong"],
+    },
+    "edge": {
+        "intent_type": IntentType.BUY_DECISION,
+        "analysis_depth": AnalysisDepth.DEEP_DIVE,
+        "question_focus": ["where_is_value", "hidden_upside"],
+    },
+    "strategy": {
+        "intent_type": IntentType.BUY_DECISION,
+        "analysis_depth": AnalysisDepth.DECISION,
+        "question_focus": ["best_path"],
+    },
+    "rent_lookup": {
+        "intent_type": IntentType.OWNER_OCCUPANT_THEN_RENT,
+        "analysis_depth": AnalysisDepth.SNAPSHOT,
+        "question_focus": ["future_income"],
+    },
+}
+
+
+def _synthesize_parser_output(answer_type_value: str) -> ParserOutput:
+    """Build a default ParserOutput for chat-tier execution given AnswerType.
+
+    Cycle 2 contract: callers (chat-tier dispatch handlers) that already have
+    a richer ParserOutput from their own intent parsing should pass it
+    explicitly to ``run_chat_tier_analysis`` instead of relying on this
+    synthesis. The defaults are deliberately conservative so module runners
+    that read from ``ExecutionContext.assumptions`` get None / empty values
+    rather than misleading user-strategy hints.
+    """
+
+    template = _CHAT_TIER_DEFAULT_PARSER_BY_ANSWER_TYPE.get(
+        answer_type_value,
+        {
+            "intent_type": IntentType.BUY_DECISION,
+            "analysis_depth": AnalysisDepth.SNAPSHOT,
+            "question_focus": [],
+        },
+    )
+    return ParserOutput(
+        intent_type=template["intent_type"],
+        analysis_depth=template["analysis_depth"],
+        question_focus=list(template["question_focus"]),
+        hold_period_years=None,
+        occupancy_type=OccupancyType.UNKNOWN,
+        renovation_plan=None,
+        exit_options=[],
+        has_additional_units=None,
+        confidence=0.4,
+        missing_inputs=[],
+    )
+
+
+def run_chat_tier_analysis(
+    property_data: dict[str, Any],
+    answer_type: Any,
+    user_input: str,
+    *,
+    parser_output: ParserOutput | None = None,
+    scoped_registry: dict[str, ModuleSpec] | None = None,
+    parallel: bool = False,
+    shadow_llm: Any | None = None,
+) -> dict[str, Any]:
+    """Run a single consolidated chat-tier analysis plan.
+
+    Replaces the per-tool fragmentation diagnosed in the 2026-04-25 audit
+    (DECISIONS.md "Chat-tier fragmented execution") with one execution plan
+    per chat turn, keyed by the router's AnswerType. Module set is sourced
+    from ``briarwood.execution.module_sets.ANSWER_TYPE_MODULE_SETS``.
+
+    Skips Briarwood's intent-contract router (the answer_type is already
+    classified at this layer) and synthesizes a minimal ParserOutput for
+    the executor's context — callers that have richer per-turn parsing
+    (e.g., chat-tier dispatch with its own user_type / question_focus
+    hints) should pass ``parser_output`` explicitly.
+
+    LOOKUP and the non-property tiers (SEARCH, COMPARISON, RESEARCH,
+    VISUALIZE, MICRO_LOCATION, CHITCHAT) short-circuit: no execution, no
+    synthesis, no module results. The returned artifact carries
+    ``skipped_reason`` so callers can branch on it.
+
+    ``parallel`` defaults to ``False`` because the parallel path's
+    ``in_active_context`` wrapper currently shares a single
+    ``contextvars.Context`` object across pool workers and re-entry from
+    concurrent ``ctx.run`` calls fails. Tracked as the FOLLOW_UPS entry
+    "Chat-tier consolidation should default parallel=True once
+    in_active_context is concurrent-safe" 2026-04-25. Callers that have
+    already proven their context-propagation surface single-threaded may
+    opt in.
+    """
+
+    if not isinstance(property_data, dict):
+        raise TypeError("property_data must be a dict.")
+    if not isinstance(user_input, str) or not user_input.strip():
+        raise ValueError("user_input must be a non-empty string.")
+    answer_type_value = (
+        answer_type.value if hasattr(answer_type, "value") else str(answer_type)
+    )
+
+    property_summary = build_property_summary(property_data)
+    _validate_routing_context(property_summary, user_input)
+
+    module_set = modules_for_answer_type(answer_type)
+    if not module_set:
+        return {
+            "answer_type": answer_type_value,
+            "property_summary": property_summary,
+            "parser_output": (parser_output or _synthesize_parser_output(answer_type_value)).model_dump(),
+            "module_results": {"outputs": {}, "trace": []},
+            "modules_run": [],
+            "unified_output": None,
+            "interaction_trace": {},
+            "skipped_reason": "no_cascade_for_answer_type",
+            "shadow_intelligence": None,
+        }
+
+    effective_parser = parser_output or _synthesize_parser_output(answer_type_value)
+    registry = scoped_registry or _get_default_scoped_registry()
+    execution_plan = build_execution_plan(sorted(module_set), registry)
+
+    execution_context = _build_execution_context(
+        property_data,
+        property_summary,
+        effective_parser,
+    )
+    module_results_raw = execute_plan(
+        execution_plan,
+        execution_context,
+        registry,
+        module_output_cache=_SCOPED_MODULE_OUTPUT_CACHE,
+        parallel=parallel,
+    )
+    module_results = _compact_module_results_for_synthesis(
+        _normalize_module_results(module_results_raw)
+    )
+
+    interaction_trace: InteractionTrace = run_all_bridges(module_results)
+    interaction_trace_dict = interaction_trace.to_dict()
+
+    # Lazy import keeps the orchestrator <-> synthesis layering tidy and
+    # avoids an import cycle if synthesis ever imports orchestrator helpers.
+    from briarwood.synthesis.structured import build_unified_output
+
+    unified_output = build_unified_output(
+        property_summary=property_summary,
+        parser_output=effective_parser.model_dump(),
+        module_results=module_results,
+        interaction_trace=interaction_trace_dict,
+    )
+
+    shadow = run_shadow_intelligence(
+        user_input=user_input,
+        selected_modules=list(execution_plan.ordered_modules),
+        parser_output=effective_parser.model_dump(),
+        module_results=module_results,
+        unified_output=unified_output,
+        llm=shadow_llm,
+        registry=registry,
+    )
+
+    return {
+        "answer_type": answer_type_value,
+        "property_summary": property_summary,
+        "parser_output": effective_parser.model_dump(),
+        "module_results": module_results,
+        "modules_run": list(execution_plan.ordered_modules),
+        "unified_output": unified_output,
+        "interaction_trace": interaction_trace_dict,
+        "execution_plan_warnings": list(execution_plan.warnings),
+        "shadow_intelligence": shadow.model_dump(mode="json") if shadow else None,
+    }
+
+
 __all__ = [
     "ModuleRunner",
     "Synthesizer",
@@ -610,5 +806,6 @@ __all__ = [
     "build_property_summary",
     "run_briarwood_analysis",
     "run_briarwood_analysis_with_artifacts",
+    "run_chat_tier_analysis",
     "supports_scoped_execution",
 ]
