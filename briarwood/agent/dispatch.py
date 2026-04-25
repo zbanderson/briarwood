@@ -2958,8 +2958,20 @@ def handle_rent_lookup(
         return "Which property? Give me a saved property id to estimate rent on."
     overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     horizon_years = _future_rent_horizon_years(text)
+
+    # Cycle 5e: load consolidated chat-tier artifact and derive rent_payload
+    # + strategy_fit from it instead of calling get_rent_estimate /
+    # get_strategy_fit (each of which spins up its own routed runner).
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, overrides, AnswerType.RENT_LOOKUP
+    )
+    rent: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        rent = _browse_rent_payload_from_artifact(chat_tier_artifact, pid)
+
     try:
-        rent = get_rent_estimate(pid, overrides=overrides)
+        if rent is None:
+            rent = get_rent_estimate(pid, overrides=overrides)
         summary = get_property_summary(pid)
         rent_outlook = get_rent_outlook(
             pid,
@@ -3011,10 +3023,14 @@ def handle_rent_lookup(
     }
 
     if overrides or horizon_years is not None or _mentions_owner_occupy_then_rent(text):
-        try:
-            fit = get_strategy_fit(pid, overrides=overrides)
-        except ToolUnavailable:
-            fit = {}
+        fit: dict[str, object] = {}
+        if chat_tier_artifact is not None:
+            fit = _browse_strategy_fit_from_artifact(chat_tier_artifact, pid) or {}
+        if not fit:
+            try:
+                fit = get_strategy_fit(pid, overrides=overrides) or {}
+            except ToolUnavailable:
+                fit = {}
         if fit:
             session.last_strategy_view = {
                 "address": summary.get("address"),
@@ -3063,12 +3079,16 @@ def handle_rent_lookup(
             )
         )
     if _mentions_owner_occupy_then_rent(text):
-        try:
-            fit = get_strategy_fit(pid, overrides=overrides)
-        except ToolUnavailable:
-            fit = {}
-        best_path = fit.get("best_path")
-        recommendation = fit.get("recommendation")
+        fit2: dict[str, object] = {}
+        if chat_tier_artifact is not None:
+            fit2 = _browse_strategy_fit_from_artifact(chat_tier_artifact, pid) or {}
+        if not fit2:
+            try:
+                fit2 = get_strategy_fit(pid, overrides=overrides) or {}
+            except ToolUnavailable:
+                fit2 = {}
+        best_path = fit2.get("best_path")
+        recommendation = fit2.get("recommendation")
         if best_path:
             lines.append(f"Likely path: {best_path}")
         elif recommendation:
@@ -3121,31 +3141,55 @@ def handle_rent_lookup(
         )
         session.last_verifier_report = report
         return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
-    fallback = lambda: " ".join(lines)
-    system = load_prompt("rent_lookup")
-    user = (
-        f"User question: {text}\n"
-        f"monthly_rent: {monthly}\n"
-        f"effective_monthly_rent: {effective}\n"
-        f"rent_source_type: {source}\n"
-        f"rental_ease_label: {label}\n"
-        f"rental_ease_score: {ease}\n"
-        f"annual_noi: {noi}\n"
-        f"horizon_years: {horizon_years}\n"
-        f"rendered_fallback: {' '.join(lines)}"
-    )
-    rent_payload = asdict(rent_outlook)
-    narrative, report = compose_contract_response(
-        llm=llm,
-        contract_type="rent_outlook",
-        payload=rent_payload,
-        system=system,
-        fallback=fallback,
-        max_tokens=220,
-        structured_inputs=rent_payload,
-        tier="rent_lookup",
-    )
-    session.last_verifier_report = report
+    # Cycle 5e: prefer Layer 3 synthesizer when artifact + llm are present.
+    narrative: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                narrative = synth_prose
+                report = synth_report
+
+    if not narrative:
+        fallback = lambda: " ".join(lines)
+        system = load_prompt("rent_lookup")
+        user = (
+            f"User question: {text}\n"
+            f"monthly_rent: {monthly}\n"
+            f"effective_monthly_rent: {effective}\n"
+            f"rent_source_type: {source}\n"
+            f"rental_ease_label: {label}\n"
+            f"rental_ease_score: {ease}\n"
+            f"annual_noi: {noi}\n"
+            f"horizon_years: {horizon_years}\n"
+            f"rendered_fallback: {' '.join(lines)}"
+        )
+        rent_payload = asdict(rent_outlook)
+        narrative, report = compose_contract_response(
+            llm=llm,
+            contract_type="rent_outlook",
+            payload=rent_payload,
+            system=system,
+            fallback=fallback,
+            max_tokens=220,
+            structured_inputs=rent_payload,
+            tier="rent_lookup",
+        )
+    if report is not None:
+        session.last_verifier_report = report
     return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
 

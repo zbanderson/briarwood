@@ -2861,6 +2861,9 @@ class RentLookupHandlerTests(unittest.TestCase):
             AnswerType.RENT_LOOKUP, confidence=0.75, target_refs=[REF], reason="test"
         )
         with patch(
+            "briarwood.agent.dispatch._chat_tier_artifact_for",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_rent_estimate",
             return_value={
                 "monthly_rent": 4200,
@@ -2917,6 +2920,9 @@ class RentLookupHandlerTests(unittest.TestCase):
             AnswerType.RENT_LOOKUP, confidence=0.75, target_refs=[REF], reason="rent-workability rewrite"
         )
         with patch(
+            "briarwood.agent.dispatch._chat_tier_artifact_for",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_rent_estimate",
             return_value={
                 "monthly_rent": 2352,
