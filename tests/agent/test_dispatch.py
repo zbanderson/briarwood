@@ -1244,6 +1244,9 @@ class BrowseHandlerTests(unittest.TestCase):
     def test_browse_uses_property_brief_contract(self) -> None:
         session = Session()
         with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_property_brief",
             return_value=self._brief(),
         ) as brief_tool, patch(
@@ -1254,6 +1257,116 @@ class BrowseHandlerTests(unittest.TestCase):
             )
         analyzer.assert_not_called()
         brief_tool.assert_called_once_with(REF, overrides={})
+
+    def test_browse_consolidated_chat_tier_path_skips_per_tool_routed_calls(self) -> None:
+        """Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md.
+
+        When ``_browse_chat_tier_artifact`` returns a populated artifact,
+        ``handle_browse`` builds the brief via ``build_property_brief`` and
+        derives projection / strategy_fit / rent_payload from the artifact's
+        module outputs, skipping the per-tool ``run_routed_report``
+        invocations that produced the audit's 33-event / 13-dormant
+        fragmentation.
+        """
+
+        artifact = {
+            "answer_type": "browse",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {
+                "outputs": {
+                    "resale_scenario": {
+                        "data": {
+                            "metrics": {
+                                "ask_price": 1_499_000,
+                                "base_case_value": 1_580_000,
+                                "bull_case_value": 1_700_000,
+                                "bear_case_value": 1_410_000,
+                                "spread": 290_000,
+                            }
+                        }
+                    },
+                    "carry_cost": {
+                        "data": {
+                            "metrics": {
+                                "monthly_rent": 4_200,
+                                "effective_monthly_rent": 4_100,
+                                "monthly_cash_flow": -650,
+                                "annual_noi": 12_400,
+                                "cash_on_cash_return": 0.018,
+                            }
+                        }
+                    },
+                    "rental_option": {
+                        "data": {
+                            "metrics": {
+                                "rental_ease_label": "Steady",
+                                "rental_ease_score": 0.72,
+                                "rent_support_score": 0.65,
+                                "liquidity_score": 0.6,
+                            }
+                        }
+                    },
+                    "valuation": {"data": {"metrics": {"pricing_view": "appears fully valued"}}},
+                },
+                "trace": [],
+            },
+            "modules_run": [
+                "valuation",
+                "carry_cost",
+                "comparable_sales",
+                "location_intelligence",
+                "strategy_classifier",
+                "rental_option",
+                "resale_scenario",
+            ],
+            "unified_output": {
+                "recommendation": "Buy if the price improves.",
+                "decision": "buy",
+                "decision_stance": "buy_if_price_improves",
+                "best_path": "Proceed carefully with a snapshot-to-decision escalation.",
+                "key_value_drivers": ["Ask sits below the fair value anchor"],
+                "key_risks": ["Thin carry inputs"],
+                "trust_flags": [],
+                "primary_value_source": "current_value",
+                "value_position": {"fair_value_base": 1_560_000, "ask_premium_pct": -0.039},
+                "analysis_depth_used": "snapshot",
+                "next_questions": ["should I buy this at the current ask?"],
+                "recommended_next_run": "decision",
+            },
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=artifact,
+        ) as chat_tier, patch(
+            "briarwood.agent.dispatch.get_property_brief",
+        ) as legacy_brief, patch(
+            "briarwood.agent.dispatch.get_projection",
+        ) as legacy_projection, patch(
+            "briarwood.agent.dispatch.get_strategy_fit",
+        ) as legacy_strategy, patch(
+            "briarwood.agent.dispatch.get_rent_estimate",
+        ) as legacy_rent, patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 526?", self._decision(), session, llm=None
+            )
+
+        chat_tier.assert_called_once()
+        # The four per-tool runners must NOT fire — those were the
+        # functions producing the audit's per-tool plan duplication.
+        legacy_brief.assert_not_called()
+        legacy_projection.assert_not_called()
+        legacy_strategy.assert_not_called()
+        legacy_rent.assert_not_called()
+        # The handler still produces a real response.
+        self.assertIn("526 West End Ave", response)
+        self.assertIn("Decision:", response)
         self.assertIn("526 West End Ave", response)
         self.assertIn("Decision:", response)
         self.assertIn("Why:", response)
@@ -1561,6 +1674,9 @@ class SearchHandlerTests(unittest.TestCase):
             },
         ]
         with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_property_brief",
             return_value=self._brief(ask_price=1_500_000),
         ), patch(
@@ -1693,6 +1809,9 @@ class SearchHandlerTests(unittest.TestCase):
 
     def test_browse_brings_forward_purchase_relevant_signals(self) -> None:
         with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_property_brief",
             return_value=self._brief(),
         ), patch(
@@ -1707,6 +1826,9 @@ class SearchHandlerTests(unittest.TestCase):
 
     def test_browse_does_not_surface_unknown_primary_value_source(self) -> None:
         with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=None,
+        ), patch(
             "briarwood.agent.dispatch.get_property_brief",
             return_value=self._brief(
                 key_value_drivers=[],

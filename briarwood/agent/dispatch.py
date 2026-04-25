@@ -4050,6 +4050,168 @@ def handle_strategy(
 # ---------- BROWSE ----------
 
 
+def _browse_chat_tier_artifact(
+    pid: str,
+    user_text: str,
+    overrides: dict[str, object] | None,
+) -> dict[str, object] | None:
+    """Run the consolidated chat-tier plan for a BROWSE turn.
+
+    Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md replaces the BROWSE handler's
+    ~5 separate ``run_routed_report`` invocations (one per tools.py call)
+    with a single ``run_chat_tier_analysis`` call that runs all 23 scoped
+    modules once. Returns ``None`` if the inputs.json is missing or
+    property loading fails — callers fall through to the legacy per-tool
+    path so the user still sees a response. The 13 modules previously
+    dormant for chat-tier traffic (per AUDIT_OUTPUT_QUALITY_2026-04-25
+    §9.3) — `comparable_sales`, `location_intelligence`,
+    `strategy_classifier`, `arv_model`, etc. — are now part of the
+    consolidated plan.
+    """
+
+    from briarwood.agent.overrides import inputs_with_overrides
+    from briarwood.agent.router import AnswerType
+    from briarwood.agent.tools import SAVED_PROPERTIES_DIR
+    from briarwood.inputs.property_loader import load_property_from_json
+    from briarwood.orchestrator import run_chat_tier_analysis
+    from briarwood.runner_common import (
+        _prepare_property_input,
+        validate_property_input,
+    )
+
+    inputs_path = SAVED_PROPERTIES_DIR / pid / "inputs.json"
+    if not inputs_path.exists():
+        return None
+    try:
+        with inputs_with_overrides(inputs_path, overrides or {}) as effective_path:
+            property_input = load_property_from_json(effective_path)
+            validate_property_input(property_input)
+            _prepare_property_input(property_input)
+            property_data = property_input.to_dict()
+        return run_chat_tier_analysis(
+            property_data,
+            AnswerType.BROWSE,
+            user_text,
+        )
+    except Exception as exc:  # noqa: BLE001 — caller falls through to legacy per-tool path
+        logger.warning("browse chat-tier consolidation failed for %s: %s", pid, exc)
+        return None
+
+
+def _module_metrics_from_artifact(
+    artifact: dict[str, object],
+    module_name: str,
+) -> dict[str, object]:
+    """Extract ``outputs[module].data.metrics`` from a chat-tier artifact.
+
+    Mirrors the duck-typed accessor in tools.py functions
+    (``get_projection``, ``get_strategy_fit``, ``get_rent_estimate``) so
+    the inline replacements below produce the same field shapes.
+    """
+
+    module_results = artifact.get("module_results") or {}
+    outputs = module_results.get("outputs") or {} if isinstance(module_results, dict) else {}
+    entry = outputs.get(module_name)
+    if not isinstance(entry, dict):
+        return {}
+    data = entry.get("data") or {}
+    if not isinstance(data, dict):
+        return {}
+    metrics = data.get("metrics") or {}
+    return metrics if isinstance(metrics, dict) else {}
+
+
+def _browse_projection_from_artifact(
+    artifact: dict[str, object],
+    pid: str,
+    overrides: dict[str, object] | None,
+) -> dict[str, object] | None:
+    """Inline equivalent of ``tools.get_projection`` over a chat-tier artifact."""
+
+    metrics = _module_metrics_from_artifact(artifact, "resale_scenario")
+    if not metrics:
+        # Fallback: bull_base_bear is wrapped by resale_scenario today; if for
+        # some reason resale_scenario is absent, try the underlying module.
+        metrics = _module_metrics_from_artifact(artifact, "bull_base_bear")
+    if not metrics:
+        return None
+    keys = (
+        "ask_price",
+        "bull_case_value",
+        "base_case_value",
+        "bear_case_value",
+        "stress_case_value",
+        "spread",
+        "bull_total_adjustment_pct",
+        "base_total_adjustment_pct",
+        "bear_total_adjustment_pct",
+        "bull_growth_rate",
+        "base_growth_rate",
+        "bear_growth_rate",
+        "bcv_anchor",
+    )
+    payload: dict[str, object] = {"property_id": pid, **{k: metrics.get(k) for k in keys}}
+    ask_override = (overrides or {}).get("ask_price")
+    if isinstance(ask_override, (int, float)):
+        payload["listing_ask_price"] = metrics.get("ask_price")
+        payload["ask_price"] = float(ask_override)
+        payload["basis_label"] = "entry basis"
+    else:
+        payload["basis_label"] = "ask"
+    return payload
+
+
+def _browse_strategy_fit_from_artifact(
+    artifact: dict[str, object],
+    pid: str,
+) -> dict[str, object] | None:
+    """Inline equivalent of ``tools.get_strategy_fit`` over a chat-tier artifact."""
+
+    unified = artifact.get("unified_output") or {}
+    if not isinstance(unified, dict):
+        unified = {}
+    rental = _module_metrics_from_artifact(artifact, "rental_option")
+    carry = _module_metrics_from_artifact(artifact, "carry_cost")
+    val = _module_metrics_from_artifact(artifact, "valuation")
+    return {
+        "property_id": pid,
+        "best_path": unified.get("best_path"),
+        "recommendation": unified.get("recommendation"),
+        "primary_value_source": unified.get("primary_value_source"),
+        "pricing_view": val.get("pricing_view"),
+        "rental_ease_label": rental.get("rental_ease_label"),
+        "rental_ease_score": rental.get("rental_ease_score"),
+        "rent_support_score": rental.get("rent_support_score"),
+        "liquidity_score": rental.get("liquidity_score"),
+        "monthly_cash_flow": carry.get("monthly_cash_flow"),
+        "cash_on_cash_return": carry.get("cash_on_cash_return"),
+        "annual_noi": carry.get("annual_noi"),
+    }
+
+
+def _browse_rent_payload_from_artifact(
+    artifact: dict[str, object],
+    pid: str,
+) -> dict[str, object]:
+    """Inline equivalent of ``tools.get_rent_estimate`` over a chat-tier artifact."""
+
+    carry = _module_metrics_from_artifact(artifact, "carry_cost")
+    rental = _module_metrics_from_artifact(artifact, "rental_option")
+    return {
+        "property_id": pid,
+        "monthly_rent": carry.get("monthly_rent"),
+        "effective_monthly_rent": carry.get("effective_monthly_rent"),
+        "rent_source_type": carry.get("rent_source_type"),
+        "annual_noi": carry.get("annual_noi"),
+        "monthly_cash_flow": carry.get("monthly_cash_flow"),
+        "cash_on_cash_return": carry.get("cash_on_cash_return"),
+        "rental_ease_score": rental.get("rental_ease_score"),
+        "rental_ease_label": rental.get("rental_ease_label"),
+        "rent_support_score": rental.get("rent_support_score"),
+        "estimated_days_to_rent": rental.get("estimated_days_to_rent"),
+    }
+
+
 def handle_browse(
     text: str, decision: RouterDecision, session: Session, llm: LLMClient | None
 ) -> str:
@@ -4078,15 +4240,31 @@ def handle_browse(
                 return _browse_missing_property_message(match)
     overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     try:
-        brief = get_property_brief(pid, overrides=overrides)
-    except ToolUnavailable as exc:
-        return f"I couldn't build a property brief ({exc})."
-    session.current_property_id = pid
-    cma_result: CMAResult | None = None
-    try:
         summary = get_property_summary(pid)
     except ToolUnavailable:
         summary = {}
+
+    chat_tier_artifact = _browse_chat_tier_artifact(pid, text, overrides)
+
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if not isinstance(unified, dict):
+            unified = {}
+        try:
+            brief = build_property_brief(pid, summary, unified)
+        except Exception as exc:  # noqa: BLE001 — fall through to legacy path
+            logger.warning("browse build_property_brief failed for %s: %s", pid, exc)
+            chat_tier_artifact = None
+    if chat_tier_artifact is None:
+        # Legacy per-tool path. Preserved for cases where the consolidated
+        # plan can't run (no inputs.json, validation failure). Cycle 5 plans
+        # to retire this fallback once handler coverage is proven.
+        try:
+            brief = get_property_brief(pid, overrides=overrides)
+        except ToolUnavailable as exc:
+            return f"I couldn't build a property brief ({exc})."
+    session.current_property_id = pid
+    cma_result: CMAResult | None = None
     try:
         cma_result = get_cma(pid, overrides=overrides)
     except Exception as exc:
@@ -4095,23 +4273,33 @@ def handle_browse(
     projection: dict[str, object] | None = None
     strategy_fit: dict[str, object] | None = None
     rent_outlook: RentOutlook | None = None
+    rent_payload: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        projection = _browse_projection_from_artifact(chat_tier_artifact, pid, overrides)
+        strategy_fit = _browse_strategy_fit_from_artifact(chat_tier_artifact, pid)
+        rent_payload = _browse_rent_payload_from_artifact(chat_tier_artifact, pid)
+    else:
+        try:
+            projection = get_projection(pid, overrides=overrides)
+        except Exception as exc:
+            logger.warning("browse projection failed for %s: %s", pid, exc)
+        try:
+            strategy_fit = get_strategy_fit(pid, overrides=overrides)
+        except Exception as exc:
+            logger.warning("browse strategy fit failed for %s: %s", pid, exc)
+        try:
+            rent_payload = get_rent_estimate(pid, overrides=overrides)
+        except Exception as exc:
+            logger.warning("browse rent estimate failed for %s: %s", pid, exc)
     try:
-        projection = get_projection(pid, overrides=overrides)
-    except Exception as exc:
-        logger.warning("browse projection failed for %s: %s", pid, exc)
-    try:
-        strategy_fit = get_strategy_fit(pid, overrides=overrides)
-    except Exception as exc:
-        logger.warning("browse strategy fit failed for %s: %s", pid, exc)
-    try:
-        rent_payload = get_rent_estimate(pid, overrides=overrides)
-        rent_outlook = get_rent_outlook(
-            pid,
-            years=3,
-            overrides=overrides,
-            rent_payload=rent_payload,
-            property_summary=summary,
-        )
+        if rent_payload is not None:
+            rent_outlook = get_rent_outlook(
+                pid,
+                years=3,
+                overrides=overrides,
+                rent_payload=rent_payload,
+                property_summary=summary,
+            )
     except Exception as exc:
         logger.warning("browse rent outlook failed for %s: %s", pid, exc)
     presentation_payload: dict[str, object] | None = None
