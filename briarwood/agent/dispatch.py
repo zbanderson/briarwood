@@ -3984,43 +3984,78 @@ def handle_edge(
         lines.extend(_format_cma_comp_lines(narrative_comps))
         return "\n".join(lines) + chart_line
 
-    system = load_prompt("edge")
-    edge_inputs = {
-        "ask_price": ask,
-        "fair_value_base": fair,
-        "premium_discount_pct": prem,
-        "pricing_view": thesis.get("pricing_view"),
-        "value_drivers": list(thesis.get("value_drivers") or []),
-        "primary_value_source": thesis.get("primary_value_source"),
-        "net_opportunity_delta_pct": thesis.get("net_opportunity_delta_pct"),
-        "key_value_drivers": list(thesis.get("key_value_drivers") or []),
-        "what_must_be_true": list(thesis.get("what_must_be_true") or []),
-        "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
-        "comps": list(comps),
-    }
-    user = (
-        f"User question: {text}\n\n"
-        f"ask_price: {ask}\n"
-        f"fair_value_base: {fair}\n"
-        f"premium_discount_pct: {prem}\n"
-        f"pricing_view: {thesis.get('pricing_view')}\n"
-        f"value_drivers: {thesis.get('value_drivers')}\n"
-        f"primary_value_source: {thesis.get('primary_value_source')}\n"
-        f"net_opportunity_delta_pct: {thesis.get('net_opportunity_delta_pct')}\n"
-        f"key_value_drivers: {thesis.get('key_value_drivers')}\n"
-        f"what_must_be_true: {thesis.get('what_must_be_true')}\n"
-        f"comp_selection_summary: {thesis.get('comp_selection_summary') or (cma_result.comp_selection_summary if cma_result else 'none')}\n"
-        f"comp_lines: {_format_cma_comp_lines(comps) if comps else 'none'}\n"
+    # Cycle 5c: Layer 3 synthesizer for the default edge path. Tries the
+    # consolidated chat-tier artifact first; falls back to the edge-tier
+    # composer + complete_and_verify when the artifact is absent or the
+    # synthesizer returns empty prose. The mode-specific paths above
+    # (comp_set, entry_point, value_change) keep their tight
+    # compose_section_followup composers — those are surgical follow-up
+    # generations, not full intent-aware prose, and the Layer 3
+    # synthesizer's full-unified-output substrate would distract from
+    # the section the user specifically asked about.
+    narrative: str = ""
+    report: dict[str, object] | None = None
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, overrides, AnswerType.EDGE
     )
-    narrative, report = complete_and_verify(
-        llm=llm,
-        system=system,
-        user=user,
-        structured_inputs=edge_inputs,
-        tier="edge",
-        max_tokens=300,
-    )
-    session.last_verifier_report = report
+    if chat_tier_artifact is not None:
+        unified_full = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified_full, dict) and unified_full:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified_full,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                narrative = synth_prose
+                report = synth_report
+
+    if not narrative:
+        system = load_prompt("edge")
+        edge_inputs = {
+            "ask_price": ask,
+            "fair_value_base": fair,
+            "premium_discount_pct": prem,
+            "pricing_view": thesis.get("pricing_view"),
+            "value_drivers": list(thesis.get("value_drivers") or []),
+            "primary_value_source": thesis.get("primary_value_source"),
+            "net_opportunity_delta_pct": thesis.get("net_opportunity_delta_pct"),
+            "key_value_drivers": list(thesis.get("key_value_drivers") or []),
+            "what_must_be_true": list(thesis.get("what_must_be_true") or []),
+            "comp_selection_summary": thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None),
+            "comps": list(comps),
+        }
+        user = (
+            f"User question: {text}\n\n"
+            f"ask_price: {ask}\n"
+            f"fair_value_base: {fair}\n"
+            f"premium_discount_pct: {prem}\n"
+            f"pricing_view: {thesis.get('pricing_view')}\n"
+            f"value_drivers: {thesis.get('value_drivers')}\n"
+            f"primary_value_source: {thesis.get('primary_value_source')}\n"
+            f"net_opportunity_delta_pct: {thesis.get('net_opportunity_delta_pct')}\n"
+            f"key_value_drivers: {thesis.get('key_value_drivers')}\n"
+            f"what_must_be_true: {thesis.get('what_must_be_true')}\n"
+            f"comp_selection_summary: {thesis.get('comp_selection_summary') or (cma_result.comp_selection_summary if cma_result else 'none')}\n"
+            f"comp_lines: {_format_cma_comp_lines(comps) if comps else 'none'}\n"
+        )
+        narrative, report = complete_and_verify(
+            llm=llm,
+            system=system,
+            user=user,
+            structured_inputs=edge_inputs,
+            tier="edge",
+            max_tokens=300,
+        )
+    if report is not None:
+        session.last_verifier_report = report
     fallback = f"The asking price is {money(ask)} versus a fair-value anchor around {money(fair)}."
     if comps:
         fallback += "\n" + "\n".join(_format_cma_comp_lines(comps))
