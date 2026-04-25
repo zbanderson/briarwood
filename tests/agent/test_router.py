@@ -49,6 +49,17 @@ LLM_CANNED: list[tuple[str, AnswerType]] = [
     ("Should I buy 526-west-end-ave?", AnswerType.DECISION),
     ("Is this a good deal?", AnswerType.DECISION),
     ("Underwrite 526-west-end-ave for me", AnswerType.DECISION),
+    # Price-analysis phrasings — explicit ask for analysis (not a single fact)
+    # routes to DECISION. Added 2026-04-25 after the live-traffic miss where
+    # "what is the price analysis for X" was classified as LOOKUP and produced
+    # a one-line factual answer. See FOLLOW_UPS.md and the prompt's
+    # IMPORTANT MAPPINGS section for the full list of analysis triggers.
+    ("what is the price analysis for 1008 14th Ave, belmar, nj", AnswerType.DECISION),
+    ("analyze the price of 526-west-end-ave", AnswerType.DECISION),
+    ("is 526-west-end-ave priced right?", AnswerType.DECISION),
+    ("how is 526-west-end-ave priced?", AnswerType.DECISION),
+    # Asking-price-as-fact stays LOOKUP — the boundary case.
+    ("what is the asking price of 526-west-end-ave?", AnswerType.LOOKUP),
     # Projection scenarios now routed through the LLM (was cached). Note:
     # entries that contain a price literal ("100k") or renovation+sell
     # phrasing fire the what-if / projection override paths and short-
@@ -235,6 +246,47 @@ class InfrastructureTests(unittest.TestCase):
         self.assertIs(buyer.user_type.use_case_type, UseCaseType.OWNER_OCCUPANT)
         self.assertIs(developer.user_type.persona_type, PersonaType.DEVELOPER)
         self.assertIs(developer.user_type.use_case_type, UseCaseType.DEVELOPMENT)
+
+
+class PromptContentRegressionTests(unittest.TestCase):
+    """Pin substantive parts of `_LLM_SYSTEM` so future edits don't silently
+    revert intent boundaries. These tests inspect the prompt string directly
+    — they don't call the LLM. The actual LLM behavior is verified by user
+    testing against gpt-4o-mini; these guard against the prompt regressing
+    on already-decided rules.
+
+    Added 2026-04-25 (output-quality audit handoff) after a live-traffic miss
+    where 'what is the price analysis for X' was classified as LOOKUP."""
+
+    def _prompt(self) -> str:
+        from briarwood.agent.router import _LLM_SYSTEM
+        return _LLM_SYSTEM.lower()
+
+    def test_lookup_is_described_as_single_fact_only(self) -> None:
+        """LOOKUP must read as 'no analysis, no interpretation' — otherwise
+        the LLM lumps analysis questions in."""
+        prompt = self._prompt()
+        self.assertIn("single-fact retrieval", prompt)
+        self.assertIn("no analysis or interpretation", prompt)
+
+    def test_decision_includes_price_analysis_phrasings(self) -> None:
+        """DECISION must enumerate the price-analysis phrasings so the LLM
+        routes 'price analysis', 'analyze the price', etc. correctly."""
+        prompt = self._prompt()
+        self.assertIn("price analysis", prompt)
+        self.assertIn("analyze the price", prompt)
+        self.assertIn("priced right", prompt)
+        self.assertIn("thoughts on the price", prompt)
+
+    def test_lookup_to_decision_boundary_example_present(self) -> None:
+        """The counter-example pair ('asking price' = LOOKUP vs 'price
+        analysis' = DECISION) is the clearest disambiguation signal we can
+        give the model. Pin it so it doesn't get edited away."""
+        prompt = self._prompt()
+        self.assertIn("asking price", prompt)
+        # Both poles of the boundary must be named.
+        self.assertIn("'what is the price analysis", prompt)
+        self.assertIn("'what is the asking price", prompt)
 
 
 if __name__ == "__main__":

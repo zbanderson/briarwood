@@ -33,6 +33,7 @@ from briarwood.agent.llm import LLMClient, default_client
 from briarwood.agent.presentation_advisor import advise_visual_surfaces
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
+from briarwood.agent.turn_manifest import in_active_context
 from briarwood.representation import RepresentationAgent
 from briarwood.routing_schema import (
     AnalysisDepth,
@@ -1402,6 +1403,30 @@ def _representation_selection_lost_surface(
     return False
 
 
+def _representation_available_chart_ids(
+    module_views: Mapping[str, Mapping[str, Any] | None],
+) -> set[str]:
+    """Return registry charts that native session data could satisfy.
+
+    Used as shadow telemetry only. The Representation Agent still decides
+    what to emit; this comparison tells us whether it skipped chartable
+    surfaces that legacy native fan-out would likely have covered.
+    """
+    from briarwood.representation.charts import all_specs as _all_specs
+
+    available: set[str] = set()
+    for spec in _all_specs():
+        if not spec.required_inputs:
+            continue
+        for view in module_views.values():
+            if not isinstance(view, Mapping):
+                continue
+            if all(view.get(field) for field in spec.required_inputs):
+                available.add(spec.id)
+                break
+    return available
+
+
 def _representation_charts(
     session: Session,
     user_question: str,
@@ -1449,6 +1474,13 @@ def _representation_charts(
         for event in patched
         if isinstance(event.get("kind"), str) and event.get("kind")
     }
+    available_chart_ids = _representation_available_chart_ids(module_views)
+    representation_shadow = {
+        "available_chart_ids": sorted(available_chart_ids),
+        "rendered_chart_ids": sorted(rendered_chart_ids),
+        "not_selected_chart_ids": sorted(available_chart_ids - rendered_chart_ids),
+        "extra_rendered_chart_ids": sorted(rendered_chart_ids - available_chart_ids),
+    }
 
     # NF1: warn when the LLM nominated chart selections that postprocessing had
     # to reject (drift signal). Skipped when the deterministic fallback was
@@ -1473,7 +1505,10 @@ def _representation_charts(
                 }
             )
 
-    session.last_representation_plan = {"selections": selections}
+    session.last_representation_plan = {
+        "selections": selections,
+        "shadow_comparison": representation_shadow,
+    }
     return patched, selections
 
 
@@ -1686,7 +1721,7 @@ async def _search_stream_impl(
     loop = asyncio.get_running_loop()
     try:
         response_text = await loop.run_in_executor(
-            None, dispatch, text, decision, session, llm
+            None, in_active_context(dispatch), text, decision, session, llm
         )
     except Exception as exc:
         yield events.text_delta(f"Search failed: {exc}")
@@ -1851,7 +1886,7 @@ async def _browse_stream_impl(
     loop = asyncio.get_running_loop()
     try:
         response_text = await loop.run_in_executor(
-            None, dispatch, text, decision, session, llm
+            None, in_active_context(dispatch), text, decision, session, llm
         )
     except Exception as exc:
         yield events.text_delta(f"Browse failed: {exc}")
@@ -2108,7 +2143,7 @@ async def _decision_stream_impl(
     loop = asyncio.get_running_loop()
     try:
         response_text = await loop.run_in_executor(
-            None, dispatch, text, decision, session, llm
+            None, in_active_context(dispatch), text, decision, session, llm
         )
     except Exception as exc:
         yield events.text_delta(f"Decision analysis failed: {exc}")
@@ -2406,7 +2441,7 @@ async def _dispatch_stream_impl(
     loop = asyncio.get_running_loop()
     try:
         response_text = await loop.run_in_executor(
-            None, dispatch, text, decision, session, llm
+            None, in_active_context(dispatch), text, decision, session, llm
         )
     except Exception as exc:
         yield events.text_delta(f"{decision.answer_type.value.title()} failed: {exc}")

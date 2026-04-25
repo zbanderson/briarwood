@@ -722,5 +722,167 @@ class NarrativeTierAnthropicRoutingTests(unittest.TestCase):
         openai_llm.complete.assert_called()
 
 
+class StrictStripFlagTests(unittest.TestCase):
+    """`BRIARWOOD_STRICT_STRIP` env flag — independent toggle for destructive
+    sentence stripping. Master `STRICT_REGEN_FLAG` remains the gate; setting
+    `STRICT_STRIP=0` keeps the LLM's prose intact while leaving the regen
+    retry path active.
+
+    Use case (2026-04-25 output-quality audit): dev/eval where the user wants
+    to inspect un-stripped LLM prose to evaluate whether the regen prompt
+    alone produces acceptable output."""
+
+    def test_strip_off_with_master_on_keeps_dirty_sentence(self) -> None:
+        """STRICT_REGEN default-on, STRICT_STRIP=0 → ungrounded sentence is
+        retained in the final text. Verifier still emits the violation."""
+        llm = _mock_llm(["Fair value $820,000. Upside is $700,000."])
+        with patch.dict("os.environ", {composer.STRICT_STRIP_FLAG: "0"}):
+            text, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        self.assertIn("$820,000", text)
+        self.assertIn("$700,000", text)
+        strict = report["strict_regen"]
+        self.assertTrue(strict["enabled"])
+        self.assertFalse(strict["strip_enabled"])
+        self.assertEqual(strict["sentences_stripped"], 0)
+        self.assertGreaterEqual(report["sentences_with_violations"], 1)
+
+    def test_strip_off_does_not_disable_regen(self) -> None:
+        """STRICT_STRIP=0 + dirty draft above threshold → regen still attempts.
+        After regen the draft is clean, so no stripping needed regardless."""
+        dirty = (
+            "Fair value $820,000. Upside is $700,000. Stress is $123,456. "
+            "Bull is $999,999."
+        )
+        clean = "Fair value $820,000 — on the money."
+        llm = _mock_llm([dirty, clean])
+        with patch.dict("os.environ", {composer.STRICT_STRIP_FLAG: "0"}):
+            text, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        self.assertEqual(llm.complete.call_count, 2)
+        self.assertIn("$820,000", text)
+        strict = report["strict_regen"]
+        self.assertTrue(strict["regen_attempted"])
+        self.assertFalse(strict["strip_enabled"])
+
+    def test_strip_off_keeps_below_threshold_dirty_sentence_after_no_regen(
+        self,
+    ) -> None:
+        """One ungrounded sentence (below threshold 2) → no regen. With
+        STRICT_STRIP=0 the bad sentence is not dropped."""
+        llm = _mock_llm(["Fair value $820,000. Upside is $700,000."])
+        with patch.dict(
+            "os.environ",
+            {
+                composer.STRICT_REGEN_FLAG: "1",
+                composer.STRICT_STRIP_FLAG: "0",
+            },
+        ):
+            text, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        self.assertIn("$700,000", text)
+        strict = report["strict_regen"]
+        self.assertFalse(strict["regen_attempted"])
+        self.assertFalse(strict["strip_enabled"])
+        self.assertEqual(strict["sentences_stripped"], 0)
+
+    def test_master_off_makes_strip_setting_moot(self) -> None:
+        """`STRICT_REGEN=0` already disables strip — `STRICT_STRIP=1` is
+        ignored. The whole strict_regen block is omitted from the report."""
+        llm = _mock_llm(["Fair $820,000. Bad $700,000."])
+        with patch.dict(
+            "os.environ",
+            {
+                composer.STRICT_REGEN_FLAG: "0",
+                composer.STRICT_STRIP_FLAG: "1",
+            },
+        ):
+            text, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        self.assertIn("$700,000", text)
+        self.assertNotIn("strict_regen", report)
+
+    def test_strip_enabled_key_present_when_master_on(self) -> None:
+        """Default-on path: report includes the new `strip_enabled` key so
+        consumers can distinguish 'strip ran' from 'strip available but
+        nothing to drop'."""
+        llm = _mock_llm(["Fair value $820,000. All grounded."])
+        with patch.dict("os.environ", {}, clear=True):
+            _, report = composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        self.assertIn("strip_enabled", report["strict_regen"])
+        self.assertTrue(report["strict_regen"]["strip_enabled"])
+
+
+class RegenPromptLoosenedTests(unittest.TestCase):
+    """The strict-regen prompt licenses re-framing while keeping the numeric
+    rule. Locked here (2026-04-25 output-quality audit) so future edits don't
+    accidentally re-tighten the prompt back into template-echo behavior."""
+
+    def test_regen_prompt_permits_reframing(self) -> None:
+        dirty = (
+            "Fair $820,000. Bad $700,000. Stress $123,456. Bull $999,999."
+        )
+        clean = "Fair value lands at $820,000."
+        llm = _mock_llm([dirty, clean])
+        with patch.dict("os.environ", {composer.STRICT_REGEN_FLAG: "1"}):
+            composer.complete_and_verify(
+                llm=llm,
+                system="sys",
+                user="u",
+                structured_inputs={"fair_value_base": 820000},
+                tier="decision_summary",
+            )
+        # Inspect the regen call (second call to complete).
+        regen_call = llm.complete.call_args_list[1]
+        regen_user = regen_call.kwargs.get("user", "")
+        lower = regen_user.lower()
+        # Reframing language present.
+        self.assertIn("reframe", lower)
+        self.assertIn("paraphrase", lower)
+        self.assertIn("voice", lower)
+        # Numeric rule still hard.
+        self.assertIn("must round to a value", lower)
+        # The previous wording ("rewrite using only values present") that
+        # caused template-echo behavior should NOT be in the new prompt.
+        self.assertNotIn("rewrite using only values present", lower)
+
+    def test_regen_prompt_no_violations_returns_original_user_unchanged(
+        self,
+    ) -> None:
+        """Edge case: if there are no flagged violations, the regen prompt
+        helper returns the original user prompt verbatim."""
+        from api.guardrails import VerifierReport
+
+        empty_report = VerifierReport(tier="decision_summary")
+        out = composer._regen_user_prompt("ORIGINAL TASK", empty_report)
+        self.assertEqual(out, "ORIGINAL TASK")
+
+
 if __name__ == "__main__":
     unittest.main()

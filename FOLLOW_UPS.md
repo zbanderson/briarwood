@@ -162,6 +162,139 @@ This is not a criticism of Handoff 2b's specific judgment calls — those calls 
 
 ---
 
+## 2026-04-25 — Consolidate chat-tier execution: one plan per turn, intent-keyed module set
+
+**Severity:** High — this is the architectural lever for "Briarwood beats plain Claude on underwriting." Today, the modules are running but in a fragmented per-tool way that hides their output from the prose layer.
+
+**Files (anchor points for the consolidation):**
+- [briarwood/agent/dispatch.py](briarwood/agent/dispatch.py) — handle_browse, handle_decision, handle_projection, handle_risk, handle_edge, handle_strategy, handle_rent_lookup
+- [briarwood/agent/tools.py](briarwood/agent/tools.py) — `get_value_thesis`, `get_cma`, `get_projection`, `get_strategy_fit`, `get_rent_estimate`, `get_property_brief`, `get_rent_outlook`, `get_property_enrichment`, `get_property_presentation`
+- [briarwood/orchestrator.py](briarwood/orchestrator.py) — `run_briarwood_analysis_with_artifacts` (already exists; runs only via the wedge or `runner_routed.py` today)
+- [briarwood/execution/registry.py](briarwood/execution/registry.py) — 23 scoped modules
+- [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) — `build_unified_output` (the deterministic synthesizer, fed by orchestrator outputs)
+
+**Issue.** Per the live diagnostic in [DECISIONS.md](DECISIONS.md) "Chat-tier fragmented execution" 2026-04-25: a single BROWSE turn produced 33 module-execution events across at least 5 separate execution plans, with only 10 distinct modules actually running. 13 modules never ran — including `comparable_sales` (the comp engine), `location_intelligence`, `strategy_classifier`, `arv_model`, `hybrid_value`. The composer LLM that does fire (4s/turn on BROWSE) sees a narrow per-tool slice rather than the full `UnifiedIntelligenceOutput` the orchestrator would have produced.
+
+**Suggested fix (multi-step):**
+
+1. **Per-AnswerType module manifest.** Define which modules each chat-tier AnswerType actually needs:
+   - BROWSE / DECISION → full set (~all 23 modules; this is the first-read or buy/pass cascade)
+   - PROJECTION → valuation, comparable_sales, scenario modules, rent_stabilization, hold_to_rent, resale_scenario, town_development_index, rental_option, hybrid_value
+   - RISK → valuation, risk_model, legal_confidence, confidence, location_intelligence
+   - EDGE → valuation, comparable_sales, scarcity_support, strategy_classifier, town_development_index, hybrid_value
+   - STRATEGY → strategy_classifier, hold_to_rent, rental_option, opportunity_cost, carry_cost, valuation
+   - RENT_LOOKUP → rental_option, rent_stabilization, income_support, scarcity_support, hold_to_rent
+   - LOOKUP → no modules (single-fact retrieval)
+   - Specific subsets to be tuned with traces, but the principle is intent-keyed not all-or-nothing.
+
+2. **New consolidated chat-tier orchestrator entry.** Either extend `run_briarwood_analysis_with_artifacts` (already in `briarwood/orchestrator.py`) to accept an explicit module-set override, OR add a new `run_chat_tier_analysis(property_data, answer_type, ...)` that selects the module set per (1), runs `build_execution_plan` + `execute_plan` once, and calls `build_unified_output`. Returns the same `UnifiedIntelligenceOutput` shape so consumers don't fork.
+
+3. **Modify dispatch handlers to use the consolidated entry.** Instead of calling 5–10 individual `tools.py` functions that each invoke their own plan, each handler calls the consolidated entry once and reads what it needs from the resulting `UnifiedIntelligenceOutput`. Keep `tools.py` functions around for one-off uses (e.g., `get_property_summary` for cheap fact retrieval) but stop using them as the primary handler scaffolding.
+
+4. **Roll out incrementally.** Start with `handle_browse` (highest-volume non-DECISION tier), verify the prose improves, then extend to `handle_projection`, `handle_risk`, etc. Pin per-handler regression tests.
+
+5. **Surface the diagnostic.** Use `BRIARWOOD_TRACE=1` to verify each turn now runs ONE consolidated plan with no `valuation`-runs-5x duplication, and that previously-dormant modules (`comparable_sales`, `location_intelligence`, etc.) appear in `modules_run`.
+
+**Out of scope here (separate FOLLOW_UPS):**
+- Per-tool execution-plan caching tuning (why `risk_model` and `confidence` re-run 4-5x even when they should cache).
+- The Layer 3 LLM synthesizer (separate entry below — consolidation is its prerequisite).
+
+Surfaced during the 2026-04-25 output-quality audit handoff. Cross-ref [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9.
+
+---
+
+## 2026-04-25 — Layer 3 LLM synthesizer: prose from full UnifiedIntelligenceOutput
+
+**Severity:** High — this is the prose-layer companion to the consolidated execution above. Without it, even a fully-populated `UnifiedIntelligenceOutput` reaches the user as a brain dump or as the composer's narrow paraphrase.
+
+**Files:**
+- [briarwood/agent/composer.py](briarwood/agent/composer.py) — current prose composer (LLM-backed but with narrow per-tier `structured_inputs`)
+- [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) — current deterministic synthesizer (no LLM, populates UnifiedIntelligenceOutput fields)
+- [briarwood/claims/representation/verdict_with_comparison.py](briarwood/claims/representation/verdict_with_comparison.py) — claim-render LLM (only fires for wedge-eligible turns)
+- [GAP_ANALYSIS.md](GAP_ANALYSIS.md) Layer 3 — target-state description
+
+**Issue.** Today's prose layer has three modes:
+1. **Wedge claim renderer** — LLM rewrites a narrow claim slice (only for DECISION/LOOKUP-with-pinned, only when `BRIARWOOD_CLAIMS_ENABLED=true`).
+2. **Composer** — LLM paraphrases per-handler `structured_inputs` (a narrow slice the handler hand-built from `tools.py` outputs).
+3. **Deterministic synthesizer** — no LLM; populates ~17 named fields on `UnifiedIntelligenceOutput` with f-string templates (the "robotic prose" source per [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §3).
+
+None of these takes the FULL `UnifiedIntelligenceOutput` and asks an LLM "given this, what should I tell the user?" That is the Layer 3 role per [GAP_ANALYSIS.md](GAP_ANALYSIS.md) (line: "LLM that asks 'did we answer the user's intent?' and re-orchestrates if needed").
+
+**Suggested fix:**
+
+1. **New module: `briarwood/synthesis/llm_synthesizer.py`** (or add to existing `briarwood/synthesis/`). Single function: `synthesize_with_llm(unified: UnifiedIntelligenceOutput, intent: IntentContract, llm: LLMClient) -> str`. Reads the full unified output, the user's intent contract, and produces intent-aware prose. Goes through `complete_structured_observed` so the LLM call shows up in the manifest.
+
+2. **Numeric guardrail.** Numbers cited in the LLM's prose must round to a value present in `unified` (the same rule the composer's verifier already enforces for its narrow inputs). Reuse the verifier infrastructure at `api/guardrails.py`.
+
+3. **Wire into chat-tier handlers** after the consolidated execution above lands. The handler returns whatever the synthesizer produces.
+
+4. **Co-existence with the wedge.** When the wedge fires (DECISION + claims enabled), keep the claim renderer — it's already producing good prose for the verdict-with-comparison archetype. The Layer 3 synthesizer fills the gap for everything else.
+
+5. **Tone / framing.** This is the place where user-type conditioning eventually lands (per [GAP_ANALYSIS.md](GAP_ANALYSIS.md) Layer 1 product decisions on user_type). For initial cut, omit user-type and just use the answer_type + question_focus.
+
+**Dependency.** Blocks on consolidated execution above. Without that, the synthesizer would have an empty or fragmented `UnifiedIntelligenceOutput` to work from.
+
+**Cross-ref:** [GAP_ANALYSIS.md](GAP_ANALYSIS.md) Layer 3, [DECISIONS.md](DECISIONS.md) "Chat-tier fragmented execution" 2026-04-25, user-memory `project_llm_guardrails.md`.
+
+---
+
+## 2026-04-25 — `presentation_advisor` bypasses the shared LLM observability ledger
+
+**Severity:** Low — same bug class as the existing `local_intelligence/adapters.py` entry. Cleanup, not user-facing.
+
+**Files:**
+- [briarwood/agent/presentation_advisor.py](briarwood/agent/presentation_advisor.py) — `advise_visual_surfaces`
+- [briarwood/agent/llm_observability.py](briarwood/agent/llm_observability.py) — `complete_structured_observed`
+
+**Issue.** The 2026-04-25 audit's live trace showed `get_property_presentation` taking ~3 seconds and emitting no LLM call records to the per-turn manifest. The tool calls `advise_visual_surfaces`, which uses the raw OpenAI client (`llm.complete_structured(...)`) directly rather than going through the observed wrapper. The LLM ledger and the per-turn manifest don't see this call, so cost / latency / success-rate telemetry for it is invisible.
+
+**Suggested fix:** Wrap the call site in `presentation_advisor.py` with `complete_structured_observed(surface="presentation_advisor.advise", ...)` analogous to the router and composer wiring. Same pattern as the `local_intelligence/adapters.py` follow-up entry above, which is a sibling case.
+
+Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9.
+
+---
+
+## 2026-04-25 — Module-result caching at the per-tool boundary is leaky
+
+**Severity:** Low-medium — efficiency, not correctness. Will be largely obviated when the consolidated execution above lands, but worth a note in case consolidation is delayed.
+
+**Files:**
+- [briarwood/execution/executor.py](briarwood/execution/executor.py) — `build_module_cache_key`
+- [briarwood/execution/registry.py](briarwood/execution/registry.py) — `MODULE_CACHE_FIELDS` (per-module cache field list)
+
+**Issue.** In a single BROWSE turn, the manifest showed `risk_model` running 4x fresh (no cache hits), `confidence` running 5x fresh, `legal_confidence` running 4x fresh — even though all 4-5 calls were within the same chat turn for the same property. Meanwhile `valuation` and `carry_cost` cached correctly (4 cache hits each after one fresh run). The cache key for `risk_model` / `confidence` / `legal_confidence` apparently includes context fields that vary between the per-tool execution plans, defeating reuse.
+
+**Suggested fix.** Audit `MODULE_CACHE_FIELDS` for the three offenders (`risk_model` is at executor.py:59-69, `confidence` at 71-82). Likely culprit: a field is being read from `assumptions` or `market` that varies per-tool but shouldn't affect the module's output. Add per-module regression tests pinning cache hits across the per-tool boundary.
+
+**Probably moot after consolidation.** If the chat-tier executes one plan per turn (per the consolidation entry above), each module runs at most once per turn and this caching issue doesn't bite. Keep this entry in case consolidation is delayed.
+
+---
+
+## 2026-04-25 — Audit router classification boundaries with real traffic
+
+**Severity:** Medium — every LOOKUP/DECISION miss produces a one-line answer to a question that wanted analysis, which is the user's #1 complaint.
+
+**Files (evidence):**
+- [briarwood/agent/router.py:169-219](briarwood/agent/router.py#L169-L219) — `_LLM_SYSTEM` prompt
+- [api/prompts/lookup.md](api/prompts/lookup.md) — "Reply in 1–2 sentences" contract
+- [tests/agent/test_router.py](tests/agent/test_router.py) — `LLM_CANNED` + `PromptContentRegressionTests`
+
+**Context:** The 2026-04-25 output-quality audit handoff caught one specific miss: "what is the price analysis for 1008 14th Ave, belmar, nj" was classified as `AnswerType.LOOKUP` (conf 0.60), which routed to `handle_lookup` (no wedge, no orchestrator), which obeyed its 1-2 sentence prompt and produced "The asking price for 1008 14th Avenue in Belmar, NJ, is $767,000." The user expected analysis, got one fact. The router prompt has been updated to route price-analysis phrasings to DECISION ([DECISIONS.md](DECISIONS.md) and [briarwood/agent/README_router.md](briarwood/agent/README_router.md) Changelog 2026-04-25).
+
+**The pattern is broader than this one query.** The router uses gpt-4o-mini and a single shot of structured-output classification. Without traffic-driven feedback, intent boundaries that LOOK clear in the prompt drift in practice — the only signal we have is what the LLM produces, and we don't measure it. Cross-references the user-memory note "Intent tiers for single-property questions" (browse vs decision unlock on escalation) and "LLM guardrails are currently too tight" (loosen LLM invocation to generate training signal).
+
+**Issue:** No mechanism exists to detect router classification misses in production traffic. Each miss is invisible until a user notices a thin response and complains. There is no log of "here's how each turn was classified, with what confidence, and what the user did next." The 2026-04-25 audit added one regression case; we'll keep adding them reactively unless we audit the prompt against a real corpus.
+
+**Suggested fix:** Two complementary moves —
+
+1. **Capture classification + outcome per turn** in the per-turn invocation manifest being added in the 2026-04-25 audit's Step 4. Specifically: log `answer_type`, `confidence`, `reason`, the user's text, and (when telemetry catches up) whether the user asked a follow-up that suggests the classification missed. This is observability, not a fix, but it gives us the corpus to audit against.
+
+2. **Audit the prompt against ~20-30 saved real queries** when there's a corpus. Specifically look for boundary cases: "price"-bearing questions that should be DECISION not LOOKUP, "what about"-bearing questions (browse vs decision), "rent"-bearing questions (rent_lookup vs decision-with-rent-context), etc. Update the prompt's IMPORTANT MAPPINGS and Counter-example sections.
+
+Out of scope for the immediate handoff — the immediate fix targeted only the price-analysis miss. The broader audit is queued for after Step 4 logging lands.
+
+---
+
 ## 2026-04-24 — Strip unreachable defensive fallback in `_classification_user_type`
 
 **Severity:** Low — dead code, not a bug. Deferred to keep the router-schema bug fix surgical.

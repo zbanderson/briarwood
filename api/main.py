@@ -37,6 +37,13 @@ from briarwood.data_sources.google_maps_client import GoogleMapsClient
 # Kept as an import-time guard: any module that touches the agent pipeline
 # needs briarwood's .env autoload to have run first.
 from briarwood.agent.router import AnswerType  # noqa: E402
+from briarwood.agent.turn_manifest import (
+    end_turn,
+    record_classification,
+    record_dispatch,
+    record_note,
+    start_turn,
+)
 
 app = FastAPI(title="Briarwood Web API", version="0.1.0")
 
@@ -252,6 +259,17 @@ async def chat(req: ChatRequest) -> StreamingResponse:
     user_msg = store.add_message(conversation_id, "user", last.content)
 
     async def event_source() -> AsyncIterator[str]:
+        # Per-turn manifest — populated as the turn unfolds, emitted to
+        # stderr at the end when BRIARWOOD_TRACE=1. Always created, even
+        # when the turn errors out, so the failure case is observable too.
+        start_turn(user_text=last.content, conversation_id=conversation_id)
+        try:
+            async for chunk in _event_source_inner():
+                yield chunk
+        finally:
+            end_turn()
+
+    async def _event_source_inner() -> AsyncIterator[str]:
         # Surface conversation id immediately so the client can navigate.
         if created_new:
             yield events.encode_sse(events.conversation_event(conversation_id, conv["title"] if not created_new else _derive_title(last.content)))
@@ -319,6 +337,13 @@ async def chat(req: ChatRequest) -> StreamingResponse:
                 f"conf={decision.confidence:.2f} reason={decision.reason!r}",
                 flush=True,
             )
+            record_classification(
+                answer_type=decision.answer_type.value,
+                confidence=decision.confidence,
+                reason=decision.reason,
+            )
+        elif classify_raised:
+            record_note("classify_turn raised; falling back to echo")
 
         # Pinned listing + canonical "Analyze X..." text = the Run-analysis CTA
         # in the detail panel. Treat that click as explicit decision-tier
@@ -333,6 +358,7 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
         if decision is None:
             stream = _echo_stream(last.content, pinned_listing)
+            record_dispatch("echo")
         elif (
             is_run_analysis_click
             or is_url_paste_decision
@@ -341,14 +367,18 @@ async def chat(req: ChatRequest) -> StreamingResponse:
             stream = decision_stream(
                 last.content, decision, pinned_listing, conversation_id=conversation_id
             )
+            record_dispatch("decision_stream")
         elif decision.answer_type == AnswerType.SEARCH and not pinned_listing:
             stream = search_stream(last.content, decision, conversation_id=conversation_id)
+            record_dispatch("search_stream")
         elif decision.answer_type == AnswerType.BROWSE and not pinned_listing:
             stream = browse_stream(last.content, decision, conversation_id=conversation_id)
+            record_dispatch("browse_stream")
         else:
             stream = dispatch_stream(
                 last.content, decision, pinned_listing, conversation_id=conversation_id
             )
+            record_dispatch("dispatch_stream")
 
         collected_text: list[str] = []
         collected_events: list[dict[str, Any]] = []

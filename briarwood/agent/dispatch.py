@@ -1823,6 +1823,7 @@ def _maybe_handle_via_claim(
     ``session.last_claim_rejected`` so the SSE adapter can surface the
     rejection without changing the wire contract the UI consumes.
     """
+    from briarwood.agent.turn_manifest import record_wedge
     from briarwood.claims.archetypes import Archetype
     from briarwood.claims.pipeline import build_claim_for_property
     from briarwood.claims.representation import render_claim
@@ -1832,6 +1833,7 @@ def _maybe_handle_via_claim(
     from briarwood.value_scout import scout_claim
 
     if not claims_enabled_for(pid):
+        record_wedge(fired=False, reason="claims_enabled_for=False")
         return None
 
     parser_output = getattr(decision, "parser_output", None)
@@ -1842,12 +1844,22 @@ def _maybe_handle_via_claim(
         has_pinned_listing=True,
     )
     if archetype != Archetype.VERDICT_WITH_COMPARISON:
+        record_wedge(
+            fired=False,
+            reason=f"archetype != VERDICT_WITH_COMPARISON (got {archetype})",
+        )
         return None
 
     try:
         claim = build_claim_for_property(pid, user_text=text)
     except Exception as exc:
         logger.warning("claims pipeline build failed: %s", exc)
+        record_wedge(
+            fired=True,
+            success=False,
+            reason=f"build_raised: {type(exc).__name__}: {exc}",
+            archetype=archetype.value,
+        )
         return None
 
     insight = scout_claim(claim)
@@ -1872,15 +1884,28 @@ def _maybe_handle_via_claim(
             "verdict_label": verdict_label,
             "failures": list(result.failures),
         }
+        record_wedge(
+            fired=True,
+            success=False,
+            reason=f"editor_rejected: {result.failures}",
+            archetype=archetype.value,
+        )
         return None
 
     try:
         rendered = render_claim(claim, llm=llm)
     except Exception as exc:
         logger.warning("claim rendering failed: %s", exc)
+        record_wedge(
+            fired=True,
+            success=False,
+            reason=f"render_raised: {type(exc).__name__}: {exc}",
+            archetype=archetype.value,
+        )
         return None
 
     session.last_claim_events = list(rendered.events)
+    record_wedge(fired=True, success=True, archetype=archetype.value)
     return rendered.prose
 
 

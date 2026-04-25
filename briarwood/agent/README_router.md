@@ -1,6 +1,6 @@
 # agent/router — Intent Router (AnswerType Classification)
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-25
 **Layer:** Intent (Layer 1 — answer-type half; user-type does not exist yet)
 **Status:** STABLE
 
@@ -141,6 +141,32 @@ decision = classify("compare 526-w-end-ave-avon-by-the-sea-nj vs 526-west-end-av
 - **When to start collecting user-type signal in the router** even before downstream consumes it — answers the "looser routing generates training signal that needs to be keyed to user type" risk in [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 1 Risks.
 
 ## Changelog
+
+### 2026-04-25
+- Prompt content change to `_LLM_SYSTEM` ([router.py:169-219](router.py#L169-L219)):
+  - LOOKUP definition tightened to "single-fact retrieval that needs no
+    analysis or interpretation." Words like "analysis", "analyze",
+    "thoughts", "right price", "fair price", "priced right" are now called
+    out as NOT lookup.
+  - DECISION definition broadened to include explicit price-analysis
+    phrasings: "price analysis", "analyze the price", "is this priced
+    right", "is this a fair price", "how is this priced", "thoughts on
+    the price." Previously these defaulted to LOOKUP because they
+    contained the word "price."
+  - New IMPORTANT MAPPINGS line for the price-analysis phrasings.
+  - Two new counter-example pairs in the prompt: "what is the price
+    analysis for X" → DECISION (not LOOKUP) vs. "what is the asking price
+    of X" → LOOKUP. The pair is the clearest disambiguation signal we
+    can give the model.
+- Regression test cases added to [tests/agent/test_router.py](../../tests/agent/test_router.py)
+  pinning the new mappings and the prompt's content shape.
+- **Contract change:** the LOOKUP/DECISION boundary now distinguishes
+  fact-retrieval from analysis-retrieval rather than splitting on
+  decisive-verb-vs-not. Callers who relied on "any 'price' question
+  routes to LOOKUP" should expect those to flow to DECISION now.
+- Surfaced by 2026-04-25 output-quality audit handoff (live miss:
+  "what is the price analysis for 1008 14th Ave, belmar, nj" → LOOKUP →
+  one-line answer). See [AUDIT_OUTPUT_QUALITY_2026-04-25.md](../../AUDIT_OUTPUT_QUALITY_2026-04-25.md).
 
 ### 2026-04-24
 - Initial README created.

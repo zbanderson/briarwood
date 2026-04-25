@@ -599,3 +599,266 @@ after. 14/14 tests in `tests/agent/test_router.py` pass, including the
 new regression test. No product-level verification (live query against
 the chat router) was performed in this commit — that is the next manual
 step under controlled conditions.
+
+---
+
+## 2026-04-25 — README_dispatch.md overstates orchestrator coupling
+
+**Severity:** Medium — misleading for any future handoff trying to plumb
+logging, observability, or refactoring through dispatch.
+
+`briarwood/agent/README_dispatch.md` (Last Updated 2026-04-24) claimed
+"From dispatch: `briarwood.orchestrator.run_briarwood_analysis_with_artifacts`
+(most handlers)" at line 9 and again at lines 41-42. Verified by
+`grep -nE "run_briarwood_analysis(_with_artifacts)?\(" briarwood/agent/dispatch.py`:
+**zero direct calls**.
+
+The orchestrator runs from exactly two production sites:
+- [briarwood/runner_routed.py:228](briarwood/runner_routed.py#L228) — external entry (property pre-computation, batch).
+- [briarwood/claims/pipeline.py:42](briarwood/claims/pipeline.py#L42) — inside the claims wedge.
+
+Plus the convenience wrapper at
+[briarwood/orchestrator.py:451](briarwood/orchestrator.py#L451) which
+internally calls `_with_artifacts`. That's it.
+
+**Implication.** Most chat-tier turns never run the full scoped
+orchestration cascade. Chat-tier handlers compose responses by calling
+individual functions in `briarwood/agent/tools.py` and rendering with
+`briarwood/agent/composer.py`. The orchestrator + scoped synthesizer
+runs only when the claims wedge fires (gated by
+`BRIARWOOD_CLAIMS_ENABLED`, default `false`, AND only DECISION/LOOKUP
+with pinned listing) or when an external caller (batch, pre-computation)
+invokes `runner_routed.py`. This contradicts the mental model that the
+README sets up — that "dispatch decides what to call; the orchestrator
+decides what runs and in what order" — for the chat-tier path that the
+README is most often consulted for.
+
+**Resolved 2026-04-25** (output-quality audit handoff): README_dispatch.md
+prose updated to describe the actual call topology — handlers as
+tools.py-and-composer compositors, with orchestrator invocation
+restricted to the wedge and the external runner. Dated changelog entry
+appended. Cross-referenced from
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §6.1.
+
+The README is not aspirational. Per project owner directive (2026-04-25,
+output-quality audit session): READMEs serve as handoffs between AI
+coding agents and must be kept synchronized with the code they describe.
+This is the second README correction grounded in grep verification this
+month — first was the Handoff 2a Piece 6 audit-doc reconciliations
+(see entries above), this one closes the chat-tier dispatch story.
+
+---
+
+## 2026-04-25 — Composer guardrails: independent strip toggle + reframe-licensed regen prompt
+
+**Decision.** Add `BRIARWOOD_STRICT_STRIP` env flag (default ON, preserves
+existing AUDIT 1.1.10 behavior) that controls destructive sentence
+stripping independently of `BRIARWOOD_STRICT_REGEN`. Master flag stays
+the gate — `STRICT_REGEN=0` continues to disable both. Setting
+`STRICT_STRIP=0` keeps the strict-regen retry path active but lets the
+LLM's prose flow through without mechanical sentence-dropping.
+
+**Rationale.** The strict-regen pipeline at
+[briarwood/agent/composer.py:333-486](briarwood/agent/composer.py#L333-L486)
+was producing template-echo prose. Two pressures stacked: (1) sentences
+with ungrounded numbers were stripped from output, training the LLM
+in-context to verbatim-quote `structured_inputs`, and (2) the regen
+prompt at lines 313-330 said "rewrite using only values present in the
+structured_inputs payload, or numbers you can cite with a marker" —
+which forbids re-framing any number-bearing sentence. The composer had
+license to paraphrase but not re-frame. The numeric-correctness
+guardrail (the half that was actually needed) lived in the verifier and
+in the critic's `_numbers_preserved` check; the strip + harsh prompt
+were the over-tight components. User-memory entry
+`project_llm_guardrails.md` documents the broader directive: loosen LLM
+invocation, keep the numeric-logic guardrail.
+
+**Rewritten regen prompt** (composer.py:313-348). The new prompt
+explicitly licenses re-framing, paraphrase, and voice choice while
+preserving the numeric rule as the only hard constraint. Pinned by
+`tests/agent/test_composer.py::RegenPromptLoosenedTests` so it can't
+silently revert. The literal "rewrite using only values present in"
+wording is gone (asserted absent in
+`test_regen_prompt_permits_reframing`).
+
+**Telemetry.** `report["strict_regen"]["strip_enabled"]` field added so
+consumers can distinguish "strip ran on dirty draft" from "strip
+available but draft was clean." Backward-compatible — existing
+`enabled` and `sentences_stripped` keys unchanged.
+
+Tests: 7 new in `tests/agent/test_composer.py`; 40/40 composer suite
+green; 280 broader regression green (1 pre-existing slug-zip failure,
+same as 2026-04-24 router-fix entry).
+
+Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §3 (robotic prose diagnosis).
+
+---
+
+## 2026-04-25 — Router: 'price analysis' routes to DECISION, not LOOKUP
+
+**Decision.** Update `_LLM_SYSTEM` at
+[briarwood/agent/router.py:169-219](briarwood/agent/router.py#L169-L219)
+so phrasings that ask for analysis of price (rather than the price as a
+single fact) route to `AnswerType.DECISION`. LOOKUP definition tightened
+to "single-fact retrieval that needs no analysis or interpretation."
+DECISION definition expanded to enumerate the price-analysis trigger
+phrases. New IMPORTANT MAPPINGS line and counter-example pair added.
+
+**Live miss that triggered the fix.** "what is the price analysis for
+1008 14th Ave, belmar, nj" was classified as LOOKUP (conf 0.60),
+routed to `handle_lookup`, which obeyed its "Reply in 1-2 sentences"
+prompt and produced "The asking price for 1008 14th Avenue in Belmar,
+NJ, is $767,000." User expected analysis; got one fact.
+
+**Why the prompt fix instead of a heuristic.** The router is LLM-first
+by design (per the module docstring at
+[router.py:11-13](briarwood/agent/router.py#L11-L13)). Adding a regex
+for "analysis" would fight the design and accumulate the same
+broad-cache drift the cache rules were narrowed to escape (see
+2026-04-24 router cache-rule reduction). Fixing the prompt is the
+intended evolution path.
+
+**Tests.** 3 new prompt-content regression tests in
+`tests/agent/test_router.py::PromptContentRegressionTests` pin the
+LOOKUP "single-fact" framing, the DECISION price-analysis enumeration,
+and the counter-example pair. 4 new entries in `LLM_CANNED` covering
+both DECISION ("price analysis", "analyze the price", "is X priced
+right", "how is X priced") and LOOKUP ("what is the asking price")
+boundary cases. 17/17 router tests green.
+
+Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md)
+and the live-miss trace in
+[FOLLOW_UPS.md](FOLLOW_UPS.md) "Audit router classification boundaries".
+
+---
+
+## 2026-04-25 — Per-turn invocation manifest infrastructure
+
+**Decision.** Add a per-turn observability layer at
+[briarwood/agent/turn_manifest.py](briarwood/agent/turn_manifest.py).
+Aggregates router classification, dispatch choice, wedge outcome,
+scoped-module runs, tool calls (`tools.py`), and LLM calls into one
+`TurnManifest` per chat turn. Emits a single JSON line to stderr at
+turn end when `BRIARWOOD_TRACE=1`. Default off; in-memory record
+populated regardless so post-hoc inspection is possible.
+
+**Why this shape.** Briarwood has at least four observability surfaces
+(LLM ledger, executor trace, planner skips, ad-hoc print statements)
+and they don't compose. The 2026-04-25 audit's #1 finding was that the
+user couldn't tell which modules ran for a given chat turn; the
+manifest is the merged view. ContextVar-based so async-streaming code
+in `api/main.py` and the agent layer can append without plumbing the
+manifest through every signature. Read-only outside of an active turn
+— all `record_*` helpers no-op when `current_manifest()` is `None`.
+
+**Cross-thread propagation: `in_active_context`.** Python's `ContextVar`
+does not propagate across thread-pool boundaries by default, and the
+chat-tier streams in `api/pipeline_adapter.py` hand work off via
+`loop.run_in_executor(None, dispatch, ...)`. Without explicit
+propagation, the manifest's ContextVar is invisible inside `dispatch`
+and every `record_*` call inside the worker silently no-ops. The fix:
+`in_active_context(fn)` captures the caller's context at decoration
+time and returns a wrapped callable that runs `fn` inside that context.
+Applied to all 4 `loop.run_in_executor` sites in `pipeline_adapter.py`
+and the `pool.map` site in `briarwood/execution/executor.py`. Pinned by
+`InActiveContextTests` (4 tests, including a negative-regression test
+that confirms the bug exists without the wrapper, so we'll catch it if
+Python's executor semantics ever change).
+
+**Hooks landed.**
+- LLM ledger (`briarwood/agent/llm_observability.py::LLMCallLedger.append`)
+  mirrors each call into the active manifest.
+- Scoped executor (`briarwood/execution/executor.py::execute_plan` and
+  `_execute_plan_parallel`) record per-module run + skip events with
+  duration_ms, mode, confidence, warnings_count, source.
+- Wedge (`briarwood/agent/dispatch.py::_maybe_handle_via_claim`) records
+  6 distinct outcomes (not-enabled, archetype miss, build raised,
+  editor rejected, render raised, success).
+- Tools.py — 25 public entry functions decorated with `@traced_tool()`.
+- Chat endpoint (`api/main.py::chat`) wraps every turn with
+  `start_turn` / `end_turn` plus `record_classification` and
+  `record_dispatch`.
+
+**Tests.** 27 in `tests/agent/test_turn_manifest.py` covering
+lifecycle, recorders, stderr emission, LLM-ledger integration,
+context propagation, and the `traced_tool` decorator.
+
+**Cross-references.** Implements the per-turn manifest from
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §7. Extends the existing in-memory LLM ledger
+(`briarwood/agent/llm_observability.py`) — partly addresses
+[FOLLOW_UPS.md](FOLLOW_UPS.md) "Add a shared LLM call ledger".
+
+---
+
+## 2026-04-25 — Chat-tier fragmented execution: 5+ plans per turn, 10/23 modules used, 13 never run
+
+**Finding (not yet a fix).** Live trace data from the per-turn manifest
+on a BROWSE turn ("what do you think of 1008 14th Ave, Belmar, NJ", 26.3s
+total) revealed that chat-tier handlers run **multiple separate
+execution plans per turn** rather than one consolidated plan. Each
+`tools.py` function (`get_value_thesis`, `get_cma`, `get_projection`,
+`get_strategy_fit`, `get_rent_estimate`, `get_property_brief`, etc.)
+internally invokes the scoped executor with its own narrow plan. As a
+result:
+
+- `valuation` ran 5x (1 fresh + 4 cached) — different tools all needed it
+- `carry_cost` ran 5x (1 fresh + 4 cached)
+- `risk_model` ran 4x **all fresh** — cache key apparently varies between tools
+- `confidence` ran 5x **all fresh**
+- `legal_confidence` ran 4x **all fresh**
+- 33 total module-execution events, but only **10 distinct modules ran**
+- **13 modules never ran for this BROWSE turn:** `arv_model`,
+  `comparable_sales`, `current_value`, `hybrid_value`, `income_support`,
+  `location_intelligence`, `margin_sensitivity`, `market_value_history`,
+  `opportunity_cost`, `renovation_impact`, `scarcity_support`,
+  `strategy_classifier`, `unit_income_offset`
+
+**Implication.** `comparable_sales` — the comp engine that drives the
+value-vs-fair-value verdict — never fires for chat-tier traffic. Same
+for `location_intelligence` (micro-location signals) and
+`strategy_classifier` (the module behind `get_strategy_fit` apparently
+isn't using it). These dormant modules are exactly the pieces of work
+that would distinguish a Briarwood response from plain Claude. The
+fragmented per-tool plan structure is the architectural cause.
+
+**Composer LLM did fire.** `composer.draft` ran for 4.08s on this turn —
+the audit's wiring map was right that BROWSE calls the composer. But
+the composer received a narrow per-tool slice of inputs, not the full
+`UnifiedIntelligenceOutput` the deterministic synthesizer would have
+populated if the orchestrator had run.
+
+**Hidden LLM call.** `get_property_presentation` (3.0s) almost certainly
+calls `presentation_advisor.advise_visual_surfaces` which uses the raw
+OpenAI client and bypasses the `complete_structured_observed` wrapper.
+That LLM call doesn't appear in the manifest's `llm_calls` list.
+Symptom of the same gap as
+[FOLLOW_UPS.md](FOLLOW_UPS.md) "Route local-intelligence extraction
+through shared LLM boundary."
+
+**Decision.** Treat this as the architectural-fix anchor for the
+2026-04-25 audit handoff. Two complementary moves planned (see
+[FOLLOW_UPS.md](FOLLOW_UPS.md)):
+
+1. **Consolidate per-tool execution plans into one chat-tier plan per
+   turn.** Run the scoped executor *once* per turn with a module-set
+   chosen by AnswerType, including `comparable_sales` and
+   `location_intelligence` for any property-analysis tier. Eliminates
+   the duplicate work and brings dormant modules online.
+
+2. **Layer 3 LLM synthesizer.** Have the composer (or a new synthesis
+   LLM step) read the consolidated plan's `UnifiedIntelligenceOutput`
+   and write intent-aware prose. Per
+   [GAP_ANALYSIS.md](GAP_ANALYSIS.md) Layer 3.
+
+This is the architectural lever that makes Briarwood's modules visible
+to the user. Until both land, the system is paying for module work
+whose output never reaches the prose. Recorded as the open lever in
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md)
+§9.
+
+Cross-ref user-memory note `project_llm_guardrails.md` ("LLM piece is
+the missing layer") and the project owner's framing during the audit
+session: "if I ask Claude directly to underwrite a house, it shouldn't
+be better than the models we've spent a month developing."

@@ -14,6 +14,7 @@ from api.guardrails import (
     verify_response,
 )
 from briarwood.agent.llm import LLMClient
+from briarwood.agent.llm_observability import complete_text_observed
 from briarwood.cost_guard import BudgetExceeded
 
 _logger = logging.getLogger(__name__)
@@ -276,6 +277,14 @@ def _run_decision_critic(
 # Until the audit flip, this was default-off — the verifier was accumulating
 # ungrounded-hedge telemetry without ever suppressing bad output.
 STRICT_REGEN_FLAG = "BRIARWOOD_STRICT_REGEN"
+# Sub-toggle for destructive sentence stripping (added 2026-04-25 output-quality
+# audit). When master STRICT_REGEN is on, this controls whether sentences that
+# the verifier flags with `_STRICT_KINDS` are dropped from the final text. Set
+# to "0"/"false"/"off" to keep the LLM's prose intact while still running the
+# regen retry — useful for evaluating whether the regen prompt alone produces
+# better output, and for collecting training signal on un-stripped drafts.
+# When STRICT_REGEN is off, this flag is moot (strip requires the master).
+STRICT_STRIP_FLAG = "BRIARWOOD_STRICT_STRIP"
 # Number of sentences that must be stripped before we bother issuing a regen.
 # One stray ungrounded number is cheaper to just drop than to pay another
 # LLM round-trip for.
@@ -309,22 +318,48 @@ def _strict_regen_enabled() -> bool:
     return True
 
 
+def _strict_strip_enabled() -> bool:
+    """Read the strip env flag at call time. Default **on** (matches the master
+    `STRICT_REGEN` flag). Set to `"0" | "false" | "no" | "off"` to disable
+    destructive sentence stripping while leaving the regen retry path active.
+    The strip is a no-op when `STRICT_REGEN` is off (master gate)."""
+    raw = os.environ.get(STRICT_STRIP_FLAG, "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return True
+
+
 def _regen_user_prompt(original_user: str, report: VerifierReport) -> str:
-    """Build the stricter retry prompt. Includes up to six flagged values so
-    the LLM sees what not to restate, but bounded to keep the context small."""
+    """Build the retry prompt. Includes up to six flagged values so the LLM
+    sees which numbers were ungrounded, but the rewrite licenses re-framing
+    and paraphrase — only the numeric guardrail is hard.
+
+    Rewritten 2026-04-25 (output-quality audit) to permit voice/framing
+    freedom. The prior wording ("rewrite using only values present in
+    structured_inputs") trained the LLM in-context to verbatim-echo the
+    structured fields, producing robotic prose. The numeric rule is
+    preserved verbatim as the only hard constraint."""
     flagged = [v for v in report.violations if v.kind in _STRICT_KINDS]
     if not flagged:
         return original_user
     bullet_lines = "\n".join(
-        f'- {v.kind}: "{v.value}" in sentence: {v.sentence!r}'
+        f'- "{v.value}" in sentence: {v.sentence!r}'
         for v in flagged[:6]
     )
     return (
-        "Your previous draft violated grounding on:\n"
+        "Your previous draft used numbers that aren't grounded in the "
+        "structured_inputs payload:\n"
         f"{bullet_lines}\n\n"
-        "Rewrite using only values present in the structured_inputs payload, "
-        "or numbers you can cite with a [[Module:field:value]] marker. "
-        "Do NOT restate any of the flagged values unless you cite them.\n\n"
+        "Rewrite the draft. You have full freedom to reframe, paraphrase, "
+        "and choose voice — voice should feel human and conversational, "
+        "not robotic. The only hard rule is numeric: every dollar amount, "
+        "percentage, multiplier, or count you mention must round to a "
+        "value present in structured_inputs. Rounded forms like '$820k' "
+        "or 'roughly 820 thousand' are fine when they round to an actual "
+        "value. If you don't have a number to support a claim, omit the "
+        "number rather than estimate or invent. Numbers cited with "
+        "[[Module:field:value]] markers are also fine, but markers are "
+        "not required for grounded values.\n\n"
         f"Original task:\n{original_user}"
     )
 
@@ -354,7 +389,17 @@ def _run_llm_with_verify(
 
     budget_exceeded = False
     try:
-        raw = effective_llm.complete(system=system, user=user, max_tokens=max_tokens).strip()
+        raw = complete_text_observed(
+            surface="composer.draft",
+            system=system,
+            user=user,
+            provider=effective_llm.__class__.__name__,
+            model=None,
+            metadata={"tier": tier},
+            call=lambda: effective_llm.complete(
+                system=system, user=user, max_tokens=max_tokens
+            ),
+        ).strip()
     except BudgetExceeded as exc:
         _logger.warning(
             "LLM budget cap reached in composer — falling back to deterministic text: %s",
@@ -370,21 +415,35 @@ def _run_llm_with_verify(
         return (strip_grounding_markers(raw) if raw else ""), None
 
     report = verify_response(raw, structured_inputs, tier=tier)
-    strict = _strict_regen_enabled()
+    strict_regen = _strict_regen_enabled()
+    # Strip requires master STRICT_REGEN — keeps `STRICT_REGEN=0` behavior
+    # backward-compatible (turning the master off disables both strip and
+    # regen). Setting STRICT_STRIP=0 alone disables stripping but leaves the
+    # regen retry active.
+    strict_strip = strict_regen and _strict_strip_enabled()
     sentences_stripped = 0
     regen_attempted = False
 
-    if strict and raw:
+    if strict_regen and raw:
         _, preview_stripped = strip_violating_sentences(
             raw, report, kinds=_STRICT_KINDS
         )
         if preview_stripped >= STRICT_REGEN_THRESHOLD:
             regen_attempted = True
             try:
-                raw2 = effective_llm.complete(
+                regen_user = _regen_user_prompt(user, report)
+                raw2 = complete_text_observed(
+                    surface="composer.strict_regen",
                     system=system,
-                    user=_regen_user_prompt(user, report),
-                    max_tokens=max_tokens,
+                    user=regen_user,
+                    provider=effective_llm.__class__.__name__,
+                    model=None,
+                    metadata={"tier": tier},
+                    call=lambda: effective_llm.complete(
+                        system=system,
+                        user=regen_user,
+                        max_tokens=max_tokens,
+                    ),
                 ).strip()
             except BudgetExceeded as exc:
                 _logger.warning(
@@ -404,6 +463,7 @@ def _run_llm_with_verify(
                     raw = raw2
                     report = report2
 
+    if strict_strip and raw:
         stripped_draft, sentences_stripped = strip_violating_sentences(
             raw, report, kinds=_STRICT_KINDS
         )
@@ -416,9 +476,10 @@ def _run_llm_with_verify(
 
     report_dict = report.to_dict()
     report_dict["budget_exceeded"] = budget_exceeded
-    if strict:
+    if strict_regen:
         report_dict["strict_regen"] = {
             "enabled": True,
+            "strip_enabled": strict_strip,
             "sentences_stripped": sentences_stripped,
             "regen_attempted": regen_attempted,
             "threshold": STRICT_REGEN_THRESHOLD,
@@ -565,6 +626,7 @@ __all__ = [
     "NARRATIVE_PROVIDER_ENV",
     "STRICT_REGEN_FLAG",
     "STRICT_REGEN_THRESHOLD",
+    "STRICT_STRIP_FLAG",
     "compose_structured_response",
     "compose_contract_response",
     "complete_and_verify",

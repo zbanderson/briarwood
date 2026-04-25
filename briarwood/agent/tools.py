@@ -24,6 +24,7 @@ from statistics import median
 from typing import Any
 
 from briarwood.agent.router import AnswerType
+from briarwood.agent.turn_manifest import traced_tool
 from briarwood.data_sources.attom_client import AttomClient
 from briarwood.data_sources.google_maps_client import GoogleMapsClient
 from briarwood.data_sources.searchapi_zillow_client import SearchApiZillowClient
@@ -458,6 +459,7 @@ class InvestmentScreenResult:
 # ---------- get_property_summary ----------
 
 
+@traced_tool()
 def get_property_summary(property_id: str) -> dict[str, Any]:
     path = SAVED_PROPERTIES_DIR / property_id / "summary.json"
     if not path.exists():
@@ -468,6 +470,7 @@ def get_property_summary(property_id: str) -> dict[str, Any]:
 # ---------- analyze_property ----------
 
 
+@traced_tool()
 def analyze_property(
     property_id: str,
     *,
@@ -492,6 +495,7 @@ def analyze_property(
     return result.unified_output.model_dump()
 
 
+@traced_tool()
 def build_property_brief(
     property_id: str,
     summary: dict[str, Any],
@@ -524,6 +528,7 @@ def build_property_brief(
     )
 
 
+@traced_tool()
 def get_property_brief(
     property_id: str,
     *,
@@ -546,6 +551,7 @@ def get_property_brief(
     return build_property_brief(property_id, summary, result.unified_output.model_dump())
 
 
+@traced_tool()
 def get_renovation_resale_outlook(
     property_id: str,
     *,
@@ -612,6 +618,7 @@ def get_renovation_resale_outlook(
 # ---------- search_listings ----------
 
 
+@traced_tool()
 def search_listings(filters: dict[str, Any]) -> list[dict[str, Any]]:
     """Filter the listing index. Returns a list of summary dicts (not full facts)."""
     from briarwood.agent.index import search
@@ -634,6 +641,7 @@ def search_listings(filters: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+@traced_tool()
 def search_live_listings(
     *,
     query: str,
@@ -731,6 +739,7 @@ def _search_zillow_rental_market(
     }
 
 
+@traced_tool()
 def screen_saved_listings_by_cap_rate(
     *,
     filters: dict[str, Any],
@@ -788,6 +797,7 @@ def screen_saved_listings_by_cap_rate(
     return screened[:max_results]
 
 
+@traced_tool()
 def get_investment_screen(
     *,
     filters: dict[str, Any],
@@ -824,6 +834,7 @@ def get_investment_screen(
     )
 
 
+@traced_tool()
 def analyze_live_listing(
     *,
     listing_url: str,
@@ -869,6 +880,7 @@ def analyze_live_listing(
     )
 
 
+@traced_tool()
 def promote_discovered_listing(
     *,
     listing_context: dict[str, Any],
@@ -938,6 +950,7 @@ def promote_discovered_listing(
     )
 
 
+@traced_tool()
 def promote_unsaved_address(address: str) -> PromotedPropertyRecord:
     """Hydrate an unsaved address via Google/ATTOM and promote it into saved properties."""
     from briarwood.data_quality.normalizers import infer_county, normalize_state, normalize_town
@@ -1257,6 +1270,7 @@ def _write_promoted_summary(
     (SAVED_PROPERTIES_DIR / property_id / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
 
+@traced_tool()
 def underwrite_matches(property_ids: list[str]) -> list[dict[str, Any]]:
     """Batch wrapper — runs analyze_property on each id, returns slim stance records."""
     out: list[dict[str, Any]] = []
@@ -1304,6 +1318,7 @@ def _module_data(outputs: dict[str, Any], module_name: str) -> dict[str, Any]:
 # ---------- research_town ----------
 
 
+@traced_tool()
 def research_town(
     town: str,
     state: str,
@@ -1348,6 +1363,7 @@ def research_town(
     }
 
 
+@traced_tool()
 def get_town_market_read(
     town: str,
     state: str,
@@ -1403,6 +1419,7 @@ def _default_research_service():
 # ---------- get_projection ----------
 
 
+@traced_tool()
 def get_projection(property_id: str, *, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Force scenario-depth analysis and extract bull/base/bear projection.
 
@@ -1454,6 +1471,7 @@ def get_projection(property_id: str, *, overrides: dict[str, Any] | None = None)
 # ---------- get_rent_estimate ----------
 
 
+@traced_tool()
 def get_rent_estimate(property_id: str, *, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Run the routed pipeline and surface rent-relevant metrics from carry_cost + rental_option modules."""
     from briarwood.agent.overrides import inputs_with_overrides
@@ -1496,6 +1514,7 @@ def get_rent_estimate(property_id: str, *, overrides: dict[str, Any] | None = No
     }
 
 
+@traced_tool()
 def get_rent_outlook(
     property_id: str,
     *,
@@ -1701,6 +1720,7 @@ def get_rent_outlook(
 # ---------- get_risk_profile ----------
 
 
+@traced_tool()
 def get_risk_profile(property_id: str, *, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Surface risk drivers from risk_model + unified.trust_flags + projection bear case."""
     from briarwood.agent.overrides import inputs_with_overrides
@@ -1749,6 +1769,7 @@ def get_risk_profile(property_id: str, *, overrides: dict[str, Any] | None = Non
 # ---------- get_value_thesis ----------
 
 
+@traced_tool()
 def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Explain WHERE the value is: valuation anchors, discount/premium, drivers."""
     from briarwood.agent.overrides import inputs_with_overrides
@@ -1804,6 +1825,7 @@ def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = Non
     }
 
 
+@traced_tool()
 def get_cma(property_id: str, *, overrides: dict[str, Any] | None = None) -> CMAResult:
     """Return a CMA contract that prefers live market support before saved comps."""
     summary = get_property_summary(property_id)
@@ -2017,6 +2039,7 @@ def _norm_address_text(value: str | None) -> str:
 # ---------- get_strategy_fit ----------
 
 
+@traced_tool()
 def get_strategy_fit(property_id: str, *, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     """Best-path read: rental profile + valuation stance + unified best_path."""
     from briarwood.agent.overrides import inputs_with_overrides
@@ -2062,6 +2085,7 @@ def get_strategy_fit(property_id: str, *, overrides: dict[str, Any] | None = Non
 # ---------- registry ----------
 
 
+@traced_tool()
 def render_chart(
     kind: str,
     property_id: str,
@@ -2085,6 +2109,7 @@ def render_chart(
     return {"property_id": property_id, "kind": kind, "path": str(path.resolve()), "format": fmt}
 
 
+@traced_tool()
 def get_property_enrichment(
     property_id: str,
     *,
@@ -2102,6 +2127,7 @@ def get_property_enrichment(
     return asdict(bundle)
 
 
+@traced_tool()
 def get_property_presentation(
     property_id: str,
     *,

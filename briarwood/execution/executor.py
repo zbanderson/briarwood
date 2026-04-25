@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from briarwood.agent.turn_manifest import (
+    in_active_context,
+    record_module_run,
+    record_module_skip,
+)
 from briarwood.execution.context import ExecutionContext
 from briarwood.execution.planner import ExecutionPlan
 from briarwood.execution.registry import ModuleSpec
@@ -321,6 +327,10 @@ def execute_plan(
     trace: list[dict[str, Any]] = []
     rerun_modules: set[str] = set()
 
+    # Per-turn manifest: surface modules the planner dropped before exec.
+    for skipped in getattr(plan, "skipped_modules", ()) or ():
+        record_module_skip(name=str(skipped), reason="not in execution plan")
+
     for module_name in plan.ordered_modules:
         if module_name not in registry:
             raise ValueError(f"Execution plan references unknown module '{module_name}'.")
@@ -335,6 +345,7 @@ def execute_plan(
         dependency_reran = any(dependency in rerun_modules for dependency in module_spec.depends_on)
         cached_result = None if dependency_reran else (module_output_cache or {}).get(cache_key)
 
+        module_started = time.perf_counter()
         if cached_result is not None:
             normalized_result = dict(cached_result)
             source = "cache"
@@ -345,6 +356,7 @@ def execute_plan(
                 module_output_cache[cache_key] = dict(normalized_result)
             rerun_modules.add(module_name)
             source = "run"
+        module_duration_ms = (time.perf_counter() - module_started) * 1000
 
         outputs[module_name] = normalized_result
         context.store_module_output(module_name, normalized_result)
@@ -356,6 +368,14 @@ def execute_plan(
                 source=source,
                 cache_key=cache_key,
             )
+        )
+        record_module_run(
+            name=module_name,
+            source=source,
+            mode=normalized_result.get("mode") if isinstance(normalized_result, dict) else None,
+            confidence=normalized_result.get("confidence") if isinstance(normalized_result, dict) else None,
+            duration_ms=module_duration_ms,
+            warnings_count=len(normalized_result.get("warnings") or []) if isinstance(normalized_result, dict) else 0,
         )
 
     return {
@@ -383,6 +403,10 @@ def _execute_plan_parallel(
     trace: list[dict[str, Any]] = []
     rerun_modules: set[str] = set()
 
+    # Per-turn manifest: surface modules the planner dropped before exec.
+    for skipped in getattr(plan, "skipped_modules", ()) or ():
+        record_module_skip(name=str(skipped), reason="not in execution plan")
+
     completed: set[str] = set()
     remaining = [m for m in plan.ordered_modules if m in registry]
     for m in plan.ordered_modules:
@@ -397,7 +421,7 @@ def _execute_plan_parallel(
         if not level:
             raise ValueError("Execution stalled — unresolved module dependencies.")
 
-        def _run_one(module_name: str) -> tuple[str, dict[str, Any], str, str]:
+        def _run_one(module_name: str) -> tuple[str, dict[str, Any], str, str, float]:
             module_spec = registry[module_name]
             validate_required_context(module_spec, context)
             runner = module_spec.runner
@@ -406,16 +430,20 @@ def _execute_plan_parallel(
             cache_key = build_module_cache_key(module_name, context)
             dep_reran = any(d in rerun_modules for d in module_spec.depends_on)
             cached = None if dep_reran else (module_output_cache or {}).get(cache_key)
+            started = time.perf_counter()
             if cached is not None:
-                return module_name, dict(cached), "cache", cache_key
+                return module_name, dict(cached), "cache", cache_key, (time.perf_counter() - started) * 1000
             result = runner(context)
             normalized = normalize_module_result(module_name, result)
-            return module_name, normalized, "run", cache_key
+            return module_name, normalized, "run", cache_key, (time.perf_counter() - started) * 1000
 
         with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
-            results = list(pool.map(_run_one, level))
+            # Wrap _run_one in the caller's context so the per-turn manifest
+            # propagates into worker threads (Python ContextVars don't cross
+            # thread boundaries by default).
+            results = list(pool.map(in_active_context(_run_one), level))
 
-        for module_name, normalized, source, cache_key in results:
+        for module_name, normalized, source, cache_key, duration_ms in results:
             module_spec = registry[module_name]
             if source == "run":
                 if module_output_cache is not None:
@@ -427,6 +455,14 @@ def _execute_plan_parallel(
                 build_execution_trace(
                     module_name, module_spec, normalized, source=source, cache_key=cache_key,
                 )
+            )
+            record_module_run(
+                name=module_name,
+                source=source,
+                mode=normalized.get("mode") if isinstance(normalized, dict) else None,
+                confidence=normalized.get("confidence") if isinstance(normalized, dict) else None,
+                duration_ms=duration_ms,
+                warnings_count=len(normalized.get("warnings") or []) if isinstance(normalized, dict) else 0,
             )
             completed.add(module_name)
             remaining.remove(module_name)
