@@ -140,6 +140,7 @@ unified = build_unified_output(
 
 ### 2026-04-25
 - New caller: `briarwood.orchestrator.run_chat_tier_analysis` (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) invokes `build_unified_output(...)` directly instead of via an injected `synthesizer` callable. No contract change — the keyword-only signature (`property_summary`, `parser_output`, `module_results`, `interaction_trace`) is unchanged. The chat-tier path now produces a `UnifiedIntelligenceOutput` from a single consolidated execution plan per chat turn rather than from the fragmented per-tool plans diagnosed in DECISIONS.md "Chat-tier fragmented execution" 2026-04-25.
+- New sibling module: `briarwood/synthesis/llm_synthesizer.py` (Cycle 4 of OUTPUT_QUALITY_HANDOFF_PLAN.md, commit `fb23152`). `synthesize_with_llm(*, unified, intent, llm) -> tuple[prose, report]` is the Layer 3 LLM prose generator that reads the full output of `build_unified_output` and writes 3-7 sentences of intent-aware prose. It does NOT call `build_unified_output` itself — it reads the dict produced by it. No change to the deterministic synthesizer's contract; the llm_synthesizer is a downstream consumer that turns the structured output into prose for the chat-tier surface. The pair (deterministic structural synthesizer + LLM prose synthesizer) implements the Layer 3 target from [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md). Wired into `handle_browse` 2026-04-25; other chat-tier handlers will follow in Cycle 5.
 
 ### 2026-04-24
 - Initial README created.

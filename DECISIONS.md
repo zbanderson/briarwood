@@ -938,3 +938,98 @@ chat-tier execution: one plan per turn, intent-keyed module set"
 2026-04-25. Cycle 2 of [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md).
 Architectural-fix anchor recorded in
 [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9.7.
+
+---
+
+## 2026-04-25 — Layer 3 LLM synthesizer: prose from full UnifiedIntelligenceOutput
+
+**Decision.** Add a Layer 3 LLM synthesizer at
+[briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py)
+that reads a fully-populated ``UnifiedIntelligenceOutput`` (the
+substrate Cycle 2/3 puts in place) and the user's intent contract,
+then writes 3-7 sentences of intent-aware prose. Wired into
+``handle_browse`` 2026-04-25 (Cycle 4 of OUTPUT_QUALITY_HANDOFF_PLAN.md,
+commit ``fb23152``); replaces ``compose_browse_surface`` on the happy
+path, falls back to it when the synthesizer returns empty.
+
+**Why this shape.** GAP_ANALYSIS.md Layer 3 names the missing piece
+explicitly: "An LLM that reads the intent contract plus the
+aggregated module outputs and either declares intent-satisfied and
+passes to Representation, or declares gaps." The 2026-04-25 audit's
+§9.4 pinned the diagnosis: the existing composer (``composer.draft``)
+saw a narrow ``_browse_surface_payload`` slice (~7 fields from the
+brief plus 4 session view dicts) rather than the full
+``UnifiedIntelligenceOutput`` Briarwood's deterministic synthesizer
+populates. Cycle 2 produced the full output; Cycle 3 wired
+``handle_browse`` to a single consolidated execution plan; Cycle 4 is
+the prose-layer companion that finally lets the LLM see what the
+deterministic models computed.
+
+**Free voice + numeric grounding.** The synthesizer's system prompt
+applies the same guardrail-loosening principle as DECISIONS.md
+"Composer guardrails: independent strip toggle + reframe-licensed
+regen prompt" 2026-04-25 — explicit license to re-frame, paraphrase,
+choose voice, with numeric grounding as the only hard rule. Numbers
+cited must round to a value present in the unified output; verifier
+runs ``api.guardrails.verify_response`` over the full unified output
+as ``structured_inputs``. On threshold-level violations a single
+regen attempt fires with the offending values named; regen is kept
+only when violations strictly decrease.
+
+**Observability.** The synthesizer's LLM call lands at surface
+``synthesis.llm`` in the per-turn manifest's ``llm_calls`` list,
+distinct from ``composer.draft`` and ``agent_router.classify``. The
+regen attempt (when it fires) lands at ``synthesis.llm.regen``.
+Metadata carries ``tier=synthesis_llm`` and the ``answer_type``.
+
+**Why a separate module instead of extending the composer.** The
+composer at [briarwood/agent/composer.py](briarwood/agent/composer.py)
+has accumulated provider routing (`_resolve_llm_for_tier` swapping
+Anthropic for narrative tiers), critic infrastructure, the strict
+strip / regen flag pair, and tier-specific behaviors. The Layer 3
+synthesizer is a tighter, focused tool: one LLM call, verify, regen,
+strip markers. Reusing the composer would have meant threading a new
+`surface` parameter through `_run_llm_with_verify`,
+`compose_structured_response`, and `compose_contract_response` and
+inheriting all the composer's tier-specific complexity for a tier
+that doesn't need it. Cycle 4 ships it as a small standalone module
+(~200 LOC) so the contract stays inspectable and the surface name
+remains clean.
+
+**Fallback contract.** ``handle_browse`` calls the synthesizer when
+both ``chat_tier_artifact`` is populated AND ``llm`` is non-None.
+When the synthesizer returns empty prose (budget cap, blank draft,
+exception, verifier blocked everything), ``compose_browse_surface``
+fires as the fallback. The user always sees a response — empty
+synthesizer output never leaks to the UI.
+
+**Out of scope (deferred).**
+- Per-tier system prompt variations. Cycle 4 ships one prompt that
+  branches via the intent contract's ``answer_type`` /
+  ``core_questions``. Per-tier prompts may land later if traces show
+  uneven prose quality across tiers.
+- Anthropic provider routing for the synthesis tier. Easy add when
+  the user wants it; for now uses whatever ``llm`` the caller passes.
+- Wedge interaction. When ``BRIARWOOD_CLAIMS_ENABLED=true`` and a
+  DECISION turn produces a ``VerdictWithComparisonClaim`` via the
+  wedge, the existing claim renderer continues to handle prose.
+  Layer 3 fills the gap for the non-wedge chat-tier paths
+  (BROWSE today; DECISION fall-through, RISK, EDGE, STRATEGY,
+  PROJECTION, RENT_LOOKUP after Cycle 5).
+
+**Tests.** 10 new in
+[tests/synthesis/test_llm_synthesizer.py](tests/synthesis/test_llm_synthesizer.py)
+covering clean draft pass-through, ledger metadata, regen-on-ungrounded,
+regen-kept-only-when-better, missing-llm short-circuit, empty-unified
+short-circuit, blank LLM response, swallowed exception, intent payload
+serialization, and a system-prompt regression for the numeric grounding
+rule. 2 new integration tests in
+``tests/agent/test_dispatch.py::BrowseHandlerTests`` pin the dispatch
+contract: synthesizer prose replaces composer when artifact + llm
+present; composer fallback fires when synthesizer returns empty.
+
+**Cross-references.** Cycle 4 of
+[OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md);
+GAP_ANALYSIS.md Layer 3 target description; FOLLOW_UPS.md "Layer 3
+LLM synthesizer: prose from full UnifiedIntelligenceOutput" 2026-04-25
+(this DECISION resolves that follow-up's design questions).

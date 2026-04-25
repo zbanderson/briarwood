@@ -230,7 +230,33 @@ python scripts/dev_chat.py
 
 ---
 
-### Cycle 4 — Layer 3 LLM synthesizer
+### Cycle 4 — Layer 3 LLM synthesizer — LANDED 2026-04-25 (commit `fb23152`)
+
+**Status:** Implementation complete, awaiting browser verification. The Layer 3 LLM synthesizer reads the full `UnifiedIntelligenceOutput` produced by Cycle 2/3's consolidated chat-tier path and writes 3-7 sentences of intent-aware prose, replacing (with fallback) the existing narrow-slice composer for BROWSE turns.
+
+**What landed:**
+- New module [`briarwood/synthesis/llm_synthesizer.py`](briarwood/synthesis/llm_synthesizer.py) — `synthesize_with_llm(*, unified, intent, llm, max_tokens=360) -> tuple[str, dict]`. Single LLM call wrapped in `complete_text_observed(surface="synthesis.llm", ...)` so it shows up distinctly in the per-turn manifest. Numeric guardrail via `api.guardrails.verify_response` over the full unified output. Single regen attempt on threshold-level violations (with grounded-or-omit free-voice prompt); regen kept only when violations strictly decrease. Returns `("", {empty: True, reason: ...})` for budget cap, blank draft, exception, or missing inputs.
+- 10 new unit tests in [`tests/synthesis/test_llm_synthesizer.py`](tests/synthesis/test_llm_synthesizer.py) — clean draft pass-through, ledger metadata, regen on ungrounded numbers, regen kept-only-when-better, missing-llm short-circuit, empty-unified short-circuit, blank LLM response, exception handling, intent payload serialization, system prompt regression (numeric grounding rule pinned).
+- `handle_browse` now calls the synthesizer when (a) `chat_tier_artifact` is populated AND (b) `llm` is non-None, using `briarwood.intent_contract.build_contract_from_answer_type(decision.answer_type.value, decision.confidence)` for the contract. Synthesizer prose replaces `compose_browse_surface` output; on empty prose, the existing composer fallback fires. 2 new integration tests in `tests/agent/test_dispatch.py::BrowseHandlerTests` pin the contract.
+
+**Net effect on a BROWSE turn (when llm is provided and a saved property is found):**
+- The per-turn manifest's `llm_calls` should now show TWO LLM calls minimum: `agent_router.classify` + `synthesis.llm`. (Plus `synthesis.llm.regen` if the verifier flagged the first draft.) `composer.draft` should be absent on the happy path; `presentation_advisor` may still produce its hidden LLM call until the existing follow-up fix lands.
+- Prose substrate jumps from the composer's narrow `_browse_surface_payload` slice (~7 fields from brief + 4 session view dicts) to the full `UnifiedIntelligenceOutput` (~17 named fields including `value_position`, `key_value_drivers`, `key_risks`, `trust_flags`, `optionality_signal`, `primary_value_source`, plus the 23 modules' outputs the synthesizer can reference via the unified output's `supporting_facts.selected_modules` list).
+- The numeric guardrail is enforced on the synthesizer output the same way the composer enforces it — `verify_response` checks every cited number against grounded values.
+
+**Out of scope (deferred):**
+- Per-tier system prompt variations. Cycle 4 ships one prompt that branches via the intent contract (`if intent.answer_type == "browse" / "decision" / "risk" / ...`). Future tuning may split per tier.
+- Anthropic provider routing. The composer's `_resolve_llm_for_tier` swaps in Anthropic for narrative tiers when configured; the synthesizer uses whatever `llm` the caller passes. Switching providers is one line plus an env-var read once we want to experiment.
+- Wedge-aware behavior. When `BRIARWOOD_CLAIMS_ENABLED=true` and a DECISION turn produces a `VerdictWithComparisonClaim` via the wedge, the existing claim renderer handles prose. Layer 3 fills the gap for everything else (BROWSE, DECISION fall-through, etc.).
+
+**Verification (browser):**
+- Run the dev stack with `llm` configured. Send "what do you think of 1008 14th Ave, Belmar, NJ".
+- Expected `[turn]` JSON: `llm_calls` includes `synthesis.llm` (and possibly `.regen`); `modules_run` still shows the 23-module consolidated plan from Cycle 3; the prose itself should feel more substantive — the synthesizer can lead with the buy/pass framing the user actually asked, weave in comp-anchor language, name specific risks and trust gaps, mention strategy classification and optionality if applicable.
+- If prose comes back too long or too short, tune the system prompt or the `max_tokens` knob.
+
+**Tests at landing time:** 10/10 in `tests/synthesis/test_llm_synthesizer.py`; 26/26 in `BrowseHandlerTests` (incl. 2 new for Cycle 4); broader smoke pending at the time of this update.
+
+**Original scope below (for reference):**
 
 **Scope:**
 - New module: `briarwood/synthesis/llm_synthesizer.py`.
