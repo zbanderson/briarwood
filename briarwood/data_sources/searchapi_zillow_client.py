@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 from dataclasses import dataclass
 import hashlib
 import json
@@ -68,6 +69,7 @@ class SearchApiZillowClient:
         retries: int = 1,
         sleep_seconds: float = 0.35,
         transport: Callable[[str, dict[str, str], dict[str, str], float], dict[str, Any]] | None = None,
+        discovery_cache_ttl_seconds: int | None = 24 * 3600,
     ) -> None:
         self.api_key = api_key if api_key is not None else _resolve_api_key()
         self.cache_dir = Path(cache_dir or Path(__file__).resolve().parents[2] / "data" / "cache" / "searchapi_zillow")
@@ -75,6 +77,7 @@ class SearchApiZillowClient:
         self.retries = retries
         self.sleep_seconds = sleep_seconds
         self.transport = transport or _urllib_transport
+        self.discovery_cache_ttl_seconds = discovery_cache_ttl_seconds
 
     @property
     def is_configured(self) -> bool:
@@ -179,7 +182,7 @@ class SearchApiZillowClient:
             source_url=f"search::{page}::{listing_status or 'default'}::{rent_min or ''}::{rent_max or ''}::{beds_min or ''}::{home_type or ''}",
             query=normalized_query,
         )
-        cached = self._read_cache(cache_key)
+        cached = self._read_cache(cache_key, max_age_seconds=self.discovery_cache_ttl_seconds)
         if cached is not None:
             return SearchApiZillowResponse(
                 cache_key=cache_key,
@@ -297,14 +300,26 @@ class SearchApiZillowClient:
             )
         return candidates
 
-    def _read_cache(self, cache_key: str) -> dict[str, Any] | None:
+    def _read_cache(self, cache_key: str, *, max_age_seconds: int | None = None) -> dict[str, Any] | None:
         path = self.cache_dir / f"{cache_key}.json"
         if not path.exists():
             return None
         try:
-            return json.loads(path.read_text())
+            payload = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
             return None
+        if max_age_seconds is None:
+            return payload
+        fetched_at = payload.get("fetched_at")
+        if not isinstance(fetched_at, str):
+            return None
+        try:
+            cached_ts = calendar.timegm(time.strptime(fetched_at, "%Y-%m-%dT%H:%M:%SZ"))
+        except ValueError:
+            return None
+        if (time.time() - cached_ts) > max_age_seconds:
+            return None
+        return payload
 
     def _write_cache(
         self,
