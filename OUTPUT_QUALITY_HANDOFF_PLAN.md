@@ -81,7 +81,24 @@ python scripts/dev_chat.py
 
 ---
 
-### Cycle 2 — Consolidated chat-tier orchestrator entry
+### Cycle 2 — Consolidated chat-tier orchestrator entry — LANDED 2026-04-25 (commit `8290966`)
+
+**Status:** Landed. Live BROWSE smoke run produced 23 distinct modules in `modules_run`, each running exactly once (vs. the audit's 33 events / 10 distinct / `valuation`-x-5 baseline). All four dormant modules from §9.3 (`comparable_sales`, `location_intelligence`, `strategy_classifier`, `arv_model`) fire. `unified_output` populated with a deterministic `decision`/`confidence`/etc. — Cycle 3 will hand this to `handle_browse`.
+
+**What landed:**
+- New module [`briarwood/execution/module_sets.py`](briarwood/execution/module_sets.py) — `ANSWER_TYPE_MODULE_SETS` keyed by `AnswerType` plus a `modules_for_answer_type` helper.
+- New function `run_chat_tier_analysis(...)` in [`briarwood/orchestrator.py`](briarwood/orchestrator.py).
+- 8 new tests in `tests/test_orchestrator.py::RunChatTierAnalysisTests` pinning the per-AnswerType module-set membership, the LOOKUP / CHITCHAT short-circuit, the once-per-turn invariant, and the explicit-vs-synthesized parser_output paths.
+- New FOLLOW_UPS entry "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25 (the reason Cycle 2 ships with `parallel=False` default — the concurrency bug surfaced when the new function exercised the parallel executor with a non-trivial dependency level).
+
+**Open design decisions (resolved):**
+1. Separate function vs. parameter on `run_briarwood_analysis_with_artifacts` → **separate.** `run_chat_tier_analysis` is ~70 lines and reuses the existing helpers; folding it would have duplicated the LOOKUP short-circuit and the synthetic-parser-output handling into the existing function's caller path.
+2. `ANSWER_TYPE_MODULE_SETS` location → **new file** at `briarwood/execution/module_sets.py`, single-responsibility.
+3. Parallel by default → **NO for Cycle 2.** The bug above blocks it. Default is `parallel=False`; flip once the wrapper is fixed (FOLLOW_UPS entry).
+5. Properties not pre-computed → punted to Cycle 3 testing per the open-decisions list.
+6. Module sets are starting points → reaffirmed in the new `module_sets.py` docstring.
+
+**Original scope below (left for reference):**
 
 **Scope:**
 - Define `ANSWER_TYPE_MODULE_SETS` constant somewhere stable (probably `briarwood/orchestrator.py` or a new `briarwood/execution/module_sets.py`):

@@ -42,6 +42,8 @@ This layer splits into an engineering gap and a product decision. They need to b
 
 **Current state.** Rule-based dispatch. [briarwood/agent/dispatch.py](briarwood/agent/dispatch.py) holds per-`AnswerType` handler functions that hardcode which modules run for each tier. The scoped execution registry at [briarwood/execution/registry.py](briarwood/execution/registry.py) provides the DAG machinery (dependency resolution, caching, execution mode), but what *goes into* the registry for a given turn is decided by handler code, not by an LLM reading a spec.
 
+A first deterministic intent → module-set mapping landed 2026-04-25 (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md): [`briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`](briarwood/execution/module_sets.py) now declares which modules each chat-tier `AnswerType` runs, and [`briarwood.orchestrator.run_chat_tier_analysis`](briarwood/orchestrator.py) executes one consolidated plan against that set per turn. The LLM tool-use loop (the actual Layer 2 target) is still absent — the mapping is hand-authored — but the affordance now exists for an LLM step to override the default set on a per-turn basis. Cycle 3 will rewire chat-tier dispatch handlers to call this entry instead of the per-tool fragmentation pattern documented under Risks below.
+
 **Gap.** Three pieces are missing:
 
 1. **A clean tool registry.** [TOOL_REGISTRY.md](TOOL_REGISTRY.md) is the first draft. Needs to cover all 22+ models (scoped + legacy) with typed inputs, typed outputs, dependencies, intent-fit, invariants, and `blockers_for_tool_use` flags.
@@ -62,6 +64,8 @@ This layer splits into an engineering gap and a product decision. They need to b
 **Target state.** An LLM ingests the outputs of all specialty models that ran and asks two questions: (a) does this answer the user's intent? (b) how do we illustrate it compellingly? The first question drives re-orchestration (go run more tools) or claim framing; the second hands off to the Representation Agent.
 
 **Current state.** Synthesis is mechanical. [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) assembles module outputs deterministically for the legacy path. The Phase 3 claim-object pipeline at [briarwood/claims/synthesis/verdict_with_comparison.py](briarwood/claims/synthesis/verdict_with_comparison.py) does the same for one archetype. Neither path has an LLM judging whether the intent has been answered.
+
+The consolidation prerequisite landed 2026-04-25 (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md): [`run_chat_tier_analysis`](briarwood/orchestrator.py) now produces a fully-populated `UnifiedIntelligenceOutput` from a single intent-keyed plan per turn — the missing co-resident structure that Cycle 4's planned Layer 3 LLM synthesizer will read in full. Until Cycle 4 lands, the chat-tier prose layer still uses the composer's narrow per-handler slice; the new entry is plumbed but not yet wired to handlers (Cycle 3). A telemetry-only Layer 3 prototype that observes (without controlling) the deterministic answer landed 2026-04-25 in [briarwood/shadow_intelligence.py](briarwood/shadow_intelligence.py) (FOLLOW_UPS "Prototype Layer 3 intent-satisfaction LLM in shadow mode" 2026-04-24).
 
 The adjacent infrastructure is the grounding verifier in [briarwood/agent/composer.py](briarwood/agent/composer.py), which fact-checks prose against a `[[Module:field:value]]` anchor format. That's narrower than intent-satisfaction — it asks "are the numbers right?", not "did we answer the question?".
 

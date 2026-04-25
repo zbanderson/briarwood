@@ -35,10 +35,11 @@ There is no LLM-driven tool-use loop here — model selection is encoded in hand
   - [briarwood/agent/dispatch.py:4028](dispatch.py#L4028) — `handle_browse`
   - [briarwood/agent/dispatch.py:4180](dispatch.py#L4180) — `handle_chitchat`
 - **Claim wedge inside dispatch:** `_maybe_handle_via_claim` at [briarwood/agent/dispatch.py:1809](dispatch.py#L1809) — the Phase 3 entry that lives inside the DECISION path (see [briarwood/claims/README.md](../claims/README.md) and [briarwood/editor/README.md](../editor/README.md)).
-- **Orchestrator root:** [briarwood/orchestrator.py](../orchestrator.py) (589 LOC).
-- **Routed analysis entry:** [briarwood/orchestrator.py:460](../orchestrator.py#L460) — `run_briarwood_analysis_with_artifacts(...)`.
-- **Convenience entry:** [briarwood/orchestrator.py:439](../orchestrator.py#L439) — `run_briarwood_analysis(...)` returns only the unified output.
-- **Cache-key construction:** [briarwood/orchestrator.py:171](../orchestrator.py#L171) — `build_cache_key(property_summary, parser_output, execution_mode=...)`.
+- **Orchestrator root:** [briarwood/orchestrator.py](../orchestrator.py) (~810 LOC).
+- **Routed analysis entry:** [briarwood/orchestrator.py:467](../orchestrator.py#L467) — `run_briarwood_analysis_with_artifacts(...)`. Production callers: [`runner_routed.py:228`](../runner_routed.py#L228) and [`claims/pipeline.py:42`](../claims/pipeline.py#L42).
+- **Chat-tier analysis entry (added 2026-04-25, Cycle 2):** [briarwood/orchestrator.py:682](../orchestrator.py#L682) — `run_chat_tier_analysis(property_data, answer_type, user_input, *, parser_output=None, parallel=False, ...)`. Skips the intent-contract router (the chat-tier `AnswerType` is already classified at this layer) and runs a single consolidated execution plan keyed by [`briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`](../execution/module_sets.py). LOOKUP and the non-property tiers short-circuit. **No dispatch handler calls it yet** — Cycle 3 of [OUTPUT_QUALITY_HANDOFF_PLAN.md](../../OUTPUT_QUALITY_HANDOFF_PLAN.md) will rewire `handle_browse` first.
+- **Convenience entry:** [briarwood/orchestrator.py:444](../orchestrator.py#L444) — `run_briarwood_analysis(...)` returns only the unified output.
+- **Cache-key construction:** [briarwood/orchestrator.py:176](../orchestrator.py#L176) — `build_cache_key(property_summary, parser_output, execution_mode=...)`.
 - **Tests:** [tests/agent/test_dispatch.py](../../tests/agent/test_dispatch.py); [tests/test_orchestrator.py](../../tests/test_orchestrator.py); [tests/claims/test_dispatch_branch.py](../../tests/claims/test_dispatch_branch.py).
 
 ## Role in the Six-Layer Architecture
@@ -183,6 +184,7 @@ artifacts = run_briarwood_analysis_with_artifacts(
   Cross-reference: [DECISIONS.md](../../DECISIONS.md) 2026-04-25 entry
   "README_dispatch.md overstates orchestrator coupling" and
   [AUDIT_OUTPUT_QUALITY_2026-04-25.md](../../AUDIT_OUTPUT_QUALITY_2026-04-25.md) §6.1.
+- Cycle 2 of [OUTPUT_QUALITY_HANDOFF_PLAN.md](../../OUTPUT_QUALITY_HANDOFF_PLAN.md) added a third orchestrator entry: `run_chat_tier_analysis` at [briarwood/orchestrator.py:682](../orchestrator.py#L682). Documented under Location alongside the existing two entries. **No handler in this file calls it yet** — Cycle 3 will rewire `handle_browse` first. Until that lands, the README's chat-tier topology description (handlers compose via `tools.py` + `composer.py`, orchestrator only via wedge / external runner) remains accurate. Line numbers for the existing entries refreshed to current orchestrator.py state (LOC grew from ~589 to ~810 with the additions). Cross-reference: [DECISIONS.md](../../DECISIONS.md) 2026-04-25 entry "Consolidated chat-tier orchestrator entry: `run_chat_tier_analysis`".
 
 ### 2026-04-24
 - Initial README created.

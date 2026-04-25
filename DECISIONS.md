@@ -862,3 +862,79 @@ Cross-ref user-memory note `project_llm_guardrails.md` ("LLM piece is
 the missing layer") and the project owner's framing during the audit
 session: "if I ask Claude directly to underwrite a house, it shouldn't
 be better than the models we've spent a month developing."
+
+---
+
+## 2026-04-25 — Consolidated chat-tier orchestrator entry: `run_chat_tier_analysis`
+
+**Decision.** Add a new orchestrator entry at
+[briarwood/orchestrator.py](briarwood/orchestrator.py) that runs ONE
+execution plan per chat turn, keyed by the router's `AnswerType`. Module
+set is sourced from a new constant
+[`briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`](briarwood/execution/module_sets.py).
+Skips the intent-contract router (the answer_type is already classified
+at the chat-tier dispatch layer); synthesizes a minimal `ParserOutput`
+from `_CHAT_TIER_DEFAULT_PARSER_BY_ANSWER_TYPE` when callers don't pass
+one explicitly. Calls the deterministic synthesizer
+(`briarwood.synthesis.structured.build_unified_output`) and returns the
+same artifact shape `run_briarwood_analysis_with_artifacts` does, plus
+`answer_type`, `modules_run`, `parser_output`, and `skipped_reason`.
+
+**Why this shape.** The 2026-04-25 audit's headline finding (DECISIONS
+"Chat-tier fragmented execution") was that a single BROWSE turn produced
+33 module-execution events across 5+ separate execution plans — `valuation`
+ran 5×, `risk_model` 4× fresh, and 13 modules including `comparable_sales`
+and `location_intelligence` never fired at all. The root cause was that
+each `tools.py` function (`get_value_thesis`, `get_cma`, `get_projection`,
+…) invokes the scoped executor with its own narrow plan. `run_chat_tier_analysis`
+replaces that fragmentation with a single intent-keyed plan so every
+relevant module's output is co-resident in one `UnifiedIntelligenceOutput`
+that the prose layer (Cycle 4 — Layer 3 LLM synthesizer) can read in full.
+A separate function (vs. parameter on `run_briarwood_analysis_with_artifacts`)
+keeps the chat-tier semantics — deterministic synthesizer, no
+intent-contract router, LOOKUP short-circuit — out of the path that
+batch / pre-computation callers (`runner_routed.py:228`) take. Live BROWSE
+smoke at landing time produced 23 distinct modules in `modules_run`, each
+running exactly once.
+
+**LOOKUP / non-cascade tiers.** `LOOKUP`, `SEARCH`, `COMPARISON`, `RESEARCH`,
+`VISUALIZE`, `MICRO_LOCATION`, and `CHITCHAT` are intentionally absent from
+`ANSWER_TYPE_MODULE_SETS`. The function returns an early-skip artifact with
+`skipped_reason="no_cascade_for_answer_type"`; callers (Cycle 3 dispatch
+handlers) branch on it. LOOKUP is single-fact retrieval and does not
+benefit from a property cascade; the others have their own non-cascade
+flows.
+
+**Parallel execution deferred.** The function ships with `parallel=False`
+default. The parallel path's `in_active_context` wrapper at
+[briarwood/agent/turn_manifest.py:332-336](briarwood/agent/turn_manifest.py#L332-L336)
+captures `ctx = contextvars.copy_context()` once at decoration time, then
+shares that single Context across pool workers — concurrent `ctx.run`
+calls fail with `RuntimeError: cannot enter context: <Context> is already
+entered`. Surfaced when `pool.map(in_active_context(_run_one), level)` was
+called with a level containing multiple independent modules. The bug is
+not exercised by any current production caller because
+`loop.run_in_executor(None, fn)` only fires one call per wrapped
+function. Tracked as the FOLLOW_UPS entry "in_active_context is not safe
+under concurrent thread-pool callers" 2026-04-25; flip the default once
+that wrapper is concurrent-safe.
+
+**Module-set tuning.** The starting sets in `module_sets.py` mirror the
+plan's text (BROWSE / DECISION → all 23 scoped modules; PROJECTION,
+RISK, EDGE, STRATEGY, RENT_LOOKUP each get an intent-keyed subset). They
+are starting points to tune with traces, not a fixed contract — the
+docstring says so and tests assert subset membership rather than exact
+equality so additions don't break.
+
+**Tests.** 8 new in `tests/test_orchestrator.py::RunChatTierAnalysisTests`:
+BROWSE runs the full first-read set; PROJECTION runs only its subset;
+RISK runs only its subset; LOOKUP and CHITCHAT short-circuit; each
+module appears at most once per turn (the no-duplication invariant);
+explicit `parser_output` overrides the synthesized default; synthesized
+parser_output carries the correct intent / depth / question_focus.
+
+**Cross-references.** Implements step 2 of FOLLOW_UPS.md "Consolidate
+chat-tier execution: one plan per turn, intent-keyed module set"
+2026-04-25. Cycle 2 of [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md).
+Architectural-fix anchor recorded in
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9.7.

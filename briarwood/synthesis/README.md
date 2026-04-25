@@ -1,6 +1,6 @@
 # synthesis — Deterministic Structured Synthesizer (Legacy Path)
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-25
 **Layer:** Unified Intelligence (Layer 3 — deterministic legacy path; runs whenever the claim-object wedge is off or falls through)
 **Status:** STABLE (production default until `BRIARWOOD_CLAIMS_ENABLED` flips)
 
@@ -137,6 +137,9 @@ unified = build_unified_output(
 - **Sunset path for the legacy synthesizer.** Once `BRIARWOOD_CLAIMS_ENABLED` is default-on for all archetypes, this path becomes a fallback only. When (and how) to remove it is open.
 
 ## Changelog
+
+### 2026-04-25
+- New caller: `briarwood.orchestrator.run_chat_tier_analysis` (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) invokes `build_unified_output(...)` directly instead of via an injected `synthesizer` callable. No contract change — the keyword-only signature (`property_summary`, `parser_output`, `module_results`, `interaction_trace`) is unchanged. The chat-tier path now produces a `UnifiedIntelligenceOutput` from a single consolidated execution plan per chat turn rather than from the fragmented per-tool plans diagnosed in DECISIONS.md "Chat-tier fragmented execution" 2026-04-25.
 
 ### 2026-04-24
 - Initial README created.
