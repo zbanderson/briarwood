@@ -152,6 +152,40 @@ MODULE_CACHE_FIELDS: dict[str, dict[str, list[str]]] = {
         "assumptions": [],
         "market": ["zone_flags"],
     },
+    "comparable_sales": {
+        # Mirrors valuation's structural set because valuation runs
+        # comparable_sales internally and they share the same comp-matching
+        # inputs. Adds rent assumptions for the income-adjusted hybrid
+        # decomposition. Market fields intentionally omitted: comparable_sales
+        # consumes market_value_history transitively, not via market_context.
+        "property": [
+            "address",
+            "town",
+            "state",
+            "county",
+            "property_type",
+            "beds",
+            "baths",
+            "sqft",
+            "lot_size",
+            "year_built",
+            "stories",
+            "garage_spaces",
+            "purchase_price",
+            "days_on_market",
+            "listing_date",
+            "has_back_house",
+            "adu_type",
+            "adu_sqft",
+            "additional_units",
+            "manual_comp_inputs",
+        ],
+        "assumptions": [
+            "back_house_monthly_rent",
+            "unit_rents",
+        ],
+        "market": [],
+    },
 }
 
 
