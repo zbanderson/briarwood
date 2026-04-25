@@ -3553,6 +3553,15 @@ def handle_risk(
     overrides, _ = _analysis_overrides(text, pid=pid, session=session)
     trust_mode = bool(_TRUST_GAPS_RE.search(text))
     downside_mode = bool(_DOWNSIDE_DETAIL_RE.search(text))
+
+    # Cycle 5b of OUTPUT_QUALITY_HANDOFF_PLAN.md: try the consolidated
+    # chat-tier path first. Trust mode and downside mode keep using
+    # ``compose_section_followup`` (tight section-specific follow-ups);
+    # the default risk path swaps in the Layer 3 synthesizer.
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, overrides, AnswerType.RISK
+    )
+
     if trust_mode:
         try:
             thesis = get_value_thesis(pid, overrides=overrides)
@@ -3589,10 +3598,14 @@ def handle_risk(
         )
         session.last_verifier_report = report
         return narrative
-    try:
-        profile = get_risk_profile(pid, overrides=overrides)
-    except ToolUnavailable as exc:
-        return f"I couldn't pull a risk profile ({exc})."
+    profile: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        profile = _browse_risk_profile_from_artifact(chat_tier_artifact, pid)
+    if profile is None:
+        try:
+            profile = get_risk_profile(pid, overrides=overrides)
+        except ToolUnavailable as exc:
+            return f"I couldn't pull a risk profile ({exc})."
     session.current_property_id = pid
 
     from briarwood.agent.rendering import ChartUnavailable, render_chart as _render
@@ -3601,12 +3614,17 @@ def handle_risk(
     bear = profile.get("bear_case_value")
     stress = profile.get("stress_case_value")
     if downside_mode and (bear is None or stress is None):
-        try:
-            projection = get_projection(pid, overrides=overrides)
-        except ToolUnavailable:
-            projection = {}
-        bear = bear if isinstance(bear, (int, float)) else projection.get("bear_case_value")
-        stress = stress if isinstance(stress, (int, float)) else projection.get("stress_case_value")
+        if chat_tier_artifact is not None:
+            proj_from_artifact = _browse_projection_from_artifact(chat_tier_artifact, pid, overrides) or {}
+            bear = bear if isinstance(bear, (int, float)) else proj_from_artifact.get("bear_case_value")
+            stress = stress if isinstance(stress, (int, float)) else proj_from_artifact.get("stress_case_value")
+        else:
+            try:
+                projection = get_projection(pid, overrides=overrides)
+            except ToolUnavailable:
+                projection = {}
+            bear = bear if isinstance(bear, (int, float)) else projection.get("bear_case_value")
+            stress = stress if isinstance(stress, (int, float)) else projection.get("stress_case_value")
     risk_flags = profile.get("risk_flags") or []
     trust_flags = profile.get("trust_flags") or []
 
@@ -3684,35 +3702,61 @@ def handle_risk(
             lines.append("No major cached risk drivers are surfacing yet.")
         return "\n".join(lines) + chart_line
 
-    system = load_prompt("risk")
-    risk_inputs = {
-        "risk_flags": list(risk_flags),
-        "trust_flags": list(trust_flags),
-        "ask_price": ask,
-        "bear_case_value": bear,
-        "stress_case_value": stress,
-        "total_penalty": total_penalty,
-        "key_risks": list(profile.get("key_risks") or []),
-    }
-    user = (
-        f"User question: {text}\n\n"
-        f"risk_flags: {risk_flags}\n"
-        f"trust_flags: {trust_flags}\n"
-        f"ask_price: {ask}\n"
-        f"bear_case_value: {bear}\n"
-        f"stress_case_value: {stress}\n"
-        f"total_penalty: {total_penalty}\n"
-        f"key_risks: {profile.get('key_risks')}\n"
-    )
-    narrative, report = complete_and_verify(
-        llm=llm,
-        system=system,
-        user=user,
-        structured_inputs=risk_inputs,
-        tier="risk",
-        max_tokens=300,
-    )
-    session.last_verifier_report = report
+    # Cycle 5b: prefer Layer 3 synthesizer when the consolidated artifact +
+    # llm are both present. Risk-tier prompt + risk_inputs slice composer
+    # remains as the fallback.
+    narrative: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                narrative = synth_prose
+                report = synth_report
+
+    if not narrative:
+        system = load_prompt("risk")
+        risk_inputs = {
+            "risk_flags": list(risk_flags),
+            "trust_flags": list(trust_flags),
+            "ask_price": ask,
+            "bear_case_value": bear,
+            "stress_case_value": stress,
+            "total_penalty": total_penalty,
+            "key_risks": list(profile.get("key_risks") or []),
+        }
+        user = (
+            f"User question: {text}\n\n"
+            f"risk_flags: {risk_flags}\n"
+            f"trust_flags: {trust_flags}\n"
+            f"ask_price: {ask}\n"
+            f"bear_case_value: {bear}\n"
+            f"stress_case_value: {stress}\n"
+            f"total_penalty: {total_penalty}\n"
+            f"key_risks: {profile.get('key_risks')}\n"
+        )
+        narrative, report = complete_and_verify(
+            llm=llm,
+            system=system,
+            user=user,
+            structured_inputs=risk_inputs,
+            tier="risk",
+            max_tokens=300,
+        )
+    if report is not None:
+        session.last_verifier_report = report
     return (narrative or "No material risk drivers surfaced.") + chart_line
 
 
@@ -4272,6 +4316,53 @@ def _browse_rent_payload_from_artifact(
         "rental_ease_label": rental.get("rental_ease_label"),
         "rent_support_score": rental.get("rent_support_score"),
         "estimated_days_to_rent": rental.get("estimated_days_to_rent"),
+    }
+
+
+def _browse_risk_profile_from_artifact(
+    artifact: dict[str, object],
+    pid: str,
+) -> dict[str, object] | None:
+    """Inline equivalent of ``tools.get_risk_profile`` over a chat-tier artifact.
+
+    Surfaces the risk_model + resale_scenario fields the legacy tool returns,
+    plus the unified output's trust_flags / key_risks / value_position.
+    Returns ``None`` when the risk_model module's metrics are absent (rare —
+    only when the consolidated plan dropped risk_model from its set).
+    """
+
+    risk = _module_metrics_from_artifact(artifact, "risk_model")
+    if not risk:
+        return None
+    scen = _module_metrics_from_artifact(artifact, "resale_scenario") or _module_metrics_from_artifact(artifact, "bull_base_bear")
+    unified = artifact.get("unified_output") or {}
+    if not isinstance(unified, dict):
+        unified = {}
+    value_position = unified.get("value_position") or {}
+    if not isinstance(value_position, dict):
+        value_position = {}
+    flags_raw = risk.get("risk_flags") or ""
+    risk_flags = (
+        [f.strip() for f in flags_raw.split(",") if f.strip()]
+        if isinstance(flags_raw, str)
+        else list(flags_raw) if isinstance(flags_raw, list) else []
+    )
+    decision_stance = unified.get("decision_stance")
+    if hasattr(decision_stance, "value"):
+        decision_stance = decision_stance.value
+    return {
+        "property_id": pid,
+        "risk_flags": risk_flags,
+        "risk_count": risk.get("risk_count"),
+        "total_penalty": risk.get("total_penalty"),
+        "total_credit": risk.get("total_credit"),
+        "flood_risk": risk.get("flood_risk"),
+        "trust_flags": list(unified.get("trust_flags") or []),
+        "key_risks": list(unified.get("key_risks") or []),
+        "ask_price": value_position.get("ask_price"),
+        "bear_case_value": scen.get("bear_case_value"),
+        "stress_case_value": scen.get("stress_case_value"),
+        "decision_stance": decision_stance,
     }
 
 
