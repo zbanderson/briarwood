@@ -286,7 +286,45 @@ python scripts/dev_chat.py
 
 ---
 
-### Cycle 5 — Roll out to remaining handlers
+### Cycle 5 — Roll out to remaining handlers — LANDED 2026-04-25 (commits `1f8ab6a`, `6b861e9`, `d3293a1`, `3811dbf`, `c589635`, `a429d88`)
+
+**Status:** All six chat-tier handlers (BROWSE from Cycle 3+4, plus PROJECTION / RISK / EDGE / STRATEGY / RENT_LOOKUP / DECISION from Cycle 5a-f) now use the consolidated chat-tier path and the Layer 3 LLM synthesizer. The previous live-trace gap — STRATEGY turns with `modules_run: []`, RISK turns running only 5 modules, BROWSE follow-ups bypassing the synthesizer via the comp-set → EDGE rewrite — is now closed for saved properties across every tier with a property cascade.
+
+**What landed:**
+
+| Sub-cycle | Handler | Commit | Rewire scope |
+|---|---|---|---|
+| 5a | `handle_projection` | `1f8ab6a` | Full: artifact load + projection-from-artifact + synthesizer (default path) |
+| 5b | `handle_risk` | `6b861e9` | Full: artifact load + risk-profile-from-artifact + synthesizer (default path); trust mode keeps `compose_section_followup` |
+| 5c | `handle_edge` | `d3293a1` | Minimal: synthesizer for default path only; comp_set / entry_point / value_change keep `compose_section_followup` |
+| 5d | `handle_strategy` | `3811dbf` | Full: artifact load + strategy_fit-from-artifact + synthesizer |
+| 5e | `handle_rent_lookup` | `c589635` | Full: artifact load + rent_payload-from-artifact + strategy_fit-from-artifact + synthesizer (default path); rent_workability mode keeps `compose_section_followup` |
+| 5f | `handle_decision` | `a429d88` | Minimal: artifact pre-load (warms `_SCOPED_MODULE_OUTPUT_CACHE` for the dense per-tool block) + synthesizer for the final `decision_summary` composer; per-tool calls and wedge unchanged |
+
+**Pattern across all six:**
+1. Generalized `_browse_chat_tier_artifact` into `_chat_tier_artifact_for(pid, text, overrides, answer_type)` so each handler picks its tier's module set.
+2. Each handler calls the helper near the top, after pid resolution and overrides extraction.
+3. Per-tool view reads (`get_projection`, `get_strategy_fit`, `get_rent_estimate`, `get_risk_profile`) project from the artifact via existing helpers (`_browse_projection_from_artifact`, `_browse_strategy_fit_from_artifact`, `_browse_rent_payload_from_artifact`, `_browse_risk_profile_from_artifact`) when the artifact is populated. Legacy per-tool calls fall through when the artifact is None.
+4. Final composer call → `synthesize_with_llm` first; existing tier-specific composer is the fallback.
+5. Section-followup composers (trust, downside, comp_set, entry_point, value_change, rent_workability) keep their tight `compose_section_followup` calls — full unified output would distract from the section's specific question.
+
+**Out of scope (deferred to Cycle 6):**
+- Full handle_decision per-tool elimination. The wedge fall-through still calls PropertyView.load + get_cma + get_projection + get_risk_profile + get_strategy_fit + get_rent_estimate. They now all hit cache thanks to the artifact pre-load, so the duplicate runs are gone, but the call sites themselves remain. Replacing them with artifact-derived view builders is its own refactor.
+- Section followup composers staying with `compose_section_followup` is a judgment call; Cycle 6 may revisit if traces show those followup paths producing thin or repetitive prose.
+- Per-handler integration tests for the new synthesizer paths beyond what Cycle 5a added (`ProjectionHandlerTests`). The other handlers are covered by their existing tests + the artifact-helper tests already in place; new synthesizer-path tests can be added incrementally as needed.
+
+**Browser verification expectations:**
+- BROWSE turns: same as Cycle 4 (synthesis.llm fires; composer.draft skipped). Confirmed working.
+- PROJECTION turns: synthesis.llm replaces compose_structured_response. Module cache hits across the cascade.
+- RISK turns: synthesis.llm replaces complete_and_verify (default path). Trust-gap follow-ups still use compose_section_followup.
+- EDGE turns (incl. comp-set rewrites): synthesis.llm replaces complete_and_verify on the default path. comp_set_mode / entry_point / value_change still use compose_section_followup.
+- STRATEGY turns: synthesis.llm replaces complete_and_verify. The `modules_run: []` baseline is gone — STRATEGY now executes the full strategy module set.
+- RENT_LOOKUP turns: synthesis.llm replaces compose_contract_response. rent_workability follow-ups still use compose_section_followup.
+- DECISION turns (wedge fall-through): synthesis.llm replaces the final decision_summary composer; the question-specific decision_value composer remains; per-tool block now hits module cache thanks to the artifact pre-load.
+
+**Tests at landing time:** 79/79 in `tests/agent/test_dispatch.py` after each sub-cycle.
+
+**Original scope below (for reference):**
 
 **Scope.** Apply the Cycle 3+4 pattern (consolidated execution + synthesizer) to:
 - `handle_projection` ([`dispatch.py:3130`](briarwood/agent/dispatch.py#L3130))
