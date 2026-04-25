@@ -7,6 +7,7 @@ from briarwood.orchestrator import (
     build_cache_key,
     build_property_summary,
     run_briarwood_analysis,
+    run_briarwood_analysis_with_artifacts,
     supports_scoped_execution,
 )
 from briarwood.routing_schema import (
@@ -186,6 +187,80 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result.analysis_depth_used, AnalysisDepth.SNAPSHOT)
         self.assertIn("outputs", calls["module_results"])
         self.assertIn("valuation", calls["module_results"]["outputs"])
+
+    def test_shadow_intelligence_artifact_is_telemetry_only(self) -> None:
+        from briarwood.shadow_intelligence import IntentSatisfactionReport, ShadowToolPlan
+
+        class ShadowLLM:
+            def __init__(self) -> None:
+                self.responses = [
+                    ShadowToolPlan(
+                        proposed_modules=["valuation", "confidence", "rental_option"],
+                        proposed_tools=[],
+                        confidence=0.8,
+                        reason="rent path may be relevant",
+                    ),
+                    IntentSatisfactionReport(
+                        intent_satisfied=True,
+                        confidence=0.7,
+                        missing_capabilities=[],
+                        suggested_modules=[],
+                        suggested_follow_up=None,
+                        reason="answered",
+                    ),
+                ]
+
+            def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+                raise AssertionError("shadow intelligence should use structured output")
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                return self.responses.pop(0)
+
+        def fake_synthesizer(
+            property_summary: dict[str, object],
+            parser_output: dict[str, object],
+            module_results: dict[str, object],
+        ) -> dict[str, object]:
+            del property_summary, parser_output, module_results
+            return {
+                "recommendation": "Buy with measured conviction.",
+                "decision": "buy",
+                "best_path": "Proceed with diligence.",
+                "key_value_drivers": ["Value support"],
+                "key_risks": ["Carry"],
+                "confidence": 0.7,
+                "analysis_depth_used": "snapshot",
+                "next_questions": [],
+                "recommended_next_run": None,
+                "supporting_facts": {},
+            }
+
+        artifacts = run_briarwood_analysis_with_artifacts(
+            property_data={
+                "property_id": "prop-shadow",
+                "address": "1 Test St",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2.0,
+                "sqft": 1400,
+                "purchase_price": 750000,
+            },
+            user_input="Should I buy this?",
+            synthesizer=fake_synthesizer,
+            shadow_llm=ShadowLLM(),
+        )
+
+        selected_before_shadow = [m.value for m in artifacts["routing_decision"].selected_modules]
+        self.assertIn("valuation", selected_before_shadow)
+        shadow = artifacts["shadow_intelligence"]
+        self.assertIsNotNone(shadow)
+        self.assertEqual(shadow["planner"]["proposed_modules"][-1], "rental_option")
+        self.assertEqual(shadow["module_diff"]["missing_from_deterministic"], ["rental_option"])
+        self.assertEqual(
+            [m.value for m in artifacts["routing_decision"].selected_modules],
+            selected_before_shadow,
+        )
 
     def test_repeated_identical_run_reuses_cached_parser_and_synthesis(self) -> None:
         counters = {"llm_parser": 0, "synthesizer": 0}

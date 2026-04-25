@@ -22,6 +22,7 @@ from briarwood.routing_schema import (
     RoutingDecision,
     UnifiedIntelligenceOutput,
 )
+from briarwood.shadow_intelligence import run_shadow_intelligence
 
 logger = logging.getLogger(__name__)
 
@@ -443,6 +444,7 @@ def run_briarwood_analysis(
     synthesizer: Synthesizer | None = None,
     scoped_registry: dict[str, ModuleSpec] | None = None,
     prior_context: list[dict[str, object]] | None = None,
+    shadow_llm: Any | None = None,
 ) -> UnifiedIntelligenceOutput:
     """Return only the unified output from the full routed analysis flow."""
 
@@ -453,6 +455,7 @@ def run_briarwood_analysis(
         synthesizer=synthesizer,
         scoped_registry=scoped_registry,
         prior_context=prior_context,
+        shadow_llm=shadow_llm,
     )
     return artifacts["unified_output"]
 
@@ -464,6 +467,7 @@ def run_briarwood_analysis_with_artifacts(
     synthesizer: Synthesizer | None = None,
     scoped_registry: dict[str, ModuleSpec] | None = None,
     prior_context: list[dict[str, object]] | None = None,
+    shadow_llm: Any | None = None,
 ) -> dict[str, Any]:
     """Run Briarwood's routed analysis flow through scoped execution.
 
@@ -520,11 +524,22 @@ def run_briarwood_analysis_with_artifacts(
 
     cached_output = _SYNTHESIS_OUTPUT_CACHE.get(analysis_cache_key)
     if cached_output is not None:
+        cached_module_results = _MODULE_RESULTS_CACHE.get(analysis_cache_key, {})
+        shadow = run_shadow_intelligence(
+            user_input=user_input,
+            selected_modules=[module.value for module in selected_modules],
+            parser_output=routing_decision.parser_output.model_dump(),
+            module_results=cached_module_results,
+            unified_output=cached_output,
+            llm=shadow_llm,
+            registry=scoped_registry,
+        )
         return {
             "routing_decision": routing_decision,
             "property_summary": property_summary,
-            "module_results": _MODULE_RESULTS_CACHE.get(analysis_cache_key, {}),
+            "module_results": cached_module_results,
             "unified_output": cached_output,
+            "shadow_intelligence": shadow.model_dump(mode="json") if shadow else None,
         }
 
     module_results = _MODULE_RESULTS_CACHE.get(analysis_cache_key)
@@ -569,12 +584,22 @@ def run_briarwood_analysis_with_artifacts(
     )
     synthesis_output = _normalize_synthesis_output(synthesis_output_raw)
     _SYNTHESIS_OUTPUT_CACHE[analysis_cache_key] = synthesis_output
+    shadow = run_shadow_intelligence(
+        user_input=user_input,
+        selected_modules=[module.value for module in selected_modules],
+        parser_output=routing_decision.parser_output.model_dump(),
+        module_results=module_results,
+        unified_output=synthesis_output,
+        llm=shadow_llm,
+        registry=scoped_registry,
+    )
     return {
         "routing_decision": routing_decision,
         "property_summary": property_summary,
         "module_results": module_results,
         "interaction_trace": interaction_trace_dict,
         "unified_output": synthesis_output,
+        "shadow_intelligence": shadow.model_dump(mode="json") if shadow else None,
     }
 
 
