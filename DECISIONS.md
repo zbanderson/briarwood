@@ -1159,3 +1159,63 @@ verifies `get_value_thesis` is NOT called when a thesis is passed.
 2026-04-25 (step 1 resolved). Surfaced during Cycle 3 (`ca94d2f`)
 post-landing UI smoke; resolved in commit `f018fc4` between Cycles 4
 and 5.
+
+---
+
+## 2026-04-25 — Phase 3 (presentation layer) kicks off — PRESENTATION_HANDOFF_PLAN.md
+
+**Decision.** Phase 2 ([OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md))
+closed the architectural / substrate gap. Phase 3 targets the
+*presentation layer* — chart visual quality, intent-aware chart
+selection, LLM-narrated charts, and front-page-newspaper prose voice.
+Tracked in [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
+at the repo root.
+
+**Why now.** Live UI smoke 2026-04-25 confirmed Phase 2's work:
+manifest cleanup, synthesizer firing, prose substantively richer, no
+duplicate runs. User feedback the same session was direct: charts
+"look like something that isn't being designed by a user rather than
+by an LLM" — no axis titles, no chart titles, no legends. Prose still
+reads as a "string of characters" rather than a hook. The substrate
+is in place; the presentation layer needs to catch up.
+
+**North-star problem statement** (from the plan): "Every Briarwood
+response should land like the front page of a newspaper — visually
+rich, intent-tight, narrative-led — so the user keeps reading and
+keeps clicking."
+
+**Cycle order** (locked 2026-04-25 in conversation): Polish → Select
+→ Narrate → Prose. Cycle A (chart visual polish) is fastest visible
+win. Cycle B (intent-keyed selection + new `market_trend` chart) is
+the highest-leverage substrate addition. Cycle C (LLM-narrated
+charts) ties chart and prose together. Cycle D (newspaper-voice
+prose) is the final voice tune.
+
+**Key design pre-decisions** (recorded in the plan's "Open design
+decisions" but worth surfacing here):
+
+1. **Town-level ZHVI is verified to work** for the `market_trend`
+   chart — `market_value_history` agent prefers town-level
+   (`geography_type = "town"`) and falls back to county (line 45 of
+   `briarwood/agents/market_history/agent.py`). Live UI smoke
+   confirmed `confidence: 1.0` for Belmar (town-level). The chart
+   plumbing works without new module work.
+2. **Selection cap drops from 6 → 3** for first-impression turns
+   (BROWSE / decision_summary). The kitchen-sink feel was the user's
+   #2 complaint after visual polish.
+3. **Markdown headers in synthesizer prose** (Cycle D) — keep the
+   verifier's free-text grounding logic intact; instruct the LLM to
+   produce literal markdown structure ("## Headline", "## Why", "##
+   What's Interesting", "## What I'd Watch") rather than moving to a
+   structured Pydantic response.
+
+**Drift prevention.** The plan lives at the repo root parallel to
+`OUTPUT_QUALITY_HANDOFF_PLAN.md`. Cross-referenced from this entry
+and from `FOLLOW_UPS.md` so future agents discover it via the
+standard CLAUDE.md orientation flow.
+
+**Cross-references.** [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
+(canonical scope); [GAP_ANALYSIS.md](GAP_ANALYSIS.md) Layer 4
+(Representation Agent target description);
+[AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §4
+(the audit's "Charts don't explain" diagnosis).

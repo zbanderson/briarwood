@@ -2,6 +2,11 @@
 
 Actionable code-level items surfaced during Handoff 1 README writing that were left untouched per Handoff 1's "no application code changes" rule. Each entry should be triagable: state the issue, the affected file paths, the impact, and a suggested approach. Resolve in subsequent handoffs.
 
+> **Active handoff plans.** Some follow-ups are part of a structured multi-cycle handoff with its own plan doc. Don't pick those off in isolation — read the plan first.
+>
+> - **Phase 2 (output quality):** [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md). All five cycles landed 2026-04-25; Cycle 6 cleanup remains.
+> - **Phase 3 (presentation):** [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md). Cycles A-D queued 2026-04-25.
+
 Distinct from [DECISIONS.md](DECISIONS.md) (which captures product/architectural decisions and audit-doc drift) and [GAP_ANALYSIS.md](GAP_ANALYSIS.md) (which captures architectural gaps relative to the six-layer target). This file is for "go fix this" items that are smaller in scope than either of those.
 
 ---
