@@ -60,31 +60,24 @@ python scripts/dev_chat.py
 
 ## Cycles
 
-### Cycle 1 — Promote `comparable_sales` to the scoped registry
+### Cycle 1 — Promote `comparable_sales` to the scoped registry — LANDED 2026-04-25 (narrowed)
 
-**Why first.** Today `comparable_sales` is grafted post-hoc inside `briarwood/claims/pipeline.py:62-88` because the scoped registry doesn't surface it. Cycle 2 needs to invoke `comparable_sales` via the executor. Without the promotion, the consolidation has to keep using the graft, which is exactly the kind of wart that compounds.
+**Status update (2026-04-25):** When this plan was drafted, the registry-promotion premise was already stale — `comparable_sales` had been promoted in commit `37df9f8` (Handoff 3, 2026-04-24). Discovered during Cycle 1 execution; flagged per CLAUDE.md "surface contradictions, do not silently reconcile." Cycle 1 was narrowed (Option B from the cycle-execution discussion) to the two cleanup items that remained, and the graft retirement was deferred to its own existing FOLLOW_UPS entry.
 
-**Scope:**
-- Add `comparable_sales` to [`briarwood/execution/registry.py`](briarwood/execution/registry.py). Runner: `briarwood.modules.comparable_sales_scoped.run_comparable_sales` (the scoped wrapper already exists at `briarwood/modules/comparable_sales_scoped.py`).
-- Determine `depends_on` and `required_context_keys` correctly. `comparable_sales` is the comp engine — it depends on property facts and reads saved comp inventory. Likely `depends_on=[]`, `required_context_keys=["property_data"]`.
-- Add cache field list to `MODULE_CACHE_FIELDS` in `briarwood/execution/executor.py:13` so per-module caching works.
-- Remove the post-hoc graft at `briarwood/claims/pipeline.py:62-88` (it becomes unnecessary).
-- Update [`briarwood/modules/README_comparable_sales.md`](briarwood/modules/README_comparable_sales.md) — note the registry promotion + dated changelog entry.
-- Update [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) and [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) — `comparable_sales` is now a scoped registry entry.
+**What landed (commit `2cb1f3e`):**
+- `MODULE_CACHE_FIELDS["comparable_sales"]` added to [`briarwood/execution/executor.py`](briarwood/execution/executor.py). Mirrors `valuation`'s property-field set; rent assumptions (`back_house_monthly_rent`, `unit_rents`) included for the income-adjusted hybrid decomposition; `market` intentionally empty (comparable_sales consumes market_value_history transitively via its internal MarketValueHistoryModule).
+- [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §Known Rough Edges → Structural bullet rewritten. Previously claimed "ComparableSalesModule is not in the scoped registry," contradicting the same doc's row at line 91 ("Promoted ... in Handoff 3"). Now leads with the registry promotion and explains why the graft is still in place (legacy-shape consumer in `_iter_comps`).
 
-**Tests:**
-- New test in `tests/execution/` (or extend existing) verifying `comparable_sales` runs via `execute_plan` and produces the expected `ModulePayload` shape.
-- Existing claims tests must pass with the graft removed — `tests/claims/test_pipeline.py` likely needs an update.
-- Wedge regression: end-to-end claim build for a saved property must still produce a valid claim.
+**What was already done before this cycle:**
+- `comparable_sales` registered in [`briarwood/execution/registry.py:270-284`](briarwood/execution/registry.py#L270-L284). `depends_on=[]`, `required_context_keys=["property_data"]`. Done in `37df9f8`.
+- [`briarwood/modules/README_comparable_sales.md`](briarwood/modules/README_comparable_sales.md) and [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) already documented the scoped path. Done in Handoff 3.
 
-**Verification:**
-- Run `tests/agent/`, `tests/claims/`, `tests/execution/`.
-- With `BRIARWOOD_TRACE=1`, run a DECISION turn (wedge fires); confirm `comparable_sales` appears in `modules_run` rather than just being grafted.
+**What was deferred (not blocking Cycle 2):**
+- Graft retirement at [`briarwood/claims/pipeline.py:62-88`](briarwood/claims/pipeline.py#L62-L88). Requires updates to [`briarwood/claims/synthesis/verdict_with_comparison.py:413-425`](briarwood/claims/synthesis/verdict_with_comparison.py#L413-L425) `_iter_comps` because the scoped runner emits `ModulePayload.data.legacy_payload.comps_used` while the graft writes the legacy `payload.comps_used` shape. Tracked as the standalone FOLLOW_UPS entry *"Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py"* 2026-04-24.
 
-**Trace:** [FOLLOW_UPS.md](FOLLOW_UPS.md) "Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py" 2026-04-24 + the new "Consolidate chat-tier execution" entry's prerequisite list.
+**Cycle 2 unblocked.** Cycle 2 ("Consolidated chat-tier orchestrator entry") can now invoke `run_comparable_sales` via the executor as planned — that was Cycle 1's only true blocker.
 
-**Estimate:** 1-2 hours.
-**Risk:** Medium — touches the wedge path which currently works.
+**Tests at landing time:** 138 passed (5 subtests) across `tests/test_execution_v2.py`, `tests/test_execution_normalization.py`, `tests/test_orchestrator.py`, `tests/claims/`, `tests/test_shadow_intelligence.py`, `tests/representation/`.
 
 ---
 
