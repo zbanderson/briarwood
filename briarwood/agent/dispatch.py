@@ -4212,6 +4212,39 @@ def _browse_rent_payload_from_artifact(
     }
 
 
+def _browse_thesis_from_artifact(
+    artifact: dict[str, object],
+) -> dict[str, object]:
+    """Project the value-thesis fields ``get_cma`` reads from a chat-tier artifact.
+
+    Cycle 5 cleanup item from FOLLOW_UPS.md "``get_cma`` internally calls
+    ``get_value_thesis``, leaking 5 module re-runs into the chat-tier path"
+    2026-04-25. ``get_cma`` reads six thesis keys (``ask_price``,
+    ``fair_value_base``, ``value_low``, ``value_high``, ``pricing_view``,
+    ``primary_value_source``); all six are reachable from the consolidated
+    artifact's ``unified_output.value_position`` plus the ``valuation``
+    module's metrics. Passing this dict into ``get_cma(thesis=...)`` skips
+    the redundant internal ``run_routed_report`` call that otherwise re-runs
+    valuation / risk_model / confidence / legal_confidence / carry_cost.
+    """
+
+    unified = artifact.get("unified_output") or {}
+    if not isinstance(unified, dict):
+        unified = {}
+    value_position = unified.get("value_position") or {}
+    if not isinstance(value_position, dict):
+        value_position = {}
+    valuation = _module_metrics_from_artifact(artifact, "valuation")
+    return {
+        "ask_price": value_position.get("ask_price"),
+        "fair_value_base": value_position.get("fair_value_base"),
+        "value_low": value_position.get("value_low"),
+        "value_high": value_position.get("value_high"),
+        "pricing_view": valuation.get("pricing_view"),
+        "primary_value_source": unified.get("primary_value_source"),
+    }
+
+
 def handle_browse(
     text: str, decision: RouterDecision, session: Session, llm: LLMClient | None
 ) -> str:
@@ -4265,8 +4298,18 @@ def handle_browse(
             return f"I couldn't build a property brief ({exc})."
     session.current_property_id = pid
     cma_result: CMAResult | None = None
+    # Pass a pre-computed thesis dict to get_cma when the chat-tier artifact
+    # is available. Eliminates the internal get_value_thesis call inside
+    # get_cma that otherwise re-runs valuation / risk_model / confidence /
+    # legal_confidence / carry_cost — surfaced as 5 trailing duplicate
+    # module-run events in the manifest after Cycle 3 landed.
+    cma_thesis: dict[str, object] | None = (
+        _browse_thesis_from_artifact(chat_tier_artifact)
+        if chat_tier_artifact is not None
+        else None
+    )
     try:
-        cma_result = get_cma(pid, overrides=overrides)
+        cma_result = get_cma(pid, overrides=overrides, thesis=cma_thesis)
     except Exception as exc:
         logger.warning("browse CMA build failed for %s: %s", pid, exc)
         cma_result = None

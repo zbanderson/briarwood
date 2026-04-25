@@ -317,6 +317,10 @@ The `valuation` module's cache key in `MODULE_CACHE_FIELDS` includes `market_his
 
 Surfaced during Cycle 3 (commit `ca94d2f`) post-landing UI smoke. Cross-ref [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md) Cycle 3 status block.
 
+**Step 1 resolved 2026-04-25** (between Cycles 4 and 5). `get_cma` gains an optional keyword-only `thesis` parameter. When provided (chat-tier callers), the internal `get_value_thesis` call is skipped and `CMAResult` populates directly from the passed dict. `handle_browse` builds the thesis dict from `chat_tier_artifact["unified_output"]["value_position"]` plus the `valuation` module's metrics via the new `_browse_thesis_from_artifact` helper. Default behavior (`thesis=None`) is unchanged for `handle_decision` / `handle_edge` callers, which still go through the per-tool routed pattern until Cycle 5 rewires them. New regression test: `tests/agent/test_tools.py::ContractToolTests::test_get_cma_skips_internal_value_thesis_when_caller_provides_thesis` verifies `get_value_thesis` is NOT called when a thesis is passed.
+
+**Step 2 still open.** The cache-miss audit on `valuation` across the consolidated path vs. `get_value_thesis`'s routed path was deferred — the leak is now zero on `handle_browse` (the consolidated path doesn't trigger the duplicate), so the audit's value drops to "diagnostic curiosity unless we re-enable per-tool routed runs for some reason." Worth noting for whoever picks up the broader `MODULE_CACHE_FIELDS` cleanup item.
+
 ---
 
 ## 2026-04-25 — `in_active_context` is not safe under concurrent thread-pool callers

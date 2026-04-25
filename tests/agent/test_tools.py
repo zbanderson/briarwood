@@ -288,6 +288,62 @@ class ContractToolTests(unittest.TestCase):
         self.assertIn("Live Zillow market comps", result.comp_selection_summary or "")
         self.assertTrue(any("ATTOM sale history confirmed" in note for note in result.confidence_notes))
 
+    def test_get_cma_skips_internal_value_thesis_when_caller_provides_thesis(self) -> None:
+        """FOLLOW_UPS.md "get_cma internally calls get_value_thesis" 2026-04-25.
+
+        When a caller (typically the chat-tier consolidated path) passes a
+        pre-computed thesis dict, ``get_cma`` must skip the internal
+        ``get_value_thesis`` call — that's the call producing the 5
+        trailing duplicate module runs the audit's manifest cleanup
+        surfaced after Cycle 3. The CMAResult should populate from the
+        passed thesis directly.
+        """
+
+        passed_thesis = {
+            "ask_price": 899000.0,
+            "fair_value_base": 804396.0,
+            "value_low": 760000.0,
+            "value_high": 860000.0,
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+        }
+
+        with patch(
+            "briarwood.agent.tools.get_property_summary",
+            return_value={
+                "address": "1600 L Street, Belmar, NJ 07719",
+                "town": "Belmar",
+                "state": "NJ",
+                "beds": 3,
+                "baths": 2.0,
+            },
+        ), patch(
+            "briarwood.agent.tools.get_value_thesis",
+        ) as legacy_thesis, patch(
+            "briarwood.agent.tools.SearchApiZillowClient"
+        ) as zillow_cls, patch(
+            "briarwood.agent.tools.AttomClient"
+        ) as attom_cls, patch(
+            "briarwood.agent.tools.search_listings", return_value=[]
+        ):
+            zillow_cls.return_value.is_configured = False
+            attom_cls.return_value.api_key = None
+            result = get_cma(
+                "1600-l-street-belmar-nj-07719",
+                thesis=passed_thesis,
+            )
+
+        # Critical: get_value_thesis must NOT have been called — that's the
+        # whole point of the leak fix.
+        legacy_thesis.assert_not_called()
+        # CMAResult populated from the passed thesis fields.
+        self.assertEqual(result.ask_price, 899000.0)
+        self.assertEqual(result.fair_value_base, 804396.0)
+        self.assertEqual(result.value_low, 760000.0)
+        self.assertEqual(result.value_high, 860000.0)
+        self.assertEqual(result.pricing_view, "above_fair_value")
+        self.assertEqual(result.primary_value_source, "current_value")
+
     def test_get_rent_outlook_returns_future_range(self) -> None:
         with patch(
             "briarwood.agent.tools.get_rent_estimate",

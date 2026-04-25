@@ -1826,10 +1826,35 @@ def get_value_thesis(property_id: str, *, overrides: dict[str, Any] | None = Non
 
 
 @traced_tool()
-def get_cma(property_id: str, *, overrides: dict[str, Any] | None = None) -> CMAResult:
-    """Return a CMA contract that prefers live market support before saved comps."""
+def get_cma(
+    property_id: str,
+    *,
+    overrides: dict[str, Any] | None = None,
+    thesis: dict[str, Any] | None = None,
+) -> CMAResult:
+    """Return a CMA contract that prefers live market support before saved comps.
+
+    When ``thesis`` is provided (typically pre-computed from a chat-tier
+    consolidated path's ``UnifiedIntelligenceOutput``), the internal
+    ``get_value_thesis`` call is skipped — the caller has already paid for
+    the routed analysis and the same fields can be projected directly. The
+    thesis dict must carry the keys ``ask_price``, ``fair_value_base``,
+    ``value_low``, ``value_high``, ``pricing_view``, and
+    ``primary_value_source`` for the CMAResult to populate fully; missing
+    keys fall back to ``None`` the same way ``get_value_thesis`` would
+    have.
+
+    Default behavior (``thesis=None``) is unchanged: ``get_value_thesis``
+    runs internally and the returned thesis is consumed locally. This
+    keeps backward compatibility for the per-tool callers under
+    ``handle_decision`` / ``handle_edge`` that still use the per-tool
+    routed pattern (Cycle 5 of OUTPUT_QUALITY_HANDOFF_PLAN.md will
+    rewire those handlers to the consolidated path and pass the thesis
+    through here).
+    """
     summary = get_property_summary(property_id)
-    thesis = get_value_thesis(property_id, overrides=overrides)
+    if thesis is None:
+        thesis = get_value_thesis(property_id, overrides=overrides)
     subject_ask = thesis.get("ask_price")
     live_source = _live_zillow_cma_candidates(property_id, summary, subject_ask)
     live_rows = live_source["rows"]
