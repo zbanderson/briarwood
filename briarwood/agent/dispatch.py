@@ -4078,10 +4078,21 @@ def handle_strategy(
     if pid is None:
         return "Which property? Give me a saved property id."
     overrides, _ = _analysis_overrides(text, pid=pid, session=session)
-    try:
-        fit = get_strategy_fit(pid, overrides=overrides)
-    except ToolUnavailable as exc:
-        return f"I couldn't score strategy fit ({exc})."
+
+    # Cycle 5d: load consolidated chat-tier artifact and project the
+    # strategy_fit dict from it. Falls back to legacy get_strategy_fit
+    # when the artifact is None.
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, overrides, AnswerType.STRATEGY
+    )
+    fit: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        fit = _browse_strategy_fit_from_artifact(chat_tier_artifact, pid)
+    if fit is None:
+        try:
+            fit = get_strategy_fit(pid, overrides=overrides)
+        except ToolUnavailable as exc:
+            return f"I couldn't score strategy fit ({exc})."
     session.current_property_id = pid
 
     strategy_facts = _load_property_facts(pid)
@@ -4129,43 +4140,67 @@ def handle_strategy(
             lines.append(str(fit["recommendation"]))
         return "\n".join(lines)
 
-    system = load_prompt("strategy")
-    strategy_inputs = {
-        "best_path": fit.get("best_path"),
-        "recommendation": fit.get("recommendation"),
-        "pricing_view": fit.get("pricing_view"),
-        "rental_ease_label": fit.get("rental_ease_label"),
-        "rental_ease_score": fit.get("rental_ease_score"),
-        "rent_support_score": fit.get("rent_support_score"),
-        "liquidity_score": fit.get("liquidity_score"),
-        "monthly_cash_flow": fit.get("monthly_cash_flow"),
-        "cash_on_cash_return": fit.get("cash_on_cash_return"),
-        "annual_noi": fit.get("annual_noi"),
-        "primary_value_source": fit.get("primary_value_source"),
-    }
-    user = (
-        f"User question: {text}\n\n"
-        f"best_path: {fit.get('best_path')}\n"
-        f"recommendation: {fit.get('recommendation')}\n"
-        f"pricing_view: {fit.get('pricing_view')}\n"
-        f"rental_ease_label: {fit.get('rental_ease_label')}\n"
-        f"rental_ease_score: {fit.get('rental_ease_score')}\n"
-        f"rent_support_score: {fit.get('rent_support_score')}\n"
-        f"liquidity_score: {fit.get('liquidity_score')}\n"
-        f"monthly_cash_flow: {fit.get('monthly_cash_flow')}\n"
-        f"cash_on_cash_return: {fit.get('cash_on_cash_return')}\n"
-        f"annual_noi: {fit.get('annual_noi')}\n"
-        f"primary_value_source: {fit.get('primary_value_source')}\n"
-    )
-    narrative, report = complete_and_verify(
-        llm=llm,
-        system=system,
-        user=user,
-        structured_inputs=strategy_inputs,
-        tier="strategy",
-        max_tokens=300,
-    )
-    session.last_verifier_report = report
+    # Cycle 5d: Layer 3 synthesizer for the strategy default path.
+    narrative: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                narrative = synth_prose
+                report = synth_report
+
+    if not narrative:
+        system = load_prompt("strategy")
+        strategy_inputs = {
+            "best_path": fit.get("best_path"),
+            "recommendation": fit.get("recommendation"),
+            "pricing_view": fit.get("pricing_view"),
+            "rental_ease_label": fit.get("rental_ease_label"),
+            "rental_ease_score": fit.get("rental_ease_score"),
+            "rent_support_score": fit.get("rent_support_score"),
+            "liquidity_score": fit.get("liquidity_score"),
+            "monthly_cash_flow": fit.get("monthly_cash_flow"),
+            "cash_on_cash_return": fit.get("cash_on_cash_return"),
+            "annual_noi": fit.get("annual_noi"),
+            "primary_value_source": fit.get("primary_value_source"),
+        }
+        user = (
+            f"User question: {text}\n\n"
+            f"best_path: {fit.get('best_path')}\n"
+            f"recommendation: {fit.get('recommendation')}\n"
+            f"pricing_view: {fit.get('pricing_view')}\n"
+            f"rental_ease_label: {fit.get('rental_ease_label')}\n"
+            f"rental_ease_score: {fit.get('rental_ease_score')}\n"
+            f"rent_support_score: {fit.get('rent_support_score')}\n"
+            f"liquidity_score: {fit.get('liquidity_score')}\n"
+            f"monthly_cash_flow: {fit.get('monthly_cash_flow')}\n"
+            f"cash_on_cash_return: {fit.get('cash_on_cash_return')}\n"
+            f"annual_noi: {fit.get('annual_noi')}\n"
+            f"primary_value_source: {fit.get('primary_value_source')}\n"
+        )
+        narrative, report = complete_and_verify(
+            llm=llm,
+            system=system,
+            user=user,
+            structured_inputs=strategy_inputs,
+            tier="strategy",
+            max_tokens=300,
+        )
+    if report is not None:
+        session.last_verifier_report = report
     return narrative or (fit.get("best_path") or "No strategy fit cached.")
 
 
