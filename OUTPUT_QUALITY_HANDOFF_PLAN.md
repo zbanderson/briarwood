@@ -351,20 +351,55 @@ The fall-through path likely benefits most from this work — it's the legacy DE
 
 ---
 
-### Cycle 6 — Cleanup + documentation closeout
+### Cycle 6 — Cleanup + documentation closeout — RE-SCOPED 2026-04-25
 
-**Scope:**
-- `presentation_advisor` LLM call: route through `complete_structured_observed` (see [FOLLOW_UPS.md](FOLLOW_UPS.md) "presentation_advisor bypasses the shared LLM observability ledger" 2026-04-25).
-- `tools.py` audit: which functions are now orphans (unused by any handler)? Either delete or mark for deferred removal.
-- Update [`briarwood/agent/README_dispatch.md`](briarwood/agent/README_dispatch.md) Changelog: handlers now use consolidated chat-tier orchestrator entry.
-- Update [`briarwood/orchestrator.py`](briarwood/orchestrator.py) — if there's a README, dated changelog entry. Otherwise add docstring on `run_chat_tier_analysis`.
-- Update [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) — chat-tier flow now uses consolidated execution.
-- Optionally: address per-module cache leak ([FOLLOW_UPS.md](FOLLOW_UPS.md) "Module-result caching at the per-tool boundary is leaky" 2026-04-25). Largely moot after consolidation but worth a sanity pass.
+**Status:** Original scope was "general cleanup," but Cycles 1-5 closed several items along the way (the audit-doc reconciliation in Cycle 1, the `get_cma` leak fix between Cycles 4 and 5, and the doc updates after each sub-cycle). Updated scope below tracks what's actually still open.
 
-**Tests:** No new tests. Run full suite to confirm.
+**Open items:**
+- `presentation_advisor` LLM call: route through `complete_structured_observed` so its ~3s LLM call shows up in the per-turn manifest's `llm_calls` list. See [FOLLOW_UPS.md](FOLLOW_UPS.md) "presentation_advisor bypasses the shared LLM observability ledger" 2026-04-25.
+- `tools.py` orphan sweep: identify functions that are no longer called by any handler after Cycle 3+5, mark for deferred removal or delete. Likely candidates: `get_property_brief` (handle_browse uses `build_property_brief` from artifact now), the per-tool runners that handlers replaced. Audit before removing.
+- Per-module cache leak (`confidence`, `legal_confidence`, `risk_model` re-running fresh across turns even when inputs are identical). See [FOLLOW_UPS.md](FOLLOW_UPS.md) "Module-result caching at the per-tool boundary is leaky" 2026-04-25.
+- `in_active_context` concurrency fix so `run_chat_tier_analysis` can default `parallel=True`. See [FOLLOW_UPS.md](FOLLOW_UPS.md) "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25.
 
-**Estimate:** 1 hour.
-**Risk:** Low.
+**Already closed during Cycles 1-5 (no longer in Cycle 6 scope):**
+- ~~Update `briarwood/agent/README_dispatch.md`~~ — done in Cycles 3, 4, 5 doc commits.
+- ~~Update `ARCHITECTURE_CURRENT.md`~~ — done in Cycles 2, 3, 4 doc commits.
+- ~~`run_chat_tier_analysis` docstring~~ — done in Cycle 2 commit `8290966`.
+
+**Tests:** No new tests beyond the per-fix regression tests in each follow-up resolution.
+
+**Estimate (re-scoped):** 1-2 hours total across the three FOLLOW_UPS items above.
+**Risk:** Low for the observability + orphan sweep; Low-Medium for the cache leak (touches `MODULE_CACHE_FIELDS` which affects every chat-tier turn).
+
+---
+
+## Phase 2 outcome — DONE 2026-04-25
+
+The architectural fix is functionally complete. Live UI traces post-Cycle-5 confirm:
+
+| Audit baseline (BROWSE turn 1, §9 of the audit doc) | Post-Cycle-5 |
+|---|---|
+| 33 module-execution events | 23 (one consolidated plan, no duplication) |
+| 10 distinct modules ran | 23 distinct |
+| 13 dormant modules | 0 dormant |
+| `comparable_sales`, `location_intelligence`, `strategy_classifier`, `arv_model` | All firing |
+| Composer LLM saw narrow per-tool slice | `synthesis.llm` sees full unified output |
+| Duplicate `valuation × 5`, `risk_model × 4 fresh` | 0 within turn; cache hits across turns |
+
+Cross-turn caching emerges as a positive side effect: consecutive BROWSE turns on the same property hit `_SCOPED_MODULE_OUTPUT_CACHE` for ~20 of 23 modules. Wall-time on follow-up BROWSE turns dropped from ~22s to ~14s in live UI smoke.
+
+Definition of done evaluation against §"Definition of done for the architectural fix" below:
+
+1. **BROWSE turn uses comparable_sales / location_intelligence / strategy_classifier + 5 other dormant modules** — ✅ confirmed.
+2. **Manifest shows ONE consolidated plan, no `valuation × 5` duplication** — ✅ confirmed (and `get_cma` leak fix in commit `f018fc4` cleared the trailing 5 duplicates).
+3. **PROJECTION turn references rental_option / hold_to_rent / opportunity_cost in prose** — ✅ available; subjective on prose-quality bar.
+4. **RISK turn names specific risk_model / legal_confidence / location_intelligence findings** — ✅ available.
+5. **"Briarwood beats plain Claude on underwriting" qualitative bar** — user judgment; user reported "the prose is significantly better" 2026-04-25.
+6. **All changes traced** — yes, every commit has a OUTPUT_QUALITY_HANDOFF_PLAN reference.
+7. **README discipline maintained** — yes, dated changelog entries in `briarwood/agent/README_dispatch.md`, `briarwood/synthesis/README.md`, `briarwood/representation/README.md`.
+8. **Tests pass** — 513 passed in broader smoke after Cycle 5 with 2 pre-existing failures unchanged.
+
+The plan's narrative loop closes: the audit's chat-tier fragmentation diagnosis → the consolidation work → live verification that the substrate is in place and the prose substrate is genuinely richer.
 
 ---
 

@@ -1033,3 +1033,129 @@ present; composer fallback fires when synthesizer returns empty.
 GAP_ANALYSIS.md Layer 3 target description; FOLLOW_UPS.md "Layer 3
 LLM synthesizer: prose from full UnifiedIntelligenceOutput" 2026-04-25
 (this DECISION resolves that follow-up's design questions).
+
+---
+
+## 2026-04-25 — Cycle 5: roll Layer 3 synthesizer to all chat-tier handlers
+
+**Decision.** The Cycle 3+4 pattern (consolidated chat-tier artifact +
+Layer 3 LLM synthesizer) wires into all six chat-tier handlers that
+have a property cascade: `handle_browse` (Cycle 3+4), plus
+`handle_projection` (commit `1f8ab6a`), `handle_risk` (`6b861e9`),
+`handle_edge` default path (`d3293a1`), `handle_strategy`
+(`3811dbf`), `handle_rent_lookup` (`c589635`), and `handle_decision`
+fall-through (`a429d88`). Generalized
+`_browse_chat_tier_artifact` to `_chat_tier_artifact_for(pid, text,
+overrides, answer_type)` so each handler picks its tier's module set
+from
+[briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS](briarwood/execution/module_sets.py).
+
+**Pattern across all six handlers.** Each handler calls
+`_chat_tier_artifact_for(...)` after pid resolution and overrides
+extraction. When the artifact is populated, per-tool view reads
+project from the artifact via existing helpers
+(`_browse_projection_from_artifact`, `_browse_strategy_fit_from_artifact`,
+`_browse_rent_payload_from_artifact`, `_browse_risk_profile_from_artifact`).
+When `None`, legacy per-tool calls fall through. The final composer
+call swaps to `synthesize_with_llm` first; tier-specific composers
+(`projection`, `risk`, `edge`, `strategy`, `rent_lookup`,
+`decision_summary`) become fallbacks.
+
+**Section followups intentionally NOT swapped to the synthesizer.**
+The `compose_section_followup` paths (trust mode in `handle_risk`,
+downside mode, comp_set / entry_point / value_change in `handle_edge`,
+rent_workability in `handle_rent_lookup`) keep their narrow-payload
+composer calls. Those are surgical section-specific generations — the
+user has already seen the full property prose and is asking a tight
+follow-up question. Feeding the full unified output would distract
+from the section's specific question. Worth revisiting if traces
+show those followup paths producing thin or repetitive prose.
+
+**handle_decision is minimum scope.** The wedge fall-through still
+calls PropertyView.load + get_cma + get_projection + get_risk_profile
++ get_strategy_fit + get_rent_estimate. They now all hit the module
+cache thanks to the artifact pre-load (the consolidated plan runs
+upfront and warms `_SCOPED_MODULE_OUTPUT_CACHE`), so the duplicate
+runs are gone, but the call sites themselves remain. Replacing them
+with artifact-derived view builders is a separate refactor —
+deferred to Cycle 6 cleanup. The wedge interaction
+(`BRIARWOOD_CLAIMS_ENABLED`) is unchanged: when the wedge fires and
+produces a `VerdictWithComparisonClaim`, the claim renderer still
+handles prose.
+
+**Cross-turn module caching.** Live UI traces post-Cycle-5 show that
+consecutive BROWSE turns on the same property hit cache for ~20 of 23
+modules (only the three known-leaky-cache modules — `confidence`,
+`legal_confidence`, `risk_model` — re-run fresh, per FOLLOW_UPS.md
+"Module-result caching at the per-tool boundary is leaky" 2026-04-25).
+Wall-time gain on follow-up BROWSE turns: ~7s vs cold-cache. This is
+a positive emergent property of the consolidation — the same
+`_SCOPED_MODULE_OUTPUT_CACHE` that warms within a turn now warms
+across turns when handlers all use the same consolidated path.
+
+**Phase 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md is functionally complete.**
+The audit's headline gap (33 events / 10 distinct / 13 dormant for a
+single BROWSE turn) is now ≤23 distinct, 0 dormant, 0 duplicates per
+turn. All chat-tier handlers consolidate. Layer 3 LLM synthesizer
+fires across the board. Numeric guardrail enforced via the verifier.
+The two pieces remaining (Cycle 6 cleanup) are
+`presentation_advisor` LLM observability and a tools.py orphan sweep
+— both small, neither user-visible.
+
+**Tests.** 79/79 in `tests/agent/test_dispatch.py`; 513 passed in
+broader smoke (10 new synthesizer tests, plus +2 from the Cycle 4
+synthesizer integration tests, plus +2 from the projection tests).
+Two pre-existing failures unchanged from session start.
+
+**Cross-references.** Cycle 5 of
+[OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md);
+the Cycle 4 entry above (which describes the synthesizer itself);
+FOLLOW_UPS.md "Consolidate chat-tier execution" 2026-04-25 step 3
+(which this resolves).
+
+---
+
+## 2026-04-25 — `get_cma` thesis-passthrough breaks the chat-tier leak
+
+**Decision.** `get_cma` (Engine B, the user-facing live-Zillow CMA
+contract) gains an optional keyword-only `thesis: dict[str, Any] | None`
+parameter at [briarwood/agent/tools.py:1829](briarwood/agent/tools.py#L1829).
+When provided (chat-tier callers like `handle_browse` post-Cycle-3),
+the internal `get_value_thesis` call is skipped — the caller has
+already paid for the routed analysis and the same fields can be
+projected from the consolidated artifact. Default behavior
+(`thesis=None`) is unchanged for the per-tool callers under
+`handle_decision` / `handle_edge` that still use the per-tool routed
+pattern (they will get the thesis-pass-through wired in once their
+respective rewires graduate to the full handler refactor in Cycle 6+).
+
+**Rationale.** Cycle 3's manifest cleanup surfaced 5 trailing
+duplicate module runs after the consolidated plan finished
+(`valuation`, `risk_model`, `confidence`, `legal_confidence`,
+`carry_cost`). Traced to `get_cma` calling `get_value_thesis` at
+[tools.py:1832](briarwood/agent/tools.py#L1832), which kicks off its
+own `run_routed_report` despite all six required thesis fields
+already living in `chat_tier_artifact["unified_output"]["value_position"]`
+plus the `valuation` module's metrics. The simplest fix that
+preserves Engine B's contract: accept a pre-computed thesis dict.
+`handle_browse` builds it via the new
+`_browse_thesis_from_artifact` helper and passes through.
+
+**Out of scope.** The broader `valuation`-module cache-miss audit
+(why does `valuation` re-run fresh in the routed `get_value_thesis`
+path even when property structural fields are identical to the
+chat-tier path?) was deferred. Once `handle_browse` no longer
+triggers the duplicate, the audit's value drops to "diagnostic
+curiosity unless we re-enable per-tool routed runs." Worth noting
+for whoever picks up the broader `MODULE_CACHE_FIELDS` cleanup
+item.
+
+**Tests.** New regression test
+`tests/agent/test_tools.py::ContractToolTests::test_get_cma_skips_internal_value_thesis_when_caller_provides_thesis`
+verifies `get_value_thesis` is NOT called when a thesis is passed.
+
+**Cross-references.** FOLLOW_UPS.md "`get_cma` internally calls
+`get_value_thesis`, leaking 5 module re-runs into the chat-tier path"
+2026-04-25 (step 1 resolved). Surfaced during Cycle 3 (`ca94d2f`)
+post-landing UI smoke; resolved in commit `f018fc4` between Cycles 4
+and 5.

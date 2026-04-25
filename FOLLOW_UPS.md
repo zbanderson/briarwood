@@ -293,6 +293,14 @@ Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref [AUDIT_OUTPUT
 
 Out of scope for the immediate handoff — the immediate fix targeted only the price-analysis miss. The broader audit is queued for after Step 4 logging lands.
 
+**Additional misses observed 2026-04-25** (during Cycle 5 post-landing UI smoke):
+- "Why were these comps chosen?" → classified as `RESEARCH` (running `research_town`) instead of `EDGE` with the comp_set follow-up path. The contextualize-followup rewrite at [briarwood/agent/dispatch.py:4536-4551](briarwood/agent/dispatch.py#L4536-L4551) has a `_COMP_SET_RE` that matches "comp set" but apparently doesn't catch "Why were these comps chosen" (the regex looks for "comp set", "cma", "comps" with specific context). The user's clear intent was a comp-set followup on the current property; the LLM router took it as a market-research query about the area. This is two-issues-in-one: the context-rewrite regex is too narrow, and the LLM router's RESEARCH classification ignored the pinned property context.
+
+When the audit-against-corpus work happens, a few things to check:
+1. The `_COMP_SET_RE` regex coverage. "Why were these comps", "what comps did you use", "explain your comp choice" should all rewrite to EDGE.
+2. The LLM router's prompt should mention that questions referencing "these / your / the" comps with a pinned property are property-followups, not market research.
+3. The "Show me listings here" query (Cycle 5 same UI smoke) classified as BROWSE rather than SEARCH — also worth review. The user wanted a list, not the BROWSE-style first-read prose.
+
 ---
 
 ## 2026-04-25 — `get_cma` internally calls `get_value_thesis`, leaking 5 module re-runs into the chat-tier path
