@@ -173,7 +173,34 @@ python scripts/dev_chat.py
 
 ---
 
-### Cycle 3 — Wire `handle_browse` to use the consolidated path
+### Cycle 3 — Wire `handle_browse` to use the consolidated path — LANDED 2026-04-25 (commit `ca94d2f`)
+
+**Status:** Landed. First user-visible change of the architectural fix. For a saved property, `handle_browse` now runs ONE consolidated execution plan with all 23 scoped modules instead of the per-tool fragmentation pattern (5+ overlapping plans, 33 events, 10 distinct modules, 13 dormant) the audit's §9.3 captured.
+
+**What landed:**
+- New helper `_browse_chat_tier_artifact(pid, user_text, overrides)` in `briarwood/agent/dispatch.py` — loads inputs.json + applies overrides + validates/prepares PropertyInput + calls `run_chat_tier_analysis(..., AnswerType.BROWSE, ...)`. Returns `None` on any failure so the legacy per-tool path can take over (graceful degradation).
+- New inline view-extraction helpers `_browse_projection_from_artifact`, `_browse_strategy_fit_from_artifact`, `_browse_rent_payload_from_artifact` — pull the same field shapes from `module_results["outputs"]` that `tools.get_projection` / `get_strategy_fit` / `get_rent_estimate` produced. Downstream consumers (`_populate_browse_slots`, `compose_browse_surface`) unchanged.
+- `handle_browse` rewritten: calls the chat-tier artifact once, then on success builds `brief` via `build_property_brief(pid, summary, unified_output)` and derives the views from the artifact's module outputs. The four per-tool routed runners (`get_property_brief`, `get_projection`, `get_strategy_fit`, `get_rent_estimate`) — the source of the per-tool plan duplication — are skipped.
+- Kept (unchanged): `get_cma` (Engine B, live-Zillow), `get_property_enrichment` (external API), `get_property_presentation` (LLM advice), `search_listings` (neighbors), `get_property_summary`, `get_rent_outlook` (now passed the pre-computed `rent_payload` so it skips its internal routed run).
+- 4 existing browse tests gain a single `_browse_chat_tier_artifact` → `None` patch so they exercise the legacy fallback path with their existing `get_property_brief` mocks. New test `test_browse_consolidated_chat_tier_path_skips_per_tool_routed_calls` pins the new contract.
+
+**Net effect on a BROWSE turn for a saved property (vs. the pre-Cycle-3 baseline captured in the user's UI logs):**
+- Module-execution events: ~33 → ~23. No `valuation` × 5 / `risk_model` × 4 fresh duplication.
+- 13 dormant modules — `comparable_sales`, `location_intelligence`, `strategy_classifier`, `arv_model`, `current_value`, `hybrid_value`, `income_support`, `margin_sensitivity`, `market_value_history`, `opportunity_cost`, `renovation_impact`, `scarcity_support`, `unit_income_offset` — now fire and contribute to the unified output the composer reads.
+- The composer's `structured_inputs` reflect the full `UnifiedIntelligenceOutput`. Prose richness still depends on Cycle 4 (Layer 3 LLM synthesizer) — the substrate is now in place but the prose layer is still the existing composer with its narrow framing.
+
+**Out of scope (deferred to Cycle 5):**
+- Per-tool function retirement. `get_property_brief`, `get_projection`, `get_strategy_fit`, `get_rent_estimate` remain in `tools.py` for the other handlers (handle_decision, handle_risk, etc.) that haven't been rewired yet.
+- The legacy fallback path inside `handle_browse` itself. Will retire once the consolidated path has soak time across saved-property and unsaved-promotion flows.
+
+**Browser verification (per the plan's pause requirement):**
+- The user re-runs the dev stack and tests "what do you think of 1008 14th Ave, Belmar, NJ".
+- Manifest assertion: `modules_run` should jump from ~10 distinct to ~23, with `comparable_sales`, `location_intelligence`, `strategy_classifier`, `arv_model` appearing.
+- Prose may already feel richer because the composer now sees richer fields; if not, that's the Cycle 4 lever.
+
+**Tests at landing time:** 24/24 in `BrowseHandlerTests` + `SearchHandlerTests`; 498 passed in broader smoke (2 pre-existing failures unchanged: `tests/agent/test_tools.py::PromoteUnsavedAddressTests` and `tests/synthesis/test_structured_synthesizer.py::test_interaction_trace_attached`).
+
+**Original scope below (for reference):**
 
 **Scope:**
 - Modify `handle_browse` at [`briarwood/agent/dispatch.py:4028`](briarwood/agent/dispatch.py#L4028).
