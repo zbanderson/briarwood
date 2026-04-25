@@ -145,7 +145,7 @@ register(
             "base_case_value",
             "bear_case_value",
         ],
-        claim_types=["scenario_range", "downside_risk"],
+        claim_types=["scenario_range", "downside_risk", "renovation_impact", "sensitivity"],
     ),
     _render_scenario_fan,
 )
@@ -159,7 +159,7 @@ register(
             "that moved the read."
         ),
         required_inputs=["ask_price", "fair_value_base"],
-        claim_types=["price_position", "value_drivers"],
+        claim_types=["price_position", "value_drivers", "affordability_carry_cost"],
     ),
     _render_value_opportunity,
 )
@@ -200,7 +200,7 @@ register(
             "Rent scenarios against monthly carry across the hold horizon."
         ),
         required_inputs=["burn_chart_payload"],
-        claim_types=["rent_coverage"],
+        claim_types=["rent_coverage", "rent_vs_own", "affordability_carry_cost"],
     ),
     _render_rent_burn,
 )
@@ -214,7 +214,7 @@ register(
             "markers."
         ),
         required_inputs=["ramp_chart_payload"],
-        claim_types=["rent_ramp", "rent_coverage"],
+        claim_types=["rent_ramp", "rent_coverage", "rent_vs_own", "sensitivity"],
     ),
     _render_rent_ramp,
 )
@@ -238,7 +238,7 @@ register(
             "HiddenUpsideBlock card; no standalone chart event is emitted."
         ),
         required_inputs=[],
-        claim_types=["hidden_upside"],
+        claim_types=["hidden_upside", "renovation_impact"],
     ),
     _render_hidden_upside_band,
 )

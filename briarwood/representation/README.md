@@ -1,6 +1,6 @@
 # representation — Representation Agent + Chart Registry
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-25
 **Layer:** Representation (Layer 4)
 **Status:** STABLE
 
@@ -11,9 +11,9 @@ The Representation Agent decides which charts back which verdict claims for the 
 ## Location
 
 - **Package root:** [briarwood/representation/](.) — re-exports from [briarwood/representation/__init__.py](__init__.py).
-- **Agent entry:** [briarwood/representation/agent.py:128](agent.py#L128) — `RepresentationAgent`. Public methods: `plan(...)` at [agent.py:157](agent.py#L157), `render_events(...)` at [agent.py:189](agent.py#L189).
+- **Agent entry:** [briarwood/representation/agent.py:133](agent.py#L133) — `RepresentationAgent`. Public methods: `plan(...)` at [agent.py:162](agent.py#L162), `render_events(...)` at [agent.py:194](agent.py#L194).
 - **Chart registry:** [briarwood/representation/charts.py](charts.py) — `register`, `get_spec`, `all_specs`, `render`, `ChartSpec`. Eight registered chart kinds today.
-- **Schemas:** `RepresentationPlan` at [agent.py:100](agent.py#L100); `RepresentationSelection` at [agent.py:80](agent.py#L80); `ClaimType` enum at [agent.py:43](agent.py#L43); `ChartSpec` at [charts.py:29](charts.py#L29).
+- **Schemas:** `RepresentationPlan` at [agent.py:105](agent.py#L105); `RepresentationSelection` at [agent.py:85](agent.py#L85); `ClaimType` enum at [agent.py:44](agent.py#L44); `ChartSpec` at [charts.py:29](charts.py#L29).
 - **Tests:** [tests/representation/test_agent.py](../../tests/representation/test_agent.py); [tests/representation/test_charts.py](../../tests/representation/test_charts.py); plus integration coverage at [tests/pipeline/test_representation.py](../../tests/pipeline/test_representation.py) and [tests/claims/test_representation.py](../../tests/claims/test_representation.py).
 - **Feature flags:** None directly. Triggering today is gated by the routed-decision path that runs in `api/pipeline_adapter.py`.
 
@@ -73,7 +73,7 @@ The Representation Agent decides which charts back which verdict claims for the 
 | Field | Type | Notes |
 |-------|------|-------|
 | `claim` | `str` | Free-text verdict claim. |
-| `claim_type` | `ClaimType` | One of nine values: `PRICE_POSITION`, `VALUE_DRIVERS`, `COMP_EVIDENCE`, `SCENARIO_RANGE`, `DOWNSIDE_RISK`, `RISK_COMPOSITION`, `RENT_COVERAGE`, `RENT_RAMP`, `HIDDEN_UPSIDE`. |
+| `claim_type` | `ClaimType` | One of thirteen values: `PRICE_POSITION`, `VALUE_DRIVERS`, `COMP_EVIDENCE`, `SCENARIO_RANGE`, `DOWNSIDE_RISK`, `RISK_COMPOSITION`, `RENT_COVERAGE`, `RENT_RAMP`, `AFFORDABILITY_CARRY_COST`, `RENT_VS_OWN`, `RENOVATION_IMPACT`, `SENSITIVITY`, `HIDDEN_UPSIDE`. |
 | `supporting_evidence` | `list[str]` | Field-name citations into `module_views`. |
 | `chart_id` | `str \| None` | Registered chart id; `None` is allowed and means "claim only, no chart event." |
 | `source_view` | `str \| None` | Which `module_views` key feeds the chart's renderer. |
@@ -88,13 +88,13 @@ Eight registered specs in [charts.py](charts.py). Each has an `id`, a `name`, a 
 
 | Chart id | Renders | claim_types | Required inputs |
 |----------|---------|-------------|-----------------|
-| `scenario_fan` | Bull/base/bear range over a 5-year hold | `scenario_range`, `downside_risk` | `bull_case_value`, `base_case_value`, `bear_case_value` |
-| `value_opportunity` | Ask vs. fair value with drivers | `price_position`, `value_drivers` | `ask_price`, `fair_value_base` |
+| `scenario_fan` | Bull/base/bear range over a 5-year hold | `scenario_range`, `downside_risk`, `renovation_impact`, `sensitivity` | `bull_case_value`, `base_case_value`, `bear_case_value` |
+| `value_opportunity` | Ask vs. fair value with drivers | `price_position`, `value_drivers`, `affordability_carry_cost` | `ask_price`, `fair_value_base` |
 | `cma_positioning` | Comp asks scattered against subject + value band | `comp_evidence`, `price_position` | `comps` (plus optional `_market_view` injected by `render_events`) |
 | `risk_bar` | Per-risk-flag penalty share | `risk_composition`, `downside_risk` | `risk_flags` |
-| `rent_burn` | Rent vs monthly cost across hold horizon | `rent_coverage` | `burn_chart_payload` |
-| `rent_ramp` | Net cash flow at base/bull/bear rent ramps with break-even markers | `rent_ramp`, `rent_coverage` | `ramp_chart_payload` |
-| `hidden_upside_band` | Marker only — UI renders via `HiddenUpsideBlock` React card; renderer returns `None` | `hidden_upside` | (none) |
+| `rent_burn` | Rent vs monthly cost across hold horizon | `rent_coverage`, `rent_vs_own`, `affordability_carry_cost` | `burn_chart_payload` |
+| `rent_ramp` | Net cash flow at base/bull/bear rent ramps with break-even markers | `rent_ramp`, `rent_coverage`, `rent_vs_own`, `sensitivity` | `ramp_chart_payload` |
+| `hidden_upside_band` | Marker only — UI renders via `HiddenUpsideBlock` React card; renderer returns `None` | `hidden_upside`, `renovation_impact` | (none) |
 | `horizontal_bar_with_ranges` | Marker only — claim-object representation builds the spec directly from a `VerdictWithComparisonClaim`; renderer returns `None` | `scenario_comparison` | `scenarios` |
 
 Renderers are thin wrappers around `_native_*_chart` helpers in [api/pipeline_adapter.py](../../api/pipeline_adapter.py); imports are lazy to avoid an import cycle. Renderers are intentionally permissive — any failure maps to `None` (no chart) at [charts.py:81-86](charts.py#L81-L86) rather than crashing the decision stream.
@@ -164,6 +164,12 @@ events = agent.render_events(plan, module_views=...)
 - **Chart-registry expansion priorities.** New chart kinds are additive but each requires both a renderer and a frontend card. Which kinds are worth the cost is open.
 
 ## Changelog
+
+### 2026-04-25
+- Contract change: `ClaimType` extended with four new values — `AFFORDABILITY_CARRY_COST`, `RENT_VS_OWN`, `RENOVATION_IMPACT`, `SENSITIVITY`. Existing values unchanged. Pydantic post-validation will accept claims tagged with the new values; previously they would have been stripped.
+- Chart registry coverage broadened — `value_opportunity`, `rent_burn`, `rent_ramp`, `scenario_fan`, and `hidden_upside_band` now declare additional `claim_types` so the LLM planner can route the new claim values to existing renderers without new chart kinds. No new chart ids; renderer behavior unchanged.
+- Internal: `_plan_via_llm` now routes through `briarwood.agent.llm_observability.complete_structured_observed` (added Phase 1 of the 2026-04-25 output-quality audit). LLM call is now visible in the shared ledger and the per-turn manifest under surface `representation.plan`. Side effect: the `session.last_partial_data_warnings` breadcrumb on retry exhaustion now fires only on `BudgetExceeded` propagation rather than on any caught exception, since `complete_structured_observed` swallows non-budget failures into `None`.
+- Line-number cross-references in §Location updated to match current `agent.py`. Other line refs in this README (§Role table, §Inputs, §Outputs, §Determinism, §Caveats, §Coupling) accumulated drift from prior diffs and have not been swept in this commit.
 
 ### 2026-04-24
 - Initial README created.

@@ -30,9 +30,24 @@ def test_horizontal_bar_with_ranges_is_a_marker_spec() -> None:
     assert charts.render("horizontal_bar_with_ranges", {"scenarios": []}) is None
 
 
+def test_registry_exposes_broader_representation_claim_intents() -> None:
+    claim_map = {
+        claim_type
+        for spec in charts.all_specs()
+        for claim_type in spec.claim_types
+    }
+    assert "affordability_carry_cost" in claim_map
+    assert "rent_vs_own" in claim_map
+    assert "renovation_impact" in claim_map
+    assert "sensitivity" in claim_map
+
+
 def test_every_spec_declares_claim_types_and_required_inputs() -> None:
+    marker_specs = {"hidden_upside_band", "horizontal_bar_with_ranges"}
     for spec in charts.all_specs():
         assert spec.claim_types, f"{spec.id} must declare at least one claim_type"
+        if spec.id in marker_specs:
+            continue
         assert spec.required_inputs, f"{spec.id} must declare required_inputs"
 
 

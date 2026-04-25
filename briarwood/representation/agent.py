@@ -29,6 +29,7 @@ from typing import Any, Mapping
 from pydantic import BaseModel, ConfigDict, Field
 
 from briarwood.agent.llm import LLMClient
+from briarwood.agent.llm_observability import complete_structured_observed
 from briarwood.representation.charts import (
     ChartSpec,
     all_specs,
@@ -56,6 +57,10 @@ class ClaimType(str, Enum):
     RISK_COMPOSITION = "risk_composition"
     RENT_COVERAGE = "rent_coverage"
     RENT_RAMP = "rent_ramp"
+    AFFORDABILITY_CARRY_COST = "affordability_carry_cost"
+    RENT_VS_OWN = "rent_vs_own"
+    RENOVATION_IMPACT = "renovation_impact"
+    SENSITIVITY = "sensitivity"
     # F5: hidden upside levers that don't show up in the ask-vs-fair-value
     # frame — renovation spread, accessory-unit income, repositioning, etc.
     # Sourced from ``UnifiedIntelligenceOutput.optionality_signal``. No
@@ -247,50 +252,37 @@ class RepresentationAgent:
         }
         user_body = json.dumps(payload, default=str)
 
-        last_exc: Exception | None = None
-        for attempt in (1, 2):
-            system = _SYSTEM_PROMPT
-            if attempt == 2:
-                system = (
-                    _SYSTEM_PROMPT
-                    + "\n\nPrevious attempt failed. Return only a valid "
-                    "RepresentationPlan JSON object that matches the declared "
-                    "schema — no prose, no wrapping, no extra keys."
-                )
-            try:
-                response = self._llm.complete_structured(
-                    system=system,
+        try:
+            response = complete_structured_observed(
+                surface="representation.plan",
+                schema=RepresentationPlan,
+                system=_SYSTEM_PROMPT,
+                user=user_body,
+                provider=self._llm.__class__.__name__,
+                model=self._model,
+                max_attempts=2,
+                call=lambda: self._llm.complete_structured(
+                    system=_SYSTEM_PROMPT,
                     user=user_body,
                     schema=RepresentationPlan,
                     model=self._model,
                     max_tokens=1200,
-                )
-            except Exception as exc:
-                last_exc = exc
-                _logger.warning(
-                    "representation LLM call failed (attempt %d): %s", attempt, exc
-                )
-                response = None
-
-            if response is not None:
-                return response
-
-        # Both attempts failed. Record a breadcrumb only when a real exception
-        # propagated — complete_structured swallows transport failures + schema
-        # drift into None and logs them itself, so leaving those as silent
-        # deterministic fallback avoids spurious banners on local runs with no
-        # API key. Exception-path retries are the "LLM is broken" signal worth
-        # surfacing to the UI.
-        if session is not None and last_exc is not None:
+                ),
+            )
+        except Exception as exc:
+            _logger.warning("representation LLM call failed: %s", exc)
+            response = None
             warnings = getattr(session, "last_partial_data_warnings", None)
             if isinstance(warnings, list):
                 warnings.append(
                     {
                         "section": "representation_plan",
-                        "reason": f"{type(last_exc).__name__}: {last_exc}",
+                        "reason": f"{type(exc).__name__}: {exc}",
                         "verdict_reliable": True,
                     }
                 )
+        if response is not None:
+            return response
         return None
 
     # ------------------------------------------------------------------
