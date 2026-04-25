@@ -1949,6 +1949,21 @@ def handle_decision(
         pid=pid,
         session=session,
     )
+
+    # Cycle 5f: pre-load the consolidated chat-tier artifact for the
+    # DECISION fall-through path. Two effects:
+    # (1) Module-level _SCOPED_MODULE_OUTPUT_CACHE is warmed across all
+    #     23 modules, so the per-tool calls below (get_cma, get_projection,
+    #     get_risk_profile, get_strategy_fit, get_rent_estimate) hit the
+    #     module cache instead of re-running each module fresh.
+    # (2) The artifact's unified_output is available for the Layer 3
+    #     synthesizer at the final decision_summary composition step.
+    # The per-tool calls below remain unchanged in this cycle — full
+    # rewire of handle_decision's per-tool fragmentation is its own
+    # cleanup item, listed in OUTPUT_QUALITY_HANDOFF_PLAN.md Cycle 6.
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, analysis_overrides, AnswerType.DECISION
+    )
     try:
         view = PropertyView.load(pid, overrides=analysis_overrides, depth="decision")
     except ToolUnavailable as exc:
@@ -2368,15 +2383,42 @@ def handle_decision(
         f"next_surface_hook: {underwrite_digest.get('next_surface_hook')}\n"
         f"research_update: {' | '.join(research_lines) or 'none'}"
     )
-    cleaned, report = complete_and_verify(
-        llm=llm,
-        system=system,
-        user=user,
-        structured_inputs=summary_inputs,
-        tier="decision_summary",
-        max_tokens=260,
-    )
-    session.last_verifier_report = report
+
+    # Cycle 5f: prefer Layer 3 synthesizer for the final decision_summary
+    # composition when the consolidated artifact is available. Falls back
+    # to the existing decision_summary-tier composer + complete_and_verify.
+    cleaned: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                cleaned = synth_prose
+                report = synth_report
+
+    if not cleaned:
+        cleaned, report = complete_and_verify(
+            llm=llm,
+            system=system,
+            user=user,
+            structured_inputs=summary_inputs,
+            tier="decision_summary",
+            max_tokens=260,
+        )
+    if report is not None:
+        session.last_verifier_report = report
     return _finalize(cleaned)
 
 
