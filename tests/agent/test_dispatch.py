@@ -2669,6 +2669,143 @@ class ResearchHandlerTests(unittest.TestCase):
 
 
 class ProjectionHandlerTests(unittest.TestCase):
+    def _projection_artifact(self) -> dict[str, object]:
+        return {
+            "answer_type": "projection",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {
+                "outputs": {
+                    "resale_scenario": {
+                        "data": {
+                            "metrics": {
+                                "ask_price": 1_499_000,
+                                "bull_case_value": 1_700_000,
+                                "base_case_value": 1_580_000,
+                                "bear_case_value": 1_410_000,
+                                "stress_case_value": 1_280_000,
+                                "spread": 290_000,
+                                "bull_growth_rate": 0.08,
+                                "base_growth_rate": 0.04,
+                                "bear_growth_rate": -0.01,
+                            }
+                        }
+                    },
+                    "valuation": {"data": {"metrics": {}}},
+                },
+                "trace": [],
+            },
+            "modules_run": [
+                "valuation",
+                "resale_scenario",
+                "hold_to_rent",
+                "arv_model",
+                "margin_sensitivity",
+            ],
+            "unified_output": {
+                "recommendation": "Strong base case if rents hold.",
+                "decision": "buy",
+                "decision_stance": "buy_if_price_improves",
+                "best_path": "Hold for 5 years, watch the rent path.",
+                "key_value_drivers": ["Comp anchor supports the entry"],
+                "key_risks": ["Rent assumption fragile"],
+                "trust_flags": [],
+                "primary_value_source": "current_value",
+                "value_position": {"fair_value_base": 1_560_000, "ask_premium_pct": -0.039},
+                "analysis_depth_used": "scenario",
+            },
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+
+    def test_projection_consolidated_path_runs_synthesizer_when_llm_present(self) -> None:
+        """Cycle 5 of OUTPUT_QUALITY_HANDOFF_PLAN.md.
+
+        When the chat-tier artifact returns a populated unified output and
+        llm is provided, ``handle_projection`` should call the Layer 3
+        synthesizer over the full unified output rather than the
+        projection-tier composer's narrow projection_inputs slice. The
+        synthesizer prose reaches the user verbatim.
+        """
+
+        synth_prose = (
+            "Briarwood's base case projects close to $1,580,000 over a five-year hold, "
+            "well above today's $1,499,000 ask. The rent path is the swing factor; "
+            "verify it before leaning on the upside scenario."
+        )
+
+        class _StubLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 360) -> str:
+                return synth_prose
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                raise AssertionError("synthesizer should use plain complete()")
+
+        decision = RouterDecision(
+            AnswerType.PROJECTION, confidence=0.7, target_refs=[REF], reason="test"
+        )
+
+        with patch(
+            "briarwood.agent.dispatch._chat_tier_artifact_for",
+            return_value=self._projection_artifact(),
+        ), patch(
+            "briarwood.agent.dispatch.compose_structured_response",
+        ) as composer, patch(
+            "briarwood.agent.dispatch.get_projection",
+        ) as legacy_projection:
+            response = handle_projection(
+                "what would five years out look like?",
+                decision,
+                Session(),
+                llm=_StubLLM(),
+            )
+
+        # Synthesizer wins; composer + legacy projection runner do NOT fire.
+        composer.assert_not_called()
+        legacy_projection.assert_not_called()
+        self.assertIn(synth_prose, response)
+
+    def test_projection_falls_back_to_legacy_path_when_artifact_is_none(self) -> None:
+        """When the chat-tier artifact can't be built (e.g., no inputs.json
+        or property loading fails), ``handle_projection`` falls through to
+        the legacy ``get_projection`` call so the user still sees a
+        response.
+        """
+
+        legacy_proj = {
+            "ask_price": 899_000,
+            "bull_case_value": 970_000,
+            "base_case_value": 925_000,
+            "bear_case_value": 810_000,
+            "stress_case_value": 760_000,
+            "spread": 160_000,
+            "base_growth_rate": 0.03,
+            "bull_growth_rate": 0.06,
+            "bear_growth_rate": -0.02,
+            "basis_label": "ask",
+        }
+
+        decision = RouterDecision(
+            AnswerType.PROJECTION, confidence=0.7, target_refs=[REF], reason="test"
+        )
+
+        with patch(
+            "briarwood.agent.dispatch._chat_tier_artifact_for",
+            return_value=None,
+        ), patch(
+            "briarwood.agent.dispatch.get_projection",
+            return_value=legacy_proj,
+        ) as legacy_projection:
+            response = handle_projection(
+                "show me the bull/base/bear",
+                decision,
+                Session(),
+                llm=None,
+            )
+
+        legacy_projection.assert_called_once()
+        self.assertIn("Most likely outcome", response)
+
     def test_renovation_resale_question_uses_dedicated_outlook(self) -> None:
         decision = RouterDecision(
             AnswerType.PROJECTION, confidence=0.7, target_refs=[REF], reason="test"

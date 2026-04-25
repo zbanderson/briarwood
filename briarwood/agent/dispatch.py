@@ -3173,10 +3173,23 @@ def handle_projection(
         session.current_property_id = pid
         _set_workflow_state(session, contract_type="renovation_resale", analysis_mode="projection")
         return _format_renovation_resale_outlook(outlook)
-    try:
-        proj = get_projection(pid, overrides=overrides)
-    except ToolUnavailable as exc:
-        return f"I couldn't build a projection ({exc})."
+
+    # Cycle 5 of OUTPUT_QUALITY_HANDOFF_PLAN.md: prefer the consolidated
+    # chat-tier path so handle_projection's prose layer reads the full
+    # UnifiedIntelligenceOutput. The artifact also surfaces the projection
+    # subset (resale_scenario / hold_to_rent / margin_sensitivity / arv_model
+    # etc.) without re-running the executor inside get_projection.
+    chat_tier_artifact = _chat_tier_artifact_for(
+        pid, text, overrides, AnswerType.PROJECTION
+    )
+    proj: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        proj = _browse_projection_from_artifact(chat_tier_artifact, pid, overrides)
+    if proj is None:
+        try:
+            proj = get_projection(pid, overrides=overrides)
+        except ToolUnavailable as exc:
+            return f"I couldn't build a projection ({exc})."
     session.current_property_id = pid
     _set_workflow_state(session, contract_type="projection", analysis_mode="projection")
     facts = _load_property_facts(pid)
@@ -3245,43 +3258,73 @@ def handle_projection(
             lines.append(f"The gap between upside and downside is about {money(spread)}.")
         return "\n".join(lines) + chart_line
 
-    system = load_prompt("projection")
-    user = (
-        f"User question: {text}\n\n"
-        f"overrides_applied: {overrides or 'none'}\n"
-        f"basis_label: {basis_label}\n"
-        f"ask_price: {ask}\n"
-        f"bull_case_value: {bull} ({_delta(bull)})\n"
-        f"base_case_value: {base} ({_delta(base)})\n"
-        f"bear_case_value: {bear} ({_delta(bear)})\n"
-        f"stress_case_value: {stress}\n"
-        f"base_growth_rate: {proj.get('base_growth_rate')}\n"
-        f"bull_growth_rate: {proj.get('bull_growth_rate')}\n"
-        f"bear_growth_rate: {proj.get('bear_growth_rate')}\n"
-    )
-    fallback = lambda: f"Most likely outcome: about {money(base)} over five years versus today's {basis_label} of {money(ask)}."
-    projection_inputs = {
-        "overrides_applied": overrides or {},
-        "basis_label": basis_label,
-        "ask_price": ask,
-        "bull_case_value": bull,
-        "base_case_value": base,
-        "bear_case_value": bear,
-        "stress_case_value": stress,
-        "base_growth_rate": proj.get("base_growth_rate"),
-        "bull_growth_rate": proj.get("bull_growth_rate"),
-        "bear_growth_rate": proj.get("bear_growth_rate"),
-    }
-    narrative, report = compose_structured_response(
-        llm=llm,
-        system=system,
-        user=user,
-        fallback=fallback,
-        max_tokens=300,
-        structured_inputs=projection_inputs,
-        tier="projection",
-    )
-    session.last_verifier_report = report
+    # Cycle 5: when the consolidated chat-tier artifact is available, run
+    # the Layer 3 LLM synthesizer over the full unified output. This swaps
+    # the projection-tier composer's narrow projection_inputs slice for the
+    # full UnifiedIntelligenceOutput; prose can lead with rent vs sell
+    # framing, weave in arv_model / margin_sensitivity / hold_to_rent
+    # outputs the projection composer never saw.
+    narrative: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                narrative = synth_prose
+                report = synth_report
+
+    if not narrative:
+        # Composer fallback: same projection-tier prompt + verifier as before.
+        system = load_prompt("projection")
+        user = (
+            f"User question: {text}\n\n"
+            f"overrides_applied: {overrides or 'none'}\n"
+            f"basis_label: {basis_label}\n"
+            f"ask_price: {ask}\n"
+            f"bull_case_value: {bull} ({_delta(bull)})\n"
+            f"base_case_value: {base} ({_delta(base)})\n"
+            f"bear_case_value: {bear} ({_delta(bear)})\n"
+            f"stress_case_value: {stress}\n"
+            f"base_growth_rate: {proj.get('base_growth_rate')}\n"
+            f"bull_growth_rate: {proj.get('bull_growth_rate')}\n"
+            f"bear_growth_rate: {proj.get('bear_growth_rate')}\n"
+        )
+        fallback = lambda: f"Most likely outcome: about {money(base)} over five years versus today's {basis_label} of {money(ask)}."
+        projection_inputs = {
+            "overrides_applied": overrides or {},
+            "basis_label": basis_label,
+            "ask_price": ask,
+            "bull_case_value": bull,
+            "base_case_value": base,
+            "bear_case_value": bear,
+            "stress_case_value": stress,
+            "base_growth_rate": proj.get("base_growth_rate"),
+            "bull_growth_rate": proj.get("bull_growth_rate"),
+            "bear_growth_rate": proj.get("bear_growth_rate"),
+        }
+        narrative, report = compose_structured_response(
+            llm=llm,
+            system=system,
+            user=user,
+            fallback=fallback,
+            max_tokens=300,
+            structured_inputs=projection_inputs,
+            tier="projection",
+        )
+    if report is not None:
+        session.last_verifier_report = report
     return narrative + chart_line if chart_line and not narrative.endswith(chart_line) else narrative
 
 
@@ -4050,27 +4093,29 @@ def handle_strategy(
 # ---------- BROWSE ----------
 
 
-def _browse_chat_tier_artifact(
+def _chat_tier_artifact_for(
     pid: str,
     user_text: str,
     overrides: dict[str, object] | None,
+    answer_type: "AnswerType",
 ) -> dict[str, object] | None:
-    """Run the consolidated chat-tier plan for a BROWSE turn.
+    """Run the consolidated chat-tier plan for one chat-tier handler.
 
-    Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md replaces the BROWSE handler's
-    ~5 separate ``run_routed_report`` invocations (one per tools.py call)
-    with a single ``run_chat_tier_analysis`` call that runs all 23 scoped
-    modules once. Returns ``None`` if the inputs.json is missing or
-    property loading fails — callers fall through to the legacy per-tool
-    path so the user still sees a response. The 13 modules previously
-    dormant for chat-tier traffic (per AUDIT_OUTPUT_QUALITY_2026-04-25
-    §9.3) — `comparable_sales`, `location_intelligence`,
-    `strategy_classifier`, `arv_model`, etc. — are now part of the
-    consolidated plan.
+    Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md introduced this helper for
+    BROWSE; Cycle 5 generalized it across the chat-tier handlers
+    (PROJECTION, RISK, EDGE, STRATEGY, RENT_LOOKUP, DECISION
+    fall-through). Each handler picks the AnswerType that maps to its
+    intended module set in
+    ``briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`` —
+    BROWSE/DECISION run the full first-read cascade; PROJECTION runs
+    the scenario subset; RISK runs the risk subset; etc.
+
+    Returns ``None`` if the inputs.json is missing or property loading
+    fails — callers fall through to the legacy per-tool path so the
+    user still sees a response.
     """
 
     from briarwood.agent.overrides import inputs_with_overrides
-    from briarwood.agent.router import AnswerType
     from briarwood.agent.tools import SAVED_PROPERTIES_DIR
     from briarwood.inputs.property_loader import load_property_from_json
     from briarwood.orchestrator import run_chat_tier_analysis
@@ -4090,12 +4135,30 @@ def _browse_chat_tier_artifact(
             property_data = property_input.to_dict()
         return run_chat_tier_analysis(
             property_data,
-            AnswerType.BROWSE,
+            answer_type,
             user_text,
         )
     except Exception as exc:  # noqa: BLE001 — caller falls through to legacy per-tool path
-        logger.warning("browse chat-tier consolidation failed for %s: %s", pid, exc)
+        logger.warning(
+            "chat-tier consolidation (%s) failed for %s: %s",
+            getattr(answer_type, "value", answer_type),
+            pid,
+            exc,
+        )
         return None
+
+
+def _browse_chat_tier_artifact(
+    pid: str,
+    user_text: str,
+    overrides: dict[str, object] | None,
+) -> dict[str, object] | None:
+    """BROWSE-tier chat-tier artifact wrapper. Kept for backward compat with
+    the existing test patches; new handlers should call
+    ``_chat_tier_artifact_for(..., answer_type=AnswerType.<TIER>)`` directly.
+    """
+
+    return _chat_tier_artifact_for(pid, user_text, overrides, AnswerType.BROWSE)
 
 
 def _module_metrics_from_artifact(
