@@ -1257,6 +1257,12 @@ class BrowseHandlerTests(unittest.TestCase):
             )
         analyzer.assert_not_called()
         brief_tool.assert_called_once_with(REF, overrides={})
+        self.assertIn("526 West End Ave", response)
+        self.assertIn("Decision:", response)
+        self.assertIn("Why:", response)
+        self.assertIn("Next move:", response)
+        self.assertEqual(session.last_presentation_payload["contract_type"], "property_brief")
+        self.assertEqual(session.last_surface_narrative, response)
 
     def test_browse_consolidated_chat_tier_path_skips_per_tool_routed_calls(self) -> None:
         """Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md.
@@ -1367,12 +1373,127 @@ class BrowseHandlerTests(unittest.TestCase):
         # The handler still produces a real response.
         self.assertIn("526 West End Ave", response)
         self.assertIn("Decision:", response)
-        self.assertIn("526 West End Ave", response)
-        self.assertIn("Decision:", response)
-        self.assertIn("Why:", response)
-        self.assertIn("Next move:", response)
-        self.assertEqual(session.last_presentation_payload["contract_type"], "property_brief")
+
+    def test_browse_layer3_synthesizer_replaces_composer_when_artifact_and_llm_present(self) -> None:
+        """Cycle 4 of OUTPUT_QUALITY_HANDOFF_PLAN.md.
+
+        When the chat-tier artifact is populated AND an llm is provided,
+        ``handle_browse`` should call ``synthesize_with_llm`` over the full
+        unified output and return its prose verbatim. The narrow-slice
+        composer (``compose_browse_surface``) must NOT fire on this path.
+        """
+
+        artifact = {
+            "answer_type": "browse",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {
+                "outputs": {
+                    "resale_scenario": {"data": {"metrics": {}}},
+                    "carry_cost": {"data": {"metrics": {}}},
+                    "rental_option": {"data": {"metrics": {}}},
+                    "valuation": {"data": {"metrics": {}}},
+                },
+                "trace": [],
+            },
+            "modules_run": ["valuation", "carry_cost", "comparable_sales"],
+            "unified_output": {
+                "recommendation": "Buy if the price improves.",
+                "decision": "buy",
+                "decision_stance": "buy_if_price_improves",
+                "best_path": "Proceed carefully.",
+                "key_value_drivers": ["Ask sits below comp anchor"],
+                "key_risks": ["Thin carry inputs"],
+                "trust_flags": [],
+                "primary_value_source": "current_value",
+                "value_position": {"fair_value_base": 1_560_000, "ask_premium_pct": -0.039},
+                "analysis_depth_used": "snapshot",
+            },
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+
+        synthesizer_prose = (
+            "At a measured ask the listing reads as a buy if the price improves; "
+            "the comp anchor supports the framing while the carry inputs remain thin."
+        )
+
+        class _StubLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 360) -> str:
+                return synthesizer_prose
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                raise AssertionError("synthesizer should use plain complete()")
+
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=artifact,
+        ), patch(
+            "briarwood.agent.dispatch.compose_browse_surface",
+        ) as composer, patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 526?",
+                self._decision(),
+                session,
+                llm=_StubLLM(),
+            )
+
+        # The composer must NOT have fired — synthesizer prose replaces it.
+        composer.assert_not_called()
+        # Synthesizer's prose reaches the user verbatim (no marker stripping
+        # needed since the stub draft has none).
+        self.assertIn(synthesizer_prose, response)
+        # The handler's downstream session bookkeeping still happened.
         self.assertEqual(session.last_surface_narrative, response)
+
+    def test_browse_falls_back_to_composer_when_synthesizer_returns_empty(self) -> None:
+        """If the synthesizer returns empty prose (e.g., budget cap, blank
+        draft, or all attempts flagged), ``handle_browse`` falls back to the
+        existing ``compose_browse_surface`` composer. Cycle 4 must keep this
+        fallback to preserve user-visible output continuity.
+        """
+
+        artifact = {
+            "answer_type": "browse",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {"outputs": {}, "trace": []},
+            "modules_run": [],
+            "unified_output": {"decision": "buy"},
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+
+        class _BlankLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 360) -> str:
+                return ""  # synthesizer treats blank as empty -> fallback
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                raise AssertionError("synthesizer should use plain complete()")
+
+        composed_prose = "Composer fallback prose for the user."
+
+        with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=artifact,
+        ), patch(
+            "briarwood.agent.dispatch.compose_browse_surface",
+            return_value=(composed_prose, None),
+        ) as composer, patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 526?",
+                self._decision(),
+                Session(),
+                llm=_BlankLLM(),
+            )
+
+        composer.assert_called_once()
+        self.assertIn(composed_prose, response)
 
 
 class SearchHandlerTests(unittest.TestCase):

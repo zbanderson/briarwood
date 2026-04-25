@@ -4364,12 +4364,46 @@ def handle_browse(
         brief,
         neighbors,
     ) or _format_browse_brief(brief, neighbors)
-    browse_inputs = _browse_surface_payload(brief=brief, session=session, neighbors=neighbors)
-    response, report = compose_browse_surface(
-        llm=llm,
-        payload=browse_inputs,
-        fallback=fallback,
-    )
+
+    # Cycle 4 of OUTPUT_QUALITY_HANDOFF_PLAN.md: when the consolidated chat-tier
+    # artifact is available, run the Layer 3 LLM synthesizer over the full
+    # UnifiedIntelligenceOutput before falling back to the narrow-slice
+    # composer. The synthesizer sees the entire unified output (~all 23
+    # modules' outputs co-resident) instead of the per-handler payload that
+    # _browse_surface_payload builds, so its prose can lead with whatever
+    # the user's intent contract demands and weave in any of the modules
+    # that were dormant before Cycle 3.
+    response: str = ""
+    report: dict[str, object] | None = None
+    if chat_tier_artifact is not None and llm is not None:
+        unified = chat_tier_artifact.get("unified_output") or {}
+        if isinstance(unified, dict) and unified:
+            from briarwood.intent_contract import build_contract_from_answer_type
+            from briarwood.synthesis.llm_synthesizer import synthesize_with_llm
+
+            intent = build_contract_from_answer_type(
+                decision.answer_type.value,
+                float(decision.confidence or 0.0),
+            )
+            synth_prose, synth_report = synthesize_with_llm(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            if synth_prose:
+                response = synth_prose
+                report = synth_report
+
+    if not response:
+        # Composer fallback. Triggers when (a) the chat-tier artifact is
+        # missing (no inputs.json), (b) llm is None, or (c) the synthesizer
+        # returned empty prose (verifier blocked, blank draft, exception).
+        browse_inputs = _browse_surface_payload(brief=brief, session=session, neighbors=neighbors)
+        response, report = compose_browse_surface(
+            llm=llm,
+            payload=browse_inputs,
+            fallback=fallback,
+        )
     _remember_surface_output(
         session,
         narrative=response,
