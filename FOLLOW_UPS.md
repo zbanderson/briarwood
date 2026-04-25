@@ -295,6 +295,30 @@ Out of scope for the immediate handoff — the immediate fix targeted only the p
 
 ---
 
+## 2026-04-25 — `get_cma` internally calls `get_value_thesis`, leaking 5 module re-runs into the chat-tier path
+
+**Severity:** Medium — visible in the per-turn manifest as 5 trailing duplicate module-run events on every BROWSE turn (and likely every other tier that calls `get_cma`). Eliminates Cycle 3's "no duplication" goal until fixed.
+
+**Files:**
+- [briarwood/agent/tools.py:1829-1858](briarwood/agent/tools.py#L1829-L1858) — `get_cma` body. Line 1832 calls `get_value_thesis(property_id, overrides=overrides)` to pick up `subject_ask` and `fair_value_base`.
+- [briarwood/agent/tools.py:1773](briarwood/agent/tools.py#L1773) — `get_value_thesis` body. Internally calls `run_routed_report`, which spins up a fresh `run_briarwood_analysis_with_artifacts` execution plan and runs ~5 modules (`valuation`, `risk_model`, `confidence`, `legal_confidence`, `carry_cost`) again.
+- [briarwood/agent/dispatch.py](briarwood/agent/dispatch.py) — `handle_browse` (Cycle 3) keeps `get_cma` because it produces Engine B comps for the user-facing CMA card. The transitive `get_value_thesis` call is the only remaining per-tool routed run inside the consolidated BROWSE path.
+
+**Issue:** Cycle 3 of OUTPUT_QUALITY_HANDOFF_PLAN.md replaces the per-tool routed-runner fragmentation in `handle_browse` with a single `run_chat_tier_analysis` call. The 13 dormant modules now fire and the manifest shows 23 distinct modules in one consolidated plan. Five trailing duplicate runs remain — `valuation` (697ms fresh), `risk_model`, `confidence`, `legal_confidence`, `carry_cost` (cache hit) — because `get_cma` internally calls `get_value_thesis`, which kicks off its own `run_routed_report` despite the chat-tier artifact already containing every field that `get_value_thesis` produces (the comps live in `module_results["outputs"]["comparable_sales"]`; `fair_value_base` lives in `unified_output["value_position"]["fair_value_base"]`; `ask_price` is on the property summary).
+
+The `valuation` module's cache key in `MODULE_CACHE_FIELDS` includes `market_history_*` fields, which appear to differ between the chat-tier execution context and the `get_value_thesis` execution context (synthetic vs. real `ParserOutput` may shape `_extract_execution_assumptions` paths differently, or `_SCOPED_MODULE_OUTPUT_CACHE` keying drifts). Worth investigating why the cache miss when the inputs should be identical.
+
+**Suggested fix:** Two-step.
+
+1. **Break the internal `get_cma` -> `get_value_thesis` coupling.** Add an optional `thesis_subject_ask` / `thesis_fair_value_base` (or `thesis_dict`) parameter to `get_cma`. When provided, skip the internal `get_value_thesis` call. The caller (`handle_browse` post-Cycle-3) already has these values in `chat_tier_artifact["unified_output"]["value_position"]` — pass them in. This eliminates the 5 trailing duplicates without changing Engine B's contract.
+2. **Audit why `valuation` cache misses across the consolidated and routed paths** even when property structural fields are identical. Likely related to the broader `MODULE_CACHE_FIELDS` leaky-cache item already in this file (2026-04-25 "Module-result caching at the per-tool boundary is leaky"). May also overlap with the `valuation`-module market_history field plumbing — the chat-tier path's market_context snapshot may differ from the routed path's snapshot in subtle ways.
+
+**Out of scope here:** the broader retirement of `get_value_thesis` itself, which other handlers (`handle_decision`, `handle_strategy`, `handle_browse`'s decision-value-thesis builder for DECISION turns at `dispatch.py:1055`) still rely on. That's Cycle 5 work.
+
+Surfaced during Cycle 3 (commit `ca94d2f`) post-landing UI smoke. Cross-ref [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md) Cycle 3 status block.
+
+---
+
 ## 2026-04-25 — `in_active_context` is not safe under concurrent thread-pool callers
 
 **Severity:** Medium — blocks turning on parallel execution for the chat-tier consolidated path. `run_chat_tier_analysis` (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) currently defaults `parallel=False` because of this.
