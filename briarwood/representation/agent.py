@@ -250,10 +250,21 @@ class RepresentationAgent:
             source = selection.source_view
             view = module_views.get(source) if source else None
             inputs: dict[str, Any] = dict(view) if isinstance(view, Mapping) else {}
-            if selection.chart_id == "cma_positioning" and isinstance(
-                market_view, Mapping
-            ):
-                inputs["_market_view"] = dict(market_view)
+            # `cma_positioning` fundamentally needs two views: the
+            # value-thesis view supplies the ask/fair/value-band anchors
+            # while `market_view` (last_market_support_view) supplies the
+            # comp rows. The agent's source_view abstraction only carries
+            # one view, so when it picks `last_market_support_view` (which
+            # has comps but no ask/fair_value), the renderer's anchor
+            # lookups silently return None and the chart renders with `—`
+            # placeholders. Force the primary view to the thesis view so
+            # the anchors always resolve.
+            if selection.chart_id == "cma_positioning":
+                thesis_view = module_views.get("last_value_thesis_view")
+                if isinstance(thesis_view, Mapping):
+                    inputs = dict(thesis_view)
+                if isinstance(market_view, Mapping):
+                    inputs["_market_view"] = dict(market_view)
             event = render_chart(selection.chart_id, inputs)
             if event is None:
                 continue

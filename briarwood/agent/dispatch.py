@@ -4432,6 +4432,83 @@ def _browse_projection_from_artifact(
     return payload
 
 
+# Phase 3 Cycle B (revised 2026-04-26): BROWSE-tier turns surface a fixed,
+# user-named 3-chart set. The agent's intent-keyed prompt has strong defaults
+# for this set, but in practice gpt-4o-mini drifts (e.g. picks
+# `cma_positioning` instead of `market_trend`). For BROWSE the chart kinds
+# are pinned; the agent's role narrows to producing per-chart `claim` text
+# (the italic caption) and informing prose. Source views are the canonical
+# choice for each chart kind, so the chart-frame rendering is deterministic.
+_BROWSE_CHART_SET: list[tuple[str, str, str, str]] = [
+    # (chart_id, source_view, claim_type, default_claim_text)
+    (
+        "market_trend",
+        "last_market_history_view",
+        "market_position",
+        "Town-level home values across the available history window — the market context the property sits in.",
+    ),
+    (
+        "value_opportunity",
+        "last_value_thesis_view",
+        "price_position",
+        "Subject ask versus Briarwood's fair-value read.",
+    ),
+    (
+        "scenario_fan",
+        "last_projection_view",
+        "scenario_range",
+        "Bull / base / bear projected value over a 5-year hold.",
+    ),
+]
+
+
+def _enforce_browse_chart_set(plan_dict: dict[str, object]) -> dict[str, object]:
+    """Rewrite an agent plan dict so it carries exactly the BROWSE chart set
+    in the canonical order, preserving the agent's per-chart `claim` text
+    when it picked the same kind, and synthesizing a default claim when it
+    did not.
+
+    Operates on the dict form (model_dump output) so the caller can keep
+    passing the result through Pydantic validation if it wants to."""
+
+    raw_selections = plan_dict.get("selections") or []
+    if not isinstance(raw_selections, list):
+        raw_selections = []
+    by_kind: dict[str, dict[str, object]] = {}
+    for sel in raw_selections:
+        if not isinstance(sel, dict):
+            continue
+        kind = sel.get("chart_id")
+        if isinstance(kind, str) and kind:
+            by_kind[kind] = sel
+
+    forced: list[dict[str, object]] = []
+    for chart_id, source_view, claim_type, default_claim in _BROWSE_CHART_SET:
+        existing = by_kind.get(chart_id)
+        if existing is not None and not existing.get("flagged"):
+            forced.append(
+                {
+                    **existing,
+                    "chart_id": chart_id,
+                    "source_view": source_view,
+                    "flagged": False,
+                }
+            )
+        else:
+            forced.append(
+                {
+                    "claim": default_claim,
+                    "claim_type": claim_type,
+                    "supporting_evidence": [],
+                    "chart_id": chart_id,
+                    "source_view": source_view,
+                    "flagged": False,
+                    "flag_reason": None,
+                }
+            )
+    return {"selections": forced}
+
+
 def _browse_compute_representation_plan(
     *,
     session: Session,
@@ -4440,18 +4517,20 @@ def _browse_compute_representation_plan(
     intent: object,
     llm: LLMClient | None,
 ) -> list[dict[str, object]] | None:
-    """Run the Representation Agent for a BROWSE-tier turn, cache the plan
+    """Run the Representation Agent for a BROWSE-tier turn, force the chart
+    set to the user-named 3-chart configuration, cache the rewritten plan
     on the session, and return a compact chart-summary the synthesizer can
     use to reference selected charts in prose.
 
-    Phase 3 Cycle C. Returns ``None`` when the agent is missing, the unified
-    output fails to validate, or the agent raises — callers fall through to
-    a synthesizer call without the ``charts`` hint."""
+    Phase 3 Cycle C. Returns ``None`` when the unified output fails to
+    validate or the agent raises — callers fall through to a synthesizer
+    call without the ``charts`` hint."""
 
-    if llm is None or not unified:
+    if not unified:
         return None
     try:
         from briarwood.representation import RepresentationAgent
+        from briarwood.representation.agent import RepresentationPlan
         from briarwood.routing_schema import UnifiedIntelligenceOutput
 
         unified_model = UnifiedIntelligenceOutput.model_validate(unified)
@@ -4470,32 +4549,41 @@ def _browse_compute_representation_plan(
         "last_projection_view": session.last_projection_view if isinstance(session.last_projection_view, dict) else None,
     }
 
-    try:
-        agent = RepresentationAgent(llm_client=llm, max_selections=3)
-        plan = agent.plan(
-            unified_model,
-            user_question=user_question,
-            module_views=module_views,
-            session=session,
-            intent=intent,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("representation plan: agent failed: %s", exc)
-        return None
+    plan_dict: dict[str, object] = {"selections": []}
+    if llm is not None:
+        try:
+            agent = RepresentationAgent(llm_client=llm, max_selections=3)
+            plan = agent.plan(
+                unified_model,
+                user_question=user_question,
+                module_views=module_views,
+                session=session,
+                intent=intent,
+            )
+            plan_dict = plan.model_dump(mode="json")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("representation plan: agent failed: %s", exc)
+
+    # Enforce the BROWSE chart set regardless of what the agent picked. The
+    # agent's per-chart claim is preserved for the kinds it did pick; missing
+    # kinds get a deterministic default claim.
+    plan_dict = _enforce_browse_chart_set(plan_dict)
 
     try:
-        session.last_representation_plan = plan.model_dump(mode="json")
+        session.last_representation_plan = plan_dict
     except Exception as exc:  # noqa: BLE001
         logger.debug("representation plan: cache failed: %s", exc)
 
     summary: list[dict[str, object]] = []
-    for selection in plan.selections:
-        if selection.chart_id is None or selection.flagged:
+    for selection in plan_dict.get("selections") or []:
+        if not isinstance(selection, dict):
+            continue
+        if not selection.get("chart_id") or selection.get("flagged"):
             continue
         summary.append(
             {
-                "kind": selection.chart_id,
-                "claim": selection.claim,
+                "kind": selection.get("chart_id"),
+                "claim": selection.get("claim"),
             }
         )
     return summary or None

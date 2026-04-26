@@ -3408,5 +3408,81 @@ class MicroLocationHandlerTests(unittest.TestCase):
         self.assertIn("micro-location row", response)
 
 
+class BrowseChartSetEnforcementTests(unittest.TestCase):
+    """Phase 3 Cycle B (revised 2026-04-26): the BROWSE chart set is fixed
+    at [market_trend, value_opportunity, scenario_fan]. The agent's prompt
+    has strong defaults but in practice gpt-4o-mini drifts (e.g. picks
+    cma_positioning instead of market_trend). The enforcer rewrites the
+    plan deterministically so the user always sees the named 3."""
+
+    def test_enforcer_inserts_missing_kinds(self) -> None:
+        from briarwood.agent.dispatch import _enforce_browse_chart_set
+
+        # Agent picked the wrong chart set (cma_positioning, scenario_fan).
+        plan = {
+            "selections": [
+                {
+                    "claim": "Comp asks cluster near subject ask.",
+                    "claim_type": "comp_evidence",
+                    "supporting_evidence": [],
+                    "chart_id": "cma_positioning",
+                    "source_view": "last_market_support_view",
+                    "flagged": False,
+                },
+                {
+                    "claim": "Bear case is well below today's basis.",
+                    "claim_type": "scenario_range",
+                    "supporting_evidence": [],
+                    "chart_id": "scenario_fan",
+                    "source_view": "last_projection_view",
+                    "flagged": False,
+                },
+            ]
+        }
+        out = _enforce_browse_chart_set(plan)
+        kinds = [sel["chart_id"] for sel in out["selections"]]
+        self.assertEqual(kinds, ["market_trend", "value_opportunity", "scenario_fan"])
+        # The agent's claim for scenario_fan must be preserved.
+        scenario_claim = next(
+            sel for sel in out["selections"] if sel["chart_id"] == "scenario_fan"
+        )["claim"]
+        self.assertEqual(scenario_claim, "Bear case is well below today's basis.")
+
+    def test_enforcer_synthesizes_default_claims_when_missing(self) -> None:
+        from briarwood.agent.dispatch import _enforce_browse_chart_set
+
+        # Empty plan → all three forced with defaults.
+        out = _enforce_browse_chart_set({"selections": []})
+        kinds = [sel["chart_id"] for sel in out["selections"]]
+        self.assertEqual(kinds, ["market_trend", "value_opportunity", "scenario_fan"])
+        for sel in out["selections"]:
+            self.assertTrue(sel["claim"])
+            self.assertFalse(sel["flagged"])
+
+    def test_enforcer_pins_canonical_source_views(self) -> None:
+        """Even when the agent picks the right chart kind, the enforcer
+        normalizes the source_view so the rendering layer's anchor lookups
+        always resolve."""
+        from briarwood.agent.dispatch import _enforce_browse_chart_set
+
+        plan = {
+            "selections": [
+                {
+                    "claim": "Subject sits above the value-thesis read.",
+                    "claim_type": "price_position",
+                    "supporting_evidence": [],
+                    "chart_id": "value_opportunity",
+                    "source_view": "last_decision_view",  # wrong source
+                    "flagged": False,
+                },
+            ]
+        }
+        out = _enforce_browse_chart_set(plan)
+        value_sel = next(
+            sel for sel in out["selections"] if sel["chart_id"] == "value_opportunity"
+        )
+        self.assertEqual(value_sel["source_view"], "last_value_thesis_view")
+
+
 if __name__ == "__main__":
     unittest.main()

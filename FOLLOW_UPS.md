@@ -243,6 +243,22 @@ None of these takes the FULL `UnifiedIntelligenceOutput` and asks an LLM "given 
 
 ---
 
+## 2026-04-26 — `cma_positioning` source-view drift in non-BROWSE handlers
+
+**Severity:** Medium — surfaces as broken chart anchors (`ASK: —`, `FAIR VALUE: —`) on whichever handler triggers the bug.
+
+**Files:**
+- [briarwood/representation/agent.py::render_events](briarwood/representation/agent.py) — chart-id → source-view dispatch
+- [api/pipeline_adapter.py::_native_cma_chart](api/pipeline_adapter.py) — renderer that reads ask/fair_value/value_band from a single view dict
+
+**Issue.** The Representation Agent's `RepresentationSelection` carries one `source_view` per chart, but `cma_positioning` fundamentally needs two views: `last_value_thesis_view` for ask / fair_value / value_band anchors, plus `last_market_support_view` for the comp rows. When the agent picks `last_market_support_view` as the single source (because it has the comps the LLM cited), the renderer's anchor lookups silently return None and the chart paints with `—` placeholders. Reproduced 2026-04-26 on a BROWSE turn before the BROWSE chart-set enforcer landed; since BROWSE no longer uses `cma_positioning`, the bug is currently latent for non-BROWSE handlers (DECISION, EDGE) that may select the chart through the agent.
+
+**Resolved 2026-04-26 (partial — defensive fix only).** `agent.render_events` now overrides the primary view to `last_value_thesis_view` whenever the chart kind is `cma_positioning`, with `market_view` already injecting the market-support comps. This prevents the broken-anchor render on any handler that goes through the agent for chart selection.
+
+**Suggested follow-on.** Restructure `RepresentationSelection` to carry an optional `secondary_source_view` (or a typed `source_views: dict[role, view_key]` mapping) so multi-view charts are first-class instead of patched per-chart. Two-views-per-chart will recur as the chart catalog grows; the first instance is `cma_positioning`, the second is likely any future overlay chart that mixes property anchors with comp/market context.
+
+---
+
 ## 2026-04-25 — `presentation_advisor` bypasses the shared LLM observability ledger
 
 **Severity:** Low — same bug class as the existing `local_intelligence/adapters.py` entry. Cleanup, not user-facing.
