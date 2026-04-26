@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from api.prompts import load_prompt
 from briarwood.agent.composer import compose_contract_response
 from briarwood.agent.llm import LLMClient
+from briarwood.agent.llm_observability import complete_structured_observed
 
 
 class SectionAdvice(BaseModel):
@@ -79,12 +80,23 @@ def advise_visual_surfaces(
 
     if llm is None or not payload:
         return None
+    system = load_prompt("visual_advisor")
+    user_body = f"payload_json: {payload!r}"
     try:
-        advice = llm.complete_structured(
-            system=load_prompt("visual_advisor"),
-            user=f"payload_json: {payload!r}",
+        advice = complete_structured_observed(
+            surface="presentation_advisor.advise",
             schema=VisualAdvice,
-            max_tokens=600,
+            system=system,
+            user=user_body,
+            provider=llm.__class__.__name__,
+            model=getattr(llm, "model", None),
+            max_attempts=2,
+            call=lambda: llm.complete_structured(
+                system=system,
+                user=user_body,
+                schema=VisualAdvice,
+                max_tokens=600,
+            ),
         )
     except Exception:
         return None

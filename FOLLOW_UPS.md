@@ -257,6 +257,8 @@ None of these takes the FULL `UnifiedIntelligenceOutput` and asks an LLM "given 
 
 Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9.
 
+**Resolved 2026-04-26** (Phase 2 Cycle 6 cleanup item 1). `advise_visual_surfaces` at [briarwood/agent/presentation_advisor.py:68](briarwood/agent/presentation_advisor.py#L68) now routes through `complete_structured_observed(surface="presentation_advisor.advise", ...)`. The call shows up in the shared LLM ledger and the per-turn manifest's `llm_calls` list with `surface="presentation_advisor.advise"`. New regression test `tests/agent/test_presentation_advisor.py::PresentationAdvisorTests::test_advise_visual_surfaces_records_call_in_ledger` pins the ledger contract. The `local_intelligence/adapters.py` sibling entry remains open.
+
 ---
 
 ## 2026-04-25 — Module-result caching at the per-tool boundary is leaky

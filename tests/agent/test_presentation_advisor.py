@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from briarwood.agent.llm_observability import get_llm_ledger
 from briarwood.agent.presentation_advisor import (
     SectionAdvice,
     VisualAdvice,
@@ -61,6 +62,18 @@ class PresentationAdvisorTests(unittest.TestCase):
         llm = _ScriptedStructuredLLM(advice)
         out = advise_visual_surfaces(llm=llm, payload={"anything": 1})
         self.assertIsNone(out)
+
+    def test_advise_visual_surfaces_records_call_in_ledger(self) -> None:
+        """Routing through `complete_structured_observed` must surface the call
+        in the shared LLM ledger so it appears in the per-turn manifest."""
+        ledger = get_llm_ledger()
+        ledger.clear()
+        advice = VisualAdvice(value=SectionAdvice(title="Ask vs fair value"))
+        llm = _ScriptedStructuredLLM(advice)
+        out = advise_visual_surfaces(llm=llm, payload={"anything": 1})
+        self.assertIsNotNone(out)
+        surfaces = [record.surface for record in ledger.records]
+        self.assertIn("presentation_advisor.advise", surfaces)
 
     def test_compose_browse_surface_falls_back_without_llm(self) -> None:
         text, report = compose_browse_surface(
