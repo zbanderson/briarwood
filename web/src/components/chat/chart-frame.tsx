@@ -269,17 +269,17 @@ export function ChartFrame({ chart }: Props) {
           "bg-[var(--color-surface)]",
         )}
       >
-        <div className="px-4 pt-3.5 pb-2">
-          <h3 className="text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+        <div className="border-b border-[var(--color-border-subtle)] px-4 pt-4 pb-3">
+          <h3 className="text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]">
             {title}
           </h3>
           {subtitle && (
-            <p className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">
+            <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
               {subtitle}
             </p>
           )}
         </div>
-        <div className="px-3 pb-3">
+        <div className="px-3 pt-3 pb-3">
           {chart.provenance && chart.provenance.length > 0 && (
             <ProvenanceChips items={chart.provenance} />
           )}
@@ -309,12 +309,12 @@ export function ChartFrame({ chart }: Props) {
         "bg-[var(--color-surface)]",
       )}
     >
-      <div className="px-4 pt-3.5 pb-2 border-b border-[var(--color-border-subtle)]">
-        <h3 className="text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+      <div className="border-b border-[var(--color-border-subtle)] px-4 pt-4 pb-3">
+        <h3 className="text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]">
           {title}
         </h3>
         {subtitle && (
-          <p className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">
+          <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
             {subtitle}
           </p>
         )}

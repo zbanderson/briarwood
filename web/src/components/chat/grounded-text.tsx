@@ -128,28 +128,49 @@ type GroundedTextProps = {
   muted?: boolean;
 };
 
-export function GroundedText({ content, anchors, muted = false }: GroundedTextProps) {
-  const segments = useMemo(
-    () => segmentContent(content, anchors),
-    [content, anchors],
-  );
+// Phase 3 Cycle D (advanced): the synthesizer can now emit markdown section
+// headers (`## Headline`, `## Why`, etc.). Split the content on those header
+// lines so each section renders with prominent typography and the body still
+// flows through the grounding-anchor segmenter.
+type Block =
+  | { kind: "heading"; level: 2 | 3; text: string }
+  | { kind: "paragraph"; text: string };
 
-  if (!content) return null;
+function blocksFromContent(content: string): Block[] {
+  if (!content) return [];
+  const lines = content.split(/\r?\n/);
+  const blocks: Block[] = [];
+  let buffer: string[] = [];
+  const flush = () => {
+    if (buffer.length === 0) return;
+    const joined = buffer.join("\n").replace(/^\s+|\s+$/g, "");
+    if (joined) blocks.push({ kind: "paragraph", text: joined });
+    buffer = [];
+  };
+  for (const line of lines) {
+    const headingMatch = /^(#{2,3})\s+(.+?)\s*$/.exec(line);
+    if (headingMatch) {
+      flush();
+      const level = headingMatch[1].length === 2 ? 2 : 3;
+      blocks.push({ kind: "heading", level: level as 2 | 3, text: headingMatch[2] });
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return blocks;
+}
 
-  const baseClass = muted
-    ? "whitespace-pre-wrap break-words rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] px-3 py-2 text-[var(--color-text-muted)]"
-    : "whitespace-pre-wrap break-words";
-
+function ParagraphSegments({
+  text,
+  anchors,
+}: {
+  text: string;
+  anchors: GroundingAnchor[];
+}) {
+  const segments = useMemo(() => segmentContent(text, anchors), [text, anchors]);
   return (
-    <div className={baseClass}>
-      {muted && (
-        <span
-          className="mr-2 inline-flex items-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]"
-          aria-label="no model output"
-        >
-          no model output
-        </span>
-      )}
+    <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
           <span key={i}>{seg.text}</span>
@@ -163,6 +184,81 @@ export function GroundedText({ content, anchors, muted = false }: GroundedTextPr
           </span>
         ),
       )}
+    </>
+  );
+}
+
+export function GroundedText({ content, anchors, muted = false }: GroundedTextProps) {
+  const blocks = useMemo(() => blocksFromContent(content), [content]);
+
+  if (!content) return null;
+
+  const containerClass = muted
+    ? "rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)] px-3 py-2 text-[var(--color-text-muted)]"
+    : "";
+
+  // Fast path: no headings → render as a single whitespace-pre-wrap block to
+  // preserve the prior visual exactly for prose that doesn't use markdown.
+  const hasHeadings = blocks.some((b) => b.kind === "heading");
+  if (!hasHeadings) {
+    return (
+      <div className={`${containerClass} whitespace-pre-wrap break-words`}>
+        {muted && (
+          <span
+            className="mr-2 inline-flex items-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]"
+            aria-label="no model output"
+          >
+            no model output
+          </span>
+        )}
+        <ParagraphSegments text={content} anchors={anchors} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={containerClass}>
+      {muted && (
+        <span
+          className="mr-2 inline-flex items-center rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-text-faint)]"
+          aria-label="no model output"
+        >
+          no model output
+        </span>
+      )}
+      {blocks.map((block, idx) => {
+        if (block.kind === "heading") {
+          // First heading sits flush with the top; subsequent headings get
+          // breathing room above to separate sections like a newspaper column.
+          const spacing = idx === 0 ? "mt-1" : "mt-5";
+          if (block.level === 2) {
+            return (
+              <h2
+                key={`h-${idx}`}
+                className={`${spacing} text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]`}
+              >
+                {block.text}
+              </h2>
+            );
+          }
+          return (
+            <h3
+              key={`h-${idx}`}
+              className={`${spacing} text-[15px] font-semibold leading-tight text-[var(--color-text)]`}
+            >
+              {block.text}
+            </h3>
+          );
+        }
+        return (
+          <p
+            key={`p-${idx}`}
+            className="mt-2 whitespace-pre-wrap break-words leading-7 text-[var(--color-text)]"
+          >
+            <ParagraphSegments text={block.text} anchors={anchors} />
+          </p>
+        );
+      })}
     </div>
   );
 }
