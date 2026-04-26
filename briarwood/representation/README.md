@@ -1,6 +1,6 @@
 # representation — Representation Agent + Chart Registry
 
-**Last Updated:** 2026-04-26 (Cycle B)
+**Last Updated:** 2026-04-26 (Phase 3 closeout — Cycles A through D)
 **Layer:** Representation (Layer 4)
 **Status:** STABLE
 
@@ -164,6 +164,13 @@ events = agent.render_events(plan, module_views=...)
 - **Chart-registry expansion priorities.** New chart kinds are additive but each requires both a renderer and a frontend card. Which kinds are worth the cost is open.
 
 ## Changelog
+
+### 2026-04-26 (Phase 3 closeout — BROWSE chart-set enforcement + cma_positioning fix)
+- BROWSE-tier chart selection is now deterministic. The agent's intent-keyed prompt has strong defaults but in practice gpt-4o-mini drifted (e.g. picked `cma_positioning` instead of `market_trend`). `_enforce_browse_chart_set` (in `briarwood/agent/dispatch.py`) rewrites any agent plan dict so the BROWSE selections are exactly `[market_trend, value_opportunity, scenario_fan]` in that order, with canonical `source_view` values pinned. Agent's per-chart `claim` text is preserved when it picked one of these kinds; default deterministic claims fill any gaps. Both the synthesizer's `charts` payload and the SSE chart events read from the same enforced plan.
+- Contract change: `RepresentationAgent.render_events(...)` now overrides the primary view to `last_value_thesis_view` whenever the chart kind is `cma_positioning`, regardless of what `source_view` the selection named. The `cma_positioning` chart fundamentally needs two views (value-thesis for ask/fair_value/value_band anchors, market-support for comp rows); the agent's single-source-view abstraction couldn't model that, so the renderer painted with `—` placeholders when the agent picked `last_market_support_view` as source. Defensive fix; the deeper restructure (typed `source_views: dict[role, view_key]` on `RepresentationSelection`) is recorded in [FOLLOW_UPS.md](../../FOLLOW_UPS.md) "cma_positioning source-view drift in non-BROWSE handlers" 2026-04-26.
+
+### 2026-04-26 (Cycle D — synthesis-side, no representation change)
+- Cycle D landed in [briarwood/synthesis/README.md](../synthesis/README.md). It restructured the synthesizer system prompt for newspaper voice with per-tier variants and added the `BRIARWOOD_SYNTHESIS_NEWSPAPER` kill switch. No representation-module code changed.
 
 ### 2026-04-26 (Cycle C)
 - Contract change: `synthesize_with_llm(...)` in `briarwood/synthesis/llm_synthesizer.py` now accepts an optional `charts: list[{kind, claim}]` keyword. The synthesizer's system prompt instructs the LLM to reference selected charts by what the user will see ("the scenario fan shows…", "the town-trend line…") so prose and charts tie together. Numeric grounding rule preserved verbatim.
