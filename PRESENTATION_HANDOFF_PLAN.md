@@ -57,7 +57,9 @@ Detailed scope per cycle below.
 
 ## Cycles
 
-### Cycle A — Chart visual polish
+### Cycle A — Chart visual polish — LANDED 2026-04-26
+
+**Status:** Landed. Chart event payloads now carry `subtitle`, `x_axis_label`, `y_axis_label`, `value_format`, and `legend` metadata across all seven chart-emitting sites (six native + the wedge `horizontal_bar_with_ranges`). React layer rewritten so each chart figure renders title + subtitle as HTML above the SVG, axis labels inside the SVG, a uniform legend row below, and y-axis tick numbers (currency formatted as `$1.2M` / `$840K`) on the three time-series charts. Color tokens centralized as `--chart-*` CSS custom properties in `web/src/app/globals.css`. Style guide at [web/CHART_STYLE.md](web/CHART_STYLE.md). 450 Python tests pass; TypeScript clean. Pause for browser smoke before kicking off Cycle B.
 
 **Why first.** Fast, visible win. Every existing chart kind benefits immediately. The architectural cycles (B, C, D) build on top of polished charts; landing polish first means later cycles inherit a credible visual baseline.
 

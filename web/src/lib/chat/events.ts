@@ -10,10 +10,17 @@ export type ConversationEvent = { type: "conversation"; id: string; title: strin
 export type MessageEvent = { type: "message"; id: string; role: "user" | "assistant" };
 export type DoneEvent = { type: "done" };
 export type ErrorEvent = { type: "error"; message: string };
+export type ChartLegendItem = {
+  label: string;
+  color?: string | null; // CSS color (hex or var(--...)) — optional for "use default"
+  style?: "solid" | "dashed" | "dotted" | null;
+};
+export type ChartValueFormat = "currency" | "percent" | "count";
 export type ChartEvent = {
   type: "chart";
   url?: string | null;  // path under /artifacts/, served by FastAPI StaticFiles
   title?: string | null;
+  subtitle?: string | null; // Cycle A: one-line description under the title
   kind?: string | null; // e.g. "value_opportunity", "scenario_fan", "radar_score"
   spec?: ChartSpec | null;
   provenance?: string[] | null;
@@ -25,6 +32,12 @@ export type ChartEvent = {
     companion?: string | null;
     preferred_surface?: string | null;
   } | null;
+  // Cycle A: presentation metadata. Optional everywhere so older event
+  // shapes still render with sensible fallbacks.
+  x_axis_label?: string | null;
+  y_axis_label?: string | null;
+  value_format?: ChartValueFormat | null;
+  legend?: ChartLegendItem[] | null;
 };
 export type ScenarioFanChartSpec = {
   kind: "scenario_fan";

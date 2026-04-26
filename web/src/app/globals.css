@@ -23,6 +23,16 @@
 
   --color-user-bubble: #2f2d2a;
 
+  /* Chart palette (Phase 3 Cycle A). Centralized so individual chart components
+     and SSE event payloads (`legend[].color`) can reference the same tokens. */
+  --chart-base: #79b8ff;        /* primary line / base case */
+  --chart-bull: #75d38f;        /* upside / bull case / "in model" comp */
+  --chart-bear: #f28b82;        /* downside / bear case / risk / subject ask */
+  --chart-stress: #d7b38a;      /* stress floor / market regime / emphasis */
+  --chart-neutral: #b8b2a4;     /* neutral / context-only series */
+  --chart-text-faint: #8a847a;  /* axis tick labels and break-even markers */
+  --chart-grid: #2f2d2b;        /* gridline color (matches --color-border-subtle) */
+
   --font-sans: var(--font-sans-app), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-mono-app), ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 

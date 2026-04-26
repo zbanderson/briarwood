@@ -5,6 +5,8 @@ import { cn } from "@/lib/cn";
 import { getChartSurface } from "@/lib/chat/chart-surface";
 import type {
   ChartEvent,
+  ChartLegendItem,
+  ChartValueFormat,
   CmaPositioningChartSpec,
   ChartSpec,
   HorizontalBarWithRangesChartSpec,
@@ -21,6 +23,27 @@ type Props = {
 
 const SVG_W = 640;
 const SVG_H = 300;
+
+// Phase 3 Cycle A: shared chart polish primitives. Colors live in globals.css
+// (var(--chart-*)) so the SSE event payload's `legend[].color` strings resolve
+// natively. Each chart sub-component receives axis labels + value_format via
+// props and renders them inside its own SVG so the labels track the chart's
+// coordinate system.
+const CHART = {
+  base: "var(--chart-base)",
+  bull: "var(--chart-bull)",
+  bear: "var(--chart-bear)",
+  stress: "var(--chart-stress)",
+  neutral: "var(--chart-neutral)",
+  textFaint: "var(--chart-text-faint)",
+  grid: "var(--chart-grid)",
+} as const;
+
+type ChartChrome = {
+  xAxisLabel?: string | null;
+  yAxisLabel?: string | null;
+  valueFormat?: ChartValueFormat | null;
+};
 
 function chartTitle(c: ChartEvent) {
   if (c.title) return c.title;
@@ -46,6 +69,109 @@ function pct(n: number | null | undefined) {
 
 function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+// Compact axis-tick formatter. Currency renders as "$1.2M" / "$840K" so the
+// y-axis stays readable at four-tick density. Percent renders with 0-1 decimal
+// places. Counts render plain.
+function formatTick(value: number, format: ChartValueFormat | null | undefined) {
+  if (!Number.isFinite(value)) return "";
+  if (format === "percent") {
+    const pctValue = value * 100;
+    return `${Math.abs(pctValue) >= 10 ? pctValue.toFixed(0) : pctValue.toFixed(1)}%`;
+  }
+  if (format === "count") {
+    return Math.round(value).toLocaleString();
+  }
+  // Currency (default).
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (abs >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
+  return `$${Math.round(value).toLocaleString()}`;
+}
+
+function strokeDashFor(style: ChartLegendItem["style"]): string | undefined {
+  if (style === "dashed") return "5 6";
+  if (style === "dotted") return "2 5";
+  return undefined;
+}
+
+function LegendRow({ items }: { items: ChartLegendItem[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-[var(--color-text-muted)]">
+      {items.map((item, idx) => {
+        const dash = strokeDashFor(item.style);
+        const color = item.color || "var(--chart-base)";
+        return (
+          <span key={`${item.label}-${idx}`} className="flex items-center gap-1.5">
+            <svg width="20" height="8" aria-hidden>
+              <line
+                x1="0"
+                y1="4"
+                x2="20"
+                y2="4"
+                stroke={color}
+                strokeWidth="2.5"
+                strokeDasharray={dash}
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>{item.label}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// Render axis-label glyphs inside the SVG. X-axis label sits below the bottom
+// tick row; Y-axis label is rotated 90° on the left margin. Both are optional.
+function AxisLabels({
+  xAxisLabel,
+  yAxisLabel,
+  width,
+  height,
+  plotLeft = 64,
+  plotBottom,
+}: {
+  xAxisLabel?: string | null;
+  yAxisLabel?: string | null;
+  width: number;
+  height: number;
+  plotLeft?: number;
+  plotBottom?: number;
+}) {
+  const yX = 18;
+  const yY = height / 2;
+  const xY = (plotBottom ?? height - 12) + 26;
+  return (
+    <g aria-hidden>
+      {yAxisLabel && (
+        <text
+          x={yX}
+          y={yY}
+          fontSize="10"
+          fill="var(--chart-text-faint)"
+          textAnchor="middle"
+          transform={`rotate(-90 ${yX} ${yY})`}
+        >
+          {yAxisLabel}
+        </text>
+      )}
+      {xAxisLabel && (
+        <text
+          x={(plotLeft + width) / 2}
+          y={xY}
+          fontSize="10"
+          fill="var(--chart-text-faint)"
+          textAnchor="middle"
+        >
+          {xAxisLabel}
+        </text>
+      )}
+    </g>
+  );
 }
 
 function linePath(
@@ -94,27 +220,27 @@ function chartBounds(values: Array<number | null | undefined>) {
   return { min: min - span * 0.18, max: max + span * 0.18 };
 }
 
-function NativeChart({ spec, title }: { spec: ChartSpec; title: string }) {
+function NativeChart({ spec, chrome }: { spec: ChartSpec; chrome: ChartChrome }) {
   if (spec.kind === "scenario_fan") {
-    return <ScenarioFanChart spec={spec} title={title} />;
+    return <ScenarioFanChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "cma_positioning") {
-    return <CmaPositioningChart spec={spec} title={title} />;
+    return <CmaPositioningChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "risk_bar") {
-    return <RiskBarChart spec={spec} title={title} />;
+    return <RiskBarChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "rent_burn") {
-    return <RentBurnChart spec={spec} title={title} />;
+    return <RentBurnChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "rent_ramp") {
-    return <RentRampChart spec={spec} title={title} />;
+    return <RentRampChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "value_opportunity") {
-    return <ValueOpportunityChart spec={spec} title={title} />;
+    return <ValueOpportunityChart spec={spec} chrome={chrome} />;
   }
   if (spec.kind === "horizontal_bar_with_ranges") {
-    return <HorizontalBarWithRangesChart spec={spec} title={title} />;
+    return <HorizontalBarWithRangesChart spec={spec} chrome={chrome} />;
   }
   return null;
 }
@@ -123,11 +249,18 @@ export function ChartFrame({ chart }: Props) {
   const [loaded, setLoaded] = useState(false);
   const surface = getChartSurface(chart);
   const title = surface.title ?? chartTitle(chart);
+  const subtitle = chart.subtitle ?? null;
+  const legend = chart.legend ?? null;
+  const chrome: ChartChrome = {
+    xAxisLabel: chart.x_axis_label,
+    yAxisLabel: chart.y_axis_label,
+    valueFormat: chart.value_format,
+  };
 
   if (!surface.shouldRender) return null;
 
   if (chart.spec) {
-    const body = <NativeChart spec={chart.spec} title={title} />;
+    const body = <NativeChart spec={chart.spec} chrome={chrome} />;
     if (!body) return null;
     return (
       <figure
@@ -136,10 +269,17 @@ export function ChartFrame({ chart }: Props) {
           "bg-[var(--color-surface)]",
         )}
       >
-        <figcaption className="border-b border-[var(--color-border-subtle)] px-4 py-2 text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
-          {title}
-        </figcaption>
-        <div className="px-3 py-3">
+        <div className="px-4 pt-3.5 pb-2">
+          <h3 className="text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+            {title}
+          </h3>
+          {subtitle && (
+            <p className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div className="px-3 pb-3">
           {chart.provenance && chart.provenance.length > 0 && (
             <ProvenanceChips items={chart.provenance} />
           )}
@@ -149,6 +289,7 @@ export function ChartFrame({ chart }: Props) {
             </div>
           )}
           {body}
+          {legend && legend.length > 0 && <LegendRow items={legend} />}
           {surface.companion && (
             <div className="mt-3 text-[12px] text-[var(--color-text-faint)]">
               {surface.companion}
@@ -168,9 +309,16 @@ export function ChartFrame({ chart }: Props) {
         "bg-[var(--color-surface)]",
       )}
     >
-      <figcaption className="border-b border-[var(--color-border-subtle)] px-4 py-2 text-[11px] uppercase tracking-wider text-[var(--color-text-faint)]">
-        {title}
-      </figcaption>
+      <div className="px-4 pt-3.5 pb-2 border-b border-[var(--color-border-subtle)]">
+        <h3 className="text-[15px] font-semibold leading-tight text-[var(--color-text)]">
+          {title}
+        </h3>
+        {subtitle && (
+          <p className="mt-0.5 text-[12px] leading-snug text-[var(--color-text-muted)]">
+            {subtitle}
+          </p>
+        )}
+      </div>
       <div className="relative">
         {chart.provenance && chart.provenance.length > 0 && (
           <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
@@ -197,6 +345,11 @@ export function ChartFrame({ chart }: Props) {
           className="block h-[420px] w-full border-0 bg-white"
         />
       </div>
+      {legend && legend.length > 0 && (
+        <div className="px-4 pb-2">
+          <LegendRow items={legend} />
+        </div>
+      )}
       {surface.companion && (
         <div className="border-t border-[var(--color-border-subtle)] px-4 py-3 text-[12px] text-[var(--color-text-faint)]">
           {surface.companion}
@@ -226,10 +379,10 @@ function ProvenanceChips({ items }: { items: string[] }) {
 
 function ScenarioFanChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: ScenarioFanChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const years = [0, 1, 2, 3, 4, 5];
   const ask = spec.ask_price ?? null;
@@ -259,6 +412,12 @@ function ScenarioFanChart({
     230 - ((value - bounds.min) / (bounds.max - bounds.min || 1)) * 170;
   const band = areaPath(bullPath, bearPath, xForIndex, yForValue);
   const endpointX = xForIndex(years.length - 1);
+  // Y-axis ticks at the four existing gridline rows.
+  const tickRows = [0, 1, 2, 3].map((row) => {
+    const y = 52 + row * 46;
+    const value = bounds.min + ((230 - y) / 170) * (bounds.max - bounds.min || 1);
+    return { y, value };
+  });
   const annotate = (
     label: string,
     tone: string,
@@ -290,20 +449,27 @@ function ScenarioFanChart({
           rx="18"
           fill="var(--color-bg-sunken)"
         />
-        {[0, 1, 2, 3].map((row) => {
-          const y = 52 + row * 46;
-          return (
+        {tickRows.map(({ y, value }) => (
+          <g key={y}>
             <line
-              key={row}
               x1="64"
               y1={y}
               x2="592"
               y2={y}
-              stroke="var(--color-border-subtle)"
+              stroke={CHART.grid}
               strokeDasharray="4 6"
             />
-          );
-        })}
+            <text
+              x={58}
+              y={y + 3}
+              textAnchor="end"
+              fontSize="9"
+              fill={CHART.textFaint}
+            >
+              {formatTick(value, chrome.valueFormat)}
+            </text>
+          </g>
+        ))}
         {band && (
           <path d={band} fill="rgba(103, 167, 255, 0.16)" stroke="none" />
         )}
@@ -320,20 +486,20 @@ function ScenarioFanChart({
         <path
           d={linePath(bullPath, xForIndex, yForValue)}
           fill="none"
-          stroke="#75d38f"
+          stroke={CHART.bull}
           strokeWidth="3"
           strokeDasharray="5 6"
         />
         <path
           d={linePath(basePath, xForIndex, yForValue)}
           fill="none"
-          stroke="#79b8ff"
+          stroke={CHART.base}
           strokeWidth="4"
         />
         <path
           d={linePath(bearPath, xForIndex, yForValue)}
           fill="none"
-          stroke="#f28b82"
+          stroke={CHART.bear}
           strokeWidth="3"
           strokeDasharray="5 6"
         />
@@ -341,7 +507,7 @@ function ScenarioFanChart({
           <path
             d={linePath(stressPath, xForIndex, yForValue)}
             fill="none"
-            stroke="#d7b38a"
+            stroke={CHART.stress}
             strokeWidth="2"
             strokeDasharray="2 6"
           />
@@ -350,25 +516,30 @@ function ScenarioFanChart({
           <g key={year}>
             <text
               x={xForIndex(index)}
-              y="262"
+              y="252"
               textAnchor="middle"
               fontSize="11"
-              fill="var(--color-text-faint)"
+              fill={CHART.textFaint}
             >
               {year === 0 ? "Today" : `Y${year}`}
             </text>
           </g>
         ))}
-        <text x="72" y="26" fontSize="13" fill="var(--color-text)">
-          {title}
-        </text>
-        {annotate("Upside", "#75d38f", spec.bull_case_value, -8)}
-        {annotate("Base", "#79b8ff", spec.base_case_value, 4)}
-        {annotate("Downside", "#f28b82", spec.bear_case_value, 16)}
+        <AxisLabels
+          xAxisLabel={chrome.xAxisLabel}
+          yAxisLabel={chrome.yAxisLabel}
+          width={SVG_W - 72}
+          height={SVG_H}
+          plotLeft={72}
+          plotBottom={232}
+        />
+        {annotate("Upside", CHART.bull, spec.bull_case_value, -8)}
+        {annotate("Base", CHART.base, spec.base_case_value, 4)}
+        {annotate("Downside", CHART.bear, spec.bear_case_value, 16)}
         {!isNumber(spec.bear_case_value) &&
-          annotate("Floor", "#d7b38a", spec.stress_case_value, 16)}
+          annotate("Floor", CHART.stress, spec.stress_case_value, 16)}
         {isNumber(spec.stress_case_value) &&
-          annotate("Floor", "#d7b38a", spec.stress_case_value, 28)}
+          annotate("Floor", CHART.stress, spec.stress_case_value, 28)}
       </svg>
       <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
         <MetricChip label={basisLabel} value={money(spec.ask_price)} />
@@ -382,10 +553,10 @@ function ScenarioFanChart({
 
 function CmaPositioningChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: CmaPositioningChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const compValues = spec.comps
     .map((comp) => comp.ask_price)
@@ -433,7 +604,7 @@ function CmaPositioningChart({
             y1="24"
             x2={xForValue(spec.fair_value_base)}
             y2={Math.max(150, 86 + spec.comps.length * 28)}
-            stroke="#79b8ff"
+            stroke={CHART.base}
             strokeDasharray="6 6"
           />
         )}
@@ -443,27 +614,32 @@ function CmaPositioningChart({
             y1="24"
             x2={xForValue(spec.subject_ask)}
             y2={Math.max(150, 86 + spec.comps.length * 28)}
-            stroke="#f28b82"
+            stroke={CHART.bear}
             strokeDasharray="3 5"
           />
         )}
-        <text x="72" y="18" fontSize="13" fill="var(--color-text)">
-          {title}
-        </text>
         {isNumber(spec.fair_value_base) && (
-          <text x={xForValue(spec.fair_value_base)} y="58" textAnchor="middle" fontSize="10" fill="#79b8ff">
+          <text x={xForValue(spec.fair_value_base)} y="22" textAnchor="middle" fontSize="10" fill={CHART.base}>
             Fair value
           </text>
         )}
         {isNumber(spec.subject_ask) && (
-          <text x={xForValue(spec.subject_ask)} y="72" textAnchor="middle" fontSize="10" fill="#f28b82">
+          <text x={xForValue(spec.subject_ask)} y="36" textAnchor="middle" fontSize="10" fill={CHART.bear}>
             Ask
           </text>
         )}
+        <AxisLabels
+          xAxisLabel={chrome.xAxisLabel}
+          yAxisLabel={chrome.yAxisLabel}
+          width={SVG_W - 72}
+          height={Math.max(180, 120 + spec.comps.length * 28)}
+          plotLeft={72}
+          plotBottom={Math.max(150, 86 + spec.comps.length * 28) - 8}
+        />
         {spec.comps.map((comp, index) => {
           if (!isNumber(comp.ask_price)) return null;
           const y = rowY(index);
-          const tone = comp.feeds_fair_value ? "#75d38f" : "#b8b2a4";
+          const tone = comp.feeds_fair_value ? CHART.bull : CHART.neutral;
           return (
             <g key={`${comp.address ?? "comp"}-${index}`}>
               <text x="28" y={y + 4} fontSize="10" fill="var(--color-text-muted)">
@@ -500,22 +676,19 @@ function CmaPositioningChart({
 
 function RiskBarChart({
   spec,
-  title,
+  chrome: _chrome,
 }: {
   spec: RiskBarChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const max = Math.max(...spec.items.map((item) => item.value), 0.1);
   return (
     <div>
       <div className="rounded-2xl bg-[var(--color-bg-sunken)] p-4">
-        <div className="text-[13px] font-medium text-[var(--color-text)]">
-          {title}
-        </div>
-        <div className="mt-1 text-[12px] text-[var(--color-text-faint)]">
+        <div className="text-[12px] text-[var(--color-text-faint)]">
           Bear {money(spec.bear_value)} · Stress {money(spec.stress_value)}
         </div>
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-3">
           {spec.items.map((item) => (
             <div key={`${item.tone}-${item.label}`}>
               <div className="mb-1 flex items-center justify-between gap-3 text-[12px]">
@@ -543,10 +716,10 @@ function RiskBarChart({
 
 function RentBurnChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: RentBurnChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const years = spec.points.map((point) => point.year);
   const values = spec.points.flatMap((point) => [
@@ -597,16 +770,27 @@ function RentBurnChart({
         />
         {[0, 1, 2, 3].map((row) => {
           const y = 52 + row * 46;
+          const value = bounds.min + ((230 - y) / 170) * (bounds.max - bounds.min || 1);
           return (
-            <line
-              key={row}
-              x1="64"
-              y1={y}
-              x2="592"
-              y2={y}
-              stroke="var(--color-border-subtle)"
-              strokeDasharray="4 6"
-            />
+            <g key={row}>
+              <line
+                x1="64"
+                y1={y}
+                x2="592"
+                y2={y}
+                stroke={CHART.grid}
+                strokeDasharray="4 6"
+              />
+              <text
+                x={58}
+                y={y + 3}
+                textAnchor="end"
+                fontSize="9"
+                fill={CHART.textFaint}
+              >
+                {formatTick(value, chrome.valueFormat)}
+              </text>
+            </g>
           );
         })}
         {band && (
@@ -618,14 +802,14 @@ function RentBurnChart({
         <path
           d={linePath(basePath, xForIndex, yForValue)}
           fill="none"
-          stroke="#79b8ff"
+          stroke={CHART.base}
           strokeWidth="4"
         />
         {marketPath.some(isNumber) && (
           <path
             d={linePath(marketPath, xForIndex, yForValue)}
             fill="none"
-            stroke="#d6a85c"
+            stroke={CHART.stress}
             strokeWidth="2.5"
             strokeDasharray="5 6"
           />
@@ -633,25 +817,30 @@ function RentBurnChart({
         <path
           d={linePath(obligationPath, xForIndex, yForValue)}
           fill="none"
-          stroke="#f28b82"
+          stroke={CHART.bear}
           strokeWidth="3"
           strokeDasharray="6 6"
         />
-        <text x="72" y="26" fontSize="13" fill="var(--color-text)">
-          {title}
-        </text>
         {years.map((year, index) => (
           <text
             key={year}
             x={xForIndex(index)}
-            y="262"
+            y="252"
             textAnchor="middle"
             fontSize="11"
-            fill="var(--color-text-faint)"
+            fill={CHART.textFaint}
           >
             Y{year}
           </text>
         ))}
+        <AxisLabels
+          xAxisLabel={chrome.xAxisLabel}
+          yAxisLabel={chrome.yAxisLabel}
+          width={SVG_W - 72}
+          height={SVG_H}
+          plotLeft={72}
+          plotBottom={232}
+        />
       </svg>
       <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-3">
         <MetricChip
@@ -686,10 +875,10 @@ function RentBurnChart({
 
 function RentRampChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: RentRampChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const years = spec.points.map((point) => point.year);
   const values = spec.points.flatMap((point) => [
@@ -721,16 +910,27 @@ function RentRampChart({
         />
         {[0, 1, 2, 3].map((row) => {
           const y = 52 + row * 46;
+          const value = bounds.min + ((230 - y) / 170) * (bounds.max - bounds.min || 1);
           return (
-            <line
-              key={row}
-              x1="64"
-              y1={y}
-              x2="592"
-              y2={y}
-              stroke="var(--color-border-subtle)"
-              strokeDasharray="4 6"
-            />
+            <g key={row}>
+              <line
+                x1="64"
+                y1={y}
+                x2="592"
+                y2={y}
+                stroke={CHART.grid}
+                strokeDasharray="4 6"
+              />
+              <text
+                x={58}
+                y={y + 3}
+                textAnchor="end"
+                fontSize="9"
+                fill={CHART.textFaint}
+              >
+                {formatTick(value, chrome.valueFormat)}
+              </text>
+            </g>
           );
         })}
         <line
@@ -744,37 +944,42 @@ function RentRampChart({
         <path
           d={linePath(zeroPath, xForIndex, yForValue)}
           fill="none"
-          stroke="rgba(184,178,164,0.85)"
+          stroke={CHART.neutral}
           strokeWidth="2.5"
         />
         <path
           d={linePath(basePath, xForIndex, yForValue)}
           fill="none"
-          stroke="#79b8ff"
+          stroke={CHART.base}
           strokeWidth="4"
         />
         <path
           d={linePath(upsidePath, xForIndex, yForValue)}
           fill="none"
-          stroke="#75d38f"
+          stroke={CHART.bull}
           strokeWidth="3"
           strokeDasharray="5 6"
         />
-        <text x="72" y="26" fontSize="13" fill="var(--color-text)">
-          {title}
-        </text>
         {years.map((year, index) => (
           <text
             key={year}
             x={xForIndex(index)}
-            y="262"
+            y="252"
             textAnchor="middle"
             fontSize="11"
-            fill="var(--color-text-faint)"
+            fill={CHART.textFaint}
           >
             Y{year}
           </text>
         ))}
+        <AxisLabels
+          xAxisLabel={chrome.xAxisLabel}
+          yAxisLabel={chrome.yAxisLabel}
+          width={SVG_W - 72}
+          height={SVG_H}
+          plotLeft={72}
+          plotBottom={232}
+        />
       </svg>
       <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
         <MetricChip label="Today rent" value={money(spec.current_rent)} tone="sky" />
@@ -793,10 +998,10 @@ function RentRampChart({
 
 function ValueOpportunityChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: ValueOpportunityChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const ask = spec.ask_price ?? null;
   const fair = spec.fair_value_base ?? null;
@@ -807,10 +1012,7 @@ function ValueOpportunityChart({
     56 + ((value - bounds.min) / (bounds.max - bounds.min || 1)) * 528;
   return (
     <div className="rounded-2xl bg-[var(--color-bg-sunken)] p-4">
-      <div className="text-[13px] font-medium text-[var(--color-text)]">
-        {title}
-      </div>
-      <div className="mt-1 text-[12px] text-[var(--color-text-faint)]">
+      <div className="text-[12px] text-[var(--color-text-faint)]">
         Ask {money(ask)} vs fair value {money(fair)} · {pct(premium)}
       </div>
       <svg viewBox={`0 0 ${SVG_W} 120`} className="mt-4 w-full">
@@ -825,7 +1027,7 @@ function ValueOpportunityChart({
         />
         {isNumber(fair) && (
           <g>
-            <circle cx={xForValue(fair)} cy="64" r="10" fill="#79b8ff" />
+            <circle cx={xForValue(fair)} cy="64" r="10" fill={CHART.base} />
             <text
               x={xForValue(fair)}
               y="38"
@@ -835,11 +1037,20 @@ function ValueOpportunityChart({
             >
               Fair
             </text>
+            <text
+              x={xForValue(fair)}
+              y="22"
+              textAnchor="middle"
+              fontSize="9"
+              fill={CHART.textFaint}
+            >
+              {formatTick(fair, chrome.valueFormat)}
+            </text>
           </g>
         )}
         {isNumber(ask) && (
           <g>
-            <circle cx={xForValue(ask)} cy="64" r="10" fill="#f28b82" />
+            <circle cx={xForValue(ask)} cy="64" r="10" fill={CHART.bear} />
             <text
               x={xForValue(ask)}
               y="98"
@@ -849,7 +1060,27 @@ function ValueOpportunityChart({
             >
               Ask
             </text>
+            <text
+              x={xForValue(ask)}
+              y="114"
+              textAnchor="middle"
+              fontSize="9"
+              fill={CHART.textFaint}
+            >
+              {formatTick(ask, chrome.valueFormat)}
+            </text>
           </g>
+        )}
+        {chrome.xAxisLabel && (
+          <text
+            x={SVG_W / 2}
+            y={120}
+            textAnchor="middle"
+            fontSize="10"
+            fill={CHART.textFaint}
+          >
+            {chrome.xAxisLabel}
+          </text>
         )}
       </svg>
       {spec.value_drivers && spec.value_drivers.length > 0 && (
@@ -905,10 +1136,10 @@ function breakEvenLabel(year: number | null | undefined) {
 
 function HorizontalBarWithRangesChart({
   spec,
-  title,
+  chrome,
 }: {
   spec: HorizontalBarWithRangesChartSpec;
-  title: string;
+  chrome: ChartChrome;
 }) {
   const scenarios = spec.scenarios.filter(
     (s) => isNumber(s.low) && isNumber(s.high) && isNumber(s.median),
@@ -949,16 +1180,24 @@ function HorizontalBarWithRangesChart({
           rx="18"
           fill="var(--color-bg-sunken)"
         />
-        <text x={leftPad} y="22" fontSize="13" fill="var(--color-text)">
-          {title}
-        </text>
+        {chrome.xAxisLabel && (
+          <text
+            x={leftPad + (SVG_W - leftPad - rightPad) / 2}
+            y={viewH - 8}
+            textAnchor="middle"
+            fontSize="10"
+            fill={CHART.textFaint}
+          >
+            {chrome.xAxisLabel}
+          </text>
+        )}
         {unit && (
           <text
             x={SVG_W - rightPad}
             y="22"
             textAnchor="end"
             fontSize="11"
-            fill="var(--color-text-faint)"
+            fill={CHART.textFaint}
           >
             {unit}
           </text>
@@ -973,15 +1212,15 @@ function HorizontalBarWithRangesChart({
           const barWidth = Math.max(x2 - x1, 6);
 
           const fillColor = isEmphasized
-            ? "rgba(245, 197, 66, 0.35)"
+            ? "rgba(215, 179, 138, 0.30)"
             : isSubject
               ? "rgba(242, 139, 130, 0.22)"
               : "rgba(121, 184, 255, 0.20)";
           const strokeColor = isEmphasized
-            ? "#f5c542"
+            ? CHART.stress
             : isSubject
-              ? "#f28b82"
-              : "#79b8ff";
+              ? CHART.bear
+              : CHART.base;
           const labelWeight = isEmphasized ? 600 : 500;
 
           return (
@@ -1038,7 +1277,7 @@ function HorizontalBarWithRangesChart({
               className={cn(
                 "rounded-full border px-2 py-0.5",
                 isEmphasized
-                  ? "border-[#f5c542] text-[var(--color-text)]"
+                  ? "border-[var(--chart-stress)] text-[var(--color-text)]"
                   : "border-[var(--color-border-subtle)] bg-[var(--color-bg-sunken)]",
               )}
             >

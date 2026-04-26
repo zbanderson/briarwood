@@ -156,10 +156,25 @@ def _build_chart_event(claim: VerdictWithComparisonClaim) -> dict[str, Any]:
         "scenarios": scenarios_payload,
         "emphasis_scenario_id": claim.comparison.emphasis_scenario_id,
     }
+    unit = claim.comparison.unit or ""
+    has_emphasis = claim.comparison.emphasis_scenario_id is not None
+    legend: list[dict[str, Any]] = [
+        {"label": "Subject", "color": "var(--chart-bear)", "style": "solid"},
+        {"label": "Comparison range", "color": "var(--chart-base)", "style": "solid"},
+    ]
+    if has_emphasis:
+        legend.append({"label": "Emphasized scenario", "color": "var(--chart-stress)", "style": "solid"})
+    value_format = "currency" if unit in {"", "usd", "$"} else "count"
     return events.chart(
+        title="Scenario ranges",
+        subtitle="Range and median for each comparison scenario",
         kind="horizontal_bar_with_ranges",
         spec=spec,
         supports_claim="verdict_with_comparison",
+        x_axis_label=unit if unit else "Price",
+        y_axis_label="Scenario",
+        value_format=value_format,
+        legend=legend,
     )
 
 

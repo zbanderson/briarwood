@@ -893,8 +893,16 @@ def _native_scenario_chart(view: dict[str, Any]) -> dict[str, Any] | None:
         for k in ("bull_case_value", "base_case_value", "bear_case_value")
     ):
         return None
+    legend: list[dict[str, Any]] = [
+        {"label": "Bull case", "color": "var(--chart-bull)", "style": "dashed"},
+        {"label": "Base case", "color": "var(--chart-base)", "style": "solid"},
+        {"label": "Bear case", "color": "var(--chart-bear)", "style": "dashed"},
+    ]
+    if isinstance(view.get("stress_case_value"), (int, float)):
+        legend.append({"label": "Stress floor", "color": "var(--chart-stress)", "style": "dotted"})
     return events.chart(
         title="5-year value range",
+        subtitle="Bull, base, and bear projected value over a 5-year hold",
         kind="scenario_fan",
         spec={
             "kind": "scenario_fan",
@@ -906,6 +914,10 @@ def _native_scenario_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "stress_case_value": view.get("stress_case_value"),
         },
         provenance=["Projection Engine", "scenario_x_risk"],
+        x_axis_label="Years from today",
+        y_axis_label="Home value",
+        value_format="currency",
+        legend=legend,
     )
 
 
@@ -917,6 +929,7 @@ def _native_value_chart(view: dict[str, Any]) -> dict[str, Any] | None:
         return None
     return events.chart(
         title="Ask vs fair value",
+        subtitle="Subject ask set against the Briarwood fair-value read",
         kind="value_opportunity",
         spec={
             "kind": "value_opportunity",
@@ -929,6 +942,13 @@ def _native_value_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "Value Thesis",
             "Valuation",
             *([] if not list(view.get("comps") or []) else ["CMA"]),
+        ],
+        x_axis_label="Price",
+        y_axis_label=None,
+        value_format="currency",
+        legend=[
+            {"label": "Fair value", "color": "var(--chart-base)", "style": "solid"},
+            {"label": "Ask", "color": "var(--chart-bear)", "style": "solid"},
         ],
     )
 
@@ -955,6 +975,7 @@ def _native_cma_chart(
         return None
     return events.chart(
         title="Where the comps sit",
+        subtitle="Comp asks scattered against subject ask and the fair-value band",
         kind="cma_positioning",
         spec={
             "kind": "cma_positioning",
@@ -975,6 +996,15 @@ def _native_cma_chart(
             ],
         },
         provenance=["CMA", "Value Thesis"],
+        x_axis_label="Ask price",
+        y_axis_label="Comp",
+        value_format="currency",
+        legend=[
+            {"label": "Comp in model", "color": "var(--chart-bull)", "style": "solid"},
+            {"label": "Comp (context)", "color": "var(--chart-neutral)", "style": "solid"},
+            {"label": "Fair value", "color": "var(--chart-base)", "style": "dashed"},
+            {"label": "Subject ask", "color": "var(--chart-bear)", "style": "dotted"},
+        ],
     )
 
 
@@ -1021,6 +1051,7 @@ def _native_risk_chart(view: dict[str, Any]) -> dict[str, Any] | None:
         )
     return events.chart(
         title="Risk drivers",
+        subtitle="Per-flag share of the risk penalty pulling the setup off course",
         kind="risk_bar",
         spec={
             "kind": "risk_bar",
@@ -1032,6 +1063,13 @@ def _native_risk_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "items": items,
         },
         provenance=["Risk Profile", "Confidence Engine"],
+        x_axis_label="Penalty share",
+        y_axis_label="Flag",
+        value_format="percent",
+        legend=[
+            {"label": "Risk flag", "color": "var(--chart-bear)", "style": "solid"},
+            {"label": "Trust gap", "color": "var(--chart-stress)", "style": "solid"},
+        ],
     )
 
 
@@ -1059,8 +1097,17 @@ def _native_rent_chart(view: dict[str, Any]) -> dict[str, Any] | None:
     if not points:
         return None
     title = "Rent vs monthly cost"
+    has_market_rent = isinstance(view.get("zillow_market_rent"), (int, float))
+    legend: list[dict[str, Any]] = [
+        {"label": "Base rent", "color": "var(--chart-base)", "style": "solid"},
+        {"label": "Bull / bear band", "color": "var(--chart-base)", "style": "dashed"},
+        {"label": "Monthly obligation", "color": "var(--chart-bear)", "style": "dashed"},
+    ]
+    if has_market_rent:
+        legend.append({"label": "Zillow market regime", "color": "var(--chart-stress)", "style": "dashed"})
     return events.chart(
         title=title,
+        subtitle="Rent scenarios against the monthly carry across the hold horizon",
         kind="rent_burn",
         spec={
             "kind": "rent_burn",
@@ -1078,6 +1125,10 @@ def _native_rent_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "rent_x_cost",
             *([] if not view.get("rent_haircut_pct") else ["rent_x_risk"]),
         ],
+        x_axis_label="Years from today",
+        y_axis_label="Monthly $",
+        value_format="currency",
+        legend=legend,
     )
 
 
@@ -1106,6 +1157,7 @@ def _native_rent_ramp_chart(view: dict[str, Any]) -> dict[str, Any] | None:
     title = "Can rent catch up?"
     return events.chart(
         title=title,
+        subtitle="Net cash flow across rent ramps, with break-even markers",
         kind="rent_ramp",
         spec={
             "kind": "rent_ramp",
@@ -1120,6 +1172,15 @@ def _native_rent_ramp_chart(view: dict[str, Any]) -> dict[str, Any] | None:
             "Rent Outlook",
             "rent_x_cost",
             *([] if not view.get("rent_haircut_pct") else ["rent_x_risk"]),
+        ],
+        x_axis_label="Years from today",
+        y_axis_label="Monthly net cash flow",
+        value_format="currency",
+        legend=[
+            {"label": "Today (0% ramp)", "color": "var(--chart-neutral)", "style": "solid"},
+            {"label": "3% rent ramp", "color": "var(--chart-base)", "style": "solid"},
+            {"label": "5% rent ramp", "color": "var(--chart-bull)", "style": "dashed"},
+            {"label": "Break-even", "color": "var(--chart-text-faint)", "style": "dashed"},
         ],
     )
 

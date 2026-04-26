@@ -85,23 +85,36 @@ def chart(
     url: str | None = None,
     *,
     title: str | None = None,
+    subtitle: str | None = None,
     kind: str | None = None,
     spec: dict[str, Any] | None = None,
     provenance: list[str] | None = None,
     advisor: dict[str, Any] | None = None,
     supports_claim: str | None = None,
     why_this_chart: str | None = None,
+    x_axis_label: str | None = None,
+    y_axis_label: str | None = None,
+    value_format: str | None = None,
+    legend: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Visual artifact or native chart spec emitted by handlers.
 
     `url` remains the backward-compatible HTML artifact path for visualize/debug
     flows. `spec` carries typed data for native chat charts in core workflows.
+    `subtitle`, `x_axis_label`, `y_axis_label`, `value_format`, and `legend` are
+    Phase 3 Cycle A presentation metadata. `value_format` is one of "currency",
+    "percent", or "count" and drives axis tick formatting on the React side.
+    `legend` entries take the shape ``{"label": str, "color": str, "style":
+    "solid"|"dashed"|"dotted"}`` and let each chart declare its swatch row
+    explicitly instead of the React layer hardcoding it.
     """
     payload: dict[str, Any] = {"type": EVENT_CHART}
     if url is not None:
         payload["url"] = url
     if title is not None:
         payload["title"] = title
+    if subtitle is not None:
+        payload["subtitle"] = subtitle
     if kind is not None:
         payload["kind"] = kind
     if spec is not None:
@@ -114,6 +127,14 @@ def chart(
         payload["supports_claim"] = supports_claim
     if why_this_chart is not None:
         payload["why_this_chart"] = why_this_chart
+    if x_axis_label is not None:
+        payload["x_axis_label"] = x_axis_label
+    if y_axis_label is not None:
+        payload["y_axis_label"] = y_axis_label
+    if value_format is not None:
+        payload["value_format"] = value_format
+    if legend is not None:
+        payload["legend"] = legend
     return payload
 
 

@@ -1,6 +1,6 @@
 # representation — Representation Agent + Chart Registry
 
-**Last Updated:** 2026-04-25
+**Last Updated:** 2026-04-26
 **Layer:** Representation (Layer 4)
 **Status:** STABLE
 
@@ -164,6 +164,20 @@ events = agent.render_events(plan, module_views=...)
 - **Chart-registry expansion priorities.** New chart kinds are additive but each requires both a renderer and a frontend card. Which kinds are worth the cost is open.
 
 ## Changelog
+
+### 2026-04-26
+- Contract change (additive): chart event payloads now carry presentation metadata —
+  `subtitle: str`, `x_axis_label: str | null`, `y_axis_label: str | null`,
+  `value_format: "currency" | "percent" | "count"`, and `legend: list[{label, color, style}]`.
+  The metadata is emitted by every `_native_*_chart` helper in `api/pipeline_adapter.py`
+  plus the wedge renderer at `briarwood/claims/representation/verdict_with_comparison.py::_build_chart_event`.
+  All fields are optional on the `ChartEvent` TypeScript type so older event shapes still render.
+  Phase 3 Cycle A. See [PRESENTATION_HANDOFF_PLAN.md](../../PRESENTATION_HANDOFF_PLAN.md) and
+  [web/CHART_STYLE.md](../../web/CHART_STYLE.md) for the chart-style convention this metadata
+  feeds into.
+- The `ChartSpec` Pydantic descriptor (the registry shape — what the LLM agent reads) is
+  unchanged. Cycle A's contract change is on the SSE event payload only, not the agent's
+  selection input.
 
 ### 2026-04-25
 - Contract change: `ClaimType` extended with four new values — `AFFORDABILITY_CARRY_COST`, `RENT_VS_OWN`, `RENOVATION_IMPACT`, `SENSITIVITY`. Existing values unchanged. Pydantic post-validation will accept claims tagged with the new values; previously they would have been stripped.

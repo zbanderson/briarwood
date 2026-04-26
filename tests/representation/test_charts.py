@@ -75,6 +75,14 @@ def test_render_scenario_fan_produces_event_payload() -> None:
     spec = event["spec"]
     assert spec["bull_case_value"] == 1_200_000
     assert spec["bear_case_value"] == 900_000
+    # Cycle A: presentation metadata is always carried alongside the spec.
+    assert event["subtitle"]
+    assert event["x_axis_label"] == "Years from today"
+    assert event["y_axis_label"] == "Home value"
+    assert event["value_format"] == "currency"
+    legend_labels = [item["label"] for item in event["legend"]]
+    assert "Bull case" in legend_labels
+    assert "Stress floor" in legend_labels  # included when stress_case_value is present
 
 
 def test_render_scenario_fan_rejects_empty_inputs() -> None:
@@ -96,6 +104,27 @@ def test_render_value_opportunity_produces_event_payload() -> None:
         "Strong town demand",
         "Coastal proximity",
     ]
+    assert event["subtitle"]
+    assert event["value_format"] == "currency"
+    assert {item["label"] for item in event["legend"]} == {"Fair value", "Ask"}
+
+
+def test_render_risk_bar_carries_presentation_metadata() -> None:
+    """Cycle A: risk_bar should declare percent formatting and a two-tone legend."""
+    event = charts.render(
+        "risk_bar",
+        {
+            "risk_flags": ["flood_zone"],
+            "trust_flags": ["incomplete_carry_inputs"],
+            "total_penalty": 0.2,
+            "ask_price": 900_000,
+        },
+    )
+    assert event is not None
+    assert event["value_format"] == "percent"
+    assert event["x_axis_label"] == "Penalty share"
+    legend_labels = {item["label"] for item in event["legend"]}
+    assert legend_labels == {"Risk flag", "Trust gap"}
 
 
 def test_render_risk_bar_uses_trust_fallback() -> None:
