@@ -130,6 +130,11 @@ def _render_rent_ramp(inputs: dict[str, Any]) -> dict[str, Any] | None:
     return _native_rent_ramp_chart(inputs)
 
 
+def _render_market_trend(inputs: dict[str, Any]) -> dict[str, Any] | None:
+    from api.pipeline_adapter import _native_market_trend_chart
+    return _native_market_trend_chart(inputs)
+
+
 # ---- Registered chart catalog ----------------------------------------
 
 register(
@@ -217,6 +222,22 @@ register(
         claim_types=["rent_ramp", "rent_coverage", "rent_vs_own", "sensitivity"],
     ),
     _render_rent_ramp,
+)
+
+
+register(
+    ChartSpec(
+        id="market_trend",
+        name="Town value trend",
+        description=(
+            "Town-level (or county fallback) Zillow Home Value Index series "
+            "across the available history window. Anchors the property's ask "
+            "to the broader market it sits in."
+        ),
+        required_inputs=["history_points", "geography_name", "geography_type"],
+        claim_types=["market_position", "town_pulse", "value_drivers"],
+    ),
+    _render_market_trend,
 )
 
 

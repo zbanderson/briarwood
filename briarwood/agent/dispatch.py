@@ -1398,6 +1398,8 @@ def _populate_browse_slots(
     projection: dict[str, object] | None,
     strategy_fit: dict[str, object] | None,
     rent_outlook: RentOutlook | None,
+    market_history: dict[str, object] | None = None,
+    unified_output: dict[str, object] | None = None,
 ) -> None:
     try:
         session.last_town_summary = _build_town_summary(brief.town, brief.state)
@@ -1436,6 +1438,12 @@ def _populate_browse_slots(
             "town": facts.get("town") or brief.town,
             "state": facts.get("state") or brief.state,
         }
+
+    if market_history:
+        session.last_market_history_view = dict(market_history)
+
+    if unified_output:
+        session.last_unified_output = dict(unified_output)
 
     if strategy_fit:
         session.last_strategy_view = {
@@ -4424,6 +4432,55 @@ def _browse_projection_from_artifact(
     return payload
 
 
+def _browse_market_history_from_artifact(
+    artifact: dict[str, object],
+    pid: str,
+) -> dict[str, object] | None:
+    """Project ``market_value_history`` output into a session view.
+
+    Pulls ``metrics`` (current_value, geography_name, geography_type, change
+    percentages) plus the full ``legacy_payload.points`` series so the
+    Representation Agent's ``market_trend`` chart has both the anchors and
+    the chartable series. Returns ``None`` when the module did not run, ran
+    in fallback mode, or produced no points."""
+
+    module_results = artifact.get("module_results") or {}
+    outputs = module_results.get("outputs") or {} if isinstance(module_results, dict) else {}
+    entry = outputs.get("market_value_history")
+    if not isinstance(entry, dict):
+        return None
+    data = entry.get("data") or {}
+    if not isinstance(data, dict):
+        return None
+    metrics = data.get("metrics") or {}
+    if not isinstance(metrics, dict):
+        metrics = {}
+    legacy_payload = data.get("legacy_payload") or {}
+    raw_points = legacy_payload.get("points") if isinstance(legacy_payload, dict) else None
+    if not isinstance(raw_points, list):
+        raw_points = []
+    history_points: list[dict[str, object]] = []
+    for row in raw_points:
+        if not isinstance(row, dict):
+            continue
+        date = row.get("date")
+        value = row.get("value")
+        if not isinstance(date, str) or not isinstance(value, (int, float)):
+            continue
+        history_points.append({"date": date, "value": float(value)})
+    if not history_points:
+        return None
+    return {
+        "property_id": pid,
+        "geography_name": metrics.get("geography_name"),
+        "geography_type": metrics.get("geography_type"),
+        "current_value": metrics.get("current_value"),
+        "one_year_change_pct": metrics.get("one_year_change_pct"),
+        "three_year_change_pct": metrics.get("three_year_change_pct"),
+        "history_points": history_points,
+    }
+
+
 def _browse_strategy_fit_from_artifact(
     artifact: dict[str, object],
     pid: str,
@@ -4627,10 +4684,12 @@ def handle_browse(
     strategy_fit: dict[str, object] | None = None
     rent_outlook: RentOutlook | None = None
     rent_payload: dict[str, object] | None = None
+    market_history: dict[str, object] | None = None
     if chat_tier_artifact is not None:
         projection = _browse_projection_from_artifact(chat_tier_artifact, pid, overrides)
         strategy_fit = _browse_strategy_fit_from_artifact(chat_tier_artifact, pid)
         rent_payload = _browse_rent_payload_from_artifact(chat_tier_artifact, pid)
+        market_history = _browse_market_history_from_artifact(chat_tier_artifact, pid)
     else:
         try:
             projection = get_projection(pid, overrides=overrides)
@@ -4700,6 +4759,11 @@ def handle_browse(
     except Exception:
         neighbors = []
     neighbors = [n for n in neighbors if n.get("property_id") != pid][:5]
+    artifact_unified: dict[str, object] | None = None
+    if chat_tier_artifact is not None:
+        raw_unified = chat_tier_artifact.get("unified_output")
+        if isinstance(raw_unified, dict):
+            artifact_unified = dict(raw_unified)
     _populate_browse_slots(
         session,
         pid=pid,
@@ -4710,6 +4774,8 @@ def handle_browse(
         projection=projection,
         strategy_fit=strategy_fit,
         rent_outlook=rent_outlook,
+        market_history=market_history,
+        unified_output=artifact_unified,
     )
     _set_workflow_state(session, contract_type="property_brief", analysis_mode="browse")
     fallback = _format_browse_from_presentation(

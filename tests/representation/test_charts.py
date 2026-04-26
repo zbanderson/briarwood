@@ -17,7 +17,46 @@ def test_registry_has_all_registered_charts() -> None:
         "rent_ramp",
         "hidden_upside_band",
         "horizontal_bar_with_ranges",
+        "market_trend",  # Phase 3 Cycle B (2026-04-26)
     }
+
+
+def test_render_market_trend_produces_event_payload() -> None:
+    """Cycle B: market_trend chart projects the ZHVI series + change percentages."""
+    inputs = {
+        "geography_name": "Belmar",
+        "geography_type": "town",
+        "current_value": 850_000,
+        "one_year_change_pct": 0.04,
+        "three_year_change_pct": 0.12,
+        "history_points": [
+            {"date": "2020-01-31", "value": 600_000},
+            {"date": "2021-01-31", "value": 680_000},
+            {"date": "2022-01-31", "value": 760_000},
+            {"date": "2023-01-31", "value": 820_000},
+            {"date": "2024-01-31", "value": 850_000},
+        ],
+    }
+    event = charts.render("market_trend", inputs)
+    assert event is not None
+    assert event["kind"] == "market_trend"
+    spec = event["spec"]
+    assert spec["geography_name"] == "Belmar"
+    assert spec["geography_type"] == "town"
+    assert spec["current_value"] == 850_000
+    assert len(spec["points"]) == 5
+    # Cycle A presentation metadata also lands.
+    assert event["value_format"] == "currency"
+    assert event["x_axis_label"] == "Year"
+    assert event["y_axis_label"] == "Home value index"
+    legend_labels = {item["label"] for item in event["legend"]}
+    assert "Belmar (town)" in legend_labels
+
+
+def test_render_market_trend_returns_none_without_points() -> None:
+    """Cycle B: market_trend without history points must not produce an event."""
+    assert charts.render("market_trend", {"geography_name": "Belmar"}) is None
+    assert charts.render("market_trend", {"history_points": []}) is None
 
 
 def test_horizontal_bar_with_ranges_is_a_marker_spec() -> None:

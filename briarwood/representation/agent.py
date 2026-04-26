@@ -67,14 +67,23 @@ class ClaimType(str, Enum):
     # registered chart yet; surfaced as a claim-only selection so the UI
     # can render it in the value_thesis SSE card.
     HIDDEN_UPSIDE = "hidden_upside"
+    # Phase 3 Cycle B (2026-04-26): town/county-level market context. The
+    # `market_trend` chart kind is the canonical surface for both — distinct
+    # claims because "market_position" is about where the subject sits in
+    # the market and "town_pulse" is about the market's own trajectory.
+    MARKET_POSITION = "market_position"
+    TOWN_PULSE = "town_pulse"
 
 
 # Known module-view keys the agent can cite as a chart's source.
-# Matches the `Session.last_*` slots populated by `handle_decision`.
+# Matches the `Session.last_*` slots populated by `handle_decision` /
+# `handle_browse`. Cycle B (2026-04-26) added `last_market_history_view` so
+# the `market_trend` chart can resolve its source.
 KNOWN_SOURCE_VIEWS = (
     "last_decision_view",
     "last_value_thesis_view",
     "last_market_support_view",
+    "last_market_history_view",
     "last_risk_view",
     "last_strategy_view",
     "last_rent_outlook_view",
@@ -114,6 +123,23 @@ _SYSTEM_PROMPT = (
     "You are Briarwood's Representation Agent. Your job is to decide which "
     "claims the verdict is making and which registered chart best represents "
     "each claim using the module evidence provided.\n\n"
+    "INTENT-FIRST SELECTION (Cycle B, 2026-04-26):\n"
+    "An `intent` block accompanies the verdict — it describes what the user "
+    "actually asked for via `answer_type` and `core_questions`. Pick charts "
+    "that *directly answer the user's intent*, not the kitchen sink. A "
+    "first-impression BROWSE turn does not need every chart that has data; "
+    "it needs the 2-3 that frame the answer.\n\n"
+    "Strong defaults by answer_type (LLM may override with explicit "
+    "evidence-based reasoning):\n"
+    "- browse → market_trend (town pulse anchors the pricing question), "
+    "value_opportunity (ask vs fair value), scenario_fan (5-year range)\n"
+    "- decision → value_opportunity, scenario_fan, plus risk_bar when "
+    "risk flags exist\n"
+    "- risk → risk_bar, scenario_fan\n"
+    "- projection → scenario_fan, plus rent_burn or rent_ramp when rent is "
+    "the constraint\n"
+    "- rent_lookup → rent_burn, rent_ramp\n"
+    "- edge → market_trend, cma_positioning, value_opportunity\n\n"
     "Hard rules:\n"
     "1. Only claim something the module evidence actually supports. If a "
     "claim lacks evidence, still return it but set flagged=true with a "
@@ -125,7 +151,8 @@ _SYSTEM_PROMPT = (
     "Do not fabricate field names.\n"
     "4. source_view must be one of the keys in module_views (e.g. "
     "`last_projection_view`) or null.\n"
-    "5. Prefer 3-5 selections. One chart per claim_type at most.\n"
+    "5. Pick 2-3 charts that directly answer the intent. One chart per "
+    "claim_type at most. Do not pad to fill quota.\n"
     "6. Do not restate the same claim with different wording."
 )
 
@@ -166,6 +193,7 @@ class RepresentationAgent:
         user_question: str,
         module_views: Mapping[str, Mapping[str, Any] | None],
         session: Any = None,
+        intent: Any = None,
     ) -> RepresentationPlan:
         """Produce a RepresentationPlan for this verdict.
 
@@ -178,6 +206,11 @@ class RepresentationAgent:
         budget is recorded to ``session.last_partial_data_warnings`` as a
         ``representation_plan`` breadcrumb so the UI can surface the
         deterministic-fallback path instead of silently swapping plans.
+
+        `intent` (Phase 3 Cycle B) accepts an ``IntentContract`` (or any
+        object with ``model_dump()`` that produces the same shape). When
+        provided the agent threads ``answer_type`` + ``core_questions``
+        into the LLM payload so chart selection is intent-keyed.
         """
         clean_views: dict[str, dict[str, Any]] = {
             key: dict(view)
@@ -185,7 +218,9 @@ class RepresentationAgent:
             if isinstance(view, Mapping)
         }
 
-        plan = self._plan_via_llm(unified, user_question, clean_views, session=session)
+        plan = self._plan_via_llm(
+            unified, user_question, clean_views, session=session, intent=intent
+        )
         if plan is None or not plan.selections:
             plan = self._deterministic_plan(unified, clean_views)
 
@@ -238,17 +273,27 @@ class RepresentationAgent:
         module_views: dict[str, dict[str, Any]],
         *,
         session: Any = None,
+        intent: Any = None,
     ) -> RepresentationPlan | None:
         if self._llm is None:
             return None
 
+        intent_payload: dict[str, Any] | None = None
+        if intent is not None:
+            try:
+                intent_payload = intent.model_dump(mode="json")  # type: ignore[attr-defined]
+            except Exception:
+                intent_payload = None
+
         payload = {
             "user_question": user_question,
+            "intent": intent_payload,
             "verdict": _verdict_digest(unified),
             "module_views": _views_digest(module_views),
             "registered_charts": [spec.model_dump() for spec in all_specs()],
             "known_source_views": list(KNOWN_SOURCE_VIEWS),
             "claim_types": [c.value for c in ClaimType],
+            "max_selections": self._max_selections,
         }
         user_body = json.dumps(payload, default=str)
 

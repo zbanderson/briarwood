@@ -118,6 +118,15 @@ export type ValueOpportunityChartSpec = {
   premium_discount_pct?: number | null;
   value_drivers?: string[];
 };
+export type MarketTrendChartSpec = {
+  kind: "market_trend";
+  geography_name?: string | null;
+  geography_type?: string | null;
+  current_value?: number | null;
+  one_year_change_pct?: number | null;
+  three_year_change_pct?: number | null;
+  points: Array<{ date: string; value: number }>;
+};
 export type HorizontalBarWithRangesScenario = {
   id: string;
   label: string;
@@ -142,7 +151,8 @@ export type ChartSpec =
   | RentBurnChartSpec
   | RentRampChartSpec
   | ValueOpportunityChartSpec
-  | HorizontalBarWithRangesChartSpec;
+  | HorizontalBarWithRangesChartSpec
+  | MarketTrendChartSpec;
 export type VerdictTrustSummary = {
   confidence?: number | null;
   band?: string | null;

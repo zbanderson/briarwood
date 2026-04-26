@@ -10,6 +10,7 @@ import type {
   CmaPositioningChartSpec,
   ChartSpec,
   HorizontalBarWithRangesChartSpec,
+  MarketTrendChartSpec,
   RentBurnChartSpec,
   RentRampChartSpec,
   RiskBarChartSpec,
@@ -241,6 +242,9 @@ function NativeChart({ spec, chrome }: { spec: ChartSpec; chrome: ChartChrome })
   }
   if (spec.kind === "horizontal_bar_with_ranges") {
     return <HorizontalBarWithRangesChart spec={spec} chrome={chrome} />;
+  }
+  if (spec.kind === "market_trend") {
+    return <MarketTrendChart spec={spec} chrome={chrome} />;
   }
   return null;
 }
@@ -1285,6 +1289,183 @@ function HorizontalBarWithRangesChart({
             </span>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function MarketTrendChart({
+  spec,
+  chrome,
+}: {
+  spec: MarketTrendChartSpec;
+  chrome: ChartChrome;
+}) {
+  const points = spec.points ?? [];
+  if (points.length === 0) return null;
+
+  const values = points.map((p) => p.value);
+  const bounds = chartBounds(values);
+  const xForIndex = (index: number) => {
+    const step = points.length > 1 ? 520 / (points.length - 1) : 0;
+    return 72 + index * step;
+  };
+  const yForValue = (value: number) =>
+    230 - ((value - bounds.min) / (bounds.max - bounds.min || 1)) * 170;
+  const seriesPath = linePath(values, xForIndex, yForValue);
+
+  // Anchor markers at the latest point, ~1 year ago, and ~3 years ago. The
+  // points come in chronological order; index from the end. ZHVI series are
+  // typically monthly so 12 / 36 indices back approximate the year-ago points
+  // when the data is dense enough.
+  const lastIdx = points.length - 1;
+  const oneYearIdx = points.length > 12 ? lastIdx - 12 : 0;
+  const threeYearIdx = points.length > 36 ? lastIdx - 36 : 0;
+
+  const annotateMarker = (
+    label: string,
+    idx: number,
+    color: string,
+    valueFormat: ChartValueFormat | null | undefined,
+  ) => {
+    const point = points[idx];
+    if (!point || !isNumber(point.value)) return null;
+    const cx = xForIndex(idx);
+    const cy = yForValue(point.value);
+    return (
+      <g key={`mark-${label}`}>
+        <circle cx={cx} cy={cy} r="4.5" fill={color} />
+        <text
+          x={Math.min(cx + 8, SVG_W - 12)}
+          y={cy - 8}
+          fontSize="10"
+          fill="var(--color-text)"
+        >
+          {label}
+        </text>
+        <text
+          x={Math.min(cx + 8, SVG_W - 12)}
+          y={cy + 6}
+          fontSize="9"
+          fill={CHART.textFaint}
+        >
+          {formatTick(point.value, valueFormat)}
+        </text>
+      </g>
+    );
+  };
+
+  // Y-axis ticks at the four existing gridline rows.
+  const tickRows = [0, 1, 2, 3].map((row) => {
+    const y = 52 + row * 46;
+    const value = bounds.min + ((230 - y) / 170) * (bounds.max - bounds.min || 1);
+    return { y, value };
+  });
+
+  // X-axis tick labels: pick ~5 evenly-spaced points and show the year.
+  const xTickStride = Math.max(1, Math.floor(points.length / 5));
+  const xTicks: Array<{ index: number; label: string }> = [];
+  for (let i = 0; i < points.length; i += xTickStride) {
+    const date = points[i]?.date;
+    if (typeof date === "string" && date.length >= 4) {
+      xTicks.push({ index: i, label: date.slice(0, 4) });
+    }
+  }
+  // Always include the final tick.
+  if (lastIdx >= 0 && (xTicks.length === 0 || xTicks[xTicks.length - 1].index !== lastIdx)) {
+    const date = points[lastIdx]?.date;
+    if (typeof date === "string" && date.length >= 4) {
+      xTicks.push({ index: lastIdx, label: date.slice(0, 4) });
+    }
+  }
+
+  const oneYearChange = spec.one_year_change_pct;
+  const threeYearChange = spec.three_year_change_pct;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full">
+        <rect
+          x="0"
+          y="0"
+          width={SVG_W}
+          height={SVG_H}
+          rx="18"
+          fill="var(--color-bg-sunken)"
+        />
+        {tickRows.map(({ y, value }) => (
+          <g key={y}>
+            <line
+              x1="64"
+              y1={y}
+              x2="592"
+              y2={y}
+              stroke={CHART.grid}
+              strokeDasharray="4 6"
+            />
+            <text
+              x={58}
+              y={y + 3}
+              textAnchor="end"
+              fontSize="9"
+              fill={CHART.textFaint}
+            >
+              {formatTick(value, chrome.valueFormat)}
+            </text>
+          </g>
+        ))}
+        <path
+          d={seriesPath}
+          fill="none"
+          stroke={CHART.base}
+          strokeWidth="3"
+        />
+        {threeYearIdx > 0 &&
+          annotateMarker("3y", threeYearIdx, CHART.neutral, chrome.valueFormat)}
+        {oneYearIdx > 0 &&
+          annotateMarker("1y", oneYearIdx, CHART.stress, chrome.valueFormat)}
+        {annotateMarker("Now", lastIdx, CHART.bull, chrome.valueFormat)}
+        {xTicks.map(({ index, label }, i) => (
+          <text
+            key={`x-${i}`}
+            x={xForIndex(index)}
+            y="252"
+            textAnchor="middle"
+            fontSize="11"
+            fill={CHART.textFaint}
+          >
+            {label}
+          </text>
+        ))}
+        <AxisLabels
+          xAxisLabel={chrome.xAxisLabel}
+          yAxisLabel={chrome.yAxisLabel}
+          width={SVG_W - 72}
+          height={SVG_H}
+          plotLeft={72}
+          plotBottom={232}
+        />
+      </svg>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-4">
+        <MetricChip
+          label={spec.geography_name ? `${spec.geography_name} now` : "Now"}
+          value={money(spec.current_value)}
+          tone="sky"
+        />
+        <MetricChip
+          label="1-year change"
+          value={pct(oneYearChange)}
+          tone={isNumber(oneYearChange) && oneYearChange < 0 ? "rose" : "emerald"}
+        />
+        <MetricChip
+          label="3-year change"
+          value={pct(threeYearChange)}
+          tone={isNumber(threeYearChange) && threeYearChange < 0 ? "rose" : "emerald"}
+        />
+        <MetricChip
+          label="Geography"
+          value={spec.geography_type ? `${spec.geography_type}-level` : "—"}
+        />
       </div>
     </div>
   );

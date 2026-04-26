@@ -1185,6 +1185,59 @@ def _native_rent_ramp_chart(view: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _native_market_trend_chart(view: dict[str, Any]) -> dict[str, Any] | None:
+    """Phase 3 Cycle B: town-level (or county fallback) ZHVI series.
+
+    Source: ``last_market_history_view`` projected from the
+    ``market_value_history`` module's legacy payload. ``view`` is expected to
+    carry ``geography_name``, ``geography_type``, ``current_value``,
+    ``one_year_change_pct``, ``three_year_change_pct``, and a ``history_points``
+    list of ``{date, value}`` rows.
+    """
+    raw_points = view.get("history_points")
+    if not isinstance(raw_points, list) or not raw_points:
+        return None
+    points: list[dict[str, Any]] = []
+    for row in raw_points:
+        if not isinstance(row, dict):
+            continue
+        date = row.get("date")
+        value = row.get("value")
+        if not isinstance(date, str) or not isinstance(value, (int, float)):
+            continue
+        points.append({"date": date, "value": float(value)})
+    if not points:
+        return None
+    points.sort(key=lambda r: r["date"])
+    geography_name = view.get("geography_name") or ""
+    geography_type = view.get("geography_type") or ""
+    legend: list[dict[str, Any]] = [
+        {"label": f"{geography_name} ({geography_type})" if geography_name else "Market index", "color": "var(--chart-base)", "style": "solid"},
+    ]
+    return events.chart(
+        title=f"{geography_name} value trend" if geography_name else "Town value trend",
+        subtitle=(
+            f"Zillow Home Value Index across {geography_type or 'available'}-level history"
+            if geography_type else "Zillow Home Value Index across available history"
+        ),
+        kind="market_trend",
+        spec={
+            "kind": "market_trend",
+            "geography_name": geography_name,
+            "geography_type": geography_type,
+            "current_value": view.get("current_value"),
+            "one_year_change_pct": view.get("one_year_change_pct"),
+            "three_year_change_pct": view.get("three_year_change_pct"),
+            "points": points,
+        },
+        provenance=["Market History", "market_value_history"],
+        x_axis_label="Year",
+        y_axis_label="Home value index",
+        value_format="currency",
+        legend=legend,
+    )
+
+
 _PROOF_CHART_REASONS: dict[str, str] = {
     "price_position": "This chart proves the verdict by showing where today's ask sits versus Briarwood's fair-value read.",
     "comp_evidence": "This chart proves the verdict by showing which comps are actually backing the pricing call.",
@@ -1327,14 +1380,23 @@ _CHART_ID_TO_ADVICE_SECTION: dict[str, str] = {
 
 def _unified_from_session(session: Session) -> UnifiedIntelligenceOutput | None:
     """Reconstruct a best-effort UnifiedIntelligenceOutput for the
-    Representation Agent from the session views produced by `handle_decision`.
+    Representation Agent.
 
-    The session persists a projected view of the verdict, not the raw routed
-    output. We synthesize the fields the Agent reads (stance, value position,
-    trust flags, drivers, risks, reasoning) from the decision + value-thesis
-    views. Non-representation fields (`recommendation`, `best_path`, etc.) are
-    filled with inert defaults so the Pydantic model validates without
-    pretending the surface has information it does not."""
+    Phase 3 Cycle B: prefer the full ``session.last_unified_output`` snapshot
+    when present (BROWSE / EDGE / etc. populate it from the chat-tier
+    artifact's real ``unified_output``). Fall back to the projection-from-
+    session-views path used by the legacy DECISION handler, which only has
+    ``last_decision_view`` to work from.
+    """
+    snapshot = getattr(session, "last_unified_output", None)
+    if isinstance(snapshot, dict) and snapshot:
+        try:
+            return UnifiedIntelligenceOutput.model_validate(snapshot)
+        except Exception as exc:  # noqa: BLE001 — fall through to projection
+            _logger.debug(
+                "last_unified_output snapshot did not validate; falling back: %s", exc
+            )
+
     decision_view = (
         session.last_decision_view
         if isinstance(session.last_decision_view, dict)
@@ -1413,6 +1475,9 @@ def _representation_module_views(
         else None,
         "last_market_support_view": session.last_market_support_view
         if isinstance(session.last_market_support_view, dict)
+        else None,
+        "last_market_history_view": session.last_market_history_view
+        if isinstance(session.last_market_history_view, dict)
         else None,
         "last_risk_view": session.last_risk_view
         if isinstance(session.last_risk_view, dict)
@@ -1493,24 +1558,32 @@ def _representation_charts(
     user_question: str,
     visual_advice: dict[str, dict[str, str]],
     llm: LLMClient | None,
+    *,
+    intent: Any = None,
+    max_selections: int = 6,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Run the Representation Agent and return advisor-patched chart events
     plus a serializable view of the selections for telemetry.
 
     Returns `([], [])` when the session has no verdict yet — callers should
     still emit whatever non-chart cards they have. Never raises: agent
-    failures degrade to an empty selection list."""
+    failures degrade to an empty selection list.
+
+    Phase 3 Cycle B: ``intent`` (an ``IntentContract``) and
+    ``max_selections`` thread through to the agent so callers can request
+    intent-keyed selection with a tier-specific cap (e.g., BROWSE=3)."""
     unified = _unified_from_session(session)
     if unified is None:
         return [], []
     module_views = _representation_module_views(session)
     try:
-        agent = RepresentationAgent(llm_client=llm)
+        agent = RepresentationAgent(llm_client=llm, max_selections=max_selections)
         plan = agent.plan(
             unified,
             user_question=user_question,
             module_views=module_views,
             session=session,
+            intent=intent,
         )
     except Exception as exc:
         _logger.warning("representation agent failed: %s", exc)
@@ -1994,45 +2067,12 @@ async def _browse_stream_impl(
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))
-        native_chart = _apply_chart_advice(
-            _native_value_chart(session.last_value_thesis_view),
-            visual_advice,
-            "value",
-        )
-        if _append_chart_once(secondary_events, native_chart):
-            native_chart_emitted = True
-        cma_chart = _apply_chart_advice(
-            _native_cma_chart(
-                session.last_value_thesis_view,
-                market_view=session.last_market_support_view
-                if isinstance(session.last_market_support_view, dict)
-                else None,
-            ),
-            visual_advice,
-            "cma",
-        )
-        if _append_chart_once(secondary_events, cma_chart):
-            native_chart_emitted = True
 
     if isinstance(session.last_strategy_view, dict):
         primary_events.append(events.strategy_path(session.last_strategy_view))
 
     if isinstance(session.last_rent_outlook_view, dict):
         primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
-        native_chart = _apply_chart_advice(
-            _native_rent_chart(session.last_rent_outlook_view),
-            visual_advice,
-            "rent",
-        )
-        if _append_chart_once(secondary_events, native_chart):
-            native_chart_emitted = True
-        native_ramp_chart = _apply_chart_advice(
-            _native_rent_ramp_chart(session.last_rent_outlook_view),
-            visual_advice,
-            "rent",
-        )
-        if _append_chart_once(secondary_events, native_ramp_chart):
-            native_chart_emitted = True
 
     if isinstance(session.last_projection_view, dict):
         payload = _scenario_table_from_view(session.last_projection_view)
@@ -2045,12 +2085,26 @@ async def _browse_stream_impl(
                 spread=payload["spread"],
             )
         )
-        native_chart = _apply_chart_advice(
-            _native_scenario_chart(session.last_projection_view),
-            visual_advice,
-            "scenario",
-        )
-        if _append_chart_once(secondary_events, native_chart):
+
+    # Phase 3 Cycle B: BROWSE chart selection now goes through the
+    # Representation Agent with a 3-chart cap and intent-keyed prompt
+    # guidance, rather than the prior hardcoded fan-out (value, cma, rent,
+    # rent_ramp, scenario_fan = 5 charts every turn). Falls back to no
+    # native charts when the agent can't reconstruct a unified output —
+    # consumers downstream still surface the iframe-style chart_events
+    # parsed from surface_text.
+    from briarwood.intent_contract import build_contract_from_answer_type
+    browse_intent = build_contract_from_answer_type("browse", confidence=0.6)
+    representation_charts, _browse_selections = _representation_charts(
+        session,
+        text,
+        visual_advice,
+        llm,
+        intent=browse_intent,
+        max_selections=3,
+    )
+    for chart_ev in representation_charts:
+        if _append_chart_once(secondary_events, chart_ev):
             native_chart_emitted = True
 
     for ev in primary_events:

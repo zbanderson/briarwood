@@ -44,6 +44,12 @@ class Session:
     last_risk_view: dict[str, object] | None = None
     last_value_thesis_view: dict[str, object] | None = None
     last_market_support_view: dict[str, object] | None = None
+    last_market_history_view: dict[str, object] | None = None
+    # Phase 3 Cycle B (2026-04-26): full UnifiedIntelligenceOutput dict from
+    # the consolidated chat-tier artifact, snapshotted so the Representation
+    # Agent can read the real verdict for BROWSE/EDGE/etc. instead of the
+    # narrow `last_decision_view` synthesis used by the DECISION path.
+    last_unified_output: dict[str, object] | None = None
     last_strategy_view: dict[str, object] | None = None
     last_rent_outlook_view: dict[str, object] | None = None
     last_research_view: dict[str, object] | None = None
@@ -82,6 +88,8 @@ class Session:
         self.last_risk_view = None
         self.last_value_thesis_view = None
         self.last_market_support_view = None
+        self.last_market_history_view = None
+        self.last_unified_output = None
         self.last_strategy_view = None
         self.last_rent_outlook_view = None
         self.last_research_view = None
@@ -132,6 +140,8 @@ class Session:
             last_risk_view=data.get("last_risk_view"),
             last_value_thesis_view=data.get("last_value_thesis_view"),
             last_market_support_view=data.get("last_market_support_view"),
+            last_market_history_view=data.get("last_market_history_view"),
+            last_unified_output=data.get("last_unified_output"),
             last_strategy_view=data.get("last_strategy_view"),
             last_rent_outlook_view=data.get("last_rent_outlook_view"),
             last_research_view=data.get("last_research_view"),

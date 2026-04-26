@@ -85,7 +85,15 @@ Detailed scope per cycle below.
 
 ---
 
-### Cycle B — Intent-keyed chart selection + market_trend chart kind
+### Cycle B — Intent-keyed chart selection + market_trend chart kind — LANDED 2026-04-26
+
+**Status:** Landed. New `market_trend` chart kind plumbed end-to-end (Python registry + native helper + TypeScript spec + React `MarketTrendChart` component) — town-level (or county fallback) Zillow Home Value Index series with anchors at "now", 1-year-ago, and 3-year-ago, plus 1y / 3y change percentages on metric chips. Two new `ClaimType` values: `MARKET_POSITION` and `TOWN_PULSE`.
+
+`Session.last_market_history_view` (and the broader `last_unified_output` snapshot) is now populated from the chat-tier artifact in `_populate_browse_slots`, with `_browse_market_history_from_artifact` projecting the `market_value_history` module's `legacy_payload.points` into the chartable shape. `_unified_from_session` prefers the snapshot when present so the Representation Agent can read the real verdict for BROWSE turns instead of the projection-from-decision-view path used by the legacy DECISION handler.
+
+The Representation Agent now accepts an `IntentContract` and a per-call `max_selections` override. System prompt extended with intent-first selection guidance and per-`answer_type` strong defaults. `_browse_stream_impl` replaces its prior hardcoded fan-out (`value_opportunity`, `cma_positioning`, `rent_burn`, `rent_ramp`, `scenario_fan` — 5 charts every turn) with a single `_representation_charts(...)` call gated to 3 charts and built from a `build_contract_from_answer_type("browse")` intent. Strong defaults steer BROWSE toward `[market_trend, value_opportunity, scenario_fan]`.
+
+Tests: 46/46 in tests/representation + tests/synthesis/test_llm_synthesizer + tests/agent/test_presentation_advisor pass; new regression tests for market_trend rendering pinned. TypeScript clean. Pause for browser smoke before kicking off Cycle C.
 
 **Why second.** Polish (Cycle A) makes individual charts look right; selection makes the *set* of charts feel intentional. The new `market_trend` chart is the highest-leverage addition because the user is making a financial decision and wants market context first.
 

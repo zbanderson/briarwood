@@ -1,6 +1,6 @@
 # representation — Representation Agent + Chart Registry
 
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-26 (Cycle B)
 **Layer:** Representation (Layer 4)
 **Status:** STABLE
 
@@ -164,6 +164,13 @@ events = agent.render_events(plan, module_views=...)
 - **Chart-registry expansion priorities.** New chart kinds are additive but each requires both a renderer and a frontend card. Which kinds are worth the cost is open.
 
 ## Changelog
+
+### 2026-04-26 (Cycle B)
+- Contract change: `RepresentationAgent.plan(...)` accepts an optional `intent` argument (`IntentContract` from `briarwood.intent_contract`). When provided, the LLM payload includes the intent so chart selection is intent-keyed; the system prompt's strong-default per-`answer_type` chart sets steer toward 2–3 charts that directly answer the user's intent rather than the kitchen sink.
+- Contract change: `RepresentationAgent.__init__` already accepted `max_selections`; the value is now threaded into the LLM payload so the model sees the cap, and `api/pipeline_adapter.py::_representation_charts(...)` accepts a per-call `intent` + `max_selections` override (defaults preserved).
+- Contract change (additive): two new `ClaimType` values — `MARKET_POSITION` and `TOWN_PULSE` — both backed by the new `market_trend` chart kind.
+- New chart kind: `market_trend`. Town-level (or county fallback) Zillow Home Value Index series. Required inputs: `history_points`, `geography_name`, `geography_type`. Source view: `last_market_history_view` (added to `KNOWN_SOURCE_VIEWS`). Renderer at `api/pipeline_adapter.py::_native_market_trend_chart`. React component `MarketTrendChart` in `web/src/components/chat/chart-frame.tsx`.
+- BROWSE chart selection is now agent-driven. `_browse_stream_impl` previously emitted 5 hardcoded charts (`value_opportunity`, `cma_positioning`, `rent_burn`, `rent_ramp`, `scenario_fan`) every turn; it now goes through `_representation_charts(...)` with `intent=build_contract_from_answer_type("browse")` and `max_selections=3`. The hardcoded fan-out is gone.
 
 ### 2026-04-26
 - Contract change (additive): chart event payloads now carry presentation metadata —
