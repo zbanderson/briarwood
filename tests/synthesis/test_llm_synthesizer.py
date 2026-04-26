@@ -262,3 +262,58 @@ def test_system_prompt_pins_numeric_grounding_rule() -> None:
     assert "round to a value present in the `unified` JSON" in normalized
     # The robotic-prose wording must NOT be in the system prompt.
     assert "rewrite using only values present" not in system.lower()
+
+
+def test_system_prompt_default_uses_newspaper_voice() -> None:
+    """Cycle D: default voice is newspaper structure with markdown headers
+    and per-tier voice variants pinned in the prompt."""
+
+    llm = _ScriptedLLM(["ok."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    system = llm.calls[0]["system"]
+    # Newspaper structure markers.
+    assert "front-page-newspaper" in system
+    assert "## Headline" in system
+    assert "## What I'd Watch" in system
+    # Per-tier voice variants land in the prompt.
+    assert "first-impression analyst" in system
+    assert "underwriter naming the gaps" in system
+    assert "5-year scenario writer" in system
+
+
+def test_kill_switch_disables_newspaper_voice(monkeypatch) -> None:
+    """Cycle D: BRIARWOOD_SYNTHESIS_NEWSPAPER=0 reverts to plain prose."""
+
+    monkeypatch.setenv("BRIARWOOD_SYNTHESIS_NEWSPAPER", "0")
+    llm = _ScriptedLLM(["ok."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    system = llm.calls[0]["system"]
+    # Plain-prose path: numeric rule kept, newspaper structure removed.
+    assert "NUMERIC GROUNDING" in system
+    assert "## Headline" not in system
+    assert "front-page-newspaper" not in system
+    # Plain-prose prompt explicitly forbids markdown headers.
+    assert "Do NOT write markdown headers" in system
+
+
+def test_kill_switch_off_value_keeps_newspaper(monkeypatch) -> None:
+    """Cycle D: only explicit kill values disable newspaper. Empty / arbitrary
+    values keep the default voice on."""
+
+    monkeypatch.setenv("BRIARWOOD_SYNTHESIS_NEWSPAPER", "yes")
+    llm = _ScriptedLLM(["ok."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    system = llm.calls[0]["system"]
+    assert "## Headline" in system

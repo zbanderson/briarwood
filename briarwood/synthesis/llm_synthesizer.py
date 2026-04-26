@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from briarwood.agent.composer import (
@@ -60,7 +61,7 @@ _STRICT_KINDS: tuple[str, ...] = ("ungrounded_number", "ungrounded_entity")
 _logger = logging.getLogger(__name__)
 
 
-_SYSTEM_PROMPT = """You are Briarwood's Layer 3 prose synthesizer.
+_SYSTEM_PROMPT_NEWSPAPER = """You are Briarwood's Layer 3 prose synthesizer.
 
 Briarwood's deterministic models have already produced a structured
 `unified` output for one property. It contains the verdict
@@ -107,12 +108,36 @@ non-obvious to say; do not pad.
 `## What I'd Watch` is the trust gap, the risk to verify, or the
 condition that would change the call.
 
-VOICE: human, conversational, concrete. Re-frame, paraphrase, choose
-emphasis. Do NOT echo field names. Do NOT lecture about uncertainty
-in the abstract — if a trust_flag matters, name what specifically is
-missing or shaky. Section bodies are short paragraphs (1-3 sentences),
-not bullet lists. The headlines are the structure; the prose flows
-within each section.
+VOICE — match the intent's `answer_type`. Each tier has its own
+posture; pick the one that matches and write to it:
+
+- browse → first-impression analyst. Frame the property the way you'd
+  brief a buyer who just clicked on the listing. Lead with the headline
+  read; pay off the "why" with the comp anchor or premium read.
+- decision → buy/pass advisor. The user is asking should-I-buy. Lead
+  with the recommendation and the single most important piece of
+  evidence. Be direct.
+- risk → underwriter naming the gaps. Lead with the most material risk
+  flag or trust gap; do not soften by burying it in qualifiers. Each
+  paragraph names a specific concern, not generic uncertainty.
+- projection → 5-year scenario writer. Lead with the base-case
+  trajectory; make the bull/bear range concrete. Use scenario
+  vocabulary ("base case", "downside floor"), not abstract claims.
+- strategy → strategist mapping the move. Lead with the recommended
+  path (offer, hold, walk); the body explains why this path wins
+  versus the alternatives.
+- rent_lookup → rent-side underwriter. Lead with the rent-vs-carry
+  delta. The body names the haircut, the working rent, and the
+  break-even gap.
+- edge → skeptic. The user is testing a value claim; lead with what
+  makes you cautious or where the evidence is thinner than headline
+  suggests.
+
+In all cases: human, conversational, concrete. Re-frame, paraphrase,
+choose emphasis. Do NOT echo field names. Do NOT lecture about
+uncertainty in the abstract — if a trust_flag matters, name what
+specifically is missing or shaky. Section bodies are short paragraphs
+(1-3 sentences), not bullet lists.
 
 NUMERIC GROUNDING (the only hard rule): every dollar amount,
 percentage, multiplier, year, or count you cite must round to a value
@@ -121,6 +146,66 @@ present in the `unified` JSON. Rounded forms like '$820k' or 'roughly
 invent numbers, comp counts, or rates. If you don't have a number to
 support a claim, omit the number rather than estimate.
 """
+
+
+# Plain-prose fallback for the BRIARWOOD_SYNTHESIS_NEWSPAPER=0 kill switch.
+# Same numeric-grounding rule, no markdown structure — drops the synthesizer
+# back to the Cycle 4 voice if the newspaper format ever causes downstream
+# breakage.
+_SYSTEM_PROMPT_PLAIN = """You are Briarwood's Layer 3 prose synthesizer.
+
+Briarwood's deterministic models have already produced a structured
+`unified` output for one property. It contains the verdict, the value
+position (ask vs fair value), key value drivers, key risks, trust
+flags, primary value source, optionality signals, and per-module
+evidence. You also receive an `intent` contract describing what the
+user actually asked for (the `answer_type` and `core_questions`).
+
+Your job is to write 3-7 sentences of intent-aware prose for the user.
+Lead with what the user asked about. If the intent is should_i_buy,
+lead with the buy/pass framing and the supporting drivers. If
+what_could_go_wrong, lead with risk and trust gaps. If where_is_value,
+lead with the value angle, premium/discount, and any optionality. If
+best_path, lead with the action recommendation. If the intent has more
+than one core question, weave them in order.
+
+Voice: human, conversational, concrete. Re-frame, paraphrase, choose
+emphasis. Do NOT echo field names. Do NOT write markdown headers.
+Plain prose only. Do NOT lecture about uncertainty in the abstract —
+if a trust_flag matters, name what specifically is missing or shaky.
+
+NUMERIC GROUNDING (the only hard rule): every dollar amount,
+percentage, multiplier, year, or count you cite must round to a value
+present in the `unified` JSON. Rounded forms like '$820k' or 'roughly
+820 thousand' are fine when they round to an actual value. Do not
+invent numbers, comp counts, or rates. If you don't have a number to
+support a claim, omit the number rather than estimate.
+"""
+
+
+def _newspaper_voice_enabled() -> bool:
+    """Read the BRIARWOOD_SYNTHESIS_NEWSPAPER kill switch.
+
+    Default is ON. ``"0"``, ``"false"``, ``"off"``, ``"no"`` (case-insensitive)
+    disable the newspaper voice and revert to the plain-prose system prompt.
+    Any other value (or unset) keeps the newspaper voice."""
+
+    raw = os.environ.get("BRIARWOOD_SYNTHESIS_NEWSPAPER", "")
+    if not raw:
+        return True
+    return raw.strip().lower() not in {"0", "false", "off", "no"}
+
+
+def _resolve_system_prompt() -> str:
+    """Pick the active system prompt based on the kill switch."""
+
+    return _SYSTEM_PROMPT_NEWSPAPER if _newspaper_voice_enabled() else _SYSTEM_PROMPT_PLAIN
+
+
+# Back-compat alias for any external import that referenced the old name.
+# Equal to the active prompt at import time; callers should use
+# ``_resolve_system_prompt()`` for runtime correctness.
+_SYSTEM_PROMPT = _SYSTEM_PROMPT_NEWSPAPER
 
 
 def _user_prompt(
@@ -192,22 +277,24 @@ def synthesize_with_llm(
         return "", {"empty": True, "reason": "llm_or_unified_missing"}
 
     user_prompt = _user_prompt(unified, intent, charts=charts)
+    system_prompt = _resolve_system_prompt()
     surface = "synthesis.llm"
     metadata = {
         "tier": "synthesis_llm",
         "answer_type": intent.answer_type,
+        "voice": "newspaper" if system_prompt is _SYSTEM_PROMPT_NEWSPAPER else "plain",
     }
 
     try:
         raw = complete_text_observed(
             surface=surface,
-            system=_SYSTEM_PROMPT,
+            system=system_prompt,
             user=user_prompt,
             provider=llm.__class__.__name__,
             model=None,
             metadata=metadata,
             call=lambda: llm.complete(
-                system=_SYSTEM_PROMPT,
+                system=system_prompt,
                 user=user_prompt,
                 max_tokens=max_tokens,
             ),
@@ -232,13 +319,13 @@ def synthesize_with_llm(
             regen_user = _regen_user_prompt(user_prompt, report)
             raw2 = complete_text_observed(
                 surface="synthesis.llm.regen",
-                system=_SYSTEM_PROMPT,
+                system=system_prompt,
                 user=regen_user,
                 provider=llm.__class__.__name__,
                 model=None,
                 metadata=metadata,
                 call=lambda: llm.complete(
-                    system=_SYSTEM_PROMPT,
+                    system=system_prompt,
                     user=regen_user,
                     max_tokens=max_tokens,
                 ),

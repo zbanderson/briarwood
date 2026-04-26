@@ -172,7 +172,17 @@ Tests: 56/57 in tests/synthesis + tests/representation + tests/agent/test_presen
 
 ---
 
-### Cycle D — Front-page-newspaper prose voice
+### Cycle D — Front-page-newspaper prose voice — LANDED 2026-04-26
+
+**Status:** Landed. Newspaper structure + per-tier voice + kill switch all in. The structural piece (markdown headers via literal-prompt — `## Headline / ## Why / ## What's Interesting / ## What I'd Watch`) had been ushered in earlier in the day; this cycle finalizes the per-tier voice variants and ships the safety hatch.
+
+**Per-tier voice** — single system prompt with intent-keyed voice instructions per Open Design Decision #5. Each tier writes to its own posture: BROWSE = first-impression analyst, DECISION = buy/pass advisor, RISK = underwriter naming the gaps, PROJECTION = 5-year scenario writer, STRATEGY = strategist mapping the move, RENT_LOOKUP = rent-side underwriter, EDGE = skeptic. Numeric grounding rule preserved verbatim (regression test still pinned).
+
+**Kill switch** — `BRIARWOOD_SYNTHESIS_NEWSPAPER=0` (or `false` / `off` / `no`) reverts the synthesizer to the pre-Cycle-D plain-prose system prompt. Default ON. Manifest metadata records `voice: "newspaper" | "plain"` so downstream tooling can tell which path produced the prose.
+
+**Open Design Decision 7 (editor pass)** remains tabled as deferred. The one-shot synthesizer is producing newspaper-quality output in browser smoke; an editor pass can land as a follow-on cycle if traces eventually show one-shot prose falling short.
+
+Tests: 13/13 in tests/synthesis/test_llm_synthesizer pass — three new Cycle D regressions pin the per-tier voice tokens and kill-switch behavior. TypeScript untouched. Phase 3 ships.
 
 **Why fourth.** Charts now polished, intent-keyed, and narrated. The remaining lever is the synthesizer's prose itself — does it hook the reader, or read like a list?
 

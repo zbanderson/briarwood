@@ -1,6 +1,6 @@
 # synthesis — Deterministic Structured Synthesizer (Legacy Path)
 
-**Last Updated:** 2026-04-25
+**Last Updated:** 2026-04-26 (Phase 3 Cycle C+D)
 **Layer:** Unified Intelligence (Layer 3 — deterministic legacy path; runs whenever the claim-object wedge is off or falls through)
 **Status:** STABLE (production default until `BRIARWOOD_CLAIMS_ENABLED` flips)
 
@@ -137,6 +137,13 @@ unified = build_unified_output(
 - **Sunset path for the legacy synthesizer.** Once `BRIARWOOD_CLAIMS_ENABLED` is default-on for all archetypes, this path becomes a fallback only. When (and how) to remove it is open.
 
 ## Changelog
+
+### 2026-04-26 (Phase 3 Cycle C+D)
+- Contract change: `synthesize_with_llm(...)` accepts an optional `charts: list[{kind, claim}]` keyword (Cycle C). When provided, the system prompt instructs the LLM to reference selected charts by what the user will see ("the scenario fan shows…", "the town-trend line…"). Numeric grounding rule preserved verbatim.
+- Newspaper voice (Cycle D): system prompt restructured to require markdown section headers (`## Headline / ## Why / ## What's Interesting / ## What I'd Watch`) plus per-`answer_type` voice instructions (BROWSE = first-impression analyst, RISK = underwriter naming the gaps, PROJECTION = 5-year scenario writer, etc.). Single prompt with intent-keyed instructions per Open Design Decision #5.
+- New env knob `BRIARWOOD_SYNTHESIS_NEWSPAPER` (Cycle D). Default ON; set to `0` / `false` / `off` / `no` to revert to the pre-Cycle-D plain-prose system prompt as a kill switch. Per-call manifest metadata records `voice: "newspaper" | "plain"` so the active path is observable.
+- Internal: `_SYSTEM_PROMPT_NEWSPAPER` and `_SYSTEM_PROMPT_PLAIN` are exposed as module-level constants; `_resolve_system_prompt()` selects between them at call time. The legacy `_SYSTEM_PROMPT` symbol is preserved as a back-compat alias.
+- Two new regression tests pin the per-tier voice tokens and the kill-switch behavior in `tests/synthesis/test_llm_synthesizer.py`.
 
 ### 2026-04-25
 - New caller: `briarwood.orchestrator.run_chat_tier_analysis` (Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) invokes `build_unified_output(...)` directly instead of via an injected `synthesizer` callable. No contract change — the keyword-only signature (`property_summary`, `parser_output`, `module_results`, `interaction_trace`) is unchanged. The chat-tier path now produces a `UnifiedIntelligenceOutput` from a single consolidated execution plan per chat turn rather than from the fragmented per-tool plans diagnosed in DECISIONS.md "Chat-tier fragmented execution" 2026-04-25.
