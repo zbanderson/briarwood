@@ -70,6 +70,15 @@ trust flags, primary value source, optionality signals, and per-module
 evidence. You also receive an `intent` contract describing what the
 user actually asked for (the `answer_type` and `core_questions`).
 
+Optionally you receive `charts` — the list of charts Briarwood's
+Representation Agent picked to render alongside your prose. Each entry
+has a `kind` (e.g. `value_opportunity`, `scenario_fan`, `market_trend`)
+and a one-line `claim` describing why it was picked. When prose
+references the substance of a chart, name what the user will see
+(e.g. "the scenario fan shows…", "the town-trend line…") so chart and
+prose tie together. Reference at most one or two charts in the body —
+do not enumerate them all.
+
 Your job is to write a front-page-newspaper-style response for the
 user. The user is making a six-figure financial decision and is
 scanning fast — every section must hook the eye and pay off.
@@ -114,14 +123,21 @@ support a claim, omit the number rather than estimate.
 """
 
 
-def _user_prompt(unified: dict[str, Any], intent: IntentContract) -> str:
-    """Serialize the unified output and intent contract as the user message."""
+def _user_prompt(
+    unified: dict[str, Any],
+    intent: IntentContract,
+    charts: list[dict[str, Any]] | None = None,
+) -> str:
+    """Serialize the unified output, intent contract, and (optionally) the
+    selected chart list as the user message."""
 
     intent_payload = intent.model_dump(mode="json")
-    body = {
+    body: dict[str, Any] = {
         "intent": intent_payload,
         "unified": unified,
     }
+    if charts:
+        body["charts"] = charts
     return json.dumps(body, default=str, sort_keys=True)
 
 
@@ -155,6 +171,7 @@ def synthesize_with_llm(
     intent: IntentContract,
     llm: LLMClient | None,
     max_tokens: int = 360,
+    charts: list[dict[str, Any]] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Render intent-aware prose from a full UnifiedIntelligenceOutput.
 
@@ -174,7 +191,7 @@ def synthesize_with_llm(
     if llm is None or not unified:
         return "", {"empty": True, "reason": "llm_or_unified_missing"}
 
-    user_prompt = _user_prompt(unified, intent)
+    user_prompt = _user_prompt(unified, intent, charts=charts)
     surface = "synthesis.llm"
     metadata = {
         "tier": "synthesis_llm",

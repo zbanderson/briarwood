@@ -165,6 +165,11 @@ events = agent.render_events(plan, module_views=...)
 
 ## Changelog
 
+### 2026-04-26 (Cycle C)
+- Contract change: `synthesize_with_llm(...)` in `briarwood/synthesis/llm_synthesizer.py` now accepts an optional `charts: list[{kind, claim}]` keyword. The synthesizer's system prompt instructs the LLM to reference selected charts by what the user will see ("the scenario fan shows…", "the town-trend line…") so prose and charts tie together. Numeric grounding rule preserved verbatim.
+- `handle_browse` runs the Representation Agent before the synthesizer (via `_browse_compute_representation_plan`) and caches the plan on `session.last_representation_plan`. `api/pipeline_adapter.py::_representation_charts` reads the cached plan when present, so the gpt-4o-mini chart-selection call fires once per turn instead of twice.
+- React: `ChartFrame` now renders `chart.why_this_chart` (the agent's per-chart claim) as a 13px italic caption with a left border above the chart body. Falls back to the `visual_advisor` summary when the agent didn't produce a claim.
+
 ### 2026-04-26 (Cycle B)
 - Contract change: `RepresentationAgent.plan(...)` accepts an optional `intent` argument (`IntentContract` from `briarwood.intent_contract`). When provided, the LLM payload includes the intent so chart selection is intent-keyed; the system prompt's strong-default per-`answer_type` chart sets steer toward 2–3 charts that directly answer the user's intent rather than the kitchen sink.
 - Contract change: `RepresentationAgent.__init__` already accepted `max_selections`; the value is now threaded into the LLM payload so the model sees the cap, and `api/pipeline_adapter.py::_representation_charts(...)` accepts a per-call `intent` + `max_selections` override (defaults preserved).

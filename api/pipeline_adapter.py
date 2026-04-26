@@ -35,6 +35,7 @@ from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
 from briarwood.agent.turn_manifest import in_active_context
 from briarwood.representation import RepresentationAgent
+from briarwood.representation.agent import RepresentationPlan
 from briarwood.routing_schema import (
     AnalysisDepth,
     DecisionStance,
@@ -1576,18 +1577,38 @@ def _representation_charts(
     if unified is None:
         return [], []
     module_views = _representation_module_views(session)
-    try:
-        agent = RepresentationAgent(llm_client=llm, max_selections=max_selections)
-        plan = agent.plan(
-            unified,
-            user_question=user_question,
-            module_views=module_views,
-            session=session,
-            intent=intent,
-        )
-    except Exception as exc:
-        _logger.warning("representation agent failed: %s", exc)
-        return [], []
+    # Phase 3 Cycle C: prefer the plan that handle_browse already cached
+    # while computing the chart-summary it fed to the synthesizer. Avoids
+    # double-running the gpt-4o-mini representation call on every BROWSE
+    # turn.
+    plan: RepresentationPlan | None = None
+    cached_plan_dict = getattr(session, "last_representation_plan", None)
+    if isinstance(cached_plan_dict, dict) and cached_plan_dict:
+        try:
+            plan = RepresentationPlan.model_validate(cached_plan_dict)
+        except Exception as exc:  # noqa: BLE001
+            _logger.debug(
+                "cached representation plan did not validate; rerunning: %s", exc
+            )
+            plan = None
+    if plan is None:
+        try:
+            agent = RepresentationAgent(llm_client=llm, max_selections=max_selections)
+            plan = agent.plan(
+                unified,
+                user_question=user_question,
+                module_views=module_views,
+                session=session,
+                intent=intent,
+            )
+        except Exception as exc:
+            _logger.warning("representation agent failed: %s", exc)
+            return [], []
+    else:
+        # Use the cached plan but still need an agent instance to call
+        # render_events — construct without an LLM client since we don't
+        # need to plan again.
+        agent = RepresentationAgent(llm_client=None, max_selections=max_selections)
 
     market_view = module_views.get("last_market_support_view")
     raw_events = agent.render_events(plan, module_views, market_view=market_view)

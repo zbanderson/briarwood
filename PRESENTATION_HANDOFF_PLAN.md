@@ -129,7 +129,17 @@ Tests: 46/46 in tests/representation + tests/synthesis/test_llm_synthesizer + te
 
 ---
 
-### Cycle C — LLM-narrates-the-chart
+### Cycle C — LLM-narrates-the-chart — LANDED 2026-04-26
+
+**Status:** Landed. Two pieces shipped:
+
+**C1 — Per-chart caption surfaced.** The Representation Agent's `claim` field already rode through the SSE event payload as `chart.why_this_chart`; the React `ChartFrame` outer shell now renders it as a 13px italic, left-border-quoted caption above the chart body. Falls back to the `visual_advisor` summary when the agent didn't produce a claim. Visible in the BROWSE turn for all three selected charts.
+
+**C2 — Synthesizer prose references charts by name.** `synthesize_with_llm(...)` accepts a new optional `charts` keyword (a `[{kind, claim}]` summary). System prompt extended to instruct the LLM to name what the user will see ("the scenario fan shows…", "the town-trend line…") so chart and prose tie together — capped at 1–2 chart references in the body.
+
+`handle_browse` now runs the Representation Agent before the synthesizer (via the new `_browse_compute_representation_plan` helper), caches the resulting plan on `session.last_representation_plan`, and feeds the chart summary into `synthesize_with_llm`. `_representation_charts` in `api/pipeline_adapter.py` reads the cached plan when present so the agent runs once per turn rather than twice. Net cost: one extra `representation.plan` LLM call moves from `_browse_stream_impl` to `handle_browse` — same call count, just earlier in the turn so prose sees it.
+
+Tests: 56/57 in tests/synthesis + tests/representation + tests/agent/test_presentation_advisor pass. One pre-existing failure unchanged. TypeScript clean. Pause for browser smoke before kicking off Cycle D.
 
 **Why third.** Charts now look right and fire intentionally. Now hook them to the prose so they aren't orphans.
 

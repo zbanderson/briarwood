@@ -287,10 +287,19 @@ export function ChartFrame({ chart }: Props) {
           {chart.provenance && chart.provenance.length > 0 && (
             <ProvenanceChips items={chart.provenance} />
           )}
-          {surface.summary && (
-            <div className="mb-3 text-[13px] text-[var(--color-text-muted)]">
-              {surface.summary}
+          {/* Phase 3 Cycle C: the Representation Agent's per-chart claim
+              leads the figure when present. Falls back to the visual_advisor
+              summary when the agent didn't produce a claim. */}
+          {chart.why_this_chart ? (
+            <div className="mb-3 border-l-2 border-[var(--color-border-subtle)] pl-3 text-[13px] italic leading-snug text-[var(--color-text-muted)]">
+              {chart.why_this_chart}
             </div>
+          ) : (
+            surface.summary && (
+              <div className="mb-3 text-[13px] text-[var(--color-text-muted)]">
+                {surface.summary}
+              </div>
+            )
           )}
           {body}
           {legend && legend.length > 0 && <LegendRow items={legend} />}

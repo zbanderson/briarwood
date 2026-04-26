@@ -4432,6 +4432,75 @@ def _browse_projection_from_artifact(
     return payload
 
 
+def _browse_compute_representation_plan(
+    *,
+    session: Session,
+    unified: dict[str, object],
+    user_question: str,
+    intent: object,
+    llm: LLMClient | None,
+) -> list[dict[str, object]] | None:
+    """Run the Representation Agent for a BROWSE-tier turn, cache the plan
+    on the session, and return a compact chart-summary the synthesizer can
+    use to reference selected charts in prose.
+
+    Phase 3 Cycle C. Returns ``None`` when the agent is missing, the unified
+    output fails to validate, or the agent raises — callers fall through to
+    a synthesizer call without the ``charts`` hint."""
+
+    if llm is None or not unified:
+        return None
+    try:
+        from briarwood.representation import RepresentationAgent
+        from briarwood.routing_schema import UnifiedIntelligenceOutput
+
+        unified_model = UnifiedIntelligenceOutput.model_validate(unified)
+    except Exception as exc:  # noqa: BLE001 — agent failure must not block prose
+        logger.debug("representation plan: unified validate failed: %s", exc)
+        return None
+
+    module_views: dict[str, dict[str, object] | None] = {
+        "last_decision_view": session.last_decision_view if isinstance(session.last_decision_view, dict) else None,
+        "last_value_thesis_view": session.last_value_thesis_view if isinstance(session.last_value_thesis_view, dict) else None,
+        "last_market_support_view": session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None,
+        "last_market_history_view": session.last_market_history_view if isinstance(session.last_market_history_view, dict) else None,
+        "last_risk_view": session.last_risk_view if isinstance(session.last_risk_view, dict) else None,
+        "last_strategy_view": session.last_strategy_view if isinstance(session.last_strategy_view, dict) else None,
+        "last_rent_outlook_view": session.last_rent_outlook_view if isinstance(session.last_rent_outlook_view, dict) else None,
+        "last_projection_view": session.last_projection_view if isinstance(session.last_projection_view, dict) else None,
+    }
+
+    try:
+        agent = RepresentationAgent(llm_client=llm, max_selections=3)
+        plan = agent.plan(
+            unified_model,
+            user_question=user_question,
+            module_views=module_views,
+            session=session,
+            intent=intent,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("representation plan: agent failed: %s", exc)
+        return None
+
+    try:
+        session.last_representation_plan = plan.model_dump(mode="json")
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("representation plan: cache failed: %s", exc)
+
+    summary: list[dict[str, object]] = []
+    for selection in plan.selections:
+        if selection.chart_id is None or selection.flagged:
+            continue
+        summary.append(
+            {
+                "kind": selection.chart_id,
+                "claim": selection.claim,
+            }
+        )
+    return summary or None
+
+
 def _browse_market_history_from_artifact(
     artifact: dict[str, object],
     pid: str,
@@ -4804,10 +4873,23 @@ def handle_browse(
                 decision.answer_type.value,
                 float(decision.confidence or 0.0),
             )
+            # Phase 3 Cycle C: run the Representation Agent first so the
+            # synthesizer prose can reference the charts the user will see.
+            # The plan is cached on session.last_representation_plan so the
+            # downstream chart-rendering path in api/pipeline_adapter doesn't
+            # double-run the agent.
+            chart_summary = _browse_compute_representation_plan(
+                session=session,
+                unified=unified,
+                user_question=text,
+                intent=intent,
+                llm=llm,
+            )
             synth_prose, synth_report = synthesize_with_llm(
                 unified=unified,
                 intent=intent,
                 llm=llm,
+                charts=chart_summary,
             )
             if synth_prose:
                 response = synth_prose
