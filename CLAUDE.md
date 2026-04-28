@@ -15,6 +15,7 @@ At the start of every Claude Code session, before taking user task work:
 5. Verify these authoritative project-state docs exist and are readable: `ARCHITECTURE_CURRENT.md`, `GAP_ANALYSIS.md`, and `TOOL_REGISTRY.md`.
 6. Read `CURRENT_STATE.md` if present.
 7. Read the relevant sections of `DECISIONS.md` and `ROADMAP.md` for the task. For roadmap planning, handoff planning, large refactors, or ambiguous/high-impact work, read both in full.
+8. Run `git log -10` and `git status` before any user task work. Other sessions (Codex CLI, web Codex, parallel Claude sessions) may be running in parallel and may have moved `HEAD` or filled the working tree since the snapshot in your initial environment block was captured. If `HEAD` is not where you expect, or files are staged/modified that you didn't touch, surface this to the user before editing — never silently overwrite or commit work whose origin you can't account for.
 
 Do not begin user task work until the applicable orientation is complete. The cost of orientation is minutes; the cost of skipping it is hours of rework against stale assumptions.
 
@@ -45,6 +46,25 @@ When information conflicts, the higher-priority source wins.
 Briarwood is being built as an AI-native, queryable company. See `design_doc.md` § 3.4 and `ROADMAP.md` for the staged buildout. Treat those principles as constraints on architectural decisions.
 
 If you find a contradiction between sources, never silently reconcile it. Surface it to the user. Add an entry to `DECISIONS.md` if the resolution requires judgment, or to `ROADMAP.md` if it is mechanical drift or cleanup work.
+
+---
+
+## Key Data Assets
+
+These are the load-bearing data files and external credentials a session is likely to need. Don't re-discover them; check inventory here first.
+
+- `data/saved_properties/<property-slug>/inputs.json` + `summary.json` — the canonical persisted-property records. Inputs are the deep 380-ish-line analysis facts; summary is the short BCV/ask/decision synopsis. Some saved entries are test fixtures (`tmp-test`, `compdb-belmar-seed-001`, `11-test-ave-...`) and some are duplicates from the URL-parser bug (multiple `526-...` slugs).
+- `data/comps/sales_comps.json` — ~3,900 SOLD comp rows across the six target Monmouth County towns (Avon By The Sea, Belmar, Bradley Beach, Manasquan, Sea Girt, Spring Lake) plus Wall and Asbury Park. Sources: NJ SR1A public records + ATTOM bulk + ATTOM enrichment. Date range 2022-04 → 2026-04. Town strings have spelling variants (e.g., `Avon By The Sea` vs `Avon-by-the-Sea`) — see ROADMAP §4 canonicalization entry.
+- `data/comps/active_listings.json` — current-listing comps (separate store from SOLD).
+- `data/eval/canonical_underwrite_benchmark.json` — qualitative stance-band benchmarks (NOT outcome data).
+- `data/learning/intelligence_feedback.jsonl` — LLM feedback / decision-rationale records (≈6K+ rows; outcomes mostly null until Stage 4 backfill runs).
+- `data/outcomes/property_outcomes.jsonl` — Stage 4 ground-truth outcome rows (`sale_price` outcomes per saved property). Newly populated 2026-04-28; expected to grow as ATTOM-outcome backfill lands.
+- `data/web/conversations.db` — SQLite for chat sessions, `turn_traces`, `model_alignment`, feedback, etc. Read API in `api/store.py`.
+- `data/llm_calls.jsonl` — Stage 1 LLM-call sink (gitignored).
+- `.env` (gitignored) — `ATTOM_API_KEY`, `SEARCHAPI_API_KEY`, OpenAI keys, etc. Loaded automatically on `import briarwood`.
+- `venv/bin/python3` — the canonical Python for this repo. System `python3` (Homebrew) lacks `pydantic`, `pytest`, `fastapi`, etc. Always invoke tests / scripts with `venv/bin/python3 -m pytest …` or `venv/bin/python3 scripts/foo.py …` unless a script's shebang already routes there.
+
+When a fact about these files matters for a decision (e.g., "do we have enough comps for town X?"), grep / inspect the file directly rather than trusting the summary above — these are pointers, not contracts.
 
 ---
 
