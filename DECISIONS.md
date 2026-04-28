@@ -2708,3 +2708,56 @@ slice).
 [`ROADMAP.md`](ROADMAP.md) §1 step 5, §3.1 Stage 4, §4 (Zillow URL
 parser appendix; comp-store canonicalization; ATTOM outcome backfill);
 [`CURRENT_STATE.md`](CURRENT_STATE.md) Current Known Themes.
+
+## 2026-04-28 — Phase 4c BROWSE rebuild plan approved with three-section reframe
+
+**Decision.** [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+is the approved planning artifact for Phase 4c — sequence step 6 of
+[`ROADMAP.md`](ROADMAP.md) §1. Implementation has not started; Cycle 1 is
+the next move. The §3.5 entry is promoted from parking-lot to ACTIVE.
+
+**Layout reframe captured in the plan.** The owner approved the plan in
+two passes on 2026-04-28. The first pass approved a "one rich summary
+card with drilldowns" shape; the second pass replaced that with **three
+stacked sections inside the assistant bubble**:
+
+1. **Section A — `BrowseRead`** (always renders): stance pill + headline + masthead `market_trend` chart + flowed synthesizer prose. "Above the fold."
+2. **Section B — `BrowseScout`** (conditional, only when scout fires): peer section with sub-head + the existing `ScoutFinds` 0/1/2 cards. Renders nothing when scout returned empty — no placeholder, no rule.
+3. **Section C — `BrowseDeeperRead`** (always renders, drilldowns collapsed): chevron-list drilldowns into Comps / Value thesis / Projection / Rent / Town / Risk / Confidence & data / Recommended path. Each drilldown embeds its relevant chart inline.
+
+**Reasoning for the reframe.** The newspaper-front-page metaphor argues
+against a single collapsible block. Newspapers achieve glance-density
+through visual hierarchy — sub-heads, thin rules, generous white space —
+not through stacked boxed cards. Screen real estate is expensive; the
+user must be able to glean as much as possible in the first 2-3 seconds.
+Section B as a **peer** (rather than a drilldown row inside the summary
+card) also honors the "Scout is the apex of the product" framing
+([`project_scout_apex.md`](/Users/zachanderson/.claude/projects/-Users-zachanderson-projects-briarwood/memory/project_scout_apex.md))
+— Scout is not buried as one of eight rows.
+
+**Scope locked for Phase 4c.**
+- Three-section rebuild on BROWSE turns only. DECISION / EDGE / PROJECTION / RISK / STRATEGY / RENT_LOOKUP card stacks are unchanged.
+- Tier marker on `ChatMessage` via an extension to the existing `message` SSE event (`answer_type`); mirror in TS per AGENTS.md SSE-parity rule.
+- 5 cycles + closeout. Cycle 1 lands tier marker + section primitive + Section A fully filled (so the newspaper feel is visible from first browser smoke). Cycle 2 = Section B / Scout migration. Cycle 3 = Comps / Value-thesis / Projection drilldowns + drive-by §3.4.1 / §3.4.3. Cycle 4 = Rent / Town / Risk / Confidence / Path drilldowns + closes `PRESENTATION_HANDOFF_PLAN.md` Open Design Decision #7 (recommended posture: 7c — deferred indefinitely; rebuild solves the layout complaint structurally). Cycle 5 = chart-library evaluation per §3.4.7. Cycle 6 = closeout.
+- Mandatory pause for owner browser smoke after every cycle.
+
+**Guardrails.**
+- No frontend redesign for non-BROWSE tiers.
+- No chart-library **migration** — Cycle 5 is eval only; any migration is a separate handoff.
+- No prompt rewrites or model-side changes; the synthesizer's prompt is unchanged.
+- ROADMAP §4 High items "Consolidate chat-tier execution" and "Layer 3 LLM synthesizer" are NOT pulled in (already substantively landed in Phase 2 / Phase 3).
+- ROADMAP §4 entries filed 2026-04-28 (comp-store canonicalization, ATTOM outcome backfill, Zillow URL-parser regression, property-resolver state ranking) all stay separate.
+- §3.4 chart sub-items: §3.4.1 + §3.4.3 fold into Cycle 3 drive-bys; §3.4.7 = Cycle 5; §3.4.2 / §3.4.6 conditional on Cycle 5 outcome; §3.4.4 (live SSE reload bug) and §3.4.5 (multi-source-view structural follow-on) stay outside Phase 4c.
+
+**Cross-references.**
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md);
+[`ROADMAP.md`](ROADMAP.md) §1 step 6, §3.4 chart umbrella, §3.4.7
+chart-library eval, §3.5 Phase 4c (status flipped from parking-lot to
+ACTIVE);
+[`PRESENTATION_HANDOFF_PLAN.md`](PRESENTATION_HANDOFF_PLAN.md) Open
+Design Decision #7 (closes during Cycle 4);
+[`docs/current_docs_index.md`](docs/current_docs_index.md) (plan-doc
+entry added);
+user-memory `project_ui_enhancements.md` (weak decision summary, charts
+need work), `project_scout_apex.md` (Scout-as-peer-section rationale),
+`project_brand_evolution.md` (placeholder naming convention).

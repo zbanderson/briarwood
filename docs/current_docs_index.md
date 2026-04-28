@@ -52,6 +52,12 @@ Use this file as the starting point for product and implementation work.
   receiver hooks, and analyzer reporting. Implementation substrate landed
   2026-04-28; real outcome data still needs to be supplied and run through
   the backfills.
+- `BROWSE_REBUILD_HANDOFF_PLAN.md`
+  Phase 4c plan for rebuilding the BROWSE response into three stacked
+  sections (`BrowseRead` / `BrowseScout` / `BrowseDeeperRead`) with
+  newspaper-front-page hierarchy. APPROVED 2026-04-28; Cycle 1 ready to
+  start. Folds the §3.4.7 chart-library evaluation as Cycle 5 and closes
+  `PRESENTATION_HANDOFF_PLAN.md` Open Design Decision #7 at Cycle 4.
 - `briarwood/routing_schema.py`
   Canonical routing and output contracts
 - `briarwood/orchestrator.py`

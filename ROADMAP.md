@@ -181,9 +181,19 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    rebuild) now unblocked. Real public-record sale ingestion remains a
    follow-up under §4 ("Automate public-record outcome ingestion") and
    the new ATTOM-outcome adapter slice.
-6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner; parking lot]`
-   *Why now:* Substrate (real comps + Scout outputs) finally available; the
-   rebuilt summary card needs both to honestly hold together.
+6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner]` — **ACTIVE 2026-04-28**, plan: [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+   *Why now:* Substrate (real comps + Scout outputs + closed model-accuracy
+   loop) is in place; the rebuilt response surface needs all three to
+   honestly hold together.
+   *Plan reframe (2026-04-28):* original "one rich summary card with
+   drilldowns" replaced with **three stacked sections inside the assistant
+   bubble** — Section A (`BrowseRead`: stance pill + headline + masthead
+   chart + prose), Section B (`BrowseScout`: peer section, conditional
+   null), Section C (`BrowseDeeperRead`: 8 chevron-list drilldowns).
+   Newspaper-front-page hierarchy via section sub-heads + thin rules + no
+   nested boxed cards. See `BROWSE_REBUILD_HANDOFF_PLAN.md` for the cycle
+   plan (5 cycles + closeout, including the §3.4.7 chart-library eval as
+   Cycle 5).
 
 Sequencing call recorded in [DECISIONS.md](DECISIONS.md) 2026-04-27 entry —
 that entry formally fixes steps 2–5; steps 1 and 6 are bookends inherited
@@ -1506,10 +1516,14 @@ post-grounding"); [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
 
 ---
 
-### §3.5 Phase 4c — BROWSE summary card rebuild (parking lot) `[size: XL]` `[impact: Output & Presentation]`
+### §3.5 Phase 4c — BROWSE summary card rebuild `[size: XL]` `[impact: Output & Presentation]`
 
-**Severity:** Medium — most-asked product surface; shape is wrong but
-blocked on substrate.
+**Status:** ACTIVE 2026-04-28 — promoted from parking lot. Plan doc:
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md).
+
+**Severity:** Medium-High — most-asked product surface; substrate (Phase 4a
+real comps + Phase 4b Scout + Stage 4 model-accuracy loop) is now in place
+so the rebuild can honestly hold together.
 
 **Origin.** 2026-04-26 BROWSE walkthrough Thread 1. Owner read of the
 current "what do you think of 1008 14th Ave, Belmar, NJ" response: the
@@ -1533,31 +1547,33 @@ rebuild can't honestly hold together:
    Today's scout is single-pattern and claims-wedge-only. Tracked in
    [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) (Phase 4b).
 
-**Suggested approach when picked up.** Promote this entry to a
-`BROWSE_REBUILD_HANDOFF_PLAN.md` (Phase 4c) once Phase 4a + Phase 4b
-land. Scope at that point: collapse the existing card stack into one
-`BrowseSummaryCard` React component with sectioned drilldowns;
-integrate the scout drilldown row from Phase 4b Cycle 3; cite real
-comps from Phase 4a; keep the synthesizer's newspaper-voice prose as
-the lead. Open layout questions today (e.g., where the chart strip
-lives relative to the summary card; how drilldowns animate; mobile vs
-desktop) belong in that plan, not here.
+**Plan reframe (2026-04-28).** Owner sign-off arrived in two passes. The
+first pass approved a "one rich summary card with drilldowns" shape; the
+second pass reframed it as **three stacked sections** organized like a
+newspaper front page:
+
+1. **Section A — `BrowseRead`** (always renders): stance pill + headline + masthead `market_trend` chart + flowed synthesizer prose. "Above the fold."
+2. **Section B — `BrowseScout`** (conditional, only when scout fires): peer section with sub-head `WHAT YOU'D MISS`-style label + the existing `ScoutFinds` 0/1/2 cards. Renders nothing when scout returned empty — no placeholder, no rule, no header.
+3. **Section C — `BrowseDeeperRead`** (always renders, drilldowns collapsed by default): chevron-list drilldowns into Comps / Value thesis / Projection / Rent / Town / Risk / Confidence & data / Recommended path. Each drilldown embeds its relevant chart inline when expanded.
+
+Visual rhythm via section sub-heads + thin rules + ~2rem padding. **No
+nested boxed cards** — that's the difference between "designed by a
+newspaper editor" and "designed by an LLM." Detailed cycles, OD
+resolutions, retired-vs-section component map, and per-cycle doc-update
+list live in
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md).
 
 **Cross-ref.** [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
 Open Design Decision #7 (editor pass / paragraph-with-interleaved-charts
-layout) is conceptually adjacent — the rebuild is a chance to revisit
-whether an editor pass is needed once the substrate is right.
+layout) closes during Phase 4c Cycle 4 — the layout reframe addresses the
+visible "paragraph + 5 charts in a row" complaint structurally.
+[ROADMAP.md](ROADMAP.md) §3.4.7 chart-library evaluation is folded into
+Phase 4c Cycle 5 per the 2026-04-28 owner sequencing call.
 
-**Status:** Parking lot (per existing entry; `DECISIONS.md` 2026-04-27
-does not promote it). Phase 4a + 4b are now complete, but the active
-sequence still places AI-Native Stage 4 before Phase 4c. Keep this parked
-until Stage 4 closes or the owner explicitly pulls it forward.
+**Plan doc:** [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md).
 
-**Plan doc:** None until promoted. Expected future artifact:
-`BROWSE_REBUILD_HANDOFF_PLAN.md`.
-
-**Dependencies:** Phase 4a complete; Phase 4b complete; current sequence
-step 5 (AI-Native Stage 4) still precedes this work.
+**Dependencies:** Phase 4a complete ✅; Phase 4b complete ✅; Stage 4
+complete ✅. All three substrate prerequisites met 2026-04-28.
 
 ---
 
