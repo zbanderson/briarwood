@@ -47,9 +47,10 @@ Use this file as the starting point for product and implementation work.
   2026-04-28; read when touching turn traces, feedback, admin dashboard,
   or LLM-call observability.
 - `STAGE4_HANDOFF_PLAN.md`
-  Proposed AI-Native Foundation Stage 4 plan for closing the model-accuracy
-  loop with outcome ingestion, `model_alignment`, receiver hooks, and
-  analyzer reporting. Approved for planning; implementation not started.
+  AI-Native Foundation Stage 4 plan for closing the model-accuracy loop
+  with outcome ingestion, `model_alignment`, receiver hooks, and analyzer
+  reporting. Implementation substrate landed 2026-04-28; real outcome data
+  still needs to be supplied and run through the backfill.
 - `briarwood/routing_schema.py`
   Canonical routing and output contracts
 - `briarwood/orchestrator.py`

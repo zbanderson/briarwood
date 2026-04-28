@@ -157,11 +157,11 @@ The ordered list of major moves. Each step carries a `[source]` tag —
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
-   *Plan:* [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) approved
-   for planning on 2026-04-28. Implementation has not started. The plan
-   keeps manual outcome ingestion, one-shot backfill, `model_alignment`,
-   module receiver hooks, and analyzer reporting in scope; auto-tuning,
-   Phase 4c, and public-record automation are out of scope for v1.
+   *Status:* Implementation substrate landed 2026-04-28 via
+   [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md): manual outcome
+   ingestion, one-shot backfill, `model_alignment`, module receiver hooks,
+   and analyzer reporting. Still needs a real outcome file/backfill run
+   before human tuning candidates can be reviewed.
 6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner; parking lot]`
    *Why now:* Substrate (real comps + Scout outputs) finally available; the
    rebuilt summary card needs both to honestly hold together.
@@ -530,10 +530,12 @@ useless if the owner can't see them.
 
 #### Stage 4 — Close The Model-Accuracy Loop `[size: M-L]` `[impact: Data, Persistence & Feedback]`
 
-**Status:** Plan approved 2026-04-28 — implementation not started.
+**Status:** Implementation substrate landed 2026-04-28 —
 [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) is the canonical
-handoff plan. The Phase 4b Scout closeout batch is committed as
-`c8b6b0d`, so Stage 4 should start from a clean new change boundary.
+handoff plan. Outcome ingestion, one-shot JSONL backfill,
+`model_alignment`, record-only module feedback hooks, and analyzer
+reporting are implemented. The loop still needs a real outcome file and
+backfill run before live human tuning candidates can be reviewed.
 
 Source: "~1-2 handoffs."
 
@@ -584,6 +586,24 @@ cannot compute the confidence-vs-outcome correlation it is built for.
   output is enough to close Loop 1 if it reads the persisted alignment
   rows.
 
+**Implementation landed 2026-04-28.**
+- `briarwood/eval/outcomes.py` loads manual CSV/JSONL sale-price outcomes
+  with row-level validation, duplicate-key reporting, strict
+  property-id/address matching, and no public-record automation.
+- `scripts/ingest_outcomes.py` validates outcome files as a dry-run CLI.
+- `scripts/backfill_outcomes.py` attaches outcomes to
+  `data/learning/intelligence_feedback.jsonl` rows when a strict match
+  exists; it preserves a `.bak`, supports `--dry-run`, and refuses to
+  overwrite non-null outcomes unless explicitly requested.
+- `api/store.py` now declares `model_alignment` plus insert/read helpers.
+- `briarwood/eval/alignment.py` computes absolute error, absolute pct
+  error, alignment score, high-confidence flag, and underperformance flag.
+- `current_value`, `valuation`, and `comparable_sales` scoped modules now
+  expose record-only `receive_feedback(session_id, signal)` hooks.
+- `briarwood/feedback/model_alignment_analyzer.py` reads alignment rows and
+  surfaces module summaries, top miss examples, and human-review tuning
+  candidates. Optional `/admin` visibility was deferred.
+
 **Out of scope (deliberate):**
 - Auto-recalibration of weights or thresholds. Stage 4 produces the
   signal; humans decide on changes. Auto-tuning is a Stage 5
@@ -596,6 +616,11 @@ cannot compute the confidence-vs-outcome correlation it is built for.
   the ingested backtest set after one human-driven recalibration cycle.
 - The analyzer report becomes part of the standard pre-handoff review
   for any module-touch handoff.
+
+**Remaining gate before marking resolved:** supply a real outcome file under
+`data/outcomes/`, run the backfill, record at least one real alignment row,
+and review the analyzer output for human tuning candidates. No
+auto-recalibration should run as part of that gate.
 
 **Sequencing note:** Stage 4 can sensibly run *after* Phase 4b (Scout) —
 Scout will benefit from Stages 1–3 but doesn't strictly need Loop 1
@@ -2414,6 +2439,32 @@ adapter that still records cost/telemetry through the shared surfaces.
 Keep the existing validation pipeline intact.
 
 ### Low
+
+#### 2026-04-28 — Add optional `/admin` visibility for `model_alignment` rows `[size: S-M]` `[impact: Data, Persistence & Feedback]`
+
+**Severity:** Low-medium — helpful owner visibility, but not required for
+Stage 4 v1 because the CLI/JSON analyzer already reads persisted alignment
+rows.
+
+**Files:**
+- [api/admin_metrics.py](api/admin_metrics.py) — compose a small alignment
+  summary from `ConversationStore.model_alignment_rows`.
+- [api/main.py](api/main.py) — optional `/api/admin/*` response extension.
+- [web/src/app/admin/page.tsx](web/src/app/admin/page.tsx) — optional small
+  section with underperforming module counts and example turn links.
+
+**Issue:** Stage 4 deferred admin UI to keep the model-accuracy loop focused
+on data correctness: outcome ingestion, `model_alignment`, receiver hooks,
+and analyzer reporting. The owner can inspect alignment through
+`python -m briarwood.feedback.model_alignment_analyzer`, but `/admin` does
+not yet show the same summary.
+
+**Suggested fix:** Add a compact read-only panel once real alignment rows
+exist. Keep it to counts, miss rates, and top examples; do not redesign the
+dashboard and do not fold in Phase 4c card work.
+
+**Out of scope** until at least one real outcome file has been backfilled and
+the analyzer has non-synthetic rows to display.
 
 #### 2026-04-28 — Automate public-record outcome ingestion after Stage 4 manual loop `[size: M]` `[impact: Data, Persistence & Feedback]`
 

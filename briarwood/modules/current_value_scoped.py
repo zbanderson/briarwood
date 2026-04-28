@@ -69,4 +69,16 @@ def run_current_value(context: ExecutionContext) -> dict[str, object]:
         ).model_dump()
 
 
-__all__ = ["run_current_value"]
+def receive_feedback(session_id: str, signal: dict[str, object]) -> dict[str, object]:
+    """Record current-value confidence-vs-outcome alignment.
+
+    Stage 4 feedback is record-only: it writes alignment evidence and never
+    changes valuation weights, thresholds, prompts, or module behavior.
+    """
+
+    from briarwood.eval.alignment import receive_feedback_for_module
+
+    return receive_feedback_for_module("current_value", session_id, dict(signal))
+
+
+__all__ = ["receive_feedback", "run_current_value"]

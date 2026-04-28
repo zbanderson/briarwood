@@ -145,6 +145,13 @@ payload = run_valuation(context)
 
 ## Changelog
 
+### 2026-04-28 (AI-Native Foundation Stage 4)
+- Added `receive_feedback(session_id, signal)` as a record-only Stage 4
+  feedback hook. It records valuation confidence-vs-sale-outcome alignment
+  through `model_alignment` when given a module payload and a sale-price
+  outcome; it does not recalibrate weights, thresholds, prompts, or module
+  behavior.
+
 ### 2026-04-28
 - Contract change: `pricing_view` now uses the shared deterministic value-position classifier in `briarwood/decision_model/value_position.py`, aligning valuation output with editor checks and claim verdict labels.
 - Added `pricing_view_confidence` and `pricing_view_confidence_band` to valuation metrics.

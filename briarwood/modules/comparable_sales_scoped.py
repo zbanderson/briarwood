@@ -70,4 +70,16 @@ def run_comparable_sales(context: ExecutionContext) -> dict[str, object]:
         ).model_dump()
 
 
-__all__ = ["run_comparable_sales"]
+def receive_feedback(session_id: str, signal: dict[str, object]) -> dict[str, object]:
+    """Record comparable-sales confidence-vs-outcome alignment.
+
+    Stage 4 feedback is record-only: it writes alignment evidence and never
+    changes comp weights, thresholds, prompts, or module behavior.
+    """
+
+    from briarwood.eval.alignment import receive_feedback_for_module
+
+    return receive_feedback_for_module("comparable_sales", session_id, dict(signal))
+
+
+__all__ = ["receive_feedback", "run_comparable_sales"]

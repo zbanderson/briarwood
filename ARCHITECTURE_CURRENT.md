@@ -363,6 +363,42 @@ substrate above (Stages 1+2) gained a read-side UI with
   note tag renders highlighted as the closure-loop audit affordance
   from Stage 2). Unlinked from the main UI by design.
 
+**Stage 4 — Model-accuracy loop substrate (added 2026-04-28).** The
+model-accuracy loop now has a manual outcome-ingestion path and a durable
+alignment store. Real outcome data still has to be supplied and backfilled
+before the loop has live rows to review.
+
+- **Outcome loader** in [briarwood/eval/outcomes.py](briarwood/eval/outcomes.py).
+  Loads manual CSV/JSONL files under the Stage 4 outcome contract:
+  `property_id`, `address`, `outcome_type="sale_price"`, `outcome_value`,
+  `outcome_date`, `source`, `source_ref`, `confidence`, `notes`. Matching is
+  strict: exact `property_id` first, normalized address second; ambiguous
+  rows are reported rather than guessed.
+- **Outcome CLIs** in [scripts/ingest_outcomes.py](scripts/ingest_outcomes.py)
+  and [scripts/backfill_outcomes.py](scripts/backfill_outcomes.py). The
+  ingest script validates rows and reports errors/duplicates. The backfill
+  script attaches outcome objects to matching
+  `data/learning/intelligence_feedback.jsonl` rows, preserves a `.bak`, and
+  refuses to overwrite non-null outcomes unless explicitly requested.
+- **`model_alignment` table** in [`data/web/conversations.db`](api/store.py).
+  Declared in `ConversationStore._init_schema`; insert/read helpers are
+  `insert_model_alignment` and `model_alignment_rows`. Rows carry
+  `module_name`, prediction, confidence, sale outcome, absolute error,
+  absolute percentage error, alignment score, high-confidence flag,
+  underperformance flag, and JSON evidence.
+- **Record-only receiver hooks** on
+  [briarwood/modules/current_value_scoped.py](briarwood/modules/current_value_scoped.py),
+  [briarwood/modules/valuation.py](briarwood/modules/valuation.py), and
+  [briarwood/modules/comparable_sales_scoped.py](briarwood/modules/comparable_sales_scoped.py).
+  Each exposes `receive_feedback(session_id, signal)` and writes alignment
+  evidence when given a module payload and sale-price outcome. These hooks do
+  not change weights, thresholds, prompts, or module behavior.
+- **Alignment analyzer** at
+  [briarwood/feedback/model_alignment_analyzer.py](briarwood/feedback/model_alignment_analyzer.py).
+  Reports rows scored by module, mean absolute percentage error,
+  high-confidence underperformance rates, top examples, and human-review
+  tuning candidates. There is no auto-tuning path.
+
 **Deferred follow-ons:**
 - (Stage 1) JSONL rotation/compaction policy (file under operational
   backlog when size becomes an issue); top-level analytic query
@@ -376,6 +412,9 @@ substrate above (Stages 1+2) gained a read-side UI with
   hundred MB; real auth on the admin surface (currently env-gate
   only); chart-library swap (bound to Phase 4c UI reconstruction
   per §3.4.7).
+- (Stage 4) Run against real outcome data; optional `/admin` panel for
+  alignment summaries; public-record outcome automation after the manual
+  loop proves useful.
 
 ## Known Rough Edges
 

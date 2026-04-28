@@ -85,11 +85,13 @@ The latest documented work centers on:
   feedback loop, and `/admin` read-side dashboard
 - Phase 4a CMA closeout: live SOLD/ACTIVE comp support and
   SearchApi-backed `rent_zestimate` substrate
-- AI-Native Stage 4 planning: `STAGE4_HANDOFF_PLAN.md` is approved for
-  planning and implementation has not started. The old Scout/docs batch
-  is committed as `c8b6b0d`; Stage 4 should be a separate change boundary
-- remaining post-Scout sequence work: implement AI-Native Stage 4
-  model-accuracy loop, then Phase 4c BROWSE summary card rebuild
+- AI-Native Stage 4 implementation substrate: manual outcome loader,
+  outcome backfill, `model_alignment` table, record-only feedback hooks
+  for `current_value` / `valuation` / `comparable_sales`, and analyzer
+  reporting are landed. Real outcome data still needs to be supplied and
+  run through the backfill before human tuning candidates can be reviewed
+- remaining post-Scout sequence work: run Stage 4 against real outcome
+  data, then Phase 4c BROWSE summary card rebuild
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued
 fixes. Do not rely on this summary when exact details matter.

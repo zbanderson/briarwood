@@ -1,7 +1,9 @@
 # AI-Native Foundation Stage 4 - Close The Model-Accuracy Loop
 
-**Status:** Approved for handoff planning, 2026-04-28. Implementation not
-started. Do not implement until the owner explicitly asks to proceed.
+**Status:** Implementation substrate landed 2026-04-28. Outcome ingestion,
+backfill, `model_alignment`, receiver hooks, and analyzer reporting are
+implemented. Real outcome data still needs to be supplied and run through the
+backfill before human tuning candidates can be reviewed against live rows.
 **Size:** M-L (~1-2 handoffs; recommended 5 cycles + closeout).
 **Sequence position:** Step 5 of [`ROADMAP.md`](ROADMAP.md) section 1. Phase 4b
 Scout is complete as of 2026-04-28; Phase 4c BROWSE summary rebuild stays
@@ -195,7 +197,7 @@ human-reviewed later. They should not silently change module weights.
 
 ### Cycle 1 - Ground-truth ingestion + loader
 
-**Status:** Draft.
+**Status:** Landed 2026-04-28.
 
 **Scope.**
 - Add a small outcome loader module, recommended:
@@ -218,7 +220,8 @@ sample template committed.
 
 ### Cycle 2 - One-shot backfill into JSONL and persisted turn rows
 
-**Status:** Draft.
+**Status:** Landed 2026-04-28 for JSONL backfill. Persisted turn rows are not
+mutated; `model_alignment` rows are the durable store.
 
 **Scope.**
 - Add `scripts/backfill_outcomes.py` or extend the existing
@@ -242,7 +245,7 @@ sample template committed.
 
 ### Cycle 3 - `model_alignment` table + module feedback receivers
 
-**Status:** Draft.
+**Status:** Landed 2026-04-28.
 
 **Scope.**
 - Add `model_alignment` schema and a safe insert/query API on
@@ -277,7 +280,7 @@ sample template committed.
 
 ### Cycle 4 - Analyzer report for underperforming high-confidence calls
 
-**Status:** Draft.
+**Status:** Landed 2026-04-28.
 
 **Scope.**
 - Extend `briarwood/feedback/analyzer.py` or add a sibling
@@ -304,7 +307,8 @@ sample template committed.
 
 ### Cycle 5 - Optional admin read surface, minimal only
 
-**Status:** Draft.
+**Status:** Deferred. CLI/JSON analyzer output closes the v1 read path; admin
+alignment visibility is tracked as lower-priority follow-up work.
 
 **Scope.**
 - If the owner wants Stage 4 visible in `/admin`, add a small read-only
@@ -323,7 +327,7 @@ sample template committed.
 
 ### Cycle 6 - Closeout docs + review pause
 
-**Status:** Draft.
+**Status:** Landed 2026-04-28.
 
 **Scope.**
 - Update [`ROADMAP.md`](ROADMAP.md) section 3.1 Stage 4 and section 1 only after the code

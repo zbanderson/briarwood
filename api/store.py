@@ -99,6 +99,32 @@ class ConversationStore:
                     ON feedback(conversation_id, created_at);
                 CREATE INDEX IF NOT EXISTS feedback_rating_idx
                     ON feedback(rating, created_at);
+                CREATE TABLE IF NOT EXISTS model_alignment (
+                    id TEXT PRIMARY KEY,
+                    turn_trace_id TEXT REFERENCES turn_traces(turn_id) ON DELETE SET NULL,
+                    conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+                    property_id TEXT,
+                    module_name TEXT NOT NULL,
+                    predicted_value REAL,
+                    predicted_label TEXT,
+                    confidence REAL,
+                    outcome_type TEXT NOT NULL,
+                    outcome_value REAL,
+                    outcome_date TEXT,
+                    absolute_error REAL,
+                    absolute_pct_error REAL,
+                    alignment_score REAL,
+                    high_confidence INTEGER NOT NULL DEFAULT 0,
+                    underperformed INTEGER NOT NULL DEFAULT 0,
+                    evidence TEXT NOT NULL,
+                    created_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS model_alignment_module_idx
+                    ON model_alignment(module_name, created_at);
+                CREATE INDEX IF NOT EXISTS model_alignment_turn_idx
+                    ON model_alignment(turn_trace_id);
+                CREATE INDEX IF NOT EXISTS model_alignment_property_idx
+                    ON model_alignment(property_id);
                 """
             )
             # Idempotent forward-only migrations on the messages table.
@@ -481,6 +507,100 @@ class ConversationStore:
                 (turn_id,),
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def insert_model_alignment(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Insert one model-vs-outcome alignment row.
+
+        This is the durable read path for Stage 4's model-accuracy loop. The
+        caller is responsible for deciding whether failures should be
+        swallowed; direct CLI backfills should usually fail loudly.
+        """
+        record = dict(row)
+        record.setdefault("id", _new_id())
+        record.setdefault("created_at", _now_ms())
+        evidence = record.get("evidence")
+        if not isinstance(evidence, str):
+            evidence = json.dumps(evidence or {}, sort_keys=True, default=str)
+        with self._conn() as conn:
+            conn.execute(
+                """INSERT INTO model_alignment (
+                       id, turn_trace_id, conversation_id, property_id,
+                       module_name, predicted_value, predicted_label,
+                       confidence, outcome_type, outcome_value, outcome_date,
+                       absolute_error, absolute_pct_error, alignment_score,
+                       high_confidence, underperformed, evidence, created_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    record["id"],
+                    record.get("turn_trace_id"),
+                    record.get("conversation_id"),
+                    record.get("property_id"),
+                    record["module_name"],
+                    record.get("predicted_value"),
+                    record.get("predicted_label"),
+                    record.get("confidence"),
+                    record["outcome_type"],
+                    record.get("outcome_value"),
+                    record.get("outcome_date"),
+                    record.get("absolute_error"),
+                    record.get("absolute_pct_error"),
+                    record.get("alignment_score"),
+                    int(bool(record.get("high_confidence"))),
+                    int(bool(record.get("underperformed"))),
+                    evidence,
+                    int(record["created_at"]),
+                ),
+            )
+        record["evidence"] = evidence
+        return record
+
+    def model_alignment_rows(
+        self,
+        *,
+        module_name: str | None = None,
+        since_ms: int | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Read model-alignment rows for reports and admin summaries."""
+        clauses: list[str] = []
+        params: list[Any] = []
+        if module_name:
+            clauses.append("module_name = ?")
+            params.append(module_name)
+        if since_ms is not None:
+            clauses.append("created_at >= ?")
+            params.append(int(since_ms))
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        limit_clause = ""
+        if limit is not None:
+            limit_clause = " LIMIT ?"
+            params.append(int(limit))
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"""SELECT id, turn_trace_id, conversation_id, property_id,
+                           module_name, predicted_value, predicted_label,
+                           confidence, outcome_type, outcome_value,
+                           outcome_date, absolute_error, absolute_pct_error,
+                           alignment_score, high_confidence, underperformed,
+                           evidence, created_at
+                    FROM model_alignment
+                    {where}
+                    ORDER BY created_at DESC{limit_clause}""",
+                tuple(params),
+            ).fetchall()
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            record = dict(row)
+            raw = record.get("evidence")
+            if raw:
+                try:
+                    record["evidence"] = json.loads(raw)
+                except (TypeError, json.JSONDecodeError):
+                    pass
+            record["high_confidence"] = bool(record.get("high_confidence"))
+            record["underperformed"] = bool(record.get("underperformed"))
+            out.append(record)
+        return out
 
     def insert_turn_trace(self, manifest: dict[str, Any]) -> None:
         """Persist a finalized TurnManifest dict (from

@@ -153,6 +153,13 @@ payload = run_comparable_sales(context)
 
 ## Changelog
 
+### 2026-04-28 (AI-Native Foundation Stage 4)
+- Added `receive_feedback(session_id, signal)` as a record-only Stage 4
+  feedback hook. It records comparable-sales confidence-vs-sale-outcome
+  alignment through `model_alignment` when given a module payload and a
+  sale-price outcome; it does not recalibrate comp weights, thresholds,
+  prompts, or module behavior.
+
 ### 2026-04-28 (CMA Phase 4a Cycle 6 — claims graft now routes through scoped runner)
 - **Downstream consumer change (no contract change for this module):** [`briarwood/claims/pipeline.py`](../claims/pipeline.py)`:62-114` (`_inject_comparable_sales`) now calls `run_comparable_sales(context)` instead of instantiating `ComparableSalesModule()` directly. The graft repackages this module's `data.legacy_payload` as a `ComparableSalesOutput` pydantic instance under `outputs["comparable_sales"]["payload"]` so the verdict_with_comparison synthesizer's `payload.comps_used` access path is preserved. Field-name stability invariant (preserved by `module_payload_from_legacy_result`) made this a one-line shape adapter rather than a contract rewrite.
 - **Why:** the claims wedge was the last out-of-`modules/` caller still instantiating `ComparableSalesModule` directly. Composite consumers under `modules/` (`renovation_scenario`, `teardown_scenario`, `unit_income_offset`, `hybrid_value`, `current_value`) continue to instantiate the legacy module internally — that's the intentional in-process composition pattern, separate from the post-hoc-graft pattern this change retires. Closes ROADMAP §4 Low *Retire the ad-hoc ComparableSalesModule() graft*.

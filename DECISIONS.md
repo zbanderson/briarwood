@@ -2536,3 +2536,72 @@ separate change boundary.
 **Cross-references.** [`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and
 §3.1 Stage 4; [`design_doc.md`](design_doc.md) §3.4 and §7;
 AI-Native Foundation Stage 1-3 closeouts; Phase 4b Scout Cycle 7 closeout.
+
+---
+
+## 2026-04-28 — AI-Native Foundation Stage 4 implementation substrate landed
+
+**Decision.** Stage 4 implementation substrate landed on 2026-04-28. The
+model-accuracy loop now has manual outcome ingestion, one-shot JSONL
+backfill, durable `model_alignment` persistence, record-only feedback hooks
+for the highest-confidence valuation modules, and a CLI/JSON analyzer. It
+does not auto-tune and it does not require Phase 4c UI work.
+
+**What landed.**
+- `briarwood/eval/outcomes.py` — manual CSV/JSONL loader for sale-price
+  outcomes with row-level validation, duplicate-key reporting, strict
+  `property_id` / normalized-address matching, and no public-record
+  automation.
+- `scripts/ingest_outcomes.py` — report-only validation CLI for outcome
+  files.
+- `scripts/backfill_outcomes.py` — one-shot JSONL backfill for
+  `data/learning/intelligence_feedback.jsonl`, with `.bak`, `--dry-run`,
+  no overwrite of non-null outcomes unless explicitly requested, and safe
+  unmatched/corrupt-line reporting.
+- `api/store.py` — new `model_alignment` table plus
+  `insert_model_alignment` and `model_alignment_rows` helpers.
+- `briarwood/eval/alignment.py` — alignment scoring helpers with named
+  thresholds: high confidence at `>=0.75`, underperformance at `>=10%`
+  absolute percentage error, and zero alignment score at `>=20%` error.
+- `briarwood/modules/current_value_scoped.py`,
+  `briarwood/modules/valuation.py`, and
+  `briarwood/modules/comparable_sales_scoped.py` — record-only
+  `receive_feedback(session_id, signal)` hooks that write alignment rows
+  when given a module payload and sale-price outcome. Module READMEs were
+  updated for the new hook contract.
+- `briarwood/feedback/model_alignment_analyzer.py` — analyzer report for
+  rows scored by module, mean absolute percentage error, high-confidence
+  miss rates, top examples, and human-review tuning candidates.
+
+**Deferred / explicitly not landed.**
+- Real outcome data was not added. The next gate is to supply a
+  `data/outcomes/` file and run the backfill to create live alignment rows.
+- `/admin` alignment visibility was deferred; CLI/JSON analyzer output is
+  the v1 read side. A low-priority ROADMAP item tracks optional admin
+  visibility after real rows exist.
+- Public-record outcome automation was deferred and remains a lower-priority
+  follow-up after the manual loop proves useful.
+- No module weights, thresholds, prompts, or semantic labels were changed.
+
+**Verification.** Focused checks passed:
+`tests/test_stage4_outcomes.py`, `tests/test_stage4_alignment.py`,
+`tests/test_api_turn_traces.py`, `tests/test_api_feedback.py`,
+`tests/test_api_admin.py`, `tests/modules/test_current_value_isolated.py`,
+`tests/modules/test_valuation_isolated.py`,
+`tests/modules/test_comparable_sales_isolated.py`, and
+`tests/test_feedback_loop.py`. The first sandboxed `test_feedback_loop`
+run failed because the existing learned-keywords test writes to
+`data/learning/learned_keywords.json`; rerunning with approved filesystem
+access passed. Pytest cache warnings in sandbox runs were expected and did
+not affect assertions.
+
+**Remaining gate before resolving Stage 4.** Supply a real outcome file,
+run `scripts/backfill_outcomes.py`, record at least one live
+`model_alignment` row, and review
+`python -m briarwood.feedback.model_alignment_analyzer` output for human
+tuning candidates. Auto-recalibration remains out of scope.
+
+**Cross-references.** [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and §3.1 Stage 4;
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) Persistence;
+[`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) Feedback / model-accuracy cluster.

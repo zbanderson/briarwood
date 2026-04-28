@@ -214,6 +214,29 @@ Cross-reference: [`PERSISTENCE_HANDOFF_PLAN.md`](PERSISTENCE_HANDOFF_PLAN.md),
 [`DASHBOARD_HANDOFF_PLAN.md`](DASHBOARD_HANDOFF_PLAN.md),
 [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence".
 
+### Model-accuracy feedback loop?
+
+**Substrate landed 2026-04-28; live outcome run still open.** AI-Native
+Foundation Stage 4 added the mechanics Loop 1 was missing:
+
+- Manual sale-price outcome ingestion in
+  [briarwood/eval/outcomes.py](briarwood/eval/outcomes.py), with dry-run
+  validation via [scripts/ingest_outcomes.py](scripts/ingest_outcomes.py).
+- One-shot JSONL outcome backfill via
+  [scripts/backfill_outcomes.py](scripts/backfill_outcomes.py).
+- Durable per-module `model_alignment` rows in
+  [api/store.py](api/store.py), storing prediction, confidence, actual
+  outcome, absolute error, absolute percentage error, alignment score, and
+  high-confidence underperformance flags.
+- Record-only `receive_feedback(session_id, signal)` hooks on
+  `current_value`, `valuation`, and `comparable_sales`.
+- Analyzer reporting in
+  [briarwood/feedback/model_alignment_analyzer.py](briarwood/feedback/model_alignment_analyzer.py).
+
+Remaining gap: the owner still needs to supply a real `data/outcomes/`
+file and run the backfill so the analyzer can produce live human-review
+tuning candidates. Auto-recalibration remains deliberately absent.
+
 ### Caching?
 
 - Synthesis cache in the orchestrator ([briarwood/orchestrator.py](briarwood/orchestrator.py)).

@@ -52,6 +52,71 @@ notes:
 
 ---
 
+## Feedback / model-accuracy cluster
+
+*"Which high-confidence module calls were wrong against actual outcomes?"*
+
+### model_alignment
+
+```yaml
+name: model_alignment
+path: briarwood/eval/alignment.py
+entry: receive_feedback_for_module(module_name, session_id, signal) -> dict
+intent_fit: []  # offline feedback loop, not user-turn orchestration
+inputs:
+  module_name: current_value | valuation | comparable_sales
+  session_id: str
+  signal:
+    module_payload: dict
+    outcome: sale-price outcome dict
+    turn_trace_id: str | None
+    conversation_id: str | None
+    property_id: str | None
+outputs:
+  status: recorded | skipped
+  row: model_alignment row | None
+  reason: str | None
+depends_on: []
+invariants:
+  - Record-only; never recalibrates weights, thresholds, prompts, or module behavior
+  - Sale-price v1 computes absolute error, absolute pct error, alignment_score, high_confidence, underperformed
+  - high_confidence threshold is 0.75; underperformance threshold is 10% absolute pct error
+blockers_for_tool_use:
+  - Offline feedback/eval surface, not a scoped execution module
+  - Requires externally supplied outcome data; no public-record automation in v1
+notes:
+  - Receivers exposed by current_value, valuation, and comparable_sales scoped modules
+  - Durable store: api.store model_alignment table
+  - Analyzer: briarwood.feedback.model_alignment_analyzer
+```
+
+### outcome_ingestion
+
+```yaml
+name: outcome_ingestion
+path: briarwood/eval/outcomes.py
+entry: load_outcomes(path) -> OutcomeLoadResult
+intent_fit: []  # offline ingestion
+inputs:
+  path: CSV | JSONL manual outcome file
+outputs:
+  records: list[OutcomeRecord]
+  errors: list[OutcomeRowError]
+  duplicate_keys: list[str]
+depends_on: []
+invariants:
+  - Supports sale_price outcomes only in v1
+  - Requires property_id or address plus outcome_value and outcome_date
+  - Strict matching: property_id first, normalized address second; ambiguous rows are reported, not guessed
+blockers_for_tool_use:
+  - Manual outcome file required
+notes:
+  - CLI: scripts/ingest_outcomes.py
+  - JSONL backfill: scripts/backfill_outcomes.py
+```
+
+---
+
 ## Valuation cluster
 
 *"What is it worth right now?"*
