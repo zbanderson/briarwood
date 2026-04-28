@@ -52,7 +52,7 @@ LLM_CANNED: list[tuple[str, AnswerType]] = [
     # Price-analysis phrasings — explicit ask for analysis (not a single fact)
     # routes to DECISION. Added 2026-04-25 after the live-traffic miss where
     # "what is the price analysis for X" was classified as LOOKUP and produced
-    # a one-line factual answer. See FOLLOW_UPS.md and the prompt's
+    # a one-line factual answer. See ROADMAP.md and the prompt's
     # IMPORTANT MAPPINGS section for the full list of analysis triggers.
     ("what is the price analysis for 1008 14th Ave, belmar, nj", AnswerType.DECISION),
     ("analyze the price of 526-west-end-ave", AnswerType.DECISION),

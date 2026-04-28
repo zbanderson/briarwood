@@ -24,7 +24,7 @@ def run_comparable_sales(context: ExecutionContext) -> dict[str, object]:
       - briarwood/modules/hybrid_value.py (reads from prior_results.comparable_sales)
       - briarwood/modules/unit_income_offset.py (reads comparable_sales sub-dict)
       - briarwood/claims/pipeline.py:62-88 (post-hoc graft; retirement is a
-        follow-up, not this handoff — see FOLLOW_UPS.md)
+        follow-up, not this handoff — see ROADMAP.md)
     Preserved keys: ``comparable_value``, ``comp_count``, ``confidence``,
     ``comps_used``, ``rejected_count``, ``direct_value_range``,
     ``income_adjusted_value_range``, ``location_adjustment_range``,
@@ -37,7 +37,7 @@ def run_comparable_sales(context: ExecutionContext) -> dict[str, object]:
     Engine A vs Engine B: this module is the fair-value anchor (saved comps,
     backs ``value_thesis.comps``). It is distinct from the user-facing "CMA"
     tool at briarwood/agent/tools.py:1802 (``get_cma``; live-Zillow first,
-    backs ``session.last_market_support_view``). See FOLLOW_UPS.md 2026-04-24
+    backs ``session.last_market_support_view``). See ROADMAP.md 2026-04-24
     *Two comp engines with divergent quality*.
     """
     try:

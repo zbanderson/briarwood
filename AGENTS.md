@@ -52,6 +52,31 @@ Every executable module must have:
 
 Question depth should dictate module scope. Keep intent, analysis depth, and question focus separate from execution planning.
 
+### AI-Native Engineering
+
+Briarwood is being built as an AI-native company — see `design_doc.md` § 3.4
+for the four principles (Contracts First, Queryable Outputs, Every Action
+Is An Artifact, Closed Feedback Loops) and `ROADMAP.md` for the
+staged buildout. The rules below are the engineering translation a future
+session can verify mechanically.
+
+- Module outputs are `pydantic` (this restates the existing rule under
+  "Engineering Rules" but anchors it to "Contracts First"). Long-form
+  prose belongs only in the synthesizer; intermediate agents return
+  structured data.
+- Every new module declares both a `confidence` field and a provenance
+  field (e.g. `mode`, `warnings`, `extra_data` lineage). If a module
+  legitimately cannot, document why in its README.
+- Every new SSE event type added to `api/events.py` is mirrored in
+  `web/src/lib/chat/events.ts` in the same change. The Python ↔ TypeScript
+  parity is a hard rule — the canonical event protocol must not drift.
+- A "feedback loop" change is incomplete until both the writer and the
+  reader exist. Shipping a write-only signal is not closing a loop. Per
+  `design_doc.md` § 7: a loop is closed only when both paths run.
+- Every persisted artifact (turn manifests, LLM call records, feedback
+  records) has a defined retention and read path. Write-only persistence
+  is dead weight — if no consumer is planned, do not collect.
+
 ## OpenAI Rules
 
 OpenAI usage is allowed only for:

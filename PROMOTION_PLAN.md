@@ -140,7 +140,7 @@ comps only if live is empty. The separation is explicit in
 Engine A drives `value_thesis.comps` (authoritative for fair value);
 Engine B drives `session.last_market_support_view`. Promotion in 2b
 applies to Engine A only. Engine B quality is tracked under
-[FOLLOW_UPS.md](FOLLOW_UPS.md) 2026-04-24 *Two comp engines with
+[ROADMAP.md](ROADMAP.md) 2026-04-24 *Two comp engines with
 divergent quality; CMA (Engine B) needs alpha-quality pass*.
 
 **Consumers of Engine A.**
@@ -536,7 +536,7 @@ That decision depends on which framing best matches how an
 orchestrator LLM would naturally ask the question. Flag as a handoff
 candidate after Handoff 3 completes.
 
-See also [FOLLOW_UPS.md](FOLLOW_UPS.md) *Route local-intelligence
+See also [ROADMAP.md](ROADMAP.md) *Route local-intelligence
 extraction through shared LLM boundary* (2026-04-24) — a separate but
 related quality concern about the subsystem's direct-OpenAI extraction
 path.
@@ -660,7 +660,7 @@ through the dead aggregator today.
 - [DECISIONS.md](DECISIONS.md) 2026-04-24 — *property_data_quality
   output schema mismatch in audit docs* (same drift pattern as the
   nine entries reconciled in Handoff 2a Piece 6).
-- [FOLLOW_UPS.md](FOLLOW_UPS.md) 2026-04-24 — *Two comp engines with
+- [ROADMAP.md](ROADMAP.md) 2026-04-24 — *Two comp engines with
   divergent quality; CMA (Engine B) needs alpha-quality pass* (surfaces
   the Engine A / Engine B split discovered during `comparable_sales`
   discussion and scopes the quality audit as its own handoff).
@@ -676,7 +676,7 @@ through the dead aggregator today.
    PROMOTE, confirm no existing module README already promises a
    contract that Handoff 3 would violate. For each KEEP, confirm the
    scoped wrapper README that covers the helper is accurate.
-3. **DECISIONS.md and FOLLOW_UPS.md drafts landed.** See "Associated
+3. **DECISIONS.md and ROADMAP.md drafts landed.** See "Associated
    entries" above.
 4. **Regression gate.** The existing test suite passes unchanged —
    this session writes no application code.
@@ -689,7 +689,7 @@ through the dead aggregator today.
 
 ## Open items NOT in this plan (flagged for later handoffs)
 
-- **CMA-quality audit** (Engine A + Engine B) — FOLLOW_UPS.md entry
+- **CMA-quality audit** (Engine A + Engine B) — ROADMAP.md entry
   landed; needs its own handoff after promotion is complete.
 - **Replacement-cost tool** — still open per DECISIONS.md 2026-04-24.
   Deprecation of `calculate_final_score` retires the orphan constant
@@ -772,7 +772,7 @@ OUT of scope and explicitly untouched: `property_data_quality`,
 documentation — Handoff 5). CMA Engine B quality audit (own handoff).
 Town-intelligence elevation (own handoff).
 
-Also see [FOLLOW_UPS.md](FOLLOW_UPS.md) 2026-04-24 "Decision sessions
+Also see [ROADMAP.md](ROADMAP.md) 2026-04-24 "Decision sessions
 should grep-verify caller claims in real time" — a process note
 recommending future decision sessions attach grep evidence to each
 classification that hinges on caller topology, to prevent the kind of
@@ -800,7 +800,7 @@ sequence (dependency order, simplicity-first, disambiguation pairs adjacent):
    `location_intelligence_scoped.py`; missing-input semantics preserved.
 7. **comparable_sales** (entry 1) — standalone scoped wrapper
    `comparable_sales_scoped.py`; hybrid-decomposition field names preserved;
-   FOLLOW_UPS.md entry added for retiring `claims/pipeline.py:62-88` graft.
+   ROADMAP.md entry added for retiring `claims/pipeline.py:62-88` graft.
 8. **hybrid_value** (entry 2) — composite scoped wrapper
    `hybrid_value_scoped.py` with canonical missing-priors contract;
    `is_hybrid=False` short-circuit preserved as valid non-error payload.

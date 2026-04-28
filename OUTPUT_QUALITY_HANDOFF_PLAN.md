@@ -23,7 +23,7 @@ The fix is two complementary moves:
 1. **Consolidate per-tool execution into one chat-tier plan per turn** (so all relevant modules' outputs are co-resident).
 2. **Add a Layer 3 LLM synthesizer** (so the prose layer has access to the full unified output, not a fragmented slice).
 
-Detailed diagnostic in [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9. Architectural decision in [DECISIONS.md](DECISIONS.md) "Chat-tier fragmented execution" 2026-04-25. Action items in [FOLLOW_UPS.md](FOLLOW_UPS.md) entries dated 2026-04-25.
+Detailed diagnostic in [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §9. Architectural decision in [DECISIONS.md](DECISIONS.md) "Chat-tier fragmented execution" 2026-04-25. Action items in [ROADMAP.md](ROADMAP.md) entries dated 2026-04-25.
 
 ---
 
@@ -40,7 +40,7 @@ Detailed diagnostic in [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY
 - `api/main.py` — chat endpoint wraps every turn in `start_turn`/`end_turn`
 - `api/pipeline_adapter.py` — `loop.run_in_executor` calls wrapped in `in_active_context`
 - `briarwood/agent/README_dispatch.md` — orchestrator-coupling correction
-- `DECISIONS.md` + `FOLLOW_UPS.md` — session entries
+- `DECISIONS.md` + `ROADMAP.md` — session entries
 - `AUDIT_OUTPUT_QUALITY_2026-04-25.md` (new) — full audit doc with §9 live findings
 - This file — the handoff plan
 
@@ -62,7 +62,7 @@ python scripts/dev_chat.py
 
 ### Cycle 1 — Promote `comparable_sales` to the scoped registry — LANDED 2026-04-25 (narrowed)
 
-**Status update (2026-04-25):** When this plan was drafted, the registry-promotion premise was already stale — `comparable_sales` had been promoted in commit `37df9f8` (Handoff 3, 2026-04-24). Discovered during Cycle 1 execution; flagged per CLAUDE.md "surface contradictions, do not silently reconcile." Cycle 1 was narrowed (Option B from the cycle-execution discussion) to the two cleanup items that remained, and the graft retirement was deferred to its own existing FOLLOW_UPS entry.
+**Status update (2026-04-25):** When this plan was drafted, the registry-promotion premise was already stale — `comparable_sales` had been promoted in commit `37df9f8` (Handoff 3, 2026-04-24). Discovered during Cycle 1 execution; flagged per CLAUDE.md "surface contradictions, do not silently reconcile." Cycle 1 was narrowed (Option B from the cycle-execution discussion) to the two cleanup items that remained, and the graft retirement was deferred to its own existing ROADMAP entry.
 
 **What landed (commit `2cb1f3e`):**
 - `MODULE_CACHE_FIELDS["comparable_sales"]` added to [`briarwood/execution/executor.py`](briarwood/execution/executor.py). Mirrors `valuation`'s property-field set; rent assumptions (`back_house_monthly_rent`, `unit_rents`) included for the income-adjusted hybrid decomposition; `market` intentionally empty (comparable_sales consumes market_value_history transitively via its internal MarketValueHistoryModule).
@@ -73,7 +73,7 @@ python scripts/dev_chat.py
 - [`briarwood/modules/README_comparable_sales.md`](briarwood/modules/README_comparable_sales.md) and [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) already documented the scoped path. Done in Handoff 3.
 
 **What was deferred (not blocking Cycle 2):**
-- Graft retirement at [`briarwood/claims/pipeline.py:62-88`](briarwood/claims/pipeline.py#L62-L88). Requires updates to [`briarwood/claims/synthesis/verdict_with_comparison.py:413-425`](briarwood/claims/synthesis/verdict_with_comparison.py#L413-L425) `_iter_comps` because the scoped runner emits `ModulePayload.data.legacy_payload.comps_used` while the graft writes the legacy `payload.comps_used` shape. Tracked as the standalone FOLLOW_UPS entry *"Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py"* 2026-04-24.
+- Graft retirement at [`briarwood/claims/pipeline.py:62-88`](briarwood/claims/pipeline.py#L62-L88). Requires updates to [`briarwood/claims/synthesis/verdict_with_comparison.py:413-425`](briarwood/claims/synthesis/verdict_with_comparison.py#L413-L425) `_iter_comps` because the scoped runner emits `ModulePayload.data.legacy_payload.comps_used` while the graft writes the legacy `payload.comps_used` shape. Tracked as the standalone ROADMAP entry *"Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py"* 2026-04-24.
 
 **Cycle 2 unblocked.** Cycle 2 ("Consolidated chat-tier orchestrator entry") can now invoke `run_comparable_sales` via the executor as planned — that was Cycle 1's only true blocker.
 
@@ -89,12 +89,12 @@ python scripts/dev_chat.py
 - New module [`briarwood/execution/module_sets.py`](briarwood/execution/module_sets.py) — `ANSWER_TYPE_MODULE_SETS` keyed by `AnswerType` plus a `modules_for_answer_type` helper.
 - New function `run_chat_tier_analysis(...)` in [`briarwood/orchestrator.py`](briarwood/orchestrator.py).
 - 8 new tests in `tests/test_orchestrator.py::RunChatTierAnalysisTests` pinning the per-AnswerType module-set membership, the LOOKUP / CHITCHAT short-circuit, the once-per-turn invariant, and the explicit-vs-synthesized parser_output paths.
-- New FOLLOW_UPS entry "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25 (the reason Cycle 2 ships with `parallel=False` default — the concurrency bug surfaced when the new function exercised the parallel executor with a non-trivial dependency level).
+- New ROADMAP entry "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25 (the reason Cycle 2 ships with `parallel=False` default — the concurrency bug surfaced when the new function exercised the parallel executor with a non-trivial dependency level).
 
 **Open design decisions (resolved):**
 1. Separate function vs. parameter on `run_briarwood_analysis_with_artifacts` → **separate.** `run_chat_tier_analysis` is ~70 lines and reuses the existing helpers; folding it would have duplicated the LOOKUP short-circuit and the synthetic-parser-output handling into the existing function's caller path.
 2. `ANSWER_TYPE_MODULE_SETS` location → **new file** at `briarwood/execution/module_sets.py`, single-responsibility.
-3. Parallel by default → **NO for Cycle 2.** The bug above blocks it. Default is `parallel=False`; flip once the wrapper is fixed (FOLLOW_UPS entry).
+3. Parallel by default → **NO for Cycle 2.** The bug above blocks it. Default is `parallel=False`; flip once the wrapper is fixed (ROADMAP entry).
 5. Properties not pre-computed → punted to Cycle 3 testing per the open-decisions list.
 6. Module sets are starting points → reaffirmed in the new `module_sets.py` docstring.
 
@@ -166,7 +166,7 @@ python scripts/dev_chat.py
 - All existing tests still green (`tests/`).
 - Run `BRIARWOOD_TRACE=1` against a fixture in isolation (no handler wiring yet) — expect to see one consolidated plan run.
 
-**Trace:** [FOLLOW_UPS.md](FOLLOW_UPS.md) "Consolidate chat-tier execution" 2026-04-25 step 2.
+**Trace:** [ROADMAP.md](ROADMAP.md) "Consolidate chat-tier execution" 2026-04-25 step 2.
 
 **Estimate:** 2-3 hours.
 **Risk:** Low — purely additive. No existing call sites change yet.
@@ -223,7 +223,7 @@ python scripts/dev_chat.py
 - Prose may already feel richer because the composer sees full unified output instead of fragments.
 - **PAUSE FOR USER VERIFICATION** before moving to Cycle 4.
 
-**Trace:** [FOLLOW_UPS.md](FOLLOW_UPS.md) "Consolidate chat-tier execution" 2026-04-25 step 3 (rollout to handle_browse first).
+**Trace:** [ROADMAP.md](ROADMAP.md) "Consolidate chat-tier execution" 2026-04-25 step 3 (rollout to handle_browse first).
 
 **Estimate:** 1-2 hours.
 **Risk:** Medium — changes user-facing prose for BROWSE.
@@ -279,7 +279,7 @@ python scripts/dev_chat.py
 - Prose should feel substantively richer — should mention comp-derived value range, location signals, strategy fit, optionality (ADU / multi-unit signals if applicable).
 - **PAUSE FOR USER VERIFICATION.**
 
-**Trace:** [FOLLOW_UPS.md](FOLLOW_UPS.md) "Layer 3 LLM synthesizer" 2026-04-25.
+**Trace:** [ROADMAP.md](ROADMAP.md) "Layer 3 LLM synthesizer" 2026-04-25.
 
 **Estimate:** 2-3 hours.
 **Risk:** Medium — prose quality is the only verification criterion. The prompt may need iteration.
@@ -356,10 +356,10 @@ The fall-through path likely benefits most from this work — it's the legacy DE
 **Status:** Original scope was "general cleanup," but Cycles 1-5 closed several items along the way (the audit-doc reconciliation in Cycle 1, the `get_cma` leak fix between Cycles 4 and 5, and the doc updates after each sub-cycle). Updated scope below tracks what's actually still open.
 
 **Open items:**
-- ~~`presentation_advisor` LLM call: route through `complete_structured_observed` so its ~3s LLM call shows up in the per-turn manifest's `llm_calls` list.~~ **Resolved 2026-04-26.** `advise_visual_surfaces` now goes through `complete_structured_observed(surface="presentation_advisor.advise", ...)`. See [FOLLOW_UPS.md](FOLLOW_UPS.md) "presentation_advisor bypasses the shared LLM observability ledger" 2026-04-25 (Resolved 2026-04-26).
+- ~~`presentation_advisor` LLM call: route through `complete_structured_observed` so its ~3s LLM call shows up in the per-turn manifest's `llm_calls` list.~~ **Resolved 2026-04-26.** `advise_visual_surfaces` now goes through `complete_structured_observed(surface="presentation_advisor.advise", ...)`. See [ROADMAP.md](ROADMAP.md) "presentation_advisor bypasses the shared LLM observability ledger" 2026-04-25 (Resolved 2026-04-26).
 - `tools.py` orphan sweep: identify functions that are no longer called by any handler after Cycle 3+5, mark for deferred removal or delete. Likely candidates: `get_property_brief` (handle_browse uses `build_property_brief` from artifact now), the per-tool runners that handlers replaced. Audit before removing.
-- Per-module cache leak (`confidence`, `legal_confidence`, `risk_model` re-running fresh across turns even when inputs are identical). See [FOLLOW_UPS.md](FOLLOW_UPS.md) "Module-result caching at the per-tool boundary is leaky" 2026-04-25.
-- `in_active_context` concurrency fix so `run_chat_tier_analysis` can default `parallel=True`. See [FOLLOW_UPS.md](FOLLOW_UPS.md) "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25.
+- Per-module cache leak (`confidence`, `legal_confidence`, `risk_model` re-running fresh across turns even when inputs are identical). See [ROADMAP.md](ROADMAP.md) "Module-result caching at the per-tool boundary is leaky" 2026-04-25.
+- `in_active_context` concurrency fix so `run_chat_tier_analysis` can default `parallel=True`. See [ROADMAP.md](ROADMAP.md) "in_active_context is not safe under concurrent thread-pool callers" 2026-04-25.
 
 **Already closed during Cycles 1-5 (no longer in Cycle 6 scope):**
 - ~~Update `briarwood/agent/README_dispatch.md`~~ — done in Cycles 3, 4, 5 doc commits.
@@ -368,7 +368,7 @@ The fall-through path likely benefits most from this work — it's the legacy DE
 
 **Tests:** No new tests beyond the per-fix regression tests in each follow-up resolution.
 
-**Estimate (re-scoped):** 1-2 hours total across the three FOLLOW_UPS items above.
+**Estimate (re-scoped):** 1-2 hours total across the three ROADMAP items above.
 **Risk:** Low for the observability + orphan sweep; Low-Medium for the cache leak (touches `MODULE_CACHE_FIELDS` which affects every chat-tier turn).
 
 ---
@@ -415,7 +415,7 @@ The plan's narrative loop closes: the audit's chat-tier fragmentation diagnosis 
 
 5. **What happens when `run_chat_tier_analysis` is called for a property that hasn't been pre-computed (no saved files)?** The current orchestrator path requires saved properties. The chat-tier path may need to handle "promote unsaved address" first. Verify this code path during Cycle 3 testing.
 
-6. **Per-AnswerType module sets are starting points.** Tune them with traces. The next agent should be willing to update [FOLLOW_UPS.md](FOLLOW_UPS.md) and DECISIONS.md if a module set turns out to be wrong.
+6. **Per-AnswerType module sets are starting points.** Tune them with traces. The next agent should be willing to update [ROADMAP.md](ROADMAP.md) and DECISIONS.md if a module set turns out to be wrong.
 
 ---
 
@@ -445,7 +445,7 @@ into cycles in OUTPUT_QUALITY_HANDOFF_PLAN.md at the repo root. Please:
 1. Run the standard CLAUDE.md orientation: read CLAUDE.md, run the
    readme-discipline drift check, verify ARCHITECTURE_CURRENT /
    GAP_ANALYSIS / TOOL_REGISTRY are present, read DECISIONS.md and
-   FOLLOW_UPS.md in full.
+   ROADMAP.md in full.
 
 2. Read OUTPUT_QUALITY_HANDOFF_PLAN.md end-to-end. That's the canonical
    to-do list for what we're working on.
@@ -474,7 +474,7 @@ That's the opening message. From there, the next Claude has everything it needs 
 
 - Audit doc: [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) (§9 has the live findings)
 - Decisions log: [DECISIONS.md](DECISIONS.md) — search for entries dated `2026-04-25`
-- Follow-ups: [FOLLOW_UPS.md](FOLLOW_UPS.md) — search for entries dated `2026-04-25`
+- Follow-ups: [ROADMAP.md](ROADMAP.md) — search for entries dated `2026-04-25`
 - Module READMEs: `briarwood/modules/README_*.md` — read the ones for modules you're adding to a module set
 - Per-turn manifest: `briarwood/agent/turn_manifest.py` (use `BRIARWOOD_TRACE=1` to see manifests in stderr)
 
@@ -489,7 +489,7 @@ The whole Phase 2 effort is done when:
 3. A PROJECTION turn ("what if we got it for $660 and rented it") references the rental_option / hold_to_rent / opportunity_cost outputs in prose.
 4. A RISK turn ("what could go wrong") names specific risk_model / legal_confidence / location_intelligence findings.
 5. The user's "Briarwood should beat plain Claude at underwriting" bar is met for at least one query type (BROWSE or DECISION). User judgment, not a metric.
-6. All changes traced to FOLLOW_UPS / DECISIONS / this plan. No drive-by fixes.
+6. All changes traced to ROADMAP / DECISIONS / this plan. No drive-by fixes.
 7. README discipline maintained. Each contract change has a dated changelog entry on the affected README.
 8. Tests pass. No regressions in `tests/agent/`, `tests/claims/`, `tests/synthesis/`, `tests/execution/`, `tests/test_orchestrator.py`.
 

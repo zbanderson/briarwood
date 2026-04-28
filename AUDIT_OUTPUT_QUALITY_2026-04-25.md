@@ -2,7 +2,7 @@
 
 **Status:** Phase 1 / read-only diagnostic. No code changes in this handoff.
 **Scope:** Diagnoses three user-reported quality complaints (brain-dump summary, robotic prose, charts that don't explain) and inventories logging gaps so we can detect missing-call problems in the terminal.
-**Out of scope:** Fixes. Recommendations land in [FOLLOW_UPS.md](FOLLOW_UPS.md) or as their own handoff.
+**Out of scope:** Fixes. Recommendations land in [ROADMAP.md](ROADMAP.md) or as their own handoff.
 
 ---
 
@@ -14,7 +14,7 @@ Three structural facts explain almost everything the user is seeing:
 
 2. **The "robotic" phrasing is real.** It comes from f-string templates in `briarwood/synthesis/structured.py` — specifically `_why_this_stance` (lines 655–691), `_what_changes_my_view` (lines 694–714), and `classify_decision_stance` recommendation strings (lines 160–229). Phrases like "A price improvement of about X% would materially improve the setup" are literally hardcoded. The composer LLM (`briarwood/agent/composer.py::complete_and_verify`) does run on most prose-bearing handlers, but it composes prose **on top of** the deterministic structured output — and a verifier (grounding gate) penalizes departure from that structure, so the LLM prose tends to faithfully echo the templates.
 
-3. **Charts don't explain because the Representation Agent only runs on the routed-decision path.** The Layer-4 agent at `briarwood/representation/agent.py` adds `supports_claim` + `why_this_chart` to chart events, but it's invoked **once**, at `api/pipeline_adapter.py:1446`, and only on the routed-decision stream. Browse-tier and other chart-emitting handlers emit chart events directly without explanation. This was already entered as [FOLLOW_UPS.md "Broaden Representation Agent triggering beyond the claims flag"](FOLLOW_UPS.md) — but the connection to the user's complaint had not been drawn.
+3. **Charts don't explain because the Representation Agent only runs on the routed-decision path.** The Layer-4 agent at `briarwood/representation/agent.py` adds `supports_claim` + `why_this_chart` to chart events, but it's invoked **once**, at `api/pipeline_adapter.py:1446`, and only on the routed-decision stream. Browse-tier and other chart-emitting handlers emit chart events directly without explanation. This was already entered as [ROADMAP.md "Broaden Representation Agent triggering beyond the claims flag"](ROADMAP.md) — but the connection to the user's complaint had not been drawn.
 
 A fourth, structural finding emerged during verification:
 
@@ -178,8 +178,8 @@ The Representation Agent is invoked from **exactly one place**: [api/pipeline_ad
 
 Everywhere else — browse-tier "what about X street", search-results panels, projection panels, comp panels — chart events are emitted directly from handler code in `dispatch.py` or from `api/pipeline_adapter.py` template-handlers without ever passing through the Representation Agent. Those events carry `chart_id` and `data` but no `supports_claim` / `why_this_chart`. The frontend has nothing to caption.
 
-### Already in FOLLOW_UPS
-This is exactly [FOLLOW_UPS.md "Broaden Representation Agent triggering beyond the claims flag"](FOLLOW_UPS.md). The connection to the user's complaint is the new evidence: the user is hitting browse-tier or non-routed paths regularly, and those paths can never produce explained charts under the current design.
+### Already in ROADMAP
+This is exactly [ROADMAP.md "Broaden Representation Agent triggering beyond the claims flag"](ROADMAP.md). The connection to the user's complaint is the new evidence: the user is hitting browse-tier or non-routed paths regularly, and those paths can never produce explained charts under the current design.
 
 ### Cited evidence
 - [briarwood/representation/agent.py:189-238](briarwood/representation/agent.py) — `render_events` + `supports_claim`/`why_this_chart` augmentation
@@ -260,12 +260,12 @@ The orchestrator is called from:
 ### 6.2 Tool count drift (15 vs 23)
 [ARCHITECTURE_CURRENT.md](ARCHITECTURE_CURRENT.md) and [TOOL_REGISTRY.md](TOOL_REGISTRY.md) frame the system as having "15 scoped models." The actual count of imported scoped runners in [`briarwood/execution/registry.py:6-28`](briarwood/execution/registry.py) is 23. This is consistent with [DECISIONS.md "Audit docs are drifted"](DECISIONS.md) — flagging here for completeness so the wiring map's reader doesn't trust the audit-doc count.
 
-**Suggested resolution:** [FOLLOW_UPS.md](FOLLOW_UPS.md) entry — mechanical update to ARCHITECTURE_CURRENT.md and TOOL_REGISTRY.md.
+**Suggested resolution:** [ROADMAP.md](ROADMAP.md) entry — mechanical update to ARCHITECTURE_CURRENT.md and TOOL_REGISTRY.md.
 
 ### 6.3 13 modules missing READMEs (READMEs Drift Check, this session)
 [bull_base_bear, local_intelligence, macro_reader, market_analyzer, ownership_economics, property_data_quality, renovation_scenario, rental_ease, risk_constraints, security_model, teardown_scenario, town_aggregation_diagnostics, town_county_outlook]. Most are KEEP-as-internal-helper per [PROMOTION_PLAN.md](PROMOTION_PLAN.md), so they don't need agent-template READMEs — but at least the boundaries are undocumented.
 
-**Suggested resolution:** Out of scope for this audit. Track via [FOLLOW_UPS.md](FOLLOW_UPS.md) if desired.
+**Suggested resolution:** Out of scope for this audit. Track via [ROADMAP.md](ROADMAP.md) if desired.
 
 ---
 
@@ -298,10 +298,10 @@ This is a recommendation, not an action. Awaits user approval.
 
 **D. `BRIARWOOD_TRACE=1` env var.** When set, the LLM ledger records emit to stderr at INFO level in addition to in-memory storage. Lightweight, opt-in, no payload change.
 
-### 7.2 Dependency on FOLLOW_UPS items
+### 7.2 Dependency on ROADMAP items
 
 Maps cleanly onto:
-- [FOLLOW_UPS.md "Add a shared LLM call ledger"](FOLLOW_UPS.md) — partly done (ledger exists in-memory); this would extend it with terminal emission and the per-turn manifest.
+- [ROADMAP.md "Add a shared LLM call ledger"](ROADMAP.md) — partly done (ledger exists in-memory); this would extend it with terminal emission and the per-turn manifest.
 
 ### 7.3 Open questions for user before Phase 2
 
@@ -317,7 +317,7 @@ After Phase 2 logging lands and we've watched it for a turn or two, the candidat
 
 - **Item 1 (brain dump):** Either (a) flip `BRIARWOOD_CLAIMS_ENABLED` on for a curated property allowlist so the wedge runs and the claim renderer rewrites the brain dump, OR (b) build a dedicated post-synthesis "humanizer" LLM call that runs over the verdict event before SSE emission. (a) is cheaper and reuses existing infra; (b) is the more general fix.
 - **Item 2 (robotic prose):** The composer's grounding verifier is probably too tight. Loosening it (already in user-memory `project_llm_guardrails.md` as "LLM guardrails are currently too tight") and giving the composer license to re-frame the structured fields, not just paraphrase them, would reduce the echo problem.
-- **Item 3 (charts):** Generalize the [api/pipeline_adapter.py:1446](api/pipeline_adapter.py) Representation Agent invocation to all chart-emitting paths, not just the routed-decision stream. This is exactly the FOLLOW_UPS entry; it just needs implementation.
+- **Item 3 (charts):** Generalize the [api/pipeline_adapter.py:1446](api/pipeline_adapter.py) Representation Agent invocation to all chart-emitting paths, not just the routed-decision stream. This is exactly the ROADMAP entry; it just needs implementation.
 
 Each is its own scoped change. None of them happens in this audit.
 
@@ -378,7 +378,7 @@ The same BROWSE turn produced 33 module-execution events across at least 5 separ
 Inputs the composer LLM saw on this turn (inferred from the 4.08s `composer.draft` call timing relative to which tools had returned by then):
 - Property summary (address, beds, baths, sqft, asking price)
 - Result of `get_value_thesis` — uses `valuation`, `carry_cost`, possibly `resale_scenario`
-- Result of `get_cma` — Engine B (live-Zillow-preferred) per [FOLLOW_UPS.md](FOLLOW_UPS.md) "Two comp engines"
+- Result of `get_cma` — Engine B (live-Zillow-preferred) per [ROADMAP.md](ROADMAP.md) "Two comp engines"
 - Result of `get_projection` — uses `resale_scenario`, `town_development_index`, `valuation`
 - Result of `get_strategy_fit` — apparently NOT routing through `strategy_classifier` module
 - Result of `get_rent_estimate` — uses `rent_stabilization`, `hold_to_rent`, `rental_option`
@@ -393,7 +393,7 @@ The prose is being asked to reason about a property using ~40% of the structured
 
 ### 9.5 Hidden LLM call: `presentation_advisor`
 
-The 3.0s spent in `get_property_presentation` is almost certainly an LLM call to `presentation_advisor.advise_visual_surfaces`. That call doesn't appear in the manifest's `llm_calls` list because it uses the raw OpenAI client rather than `complete_structured_observed`. Same bug class as the existing [FOLLOW_UPS.md](FOLLOW_UPS.md) "Route local-intelligence extraction through shared LLM boundary" entry — a sibling LLM call site that bypasses the shared infrastructure. Captured as a new follow-up.
+The 3.0s spent in `get_property_presentation` is almost certainly an LLM call to `presentation_advisor.advise_visual_surfaces`. That call doesn't appear in the manifest's `llm_calls` list because it uses the raw OpenAI client rather than `complete_structured_observed`. Same bug class as the existing [ROADMAP.md](ROADMAP.md) "Route local-intelligence extraction through shared LLM boundary" entry — a sibling LLM call site that bypasses the shared infrastructure. Captured as a new follow-up.
 
 ### 9.6 The composer DID fire; the wedge did NOT
 
@@ -403,28 +403,28 @@ Two things the audit's §1.3 wiring map got right and one it got partly wrong:
 - **Right:** The wedge fires only on DECISION (`wedge: null` for BROWSE).
 - **Partly wrong:** The map showed BROWSE as "calls composer." It does — but it ALSO calls 10+ tools.py functions that each invoke the executor. The audit's per-AnswerType table understated how much work each handler does.
 
-### 9.7 The architectural lever — captured in FOLLOW_UPS
+### 9.7 The architectural lever — captured in ROADMAP
 
-Two complementary fixes are now formally tracked in [FOLLOW_UPS.md](FOLLOW_UPS.md):
+Two complementary fixes are now formally tracked in [ROADMAP.md](ROADMAP.md):
 
 1. **"Consolidate chat-tier execution: one plan per turn, intent-keyed module set"** — replace the fragmented per-tool plans with a single consolidated execution plan per chat turn. Module-set keyed by AnswerType. Brings dormant modules online, eliminates duplicate work, produces a real `UnifiedIntelligenceOutput`.
 
 2. **"Layer 3 LLM synthesizer: prose from full UnifiedIntelligenceOutput"** — depends on (1). Replace the composer's narrow-input call with an LLM that reads the full unified output and writes intent-aware prose. Numeric guardrail preserved via existing verifier infrastructure.
 
-Both are captured with file-level anchor points and a rollout plan in FOLLOW_UPS.md. The order is set: consolidation first (without it, the synthesizer has nothing to read), then the synthesizer (without it, even a perfect unified output doesn't reach the user).
+Both are captured with file-level anchor points and a rollout plan in ROADMAP.md. The order is set: consolidation first (without it, the synthesizer has nothing to read), then the synthesizer (without it, even a perfect unified output doesn't reach the user).
 
 ### 9.8 Where this leaves the original four complaints
 
 - **Complaint 1: brain-dump summary** — partly addressed via composer loosening; will be properly fixed by Layer 3 synthesizer reading full output instead of fragmented slices.
 - **Complaint 2: robotic prose** — composer guardrails were tightening output; loosening them (BRIARWOOD_STRICT_STRIP) is half the answer. The other half is feeding the LLM richer structured input — same Layer 3 lever.
 - **Complaint 3: charts don't explain** — Step 2 (Representation Agent generalization) still pending. Independent of the consolidation work.
-- **Complaint 4: model wiring map + logging** — done. The manifest is the diagnostic; the audit doc + DECISIONS.md + FOLLOW_UPS.md are the wiring map.
+- **Complaint 4: model wiring map + logging** — done. The manifest is the diagnostic; the audit doc + DECISIONS.md + ROADMAP.md are the wiring map.
 
 ---
 
 ## Appendix A — Files inspected
 
-- [CLAUDE.md](CLAUDE.md), [DECISIONS.md](DECISIONS.md), [FOLLOW_UPS.md](FOLLOW_UPS.md)
+- [CLAUDE.md](CLAUDE.md), [DECISIONS.md](DECISIONS.md), [ROADMAP.md](ROADMAP.md)
 - [briarwood/agent/README_router.md](briarwood/agent/README_router.md), [README_dispatch.md](briarwood/agent/README_dispatch.md)
 - [briarwood/editor/README.md](briarwood/editor/README.md), [briarwood/synthesis/README.md](briarwood/synthesis/README.md), [briarwood/representation/README.md](briarwood/representation/README.md), [briarwood/claims/README.md](briarwood/claims/README.md)
 - [briarwood/execution/registry.py](briarwood/execution/registry.py)

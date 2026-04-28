@@ -710,7 +710,7 @@ def run_chat_tier_analysis(
     ``parallel`` defaults to ``False`` because the parallel path's
     ``in_active_context`` wrapper currently shares a single
     ``contextvars.Context`` object across pool workers and re-entry from
-    concurrent ``ctx.run`` calls fails. Tracked as the FOLLOW_UPS entry
+    concurrent ``ctx.run`` calls fails. Tracked as the ROADMAP entry
     "Chat-tier consolidation should default parallel=True once
     in_active_context is concurrent-safe" 2026-04-25. Callers that have
     already proven their context-propagation surface single-threaded may

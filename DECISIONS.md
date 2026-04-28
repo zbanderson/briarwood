@@ -251,7 +251,7 @@ whether all 14 carry meaningful logic or some are stubs.
 Orchestration Layer Dispatch bullet now lists all 14 handlers and
 names dispatch as "14 per-AnswerType handler functions." The question
 of whether all 14 carry meaningful logic is deferred — open in
-FOLLOW_UPS.md (not added in this handoff; flag to user if triage is
+ROADMAP.md (not added in this handoff; flag to user if triage is
 desired).
 
 ## 2026-04-24 — Audit docs are drifted
@@ -568,14 +568,14 @@ which happens only during a real provider call.
 
 This is the same class of blind spot catalogued in the 2026-04-24
 "Decision sessions should grep-verify caller claims in real time"
-entry in FOLLOW_UPS.md — decision-by-reading without mechanical
+entry in ROADMAP.md — decision-by-reading without mechanical
 verification. The analogous lesson for handoff completion: any handoff
 that claims to extend the live classifier contract needs a smoke test
 that hits the real `complete_structured` path at least once (against a
 staged provider, not a mock), because unit mocks cannot exercise the
 Pydantic-schema → provider-strict-validation boundary that is exactly
 where this bug lived. Cross-referenced as process evidence for that
-FOLLOW_UPS entry.
+ROADMAP entry.
 
 ### Fix artefacts
 
@@ -587,7 +587,7 @@ FOLLOW_UPS entry.
   added to `LLMClassifyTests`.
 - `tests/test_intent_contract.py` — `_ScriptedLLM` updated.
 - `tests/agent/test_rendering.py` — `_VisualizeLLM` updated.
-- FOLLOW_UPS.md — dated entry for stripping the now-unreachable
+- ROADMAP.md — dated entry for stripping the now-unreachable
   `or PersonaType.UNKNOWN` / `or UseCaseType.UNKNOWN` guards in
   `_classification_user_type` (left in place this commit to keep the
   bug-fix surgical).
@@ -730,7 +730,7 @@ boundary cases. 17/17 router tests green.
 Surfaced during 2026-04-25 output-quality audit handoff. Cross-ref
 [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md)
 and the live-miss trace in
-[FOLLOW_UPS.md](FOLLOW_UPS.md) "Audit router classification boundaries".
+[ROADMAP.md](ROADMAP.md) "Audit router classification boundaries".
 
 ---
 
@@ -788,7 +788,7 @@ context propagation, and the `traced_tool` decorator.
 **Cross-references.** Implements the per-turn manifest from
 [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §7. Extends the existing in-memory LLM ledger
 (`briarwood/agent/llm_observability.py`) — partly addresses
-[FOLLOW_UPS.md](FOLLOW_UPS.md) "Add a shared LLM call ledger".
+[ROADMAP.md](ROADMAP.md) "Add a shared LLM call ledger".
 
 ---
 
@@ -834,12 +834,12 @@ calls `presentation_advisor.advise_visual_surfaces` which uses the raw
 OpenAI client and bypasses the `complete_structured_observed` wrapper.
 That LLM call doesn't appear in the manifest's `llm_calls` list.
 Symptom of the same gap as
-[FOLLOW_UPS.md](FOLLOW_UPS.md) "Route local-intelligence extraction
+[ROADMAP.md](ROADMAP.md) "Route local-intelligence extraction
 through shared LLM boundary."
 
 **Decision.** Treat this as the architectural-fix anchor for the
 2026-04-25 audit handoff. Two complementary moves planned (see
-[FOLLOW_UPS.md](FOLLOW_UPS.md)):
+[ROADMAP.md](ROADMAP.md)):
 
 1. **Consolidate per-tool execution plans into one chat-tier plan per
    turn.** Run the scoped executor *once* per turn with a module-set
@@ -915,7 +915,7 @@ entered`. Surfaced when `pool.map(in_active_context(_run_one), level)` was
 called with a level containing multiple independent modules. The bug is
 not exercised by any current production caller because
 `loop.run_in_executor(None, fn)` only fires one call per wrapped
-function. Tracked as the FOLLOW_UPS entry "in_active_context is not safe
+function. Tracked as the ROADMAP entry "in_active_context is not safe
 under concurrent thread-pool callers" 2026-04-25; flip the default once
 that wrapper is concurrent-safe.
 
@@ -933,7 +933,7 @@ module appears at most once per turn (the no-duplication invariant);
 explicit `parser_output` overrides the synthesized default; synthesized
 parser_output carries the correct intent / depth / question_focus.
 
-**Cross-references.** Implements step 2 of FOLLOW_UPS.md "Consolidate
+**Cross-references.** Implements step 2 of ROADMAP.md "Consolidate
 chat-tier execution: one plan per turn, intent-keyed module set"
 2026-04-25. Cycle 2 of [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md).
 Architectural-fix anchor recorded in
@@ -1030,7 +1030,7 @@ present; composer fallback fires when synthesizer returns empty.
 
 **Cross-references.** Cycle 4 of
 [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md);
-GAP_ANALYSIS.md Layer 3 target description; FOLLOW_UPS.md "Layer 3
+GAP_ANALYSIS.md Layer 3 target description; ROADMAP.md "Layer 3
 LLM synthesizer: prose from full UnifiedIntelligenceOutput" 2026-04-25
 (this DECISION resolves that follow-up's design questions).
 
@@ -1086,7 +1086,7 @@ handles prose.
 **Cross-turn module caching.** Live UI traces post-Cycle-5 show that
 consecutive BROWSE turns on the same property hit cache for ~20 of 23
 modules (only the three known-leaky-cache modules — `confidence`,
-`legal_confidence`, `risk_model` — re-run fresh, per FOLLOW_UPS.md
+`legal_confidence`, `risk_model` — re-run fresh, per ROADMAP.md
 "Module-result caching at the per-tool boundary is leaky" 2026-04-25).
 Wall-time gain on follow-up BROWSE turns: ~7s vs cold-cache. This is
 a positive emergent property of the consolidation — the same
@@ -1110,7 +1110,7 @@ Two pre-existing failures unchanged from session start.
 **Cross-references.** Cycle 5 of
 [OUTPUT_QUALITY_HANDOFF_PLAN.md](OUTPUT_QUALITY_HANDOFF_PLAN.md);
 the Cycle 4 entry above (which describes the synthesizer itself);
-FOLLOW_UPS.md "Consolidate chat-tier execution" 2026-04-25 step 3
+ROADMAP.md "Consolidate chat-tier execution" 2026-04-25 step 3
 (which this resolves).
 
 ---
@@ -1154,7 +1154,7 @@ item.
 `tests/agent/test_tools.py::ContractToolTests::test_get_cma_skips_internal_value_thesis_when_caller_provides_thesis`
 verifies `get_value_thesis` is NOT called when a thesis is passed.
 
-**Cross-references.** FOLLOW_UPS.md "`get_cma` internally calls
+**Cross-references.** ROADMAP.md "`get_cma` internally calls
 `get_value_thesis`, leaking 5 module re-runs into the chat-tier path"
 2026-04-25 (step 1 resolved). Surfaced during Cycle 3 (`ca94d2f`)
 post-landing UI smoke; resolved in commit `f018fc4` between Cycles 4
@@ -1211,7 +1211,7 @@ decisions" but worth surfacing here):
 
 **Drift prevention.** The plan lives at the repo root parallel to
 `OUTPUT_QUALITY_HANDOFF_PLAN.md`. Cross-referenced from this entry
-and from `FOLLOW_UPS.md` so future agents discover it via the
+and from `ROADMAP.md` so future agents discover it via the
 standard CLAUDE.md orientation flow.
 
 **Cross-references.** [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
@@ -1219,3 +1219,46 @@ standard CLAUDE.md orientation flow.
 (Representation Agent target description);
 [AUDIT_OUTPUT_QUALITY_2026-04-25.md](AUDIT_OUTPUT_QUALITY_2026-04-25.md) §4
 (the audit's "Charts don't explain" diagnosis).
+
+## 2026-04-27 — AI-Native Foundation precedes Phase 4b (Scout)
+
+**Decision.** The AI-Native Foundation umbrella —
+[`ROADMAP.md`](ROADMAP.md) Stages 1-3 (artifact
+persistence, user-feedback loop closure, business-facing dashboard) —
+runs **before** Phase 4b (Scout buildout per
+[`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)). Stage 4 (model-accuracy
+loop closure) runs after Scout.
+
+**Rationale.** Scout is the apex of the product (per the user-memory
+note `project_scout_apex.md` and the 2026-04-26 owner direction folded
+into [`ROADMAP.md`](ROADMAP.md)). Building Scout against a
+substrate that has (a) persisted per-turn artifacts to mine, (b) a
+closed user-feedback signal to learn from, and (c) a dashboard surface
+where Scout's own outputs can be measured produces a materially better
+Scout. Without Stages 1-3, every Scout iteration leaves no inspectable
+trace and no mechanism for the user to signal whether the surfaced
+insight was useful — exactly the failure mode the AI-native principles
+in [`design_doc.md`](design_doc.md) § 3.4 are written to prevent.
+
+The owner explicitly chose "Docs + roadmap only" as the scope of this
+foundation handoff, with sequencing "Before Scout" — so this entry
+records the sequencing call rather than introducing it.
+
+**Cost.** One-handoff Scout deferral. Stages 1-3 are estimated at three
+focused handoffs (one each); Scout slots in after Stage 2 or Stage 3
+depending on signal at that point. The Scout substrate (`rent_zestimate`
+from CMA Cycle 3a, per `ROADMAP.md`) is already landed and is not
+disturbed by this sequencing.
+
+**Reversibility.** Each stage of `ROADMAP.md` is independently
+approvable; if Scout signal becomes urgent mid-roadmap, any in-flight
+stage can be paused and Scout pulled forward. The principles in
+[`design_doc.md`](design_doc.md) § 3.4 are load-bearing regardless of
+sequencing — they constrain Scout's design either way.
+
+**Cross-references.** [`ROADMAP.md`](ROADMAP.md)
+(staged buildout); [`design_doc.md`](design_doc.md) § 3.4 (the
+principles being operationalized); [`design_doc.md`](design_doc.md) § 7
+(the dual feedback loops being closed); [`ROADMAP.md`](ROADMAP.md)
+2026-04-27 umbrella entry "AI-Native Foundation";
+[`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md) (the deferred handoff).

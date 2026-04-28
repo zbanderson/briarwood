@@ -74,6 +74,57 @@ Output Intelligence produces a claim object. Value Scout annotates it. Editor va
 
 ---
 
+### 3.4 North Star: AI-Native Principles
+
+Briarwood is being built as an AI-native, "queryable" company. The four
+principles below are load-bearing across every architectural decision —
+when something feels like a tradeoff, the side that honors more of these
+principles wins.
+
+These principles are not aspirations. Each is named here, points to where
+it currently lives in the codebase, and points to where it gets reinforced
+in the staged buildout. The staged buildout itself is in
+[`ROADMAP.md`](ROADMAP.md).
+
+**1. Contracts First.** Components communicate via typed schemas, never
+prose. This is the existing philosophy from § 3.3 above made explicit as
+a principle. Today: every module's I/O is a `pydantic` schema; the
+unified intelligence layer reads `ModulePayload` and emits
+`UnifiedIntelligenceOutput`; the claims pipeline emits structured claim
+objects. The synthesizer is the only layer that produces prose, and it
+produces prose **from** structured inputs. Future agents follow the same
+rule: prose is an output format, not an interface.
+
+**2. Queryable Outputs.** Every analysis result is machine-consumable so
+downstream LLM agents can reason over it without parsing text. This is
+what enables Value Scout (§ 5) and what will enable every future
+LLM-driven surface. Today: module outputs carry confidence, provenance,
+and structured `extra_data`. The Scout buildout (Phase 4b) is the proof
+of value — Scout reads `UnifiedIntelligenceOutput` and surfaces the
+non-obvious read entirely from structured data.
+
+**3. Every Action Is An Artifact.** Every turn, module run, LLM call,
+and tool call leaves a durable inspectable record. Today: partially
+operative. `TurnManifest` (`briarwood/agent/turn_manifest.py`) and
+`LLMCallLedger` (`briarwood/agent/llm_observability.py`) capture rich
+per-turn detail in memory but do not persist by default. Stage 1 of
+[`ROADMAP.md`](ROADMAP.md) makes them durable, and
+Stage 3 surfaces the resulting data in a business-facing dashboard.
+
+**4. Closed Feedback Loops.** Every output schema carries a path back to
+the input so the system improves from use. This expands and operationalizes
+the existing § 7 (Dual Feedback Loops). Today: Loop 1 (Model Accuracy)
+is write-only — `intelligence_feedback.jsonl` accumulates but no consumer
+reads `outcome` because `outcome` is always null. Loop 2 (Communication
+Calibration) is unbuilt — no user-facing rating surface exists. Stage 2
+of the roadmap closes Loop 2; Stage 4 closes Loop 1.
+
+A loop is **closed** only when both the write path AND the read path are
+implemented and the read path provably runs. Write-only signals do not
+count — see § 7 below.
+
+---
+
 ## 4. The User Context Object
 
 Persistent within a session. Tracks who the user is and what they're working on. Read by Intent Parser, Output Intelligence, Value Scout, Editor, and Representation — each uses it differently.
@@ -207,6 +258,13 @@ Applied per-claim, not per-response. A single response can contain a >90% claim 
 ---
 
 ## 7. Dual Feedback Loops
+
+A loop is **closed** only when both the write path AND the read path
+exist and the read path provably runs. A signal that is captured but
+never consumed is a write-only path, not a closed loop, and should not
+be described as one. This distinction is load-bearing — the audit on
+2026-04-27 found that today's `intelligence_feedback.jsonl` is
+write-only, which the system was treating as if it were closed.
 
 Two separate feedback mechanisms — kept separate on purpose:
 

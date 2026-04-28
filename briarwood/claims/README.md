@@ -69,7 +69,7 @@ The wedge entrypoint `_maybe_handle_via_claim` additionally consumes `text`, `de
   - `briarwood.modules.comparable_sales.ComparableSalesModule` — graft target.
   - `briarwood.inputs.property_loader.load_property_from_json` — input loading.
   - `briarwood.agent.overrides.inputs_with_overrides`, `briarwood.agent.tools.SAVED_PROPERTIES_DIR`.
-- **Coupled to:** `briarwood/editor/checks.py` (threshold constants must agree — see Known Rough Edges and [FOLLOW_UPS.md](../../FOLLOW_UPS.md)). Coupled to `briarwood/value_scout/` for the insight graft. Coupled to `briarwood/agent/dispatch.py` for the wedge entry.
+- **Coupled to:** `briarwood/editor/checks.py` (threshold constants must agree — see Known Rough Edges and [ROADMAP.md](../../ROADMAP.md)). Coupled to `briarwood/value_scout/` for the insight graft. Coupled to `briarwood/agent/dispatch.py` for the wedge entry.
 
 ## Invariants
 
@@ -114,7 +114,7 @@ claim = build_claim_for_property("NJ-0000001", user_text="Is this a buy?")
 ## Known Rough Edges
 
 - **Post-hoc `ComparableSalesModule` graft.** [pipeline.py:62-88](pipeline.py#L62-L88) runs `ComparableSalesModule` directly because the scoped execution registry does not surface `comparable_sales` as a top-level module. The comment at [pipeline.py:67-72](pipeline.py#L67-L72) explicitly documents this gap. Cross-ref [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → "ComparableSalesModule is not in the scoped registry" — promoting it would let the graft go away.
-- **Threshold duplication with editor.** `SMALL_SAMPLE_THRESHOLD`, `VALUE_FIND_THRESHOLD`, `OVERPRICED_THRESHOLD` live both in [synthesis/verdict_with_comparison.py:39-43](synthesis/verdict_with_comparison.py#L39-L43) and (mirrored) in [briarwood/editor/checks.py:14-20](../editor/checks.py#L14-L20). The editor explicitly does not import from this package to avoid a layering violation. Silent drift is the hazard. See [FOLLOW_UPS.md](../../FOLLOW_UPS.md) "Editor / synthesis threshold duplication has no mechanical guard."
+- **Threshold duplication with editor.** `SMALL_SAMPLE_THRESHOLD`, `VALUE_FIND_THRESHOLD`, `OVERPRICED_THRESHOLD` live both in [synthesis/verdict_with_comparison.py:39-43](synthesis/verdict_with_comparison.py#L39-L43) and (mirrored) in [briarwood/editor/checks.py:14-20](../editor/checks.py#L14-L20). The editor explicitly does not import from this package to avoid a layering violation. Silent drift is the hazard. See [ROADMAP.md](../../ROADMAP.md) "Editor / synthesis threshold duplication has no mechanical guard."
 - **Single archetype.** Only `VERDICT_WITH_COMPARISON` is implemented. The six others in [archetypes.py:11-17](archetypes.py#L11-L17) are reserved as comments. Adding one requires: a new archetype enum value, a new Pydantic schema, a new synthesizer, a new representation renderer, an entry in `map_to_archetype`, and (often) editor checks specific to the archetype's invariants.
 - **Routing is narrow.** `map_to_archetype` returns `VERDICT_WITH_COMPARISON` only for `AnswerType.DECISION` or `AnswerType.LOOKUP` AND `has_pinned_listing=True`. All other intent/state combinations route to legacy.
 - **Cache trace recovery.** [pipeline.py:91-106](pipeline.py#L91-L106) recovers `interaction_trace` from either the top-level artifact OR the unified output — needed because the orchestrator's synthesis cache hit does not emit the trace at the top level. Brittle; surface as a "Contract change:" entry if the orchestrator's cache shape changes.
@@ -126,7 +126,7 @@ claim = build_claim_for_property("NJ-0000001", user_text="Is this a buy?")
 
 - **Promote `comparable_sales` to the scoped registry?** ([GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 2) — would eliminate the post-hoc graft.
 - **Archetype expansion strategy.** Which of the six reserved archetypes lands next, and what their schemas look like, is undecided. The Editor's [Open Product Decisions](../editor/README.md) frame this from the validator side.
-- **Threshold drift defense.** See [FOLLOW_UPS.md](../../FOLLOW_UPS.md) for the suggested mechanical fix; the design choice between "shared constants module" vs. "test-time guard" is open.
+- **Threshold drift defense.** See [ROADMAP.md](../../ROADMAP.md) for the suggested mechanical fix; the design choice between "shared constants module" vs. "test-time guard" is open.
 - **When to flip `BRIARWOOD_CLAIMS_ENABLED` to default-on.** Open product call; gated on rejection-rate signal from the SSE `claim_rejected` event.
 
 ## Changelog

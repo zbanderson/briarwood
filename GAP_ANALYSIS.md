@@ -69,7 +69,7 @@ The consolidation prerequisite landed 2026-04-25 (Cycle 2 of OUTPUT_QUALITY_HAND
 
 **The substrate-and-prose pair Layer 3 needed is now in place across every chat-tier handler that has a property cascade.** Section followups (trust mode, downside mode, comp_set, entry_point, value_change, rent_workability) keep their tight `compose_section_followup` composer calls — those are surgical section-specific generations and don't benefit from the full unified output the same way the default handler paths do.
 
-What's still absent is the **intent-satisfaction-and-reorchestrate loop** the gap below names — the synthesizer writes prose from whatever the deterministic models produced; it does not yet ask "did we answer the user?" or trigger more tool calls. A telemetry-only prototype of that question landed earlier in [briarwood/shadow_intelligence.py](briarwood/shadow_intelligence.py) (FOLLOW_UPS "Prototype Layer 3 intent-satisfaction LLM in shadow mode" 2026-04-24); promotion-from-shadow is open.
+What's still absent is the **intent-satisfaction-and-reorchestrate loop** the gap below names — the synthesizer writes prose from whatever the deterministic models produced; it does not yet ask "did we answer the user?" or trigger more tool calls. A telemetry-only prototype of that question landed earlier in [briarwood/shadow_intelligence.py](briarwood/shadow_intelligence.py) (ROADMAP "Prototype Layer 3 intent-satisfaction LLM in shadow mode" 2026-04-24); promotion-from-shadow is open.
 
 The adjacent infrastructure is the grounding verifier in [briarwood/agent/composer.py](briarwood/agent/composer.py), which fact-checks prose against a `[[Module:field:value]]` anchor format. That's narrower than intent-satisfaction — it asks "are the numbers right?", not "did we answer the question?".
 
@@ -167,7 +167,7 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 Action item: create a shared LLM call ledger that records call site, prompt tier,
 provider/model, structured-vs-prose mode, latency, token/cost estimate,
 fallback reason, verifier outcome, and whether the user saw LLM prose or a
-deterministic fallback. See `FOLLOW_UPS.md`.
+deterministic fallback. See `ROADMAP.md`.
 
 ### Caching?
 

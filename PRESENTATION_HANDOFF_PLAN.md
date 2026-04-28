@@ -233,7 +233,7 @@ root. Please:
 1. Run the standard CLAUDE.md orientation: read CLAUDE.md, run the
    readme-discipline drift check, verify
    ARCHITECTURE_CURRENT / GAP_ANALYSIS / TOOL_REGISTRY are present,
-   read DECISIONS.md and FOLLOW_UPS.md in full.
+   read DECISIONS.md and ROADMAP.md in full.
 
 2. Read PRESENTATION_HANDOFF_PLAN.md end-to-end. That's the canonical
    to-do list for Phase 3.
@@ -289,7 +289,7 @@ The whole Phase 3 effort is done when:
 4. The synthesizer's prose explicitly references at least one chart by what the user sees, so chart and prose tie together.
 5. The synthesizer's output reads top-down with a headline lead, structured beats (Headline / Why / What's Interesting / What I'd Watch), and the user wants to keep clicking.
 6. The "Briarwood beats plain Claude on underwriting" qualitative bar from Phase 2 holds — the visual + narrative substrate together is now better than what plain Claude (no charts, no Briarwood data) can produce.
-7. All changes traced to FOLLOW_UPS / DECISIONS / this plan. No drive-by fixes.
+7. All changes traced to ROADMAP / DECISIONS / this plan. No drive-by fixes.
 8. README discipline maintained. Each contract change has a dated changelog entry on the affected README.
 9. Tests pass. No regressions in `tests/representation/`, `tests/synthesis/`, `tests/agent/test_dispatch.py`.
 
@@ -300,5 +300,5 @@ The whole Phase 3 effort is done when:
 - **The user is visual and prefers iterating in the browser.** Don't skip the verification pause between cycles — the user's qualitative read is the truth-source for both chart and prose quality.
 - **Don't over-spec; iterate.** The first system-prompt tune in Cycle D will likely need 2-3 iterations. Plan for it.
 - **Leverage what already exists.** Cycle B's `market_trend` chart needs no new module work — `market_value_history` already runs. Cycle C's chart-narration uses the Representation Agent's existing `claim` field. The architectural cycles touch behavior, not new infrastructure.
-- **Drift prevention.** This file lives at the repo root parallel to OUTPUT_QUALITY_HANDOFF_PLAN.md and is cross-referenced from DECISIONS.md and FOLLOW_UPS.md so future agents discover it via the standard orientation flow.
+- **Drift prevention.** This file lives at the repo root parallel to OUTPUT_QUALITY_HANDOFF_PLAN.md and is cross-referenced from DECISIONS.md and ROADMAP.md so future agents discover it via the standard orientation flow.
 - **Ordering is locked.** Polish → Select → Narrate → Prose. The user confirmed this sequence 2026-04-25.

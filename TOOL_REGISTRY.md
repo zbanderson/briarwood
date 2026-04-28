@@ -160,12 +160,12 @@ invariants:
 blockers_for_tool_use: []
 notes:
   - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 1.
-  - **Engine A** (saved comps). Distinct from **Engine B** (get_cma at briarwood/agent/tools.py:1802, live-Zillow first, backs session.last_market_support_view). Engine B quality is its own handoff — see FOLLOW_UPS.md 2026-04-24 *Two comp engines*.
-  - Graft retirement: briarwood/claims/pipeline.py:62-88 ad-hoc instantiation now unnecessary; retirement tracked in FOLLOW_UPS.md (not in H3 scope).
-  - Data source: data/comps/sales_comps.json (shared with location_intelligence).
+  - **Engine A vs Engine B (status as of CMA Phase 4a Cycles 3a-3c, 2026-04-26):** Engine A (saved comps, this entry) and Engine B (`get_cma` in briarwood/agent/tools.py) now share one scoring pipeline at briarwood/modules/comp_scoring.py. Engine B issues SOLD + ACTIVE SearchApi calls per turn, scores all rows uniformly via Engine A's lifted scoring functions, and uses saved comps as defensive fallback. Per-row `listing_status` provenance ("sold" / "active") flows end-to-end. Tracked in CMA_HANDOFF_PLAN.md; Cycles 4-6 still open.
+  - Graft retirement: briarwood/claims/pipeline.py:62-88 ad-hoc instantiation now unnecessary; retirement tracked in ROADMAP.md (not in H3 scope).
+  - Data source: data/comps/sales_comps.json (shared with location_intelligence). For Engine B's user-facing CMA path, this file is now defensive fallback only — primary source is SearchApi Zillow SOLD + ACTIVE.
   - Hardcoded: 15% sqft tolerance for comp matching; ADU cap rate 0.08; ADU expense ratio 0.30.
-  - Cross-town comps TODO flagged in base_comp_selector.py.
-  - Renovation premium TODO: estimate_comp_renovation_premium() not yet fed through.
+  - Cross-town comps TODO flagged in base_comp_selector.py — Cycle 4 of CMA_HANDOFF_PLAN.md.
+  - Renovation premium TODO: estimate_comp_renovation_premium() not yet fed through — Cycle 4 of CMA_HANDOFF_PLAN.md.
   - See README_comparable_sales.md for the full contract.
 ```
 
