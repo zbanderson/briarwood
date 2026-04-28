@@ -157,6 +157,11 @@ The ordered list of major moves. Each step carries a `[source]` tag —
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
+   *Plan:* [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) approved
+   for planning on 2026-04-28. Implementation has not started. The plan
+   keeps manual outcome ingestion, one-shot backfill, `model_alignment`,
+   module receiver hooks, and analyzer reporting in scope; auto-tuning,
+   Phase 4c, and public-record automation are out of scope for v1.
 6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner; parking lot]`
    *Why now:* Substrate (real comps + Scout outputs) finally available; the
    rebuilt summary card needs both to honestly hold together.
@@ -525,6 +530,11 @@ useless if the owner can't see them.
 
 #### Stage 4 — Close The Model-Accuracy Loop `[size: M-L]` `[impact: Data, Persistence & Feedback]`
 
+**Status:** Plan approved 2026-04-28 — implementation not started.
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) is the canonical
+handoff plan. The Phase 4b Scout closeout batch is committed as
+`c8b6b0d`, so Stage 4 should start from a clean new change boundary.
+
 Source: "~1-2 handoffs."
 
 **Principle:** "Closed feedback loops" — Loop 1 (Model Accuracy) from
@@ -555,6 +565,24 @@ cannot compute the confidence-vs-outcome correlation it is built for.
    "this module's high-confidence calls underperform on outcome" and
    route those signals to the relevant module owner (the human; this
    stage produces the report, not the auto-tune).
+
+**Plan refinement accepted 2026-04-28.**
+- V1 outcome source should be manual CSV/JSONL under `data/outcomes/`;
+  public-record automation is useful but lower priority and tracked
+  separately in §4 Low.
+- Start with actual sale-price outcomes and strict matching:
+  `property_id` first, normalized address + town/state second, manual
+  mapping for ambiguous historical rows. Uncertain matches are reported,
+  not guessed.
+- Persist per-module alignment in a new `model_alignment` table and score
+  the highest-confidence valuation modules first: `current_value`,
+  `valuation`, and `comparable_sales`.
+- Analyzer output produces human-reviewed prompt/weight tuning candidates
+  only. No auto-recalibration, prompt change, or threshold change belongs
+  in Stage 4.
+- `/admin` alignment visibility is optional and minimal; CLI/JSON analyzer
+  output is enough to close Loop 1 if it reads the persisted alignment
+  rows.
 
 **Out of scope (deliberate):**
 - Auto-recalibration of weights or thresholds. Stage 4 produces the
@@ -1443,11 +1471,15 @@ layout) is conceptually adjacent — the rebuild is a chance to revisit
 whether an editor pass is needed once the substrate is right.
 
 **Status:** Parking lot (per existing entry; `DECISIONS.md` 2026-04-27
-does not promote it). Stays parked until Phase 4a + 4b complete.
+does not promote it). Phase 4a + 4b are now complete, but the active
+sequence still places AI-Native Stage 4 before Phase 4c. Keep this parked
+until Stage 4 closes or the owner explicitly pulls it forward.
 
-**Plan doc:** None until promoted.
+**Plan doc:** None until promoted. Expected future artifact:
+`BROWSE_REBUILD_HANDOFF_PLAN.md`.
 
-**Dependencies:** Phase 4a complete; Phase 4b complete.
+**Dependencies:** Phase 4a complete; Phase 4b complete; current sequence
+step 5 (AI-Native Stage 4) still precedes this work.
 
 ---
 
@@ -2382,6 +2414,31 @@ adapter that still records cost/telemetry through the shared surfaces.
 Keep the existing validation pipeline intact.
 
 ### Low
+
+#### 2026-04-28 — Automate public-record outcome ingestion after Stage 4 manual loop `[size: M]` `[impact: Data, Persistence & Feedback]`
+
+**Severity:** Low-medium — useful scale-up for the model-accuracy loop,
+but not required to close Loop 1 in Stage 4 v1.
+
+**Files (future anchors):**
+- `data/outcomes/` — manual outcome files from Stage 4 v1.
+- `briarwood/eval/outcomes.py` — planned Stage 4 outcome loader.
+- `scripts/ingest_outcomes.py` — planned Stage 4 dry-run ingestion CLI.
+
+**Issue:** Stage 4 v1 intentionally starts with manual CSV/JSONL outcome
+files so the loop can close without mixing in public-record API decisions,
+scraping reliability, source licensing, or address-match ambiguity. Once
+the manual loop proves useful, outcome collection will become the
+bottleneck.
+
+**Suggested fix:** Add a separate public-record ingestion path that writes
+the same outcome contract Stage 4 defines. It should keep source
+provenance, source confidence, and row-level ambiguity reporting, and it
+should feed the same `model_alignment` writer rather than inventing a
+parallel store.
+
+**Out of scope** for Stage 4 v1. Pick up only after the manual outcome
+file, backfill, receiver hooks, and analyzer report are working.
 
 #### 2026-04-26 — Pre-existing failure: `StructuredSynthesizerTests::test_interaction_trace_attached` `[size: S]` `[impact: Docs, Process & Repo Health]`
 

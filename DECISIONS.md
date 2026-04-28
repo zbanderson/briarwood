@@ -2498,3 +2498,41 @@ Cycle 7 closeout; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 and
 [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) `value_scout`;
 [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) LLM integrations
 and Persistence.
+
+---
+
+## 2026-04-28 — AI-Native Foundation Stage 4 handoff plan approved
+
+**Decision.** [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) is the
+approved planning artifact for AI-Native Foundation Stage 4, the
+model-accuracy loop. Implementation has not started. The Phase 4b Scout
+Cycle 5-7/docs batch was committed first as `c8b6b0d`
+(`feat(scout): land Cycle 5-7 closeout`) so Stage 4 can start from a
+separate change boundary.
+
+**Scope locked for Stage 4 v1.**
+- Ground-truth ingestion starts with actual sale-price outcome data from a
+  manual CSV/JSONL file under `data/outcomes/`.
+- A one-shot backfill attaches outcomes to historical
+  `data/learning/intelligence_feedback.jsonl` rows and persisted turn
+  evidence where matching is safe.
+- `receive_feedback()` gets real record-only bodies for the highest
+  confidence valuation modules first: `current_value`, `valuation`, and
+  `comparable_sales`.
+- Per-module confidence-vs-outcome alignment persists to a new
+  `model_alignment` table.
+- Analyzer output surfaces high-confidence module calls that underperform
+  actual outcomes and produces human-reviewed prompt/weight tuning
+  candidates.
+
+**Guardrails.**
+- No auto-tuning or auto-recalibration in Stage 4.
+- No Phase 4c BROWSE summary rebuild or frontend redesign.
+- No public-record automation in v1; filed separately as lower-priority
+  ROADMAP work after the manual loop proves useful.
+- No broad semantic-audit implementation unless a narrow field contract is
+  needed to score Stage 4 alignment rows.
+
+**Cross-references.** [`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and
+§3.1 Stage 4; [`design_doc.md`](design_doc.md) §3.4 and §7;
+AI-Native Foundation Stage 1-3 closeouts; Phase 4b Scout Cycle 7 closeout.

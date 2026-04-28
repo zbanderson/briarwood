@@ -46,6 +46,10 @@ Use this file as the starting point for product and implementation work.
   Historical AI-Native Foundation Stage 1-3 plans. Complete as of
   2026-04-28; read when touching turn traces, feedback, admin dashboard,
   or LLM-call observability.
+- `STAGE4_HANDOFF_PLAN.md`
+  Proposed AI-Native Foundation Stage 4 plan for closing the model-accuracy
+  loop with outcome ingestion, `model_alignment`, receiver hooks, and
+  analyzer reporting. Approved for planning; implementation not started.
 - `briarwood/routing_schema.py`
   Canonical routing and output contracts
 - `briarwood/orchestrator.py`
