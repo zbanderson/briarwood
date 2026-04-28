@@ -353,6 +353,15 @@ export type ValueThesisEvent = {
   address?: string | null;
   town?: string | null;
   state?: string | null;
+  // Phase 4c Cycle 2 carry-over: stance is lifted from
+  // `session.last_unified_output.decision_stance` so BROWSE turns can render
+  // a real Section A pill without emitting a `verdict` event. Lowercase
+  // snake_case from the `DecisionStance` enum (e.g. "buy_if_price_improves",
+  // "pass_unless_changes"). DECISION turns also carry it now (back-compat
+  // additive); the existing `verdict.stance` remains the primary on
+  // DECISION-tier renders.
+  stance?: string | null;
+  decision_stance?: string | null;
   ask_price?: number | null;
   fair_value_base?: number | null;
   premium_discount_pct?: number | null;

@@ -681,6 +681,26 @@ def _verdict_from_view(view: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _value_thesis_payload(session: Session, view: dict[str, Any]) -> dict[str, Any]:
+    """Project the value_thesis SSE payload, lifting stance from
+    `session.last_unified_output` when available.
+
+    Phase 4c Cycle 2 carry-over: BROWSE turns do not emit a `verdict` event,
+    so the BROWSE Section A pill cannot read `verdict.stance`. Lifting
+    `decision_stance` onto the `value_thesis` event lets `BrowseRead`
+    coalesce a real stance without forcing BROWSE to grow a verdict event.
+    Stance is validated against the `DecisionStance` vocabulary so unknown
+    upstream values are dropped rather than rendered as a stale label."""
+    payload: dict[str, Any] = dict(view)
+    snapshot = getattr(session, "last_unified_output", None)
+    if isinstance(snapshot, dict):
+        stance_raw = snapshot.get("decision_stance")
+        if isinstance(stance_raw, str) and stance_raw in {s.value for s in DecisionStance}:
+            payload["stance"] = stance_raw
+            payload["decision_stance"] = stance_raw
+    return payload
+
+
 def _trust_summary_from_view(view: dict[str, Any]) -> dict[str, Any] | None:
     trust_summary = dict(view.get("trust_summary") or {})
     if not trust_summary and not list(view.get("trust_flags") or []):
@@ -2086,7 +2106,11 @@ async def _browse_stream_impl(
         primary_events.append(events.comps_preview(session.last_comps_preview))
 
     if isinstance(session.last_value_thesis_view, dict):
-        primary_events.append(events.value_thesis(session.last_value_thesis_view))
+        primary_events.append(
+            events.value_thesis(
+                _value_thesis_payload(session, session.last_value_thesis_view)
+            )
+        )
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
             valuation_payload, drift = _sanitize_valuation_module_comps(
@@ -2374,7 +2398,11 @@ async def _decision_stream_impl(
     # given module did not run (or ran but left no view), the corresponding card
     # is silently skipped, matching the _dispatch_stream_impl contract.
     if isinstance(session.last_value_thesis_view, dict):
-        primary_events.append(events.value_thesis(session.last_value_thesis_view))
+        primary_events.append(
+            events.value_thesis(
+                _value_thesis_payload(session, session.last_value_thesis_view)
+            )
+        )
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
             valuation_payload, drift = _sanitize_valuation_module_comps(
@@ -2661,7 +2689,11 @@ async def _dispatch_stream_impl(
         primary_events.append(events.comps_preview(session.last_comps_preview))
 
     if isinstance(session.last_value_thesis_view, dict):
-        primary_events.append(events.value_thesis(session.last_value_thesis_view))
+        primary_events.append(
+            events.value_thesis(
+                _value_thesis_payload(session, session.last_value_thesis_view)
+            )
+        )
         valuation_payload = _valuation_comps_from_view(session.last_value_thesis_view)
         if valuation_payload is not None:
             valuation_payload, drift = _sanitize_valuation_module_comps(

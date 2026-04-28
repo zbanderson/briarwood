@@ -65,7 +65,7 @@ export function ScoutFinds({ insights, onPrompt }: Props) {
   );
 }
 
-function ScoutFindCard({
+export function ScoutFindCard({
   insight,
   onPrompt,
 }: {

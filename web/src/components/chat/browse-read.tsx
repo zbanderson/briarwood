@@ -37,9 +37,19 @@ type Props = {
   ungroundedDeclaration?: boolean;
 };
 
+// Tone map covers the full `DecisionStance` vocabulary plus two legacy
+// labels (`buy`, `pass`) so back-compat with any older verdict event holds.
+// `conditional` (trust gate) deliberately maps to no tone — the pill falls
+// through to the neutral border so the UI doesn't suggest a stance the
+// model itself declined to take.
 const STANCE_TONE: Record<string, string> = {
+  strong_buy: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40",
   buy: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   buy_if_price_improves:
+    "bg-amber-500/15 text-amber-200 border-amber-500/30",
+  interesting_but_fragile:
+    "bg-amber-500/15 text-amber-200 border-amber-500/30",
+  execution_dependent:
     "bg-amber-500/15 text-amber-200 border-amber-500/30",
   pass_unless_changes: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   pass: "bg-rose-500/15 text-rose-300 border-rose-500/30",
@@ -72,12 +82,11 @@ export function BrowseRead({
 }: Props) {
   // Coalesce headline anchors across the two events that carry them:
   // `valueThesis` is BROWSE's primary surface (session.last_value_thesis_view);
-  // `verdict` is DECISION's primary surface. Stance lives on `verdict`
-  // only — BROWSE turns currently render the stance pill as "Undecided"
-  // until either the synthesizer's decision_stance is added to the
-  // value_thesis SSE event or BROWSE starts emitting `verdict` directly.
-  // Tracked as a follow-up; out of Cycle 1 scope.
-  const stance = verdict?.stance ?? null;
+  // `verdict` is DECISION's primary surface. Stance is lifted onto
+  // `value_thesis` for BROWSE in Phase 4c Cycle 2, so prefer it; fall back
+  // to `verdict` for non-BROWSE callers that still set this component's
+  // props from the verdict event.
+  const stance = valueThesis?.stance ?? verdict?.stance ?? null;
   const tone = stance ? STANCE_TONE[stance] : undefined;
   const addressParts = [
     valueThesis?.address ?? verdict?.address ?? null,

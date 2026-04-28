@@ -766,6 +766,125 @@ class PipelineAdapterContractTests(unittest.TestCase):
         self.assertEqual(burn_chart.get("title"), "Rent vs monthly cost")
         self.assertEqual(ramp_chart.get("title"), "Can rent catch up?")
 
+    def test_browse_value_thesis_event_carries_stance_from_unified_output(self) -> None:
+        """Phase 4c Cycle 2 carry-over: BROWSE turns must lift
+        `decision_stance` from `session.last_unified_output` onto the
+        `value_thesis` SSE event so Section A's stance pill renders a real
+        recommendation. When the unified-output snapshot is missing, both
+        keys must stay absent rather than fall back to a stale label."""
+        session = Session(session_id="browse-stance-carryover")
+        session.last_value_thesis_view = {
+            "address": "1228 Briarwood Rd, Belmar, NJ 07719",
+            "town": "Belmar",
+            "state": "NJ",
+            "ask_price": 1490000,
+            "fair_value_base": 1311000,
+            "premium_discount_pct": 0.137,
+            "pricing_view": "above_fair_value",
+            "primary_value_source": "current_value",
+            "value_drivers": [],
+            "key_value_drivers": [],
+            "what_must_be_true": [],
+            "comp_selection_summary": None,
+            "comps": [],
+        }
+        session.last_unified_output = {
+            "decision_stance": "buy_if_price_improves",
+            "recommendation": "Interesting if you can buy below ask.",
+        }
+        session.current_property_id = "subject-stance"
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="."),
+            patch(
+                "api.pipeline_adapter._focal_listing_from_session",
+                return_value={
+                    "id": "subject-stance",
+                    "address_line": "1228 Briarwood Rd, Belmar, NJ 07719",
+                    "city": "Belmar",
+                    "state": "NJ",
+                    "price": 1490000,
+                },
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                browse_stream(
+                    "what do you think of 1228 Briarwood Rd, Belmar, NJ",
+                    _decision(AnswerType.BROWSE),
+                    conversation_id="conv-browse-stance",
+                )
+            )
+
+        value_thesis_event = next(
+            e for e in emitted if e["type"] == events.EVENT_VALUE_THESIS
+        )
+        self.assertEqual(value_thesis_event.get("stance"), "buy_if_price_improves")
+        self.assertEqual(
+            value_thesis_event.get("decision_stance"), "buy_if_price_improves"
+        )
+
+        # Back-compat: missing unified_output snapshot leaves stance absent.
+        session.last_unified_output = None
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="."),
+            patch(
+                "api.pipeline_adapter._focal_listing_from_session",
+                return_value={
+                    "id": "subject-stance",
+                    "address_line": "1228 Briarwood Rd, Belmar, NJ 07719",
+                    "city": "Belmar",
+                    "state": "NJ",
+                    "price": 1490000,
+                },
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted_no_snapshot = _run_stream(
+                browse_stream(
+                    "what do you think of 1228 Briarwood Rd, Belmar, NJ",
+                    _decision(AnswerType.BROWSE),
+                    conversation_id="conv-browse-stance-empty",
+                )
+            )
+        no_snapshot_event = next(
+            e for e in emitted_no_snapshot if e["type"] == events.EVENT_VALUE_THESIS
+        )
+        self.assertNotIn("stance", no_snapshot_event)
+        self.assertNotIn("decision_stance", no_snapshot_event)
+
+        # Back-compat: an unknown stance vocabulary is dropped, not rendered.
+        session.last_unified_output = {"decision_stance": "lean_buy"}  # legacy label
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="."),
+            patch(
+                "api.pipeline_adapter._focal_listing_from_session",
+                return_value={
+                    "id": "subject-stance",
+                    "address_line": "1228 Briarwood Rd, Belmar, NJ 07719",
+                    "city": "Belmar",
+                    "state": "NJ",
+                    "price": 1490000,
+                },
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted_unknown = _run_stream(
+                browse_stream(
+                    "what do you think of 1228 Briarwood Rd, Belmar, NJ",
+                    _decision(AnswerType.BROWSE),
+                    conversation_id="conv-browse-stance-unknown",
+                )
+            )
+        unknown_event = next(
+            e for e in emitted_unknown if e["type"] == events.EVENT_VALUE_THESIS
+        )
+        self.assertNotIn("stance", unknown_event)
+        self.assertNotIn("decision_stance", unknown_event)
+
     def test_dispatch_stream_emits_browse_cards_when_browse_turn_uses_generic_adapter(self) -> None:
         session = Session(session_id="browse-contract")
         session.last_town_summary = {

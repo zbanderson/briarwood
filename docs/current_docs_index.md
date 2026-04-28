@@ -55,9 +55,12 @@ Use this file as the starting point for product and implementation work.
 - `BROWSE_REBUILD_HANDOFF_PLAN.md`
   Phase 4c plan for rebuilding the BROWSE response into three stacked
   sections (`BrowseRead` / `BrowseScout` / `BrowseDeeperRead`) with
-  newspaper-front-page hierarchy. APPROVED 2026-04-28; **Cycle 1 LANDED
-  2026-04-28** (tier marker + section primitive + Section A fully
-  filled; Sections B/C are Cycle 1 stubs). Cycle 2 ready to start. Folds
+  newspaper-front-page hierarchy. APPROVED 2026-04-28; **Cycles 1–2
+  LANDED 2026-04-28** (Cycle 1: tier marker + section primitive +
+  Section A fully filled; Cycle 2: Section B "What did Scout dig up?"
+  fill with playful-yet-intelligent treatment + stance carry-over wired
+  onto `value_thesis`). Section C remains a Cycle-1 placeholder until
+  Cycle 3 fills the Comps / Value-thesis / Projection drilldowns. Folds
   the §3.4.7 chart-library evaluation as Cycle 5 and closes
   `PRESENTATION_HANDOFF_PLAN.md` Open Design Decision #7 at Cycle 4.
 - `briarwood/routing_schema.py`

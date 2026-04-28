@@ -1,9 +1,11 @@
 # Phase 4c — BROWSE Summary Card Rebuild (Handoff Plan)
 
-**Status:** Cycle 1 LANDED 2026-04-28 (tier marker + section primitive +
-Section A fully filled; Sections B/C are Cycle 1 stubs). Cycle 2 ready to
-start. Plan APPROVED 2026-04-28 with the three-section newspaper-hierarchy
-reframe.
+**Status:** Cycle 2 LANDED 2026-04-28 (Section B "What did Scout dig up?"
+fill with playful-yet-intelligent treatment; stance carry-over wired onto
+the `value_thesis` SSE event; empty-state teaser preserves section
+presence). Cycles 1–2 shipped; Cycle 3 (Section C drilldowns: Comps /
+Value-thesis / Projection) ready to start. Plan APPROVED 2026-04-28 with
+the three-section newspaper-hierarchy reframe.
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE walkthrough Thread 1; parking-lot entry at
 [`ROADMAP.md`](ROADMAP.md) §3.5; sequence step 6 of [`ROADMAP.md`](ROADMAP.md)
@@ -372,6 +374,99 @@ turn is functionally complete.
 ---
 
 ### Cycle 2 — Section B: Scout Finds peer section
+
+**Status:** ✅ **LANDED 2026-04-28.**
+
+**Closeout (2026-04-28).** Section B ships with the playful-yet-intelligent
+treatment the owner asked for: sentence-case sub-head **"What did Scout
+dig up?"** with an inline four-pointed amber sparkle glyph, a magazine-
+sidebar L-bracket frame (2px warm-amber top rule + 2px warm-amber left rule,
+no right or bottom rule), and a faint warm tonal background — visually
+distinct from Sections A and C without violating the plan's "no nested
+boxed cards" rule. Cards inside are rendered via the now-exported
+`ScoutFindCard` from [`scout-finds.tsx`](web/src/components/chat/scout-finds.tsx)
+so a single source of truth covers both BROWSE Section B and the legacy
+non-BROWSE inline ScoutFinds surface. Cycle 1's stance carry-over landed
+in the same cycle: `decision_stance` is now lifted from
+`session.last_unified_output` onto the `value_thesis` SSE event via a new
+`_value_thesis_payload(session, view)` helper applied at all three emit
+sites (`_browse_stream_impl`, `_decision_stream_impl`, `_dispatch_stream_impl`),
+the field is mirrored on `ValueThesisEvent` in TypeScript, and `BrowseRead`
+coalesces stance from `valueThesis` first then `verdict` so Section A's
+pill renders a real recommendation instead of "Undecided."
+
+Verification gates green: new regression test
+`tests/test_pipeline_adapter_contracts.py::test_browse_value_thesis_event_carries_stance_from_unified_output`
+pins three contracts (stance + decision_stance lifted when unified_output
+present; absent when snapshot missing; absent when stance is outside the
+`DecisionStance` vocabulary). 43/44 pipeline-adapter tests pass; the one
+failure (`test_browse_stream_emits_briefing_cards_before_text_and_scenarios_after`'s
+chart-kind assertion) was confirmed pre-existing baseline noise (verified
+by stashing the Cycle 2 diff and re-running on Cycle 1's HEAD — same
+failure). `tsc --noEmit` clean; `eslint` clean on touched files;
+`next build` clean (1068ms compile, all 4 static pages generated, no
+warnings). Live browser smoke 2026-04-28 confirmed Section A pill now
+renders a real stance with tone, Section B chrome lands with the warm
+L-bracket + sparkle + sentence-case sub-head, and DECISION turns continue
+to render the legacy card stack unchanged.
+
+**Open Design Decisions resolved at Cycle 2 start.**
+- **Carry-over path (a) vs (b).** Resolved: path **(a)** — add `stance` +
+  `decision_stance` to the `value_thesis` SSE event. Narrower SSE delta
+  than emitting a `verdict` event on BROWSE; avoids "verdict" semantics on
+  a tier that isn't a final decision.
+- **Section B sub-head copy.** Resolved: **"What did Scout dig up?"** in
+  sentence case (deliberate break from the THE READ / THE DEEPER READ
+  uppercase rhythm). Owner reframe: Scout is the apex differentiator and
+  earns its own voice; sentence case + the dog-digging metaphor signal
+  "this section is different / this is the value-add" without requiring a
+  card-style frame.
+- **Section B visual treatment.** Resolved: between (b) tone-only and (c)
+  distinctive frame on the Cycle-2-start spectrum. Concretely: warm-amber
+  top + left rules form a magazine-sidebar L-bracket (NOT a four-sided
+  card — honors the rebuild's "no nested boxed cards" rule), faint warm
+  tonal background (`bg-amber-500/[0.04]`), inline four-pointed sparkle
+  SVG next to the sub-head. Owner direction: "playful yet intelligent,
+  premium feel via tone not boxed borders."
+- **Card chrome inside Section B.** Resolved: cards keep their own
+  border+bg; Section B bypasses the standalone `ScoutFinds` outer
+  `<section>` wrapper and renders the inner `ScoutFindCard` instances
+  directly inside the section content slot. `ScoutFindCard` was promoted
+  to a named export so both consumers (BROWSE Section B, non-BROWSE
+  inline `ScoutFinds`) share the same card source of truth.
+
+**One material deviation from plan, recorded.** The original Cycle 2 scope
+specified that Section B return null entirely when `scoutInsights` is
+empty ("the entire section disappears — no sub-head, no rule, no
+placeholder"). Owner overrode at Cycle 2 start: Scout is the selling
+feature for the demo, so Section B always renders with its full chrome
+(sub-head, glyph, accent rules) and the body collapses to a single
+italic line `Scout was quiet on this one.` when insights are empty. The
+"honest UI hides empty sections" discipline yields here to the
+"Scout-is-the-apex" framing — the section's presence on the screen is
+itself part of the product story. This trades a small honest-UI rule for
+a guaranteed-visible Scout slot, which the owner judged the right
+tradeoff for the one-shot demo.
+
+**Additive polish landed alongside the carry-over.** `STANCE_TONE` map in
+`browse-read.tsx` was widened from 4 entries to 7 to cover the full
+`DecisionStance` vocabulary (`strong_buy`, `interesting_but_fragile`,
+`execution_dependent` added; `conditional` deliberately maps to no tone
+so the trust-gate stance falls through to the neutral border). Without
+this, a Strong Buy stance would have rendered with a gray neutral border
+instead of an emerald pill, defeating the carry-over's "Section A reads
+striking" goal.
+
+**Files touched (8 total — 5 modified, 0 new).** Server: `api/pipeline_adapter.py`
+(new `_value_thesis_payload` helper + 3 emit-site wirings). Tests:
+`tests/test_pipeline_adapter_contracts.py` (1 new regression test, 3
+assertion blocks). TS protocol: `web/src/lib/chat/events.ts`
+(`ValueThesisEvent.stance` + `decision_stance`). TS render:
+`web/src/components/chat/browse-read.tsx` (stance coalesce + STANCE_TONE
+expansion), `browse-scout.tsx` (full Cycle 2 fill — replaces Cycle 1
+stub), `scout-finds.tsx` (export `ScoutFindCard`).
+
+---
 
 **Goal.** Section B fills in. Scout migrates from its current position
 (under prose, above card stack) into a peer section with its own sub-head.
