@@ -1,6 +1,6 @@
 # Briarwood — Current Architecture
 
-Factual snapshot of what exists in the codebase as of 2026-04-24. No gap analysis, no recommendations. For those, see [GAP_ANALYSIS.md](GAP_ANALYSIS.md).
+Factual snapshot of what exists in the codebase as of 2026-04-28. No gap analysis, no recommendations. For those, see [GAP_ANALYSIS.md](GAP_ANALYSIS.md).
 
 ## Overview
 
@@ -32,7 +32,7 @@ Inside [briarwood/](briarwood/), the directories that matter for the decision pi
 | [briarwood/pipeline/](briarwood/pipeline/) | V2 orchestration (registry wiring, triage, macro nudges). |
 | [briarwood/claims/](briarwood/claims/) | Phase 3 claim-object pipeline (archetypes, synthesis, representation, feature-flagged). |
 | [briarwood/editor/](briarwood/editor/) | Claim-object validator (5 checks). |
-| [briarwood/value_scout/](briarwood/value_scout/) | Pattern-based insight surfacing on claim objects. |
+| [briarwood/value_scout/](briarwood/value_scout/) | Shared Scout dispatcher for claim-wedge and chat-tier non-obvious insights. |
 | [briarwood/synthesis/](briarwood/synthesis/) | Legacy structured-output synthesis (runs when claims pipeline disabled). |
 | [briarwood/representation/](briarwood/representation/) | Representation Agent + chart registry. |
 | [briarwood/interactions/](briarwood/interactions/) | Session state, persona inference, primary-value-source bridge. |
@@ -51,7 +51,7 @@ The "Run analysis" flow for a saved property, end-to-end:
 3. FastAPI calls into [api/pipeline_adapter.py](api/pipeline_adapter.py), which classifies the turn via `classify_turn()` → `briarwood.agent.router.classify()` at [briarwood/agent/router.py:105](briarwood/agent/router.py#L105). Router produces a `RouterDecision` with an `AnswerType` (one of 14 values).
 4. The adapter dispatches to a tier-specific stream: `search_stream`, `browse_stream`, `decision_stream`, or the generic `dispatch_stream`. For DECISION, control enters `handle_decision()` at [briarwood/agent/dispatch.py:1887](briarwood/agent/dispatch.py#L1887).
 5. Inside the decision handler, a feature-flag check at [briarwood/agent/dispatch.py:1809-1883](briarwood/agent/dispatch.py#L1809-L1883) uses `claims_enabled_for(property_id)` from [briarwood/feature_flags.py:22](briarwood/feature_flags.py#L22). Branching:
-   - **Flag on**: `build_claim_for_property()` at [briarwood/claims/pipeline.py:28](briarwood/claims/pipeline.py#L28) runs `run_briarwood_analysis_with_artifacts()`, grafts a `comparable_sales` entry via the canonical scoped runner `run_comparable_sales(context)` at [briarwood/claims/pipeline.py:62-114](briarwood/claims/pipeline.py#L62-L114), and calls `build_verdict_with_comparison_claim()`. The claim goes through `scout_claim()` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) (one pattern registered: `uplift_dominance`), then `edit_claim()` at [briarwood/editor/validator.py](briarwood/editor/validator.py) (5 checks). On pass, `render_claim()` at [briarwood/claims/representation/verdict_with_comparison.py:52](briarwood/claims/representation/verdict_with_comparison.py#L52) emits prose + chart + suggestions events. On editor failure, the handler emits `EVENT_CLAIM_REJECTED` and falls back to the legacy path.
+   - **Flag on**: `build_claim_for_property()` at [briarwood/claims/pipeline.py:28](briarwood/claims/pipeline.py#L28) runs `run_briarwood_analysis_with_artifacts()`, grafts a `comparable_sales` entry via the canonical scoped runner `run_comparable_sales(context)` at [briarwood/claims/pipeline.py:62-114](briarwood/claims/pipeline.py#L62-L114), and calls `build_verdict_with_comparison_claim()`. The claim goes through `scout_claim()` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) (`uplift_dominance`), then `edit_claim()` at [briarwood/editor/validator.py](briarwood/editor/validator.py) (5 checks). On pass, `render_claim()` at [briarwood/claims/representation/verdict_with_comparison.py:52](briarwood/claims/representation/verdict_with_comparison.py#L52) emits prose + chart + suggestions events. On editor failure, the handler emits `EVENT_CLAIM_REJECTED` and falls back to the legacy path. Chat-tier BROWSE / DECISION fall-through / EDGE calls use the shared `scout(...)` dispatcher over `UnifiedIntelligenceOutput` before `synthesize_with_llm`.
    - **Flag off**: handler runs the scoped-execution registry via `briarwood.orchestrator.run_briarwood_analysis_with_artifacts()`, synthesizes through [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py), and emits events directly.
 6. Responses stream back as SSE events defined in [api/events.py](api/events.py) (22 event types).
 7. The `useChat` hook in [web/src/lib/chat/use-chat.ts](web/src/lib/chat/use-chat.ts) deserializes events and assembles `ChatMessage` objects with structured payloads.
@@ -121,7 +121,7 @@ The modules above are often thin wrappers around agents in [briarwood/agents/](b
 
 ## LLM Integrations
 
-Nine call sites across the codebase. All are non-streaming; the streaming the user sees is applied after LLM response at the SSE layer.
+Active call sites across the codebase. All are non-streaming; the streaming the user sees is applied after LLM response at the SSE layer.
 
 ### Core clients
 
@@ -139,6 +139,8 @@ Nine call sites across the codebase. All are non-streaming; the streaming the us
 | [briarwood/representation/agent.py:128-187](briarwood/representation/agent.py#L128-L187) | Chart selection | OpenAI / `gpt-4o-mini` | `RepresentationPlan` | Inline at [briarwood/representation/agent.py:108-125](briarwood/representation/agent.py#L108-L125) |
 | [briarwood/local_intelligence/adapters.py:130-193](briarwood/local_intelligence/adapters.py#L130-L193) | Town signal extraction from documents | OpenAI / `gpt-5-mini` | `TownSignalDraftBatch` | `LOCAL_INTELLIGENCE_SYSTEM_PROMPT` |
 | [briarwood/claims/representation/verdict_with_comparison.py:87-106](briarwood/claims/representation/verdict_with_comparison.py#L87-L106) | Claim prose (2–4 sentences around verdict + insight) | OpenAI (injected) / default | Free text | `api/prompts/claim_verdict_with_comparison.yaml` |
+| [briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py) `synthesize_with_llm()` | Chat-tier prose from `UnifiedIntelligenceOutput` | Injected LLM / default | Free text | Inline newspaper/plain prompts; ledger surface `synthesis.llm` |
+| [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) `scout_unified()` | Non-obvious chat-tier Scout Finds | Injected LLM / default structured model | `_ScoutScanResult` | Inline `_SYSTEM_PROMPT`; ledger surface `value_scout.scan` |
 
 ### Grounding and verification
 
@@ -177,6 +179,7 @@ The orchestration layer today is a **handler registry**, not an LLM-driven tool-
   - `run_briarwood_analysis_with_artifacts(property_data, user_input, synthesizer=_scoped_synthesizer)` — runs the intent-contract router (`briarwood/router.py`), then the scoped pipeline, then an injected synthesizer. Production callers are [briarwood/runner_routed.py:228](briarwood/runner_routed.py#L228) (batch / pre-computation) and [briarwood/claims/pipeline.py:42](briarwood/claims/pipeline.py#L42) (claims wedge). Chat-tier handlers do NOT call this directly — see DECISIONS.md 2026-04-25 "README_dispatch.md overstates orchestrator coupling".
   - `run_chat_tier_analysis(property_data, answer_type, user_input, *, parser_output=None, parallel=False)` (added 2026-04-25, Cycle 2 of OUTPUT_QUALITY_HANDOFF_PLAN.md) — skips the intent-contract router (the chat-tier router has already produced an `AnswerType`), picks a module set from [`briarwood/execution/module_sets.py::ANSWER_TYPE_MODULE_SETS`](briarwood/execution/module_sets.py), runs a single consolidated execution plan, and calls the deterministic `briarwood.synthesis.structured.build_unified_output` directly. LOOKUP and the non-property tiers short-circuit. **Wired into `handle_browse` 2026-04-25 (Cycle 3, commit `ca94d2f`)** via the helper `_browse_chat_tier_artifact` — for saved properties the BROWSE handler now runs ONE consolidated execution plan with all 23 scoped modules instead of the per-tool fragmentation pattern from §9.3. Other chat-tier handlers (`handle_decision`, `handle_risk`, `handle_edge`, `handle_strategy`, `handle_projection`, `handle_rent_lookup`) still use the per-tool pattern — Cycle 5 will roll the same rewire out.
 - **Layer 3 LLM synthesizer** at [briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py) (added 2026-04-25, Cycle 4 of OUTPUT_QUALITY_HANDOFF_PLAN.md, commit `fb23152`). `synthesize_with_llm(*, unified, intent, llm, max_tokens=360) -> tuple[str, dict]` reads a fully-populated `UnifiedIntelligenceOutput` and the user's `IntentContract` and writes 3-7 sentences of intent-aware prose. Single LLM call wrapped in `complete_text_observed(surface="synthesis.llm", ...)` for distinct ledger telemetry. Numeric guardrail via `api.guardrails.verify_response` over the full unified output; one regen attempt (`synthesis.llm.regen` surface) on threshold-level ungrounded numbers, kept only when violations strictly decrease. **Wired into all six chat-tier handlers as of 2026-04-25 (Cycle 5):** `handle_browse` (Cycle 4, `fb23152`), `handle_projection` (`1f8ab6a`), `handle_risk` (`6b861e9`), `handle_edge` (`d3293a1`), `handle_strategy` (`3811dbf`), `handle_rent_lookup` (`c589635`), `handle_decision` final summary (`a429d88`). On empty synthesizer output the tier-specific composer fires as fallback so user-visible prose is never empty. Section-followup composers (`compose_section_followup` for trust, downside, comp_set, entry_point, value_change, rent_workability) keep their narrow-payload composer calls — those follow-ups are surgical section-specific generations, not full intent-aware prose.
+- **Value Scout** at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) exposes `scout(input_obj, *, llm=None, intent=None, max_insights=2)`. Claim-wedge inputs run deterministic `uplift_dominance`; chat-tier `UnifiedIntelligenceOutput` inputs run deterministic rails (`rent_angle`, `adu_signal`, `town_trend_tailwind`) plus the LLM scout when `llm` is provided. Results are sorted by `SurfacedInsight.confidence`, cached on `session.last_scout_insights`, threaded into `synthesize_with_llm`, and emitted as the `scout_insights` SSE event for the `ScoutFinds` React surface.
 - **Macro nudges** at [briarwood/pipeline/triage.py](briarwood/pipeline/triage.py) apply small confidence/value adjustments per module based on signed macro signals (HPI momentum, liquidity) with per-dimension caps.
 
 There is no LLM layer that reads a tool registry and picks which specialty models to invoke. Model selection is encoded in handler code.
@@ -246,6 +249,13 @@ prefix and never breaks a turn).
   runs are isolated by [tests/conftest.py](tests/conftest.py), which
   redirects the env var to a per-session tmp file so the production
   artifact isn't polluted.
+- **Scout yield telemetry** — chat-tier `scout(...)` calls append a
+  `value_scout_yield insights_generated=... insights_surfaced=...
+  top_confidence=...` note to the active `TurnManifest`. The LLM Scout
+  path also appears in `data/llm_calls.jsonl` under surface
+  `value_scout.scan` (and `value_scout.scan.regen` when numeric
+  grounding triggers a rewrite), so `/admin/turn/[turn_id]` can compare
+  Scout output yield against LLM cost and duration.
 - **Metric columns on `messages`** — `latency_ms`, `answer_type`,
   `success_flag`, `turn_trace_id` (FK → `turn_traces.turn_id`,
   `ON DELETE SET NULL`). Added via idempotent `ALTER TABLE ADD COLUMN`

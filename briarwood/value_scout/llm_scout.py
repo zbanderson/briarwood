@@ -84,6 +84,12 @@ Examples (illustrative, not exhaustive):
 
 Return AT MOST 2 insights, ranked by your own confidence. Do NOT pad.
 If nothing non-obvious is in the unified output, return zero insights.
+Before returning an insight, check it against `recommendation`,
+`key_value_drivers`, `why_this_stance`, and `value_position`: if it is
+just another phrasing of ask-vs-fair-value, the headline verdict, or an
+already-listed driver, choose a different angle or return fewer insights.
+Prefer evidence that lives outside the obvious valuation fields when the
+unified output contains it.
 
 For each insight produce:
 
@@ -97,9 +103,11 @@ For each insight produce:
   `unified` that the insight rests on (e.g.
   `market_value_history.three_year_change_pct`,
   `rental_option.rent_support_score`). Minimum 1, target 2-4.
-- `category` — short snake_case label (e.g. `rent_angle`, `adu_signal`,
-  `town_trend`, `comp_anomaly`, `carry_yield_mismatch`,
-  `optionality`). Invent a new label when none of these fit.
+- `category` — prefer one of Briarwood's canonical labels when it fits:
+  `rent_angle`, `adu_signal`, `town_trend_tailwind`, `comp_anomaly`,
+  `carry_yield_mismatch`, `optionality`. Invent a new short snake_case
+  label only when none of the canonical labels fit the actual evidence;
+  do not invent vague meta-labels like `optional_signal`.
 - `confidence` — your self-rated confidence in [0, 1] that this
   insight is both true and non-obvious. Anchors: 1.0 = canonical
   evidence with no ambiguity, 0.7 = solid signal worth surfacing,

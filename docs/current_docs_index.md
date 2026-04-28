@@ -6,8 +6,27 @@ Use this file as the starting point for product and implementation work.
 
 - `AGENTS.md`
   Repo rules for routing, scoped execution, UI direction, and agent behavior
+- `CODEX.md`, `CLAUDE.md`
+  Startup contracts for Codex / Claude sessions. These define orientation,
+  README discipline, handoff expectations, and source priority.
 - `CURRENT_STATE.md`
   Short bootstrap context for fresh AI sessions and handoff continuity
+- `DECISIONS.md`
+  Append-only record of owner decisions, landed handoffs, guardrails, and
+  cross-document closeout notes. Read the relevant dated entries before
+  changing architecture or product behavior.
+- `ROADMAP.md`
+  Active sequence, strategic initiatives, tactical backlog, resolved index,
+  and known drift. For planning, read this in full.
+- `ARCHITECTURE_CURRENT.md`
+  Current system map for layers, directories, LLM integrations,
+  orchestration, persistence, and UI boundaries.
+- `GAP_ANALYSIS.md`
+  Current-state vs. six-layer target architecture, including which target
+  gaps are already closed and which remain.
+- `TOOL_REGISTRY.md`
+  Registry of callable/tool-like surfaces, module ownership, and known
+  quirks. Use this when changing tool/module entry points or manifests.
 - `docs/scoped_execution_support.md`
   Current V2 scoped execution coverage and fallback status
 - `docs/operational_model_sweep.md`
@@ -16,6 +35,17 @@ Use this file as the starting point for product and implementation work.
   Current backend-model-to-chat-surface map for the canonical decision flow
 - `unified_intelligence.md`
   Unified Intelligence behavior and output contract
+- `SCOUT_HANDOFF_PLAN.md`
+  Historical Phase 4b Scout plan. Complete as of 2026-04-28; still useful
+  for Scout architecture, verification, and closeout context.
+- `CMA_HANDOFF_PLAN.md`
+  Historical Phase 4a CMA quality plan. Complete as of 2026-04-28; still
+  useful for live comp, SearchApi, and rent-zestimate lineage.
+- `PERSISTENCE_HANDOFF_PLAN.md`, `FEEDBACK_LOOP_HANDOFF_PLAN.md`,
+  `DASHBOARD_HANDOFF_PLAN.md`
+  Historical AI-Native Foundation Stage 1-3 plans. Complete as of
+  2026-04-28; read when touching turn traces, feedback, admin dashboard,
+  or LLM-call observability.
 - `briarwood/routing_schema.py`
   Canonical routing and output contracts
 - `briarwood/orchestrator.py`

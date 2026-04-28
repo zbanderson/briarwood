@@ -1,6 +1,6 @@
 # Briarwood Current State
 
-Last Updated: 2026-04-24
+Last Updated: 2026-04-28
 
 This file is the short bootstrap context for new AI coding sessions. It
 does not replace `CODEX.md`, `AGENTS.md`, `DECISIONS.md`,
@@ -78,12 +78,15 @@ Expected handoff rhythm:
 
 The latest documented work centers on:
 
-- scoped execution coverage and wrapper behavior
-- module output contract drift between code and audit docs
-- README discipline for module-level contracts
-- graceful degradation behavior in scoped wrappers
-- editor / synthesis threshold drift prevention
-- naming clarity around representation agents and carry-cost modules
+- Phase 4b Scout closeout: shared `scout(...)` dispatcher, LLM Scout
+  on BROWSE / DECISION / EDGE, `ScoutFinds` UI surface, deterministic
+  fallback rails, and Scout yield telemetry
+- AI-Native Foundation Stages 1-3: turn traces, LLM-call JSONL,
+  feedback loop, and `/admin` read-side dashboard
+- Phase 4a CMA closeout: live SOLD/ACTIVE comp support and
+  SearchApi-backed `rent_zestimate` substrate
+- remaining post-Scout sequence work: AI-Native Stage 4 model-accuracy
+  loop, then Phase 4c BROWSE summary card rebuild
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued
 fixes. Do not rely on this summary when exact details matter.

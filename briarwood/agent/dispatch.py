@@ -2412,12 +2412,12 @@ def handle_decision(
             # session for the SSE adapter to emit, and pass them to
             # the synthesizer so the `## What's Interesting` beat
             # weaves a decision-pivot angle.
-            from briarwood.value_scout import scout_unified
+            from briarwood.value_scout import scout
 
-            scout_insights, _scout_report = scout_unified(
-                unified=unified,
-                intent=intent,
+            scout_insights = scout(
+                unified,
                 llm=llm,
+                intent=intent,
             )
             session.last_scout_insights = (
                 [insight.model_dump(mode="json") for insight in scout_insights]
@@ -4139,12 +4139,12 @@ def handle_edge(
             # synthesizer. The scout's per-tier voice (set via the
             # intent contract) biases toward skeptical / risk-adjacent
             # angles for EDGE.
-            from briarwood.value_scout import scout_unified
+            from briarwood.value_scout import scout
 
-            scout_insights, _scout_report = scout_unified(
-                unified=unified_full,
-                intent=intent,
+            scout_insights = scout(
+                unified_full,
                 llm=llm,
+                intent=intent,
             )
             session.last_scout_insights = (
                 [insight.model_dump(mode="json") for insight in scout_insights]
@@ -5084,12 +5084,12 @@ def handle_browse(
             # drilldown surface (Cycle 3). Empty / no-fire turns leave
             # `last_scout_insights` as None — the synthesizer falls
             # back to its usual non-obvious-angle judgment.
-            from briarwood.value_scout import scout_unified
+            from briarwood.value_scout import scout
 
-            scout_insights, _scout_report = scout_unified(
-                unified=unified,
-                intent=intent,
+            scout_insights = scout(
+                unified,
                 llm=llm,
+                intent=intent,
             )
             session.last_scout_insights = (
                 [insight.model_dump(mode="json") for insight in scout_insights]

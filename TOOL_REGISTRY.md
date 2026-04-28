@@ -8,6 +8,50 @@ Each entry is a YAML block with: `name`, `path`, `entry`, `intent_fit` (matching
 
 ---
 
+## Scout / insight surfacing cluster
+
+*"What angle did the user not know to ask about?"*
+
+### value_scout
+
+```yaml
+name: value_scout
+path: briarwood/value_scout/scout.py
+entry: scout(input_obj, *, llm=None, intent=None, max_insights=2) -> list[SurfacedInsight]
+intent_fit: [BROWSE, DECISION, EDGE]
+inputs:
+  input_obj: UnifiedIntelligenceOutput | VerdictWithComparisonClaim | dict
+  llm: LLMClient | None
+  intent: IntentContract | None
+  max_insights: int
+outputs:
+  list[SurfacedInsight]:
+    headline: str
+    reason: str
+    supporting_fields: list[str]
+    scenario_id: str | None
+    confidence: float | None
+    category: str | None
+depends_on: []
+invariants:
+  - Deterministic patterns are pure and never fetch data
+  - Chat-tier LLM output is numerically grounded against UnifiedIntelligenceOutput
+  - Results sort by SurfacedInsight.confidence descending; missing confidence sorts as 0.0
+  - Empty output is [] for scout(...) and None for scout_claim(...)
+blockers_for_tool_use:
+  - Not a scoped execution module; called from dispatch after UnifiedIntelligenceOutput exists
+  - Still sequential after Layer 2 today, not parallel with orchestration
+notes:
+  - Claim-wedge wrapper: scout_claim(claim) -> SurfacedInsight | None, retained indefinitely for compatibility
+  - Deterministic claim pattern: uplift_dominance
+  - Deterministic chat-tier rails: rent_angle, adu_signal, town_trend_tailwind
+  - LLM surface: value_scout.scan via complete_structured_observed; regen surface value_scout.scan.regen
+  - Manifest note: value_scout_yield insights_generated=... insights_surfaced=... top_confidence=...
+  - UI surface: api EVENT_SCOUT_INSIGHTS -> web ScoutFinds component
+```
+
+---
+
 ## Valuation cluster
 
 *"What is it worth right now?"*

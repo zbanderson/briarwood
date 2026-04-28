@@ -42,6 +42,12 @@ PLACEHOLDER_INVESTMENT_BY_TIER: dict[str, float] = {
 }
 DEFAULT_PLACEHOLDER_INVESTMENT: float = 150_000.0
 
+# Cycle 5 makes ``SurfacedInsight.confidence`` the universal ranking key.
+# For this deterministic pattern, confidence rises with the dominance
+# multiple and caps at 1.0.
+CONFIDENCE_BASE: float = 0.5
+CONFIDENCE_PER_MULTIPLE: float = 0.1
+
 
 @dataclass(frozen=True)
 class _Candidate:
@@ -114,6 +120,7 @@ def detect(claim: VerdictWithComparisonClaim) -> SurfacedInsight | None:
             "subject.sqft",
         ],
         scenario_id=winner.scenario.id,
+        confidence=_confidence_for_multiple(multiple),
     )
 
 
@@ -126,3 +133,7 @@ def _find_subject(scenarios: list[ComparisonScenario]) -> ComparisonScenario | N
 
 def _investment_for(scenario: ComparisonScenario) -> float:
     return PLACEHOLDER_INVESTMENT_BY_TIER.get(scenario.id, DEFAULT_PLACEHOLDER_INVESTMENT)
+
+
+def _confidence_for_multiple(multiple: float) -> float:
+    return min(1.0, max(0.0, CONFIDENCE_BASE + CONFIDENCE_PER_MULTIPLE * multiple))

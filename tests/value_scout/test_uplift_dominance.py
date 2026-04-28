@@ -87,6 +87,10 @@ class UpliftDominanceFiresTests(unittest.TestCase):
             "comparison.scenarios[renovated_same].metric_median",
             insight.supporting_fields,
         )
+        self.assertIsNotNone(insight.confidence)
+        assert insight.confidence is not None
+        self.assertGreaterEqual(insight.confidence, 0.0)
+        self.assertLessEqual(insight.confidence, 1.0)
 
     def test_fires_on_minimal_synthetic_claim(self) -> None:
         claim = _build_claim(

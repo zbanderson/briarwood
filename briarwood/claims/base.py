@@ -51,9 +51,10 @@ class SurfacedInsight(BaseModel):
 
     `scenario_id` is claims-wedge-specific (uplift_dominance pattern points
     at a `ComparisonScenario`); it stays None for chat-tier LLM-emitted
-    insights. `confidence` and `category` are populated by the LLM scout
-    (Phase 4b Cycle 1) and remain None for the existing deterministic
-    pattern.
+    insights. `confidence` is the Value Scout ranking channel; LLM
+    insights self-rate it, and deterministic patterns assign it from
+    their own scoring signal. `category` is populated by the LLM scout
+    and may stay None for deterministic claim-wedge patterns.
     """
 
     headline: str

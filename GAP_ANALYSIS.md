@@ -104,11 +104,11 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 
 **Target state.** A parallel process that proactively surfaces angles the user didn't ask about but should care about, based on their inferred profile (e.g., "after a 5% rent escalation, you break even in 5 years").
 
-**Current state.** Partial. [briarwood/value_scout/](briarwood/value_scout/) exists with one pattern (`uplift_dominance` at [briarwood/value_scout/patterns/uplift_dominance.py](briarwood/value_scout/patterns/uplift_dominance.py)). `scout_claim(claim)` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) runs patterns and returns a `SurfacedInsight`. It runs **only inside the claim-object wedge**, not in parallel with the main analysis path.
+**Current state.** Substantially landed as of Phase 4b Scout Cycles 1-7 (2026-04-28). [briarwood/value_scout/](briarwood/value_scout/) now exposes a shared `scout(...)` dispatcher at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) for both claim-wedge `VerdictWithComparisonClaim` inputs and chat-tier `UnifiedIntelligenceOutput` inputs. Claim-wedge compatibility stays through `scout_claim(claim)`. BROWSE, DECISION fall-through, and EDGE handlers run Scout before the Layer 3 LLM synthesizer, cache results on `session.last_scout_insights`, pass them into `synthesize_with_llm`, and surface them through the `scout_insights` SSE event rendered by `ScoutFinds`.
 
 **Gap.**
-- Parallel-invocation machinery. Currently scout runs after claim synthesis, sequentially. Target-state says "parallel process" — needs to fire alongside Layer 2 orchestration, not after Layer 3 synthesis.
-- Pattern library is one entry. Target implies many: rent escalation break-even, optionality patterns, teardown arbitrage, scarcity premium, comp-spread widening, etc. Each pattern needs a trigger heuristic and a structured insight schema.
+- Parallel-invocation machinery. Scout is no longer claim-wedge-only, but it still runs sequentially after the consolidated chat-tier artifact exists. Target-state says "parallel process" — needs to fire alongside Layer 2 orchestration if latency or architecture demands it.
+- Pattern library breadth. The library now includes `uplift_dominance`, `rent_angle`, `adu_signal`, and `town_trend_tailwind`, plus the LLM scout. Target still implies more patterns over time: teardown arbitrage, scarcity premium, comp-spread widening, hidden comp-set strength, etc. Each new pattern needs deterministic trigger heuristics and confidence scoring.
 - User-type conditioning. A pattern that matters for an investor ("break-even IRR") may be noise for a first-time buyer ("can I live here?"). No mechanism today keys patterns to user type.
 
 **Complexity.** Significant. Parallel invocation plus a growing pattern library plus user-type-conditioned triggering is three non-trivial pieces that interact.
@@ -116,7 +116,7 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 **Risks.**
 - Scout firing on every turn could feel like a noisy upsell. Trigger discipline matters — one insight per turn at most, with confidence thresholds, or users will tune it out.
 - Needs Layer 1 (user type) to be useful. Without it, scout insights are generic, which defeats the "two-steps-ahead" framing.
-- The `uplift_dominance` pattern's v1 returns "first non-null"; Phase B is marked as adding scoring to select "strongest". That scoring logic is shared across all future patterns and should be designed before the pattern count grows.
+- The first deterministic chat-tier thresholds are conservative. Live `/admin/turn/[turn_id]` review should tune `rent_angle`, `adu_signal`, and `town_trend_tailwind` rather than assuming v1 thresholds are final.
 
 **Substrate added 2026-04-28 (AI-Native Foundation Stages 1-3).** Scout
 inherits a richer foundation than was available when this gap was
@@ -140,6 +140,13 @@ written:
 These together close the "we ship scout but can't evaluate it"
 risk that would have been live in a 2026-04-26 build.
 
+**Scout closeout added 2026-04-28.** `value_scout.scan` appears in the
+LLM ledger through `complete_structured_observed`, and chat-tier
+`scout(...)` writes a manifest note with `insights_generated`,
+`insights_surfaced`, and `top_confidence`. This leaves two Layer 5 target
+items open: true parallel firing alongside Layer 2, and user-type
+conditioning.
+
 ---
 
 ## Layer 6 — Conversational Delivery
@@ -151,11 +158,11 @@ risk that would have been live in a 2026-04-26 build.
 - SSE `text_delta` events stream from the composer. [briarwood/agent/composer.py](briarwood/agent/composer.py) emits prose; [api/pipeline_adapter.py](api/pipeline_adapter.py) chunks it word-by-word for streaming.
 - Structured events (`verdict`, `chart`, `scenario_table`, etc.) emit as complete objects.
 - Card components in [web/src/components/chat/](web/src/components/chat/) render structured payloads alongside prose.
-- Scout insights emit as fields inside the claim event, not as independent visual elements.
+- Scout insights emit as independent `scout_insights` SSE events and render through `ScoutFinds` for chat-tier turns. Claim-wedge insights still travel inside the claim event.
 
 **Gap.**
 - Prose and cards render in parallel but don't reference each other. The prose can't say "see the chart below" and have the chart land in the right place; ordering and relative layout are implicit.
-- Scout insights don't get inline treatment. They sit inside the verdict card; the prose doesn't call them out.
+- Scout insights now get inline treatment in BROWSE / DECISION / EDGE through the synthesizer's `scout_insights` prompt payload plus the dedicated `ScoutFinds` surface.
 - Tone doesn't adapt to user type (which doesn't exist yet — Layer 1 dependency).
 - Auto-memory flags: live SSE cards sometimes need a page reload to render; decision summaries are weak. These are UX regressions more than architectural gaps, but they block the "conversational delivery" feel.
 

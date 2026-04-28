@@ -2326,3 +2326,175 @@ DECISIONS.md prior cycle entries (Cycles 1, 2, 3); user-memory
 `project_scout_apex.md`; user-memory `project_llm_guardrails.md`;
 commit `cc50f77`. README updates remain deferred to Cycle 7 per the
 SCOUT_HANDOFF_PLAN.md batching convention.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 5 landed: registry dispatcher + confidence scoring
+
+**Decision.** Cycle 5 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed on 2026-04-28. Value Scout now has a shared dispatcher across
+the claim wedge and chat-tier Scout surfaces. The existing claim-wedge
+contract is preserved through `scout_claim`, while BROWSE / DECISION
+fall-through / EDGE handlers now call the shared `scout(...)` entry
+point before the Layer 3 synthesizer.
+
+**What landed.**
+- `briarwood/value_scout/scout.py` — new
+  `scout(input_obj, *, llm=None, intent=None, max_insights=2) ->
+  list[SurfacedInsight]` dispatcher. `_PATTERNS` is now keyed by input
+  type with entries for `VerdictWithComparisonClaim` and
+  `UnifiedIntelligenceOutput`.
+- `briarwood/value_scout/scout.py::scout_claim` — retained as the
+  stable back-compat wrapper, returning the first result from
+  `scout(claim, max_insights=1)` or `None`.
+- `briarwood/value_scout/patterns/uplift_dominance.py` — deterministic
+  confidence now derives from the dominance multiple via
+  `min(1.0, 0.5 + 0.1 * multiple)`, making `SurfacedInsight.confidence`
+  the universal Scout sort key.
+- `briarwood/agent/dispatch.py` — BROWSE, DECISION fall-through, and
+  EDGE scout calls now use `scout(...)` instead of direct
+  `scout_unified(...)` calls. The `intent` kwarg is preserved so the
+  Cycle 4 per-tier voice block still works.
+- `briarwood/value_scout/README.md` — updated inline this cycle with
+  the dispatcher contract and dated changelog entry, intentionally
+  overriding the Cycle 7 README batching convention because Cycle 5
+  changes the public module contract.
+
+**Open Design Decisions resolved.**
+1. **OD #A — Confidence for deterministic patterns.** Resolved: derive
+   confidence from the dominance multiple. This bands deterministic
+   Scout output into the same ranking channel as LLM insights without
+   forcing deterministic insights to always outrank LLM finds.
+2. **OD #B — `scout_claim` lifecycle.** Resolved: keep indefinitely as
+   the claim-wedge compatibility wrapper. No deprecation target.
+
+**Compatibility notes.**
+- The claim-wedge still gets the same `uplift_dominance` insight for the
+  Belmar fixture, now with confidence populated.
+- Loose chat-tier unified dicts remain supported. When a dict cannot be
+  validated as `UnifiedIntelligenceOutput`, the dispatcher still passes
+  it through to the LLM scout; deterministic chat-tier patterns require a
+  typed/valid unified object.
+- Wedge-active DECISION path still renders through the claim renderer;
+  Cycle 5 unifies the Scout entry point, not the user-facing wedge
+  rendering surface.
+
+**Verification.** Focused checks passed:
+`tests/value_scout/`, focused BROWSE scout dispatch tests,
+`tests/editor/test_validator`, `tests/claims/test_representation`, an
+import smoke for `scout` / `scout_claim` / `scout_unified`, and
+`git diff --check`. The sandbox printed expected `llm_calls.jsonl`
+write warnings during LLM-observability tests; assertions still passed.
+A full-suite rerun was not used as the Cycle 5 gate because preflight on
+a clean tree already showed the repo baseline differs from the handoff
+claim: 20 failures / 3 errors rather than 16 failures / 1581 passed.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 5 closeout; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 and
+§3.2 Phase 4b; prior Scout Cycle 1-4 decision entries;
+user-memory `project_scout_apex.md`; user-memory
+`project_llm_guardrails.md`.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 6 landed: deterministic fallback rails + yield telemetry
+
+**Decision.** Cycle 6 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed on 2026-04-28. Value Scout now has deterministic chat-tier
+fallback rails under the shared dispatcher. The rails run for
+`UnifiedIntelligenceOutput` inputs before the LLM scout and are ranked in
+the same `SurfacedInsight.confidence` channel, so they can surface Finds
+when the LLM scout returns empty or when no LLM is available.
+
+**What landed.**
+- `briarwood/value_scout/patterns/rent_angle.py` — pure-function rail
+  for rental upside. Primary trigger reads comp rows with `rent_zestimate`
+  plus sale/ask price and checks median gross yield / rent-vs-carry
+  coverage. Secondary trigger reads `rental_option.rent_support_score`
+  and `carry_cost.monthly_cash_flow` when comp-rent rows are absent.
+- `briarwood/value_scout/patterns/adu_signal.py` — pure-function rail for
+  structured accessory-unit optionality evidence from `legal_confidence`.
+  It does not classify legality.
+- `briarwood/value_scout/patterns/town_trend_tailwind.py` — pure-function
+  rail for a town-level three-year price tailwind at or above 10%.
+- `briarwood/value_scout/scout.py` — registers all three rails under the
+  `UnifiedIntelligenceOutput` key and records a chat-tier manifest note:
+  `value_scout_yield insights_generated=... insights_surfaced=...
+  top_confidence=...`.
+- `briarwood/value_scout/llm_scout.py` — prompt iteration from Cycle 3
+  browser smoke. The LLM scout now explicitly avoids restating
+  `recommendation`, `key_value_drivers`, `why_this_stance`, and
+  `value_position`, and it prefers canonical categories
+  (`rent_angle`, `adu_signal`, `town_trend_tailwind`, `comp_anomaly`,
+  `carry_yield_mismatch`, `optionality`) while allowing a new label only
+  when the evidence truly does not fit.
+- `briarwood/value_scout/README.md` — updated inline for the new
+  deterministic chat-tier contract, manifest note, and prompt behavior.
+
+**Guardrails.**
+- Numeric and analytical logic remains deterministic Python. No LLM is used
+  for rent math, valuation, legal classification, scenario math, or risk
+  scoring.
+- The ADU rail surfaces evidence only; it does not decide whether a unit is
+  legal.
+- Frontend drilldown click telemetry was intentionally not implemented in
+  this cycle.
+- Phase 4c BROWSE rebuild remains out of scope.
+
+**Verification.** Focused checks passed:
+`venv/bin/python -m pytest tests/value_scout` (32 passed) and
+`venv/bin/python -m unittest
+tests.agent.test_dispatch.BrowseHandlerTests.test_browse_runs_scout_and_caches_insights_when_artifact_and_llm_present
+tests.agent.test_dispatch.BrowseHandlerTests.test_browse_skips_scout_when_no_llm`
+(2 passed). The sandbox printed expected `llm_calls.jsonl` write warnings
+during LLM-observability tests and a pytest cache warning; assertions
+passed. A full-suite rerun was not used because the pre-Cycle-5 clean-tree
+baseline is known to differ from the handoff count: 20 failures / 3 errors.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 6 closeout; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 and
+§3.2 Phase 4b; prior Scout Cycle 1-5 decision entries.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 7 landed: closeout docs + Phase 4b complete
+
+**Decision.** Cycle 7 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed on 2026-04-28, closing Phase 4b Scout. The implementation
+surface from Cycles 1-6 remains unchanged in this cycle; Cycle 7 is the
+documentation and handoff reconciliation pass.
+
+**What landed.**
+- `GAP_ANALYSIS.md` Layer 5 now reflects the actual shipped topology:
+  shared `scout(...)`, chat-tier BROWSE / DECISION / EDGE Scout, the
+  `ScoutFinds` surface, deterministic fallback rails, and manifest yield
+  telemetry. The remaining Layer 5 target gaps are true parallel firing
+  with Layer 2 and user-type conditioning.
+- `TOOL_REGISTRY.md` now includes `value_scout` with deterministic rails,
+  `value_scout.scan`, `value_scout.scan.regen`, and the
+  `value_scout_yield` manifest note.
+- `ARCHITECTURE_CURRENT.md` now records Scout in the directory map, LLM
+  integrations table, orchestration section, and persistence telemetry.
+- `CURRENT_STATE.md`, `ROADMAP.md`, and `SCOUT_HANDOFF_PLAN.md` now mark
+  Phase 4b complete and point the sequence to AI-Native Foundation Stage 4.
+- `briarwood/value_scout/README.md` had its tests list and Cycle 1-6
+  contract changelog reconciled with the final implementation.
+
+**Verification.** Cycle 7 reused the focused verification gate from Cycle
+6 after doc reconciliation: `tests/value_scout/`, focused BROWSE Scout
+dispatch tests, import smoke, and `git diff --check`. Live browser smoke
+was not rerun in Cycle 7; Cycle 3 already verified the end-to-end
+ScoutFinds render. Full-suite rerun remains out of scope because the
+pre-Cycle-5 clean-tree baseline differed from the handoff count (20
+failures / 3 errors).
+
+**Next sequence task.** AI-Native Foundation Stage 4 — model-accuracy
+loop. Phase 4c BROWSE summary card rebuild remains after Stage 4 in the
+current sequence.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 7 closeout; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 and
+§3.2 Phase 4b; [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md) Layer 5;
+[`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) `value_scout`;
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) LLM integrations
+and Persistence.

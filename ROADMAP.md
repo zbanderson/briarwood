@@ -106,7 +106,7 @@ The ordered list of major moves. Each step carries a `[source]` tag —
     Phase 4c UI reconstruction (§3.4.7). With 3a + 3b both closed, the
     AI-Native Foundation umbrella's user-visible phase is complete and
     sequence step 4 (Phase 4b Scout) is now unblocked.
-4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-4 ✅ 2026-04-28**
+4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` ✅ RESOLVED 2026-04-28
    *Why now:* Apex differentiator for Briarwood vs Zillow/Redfin/realtor.com.
    Substrate is ready (`rent_zestimate` from CMA Cycle 3a is landed).
    *Cycle 1 outcome:* LLM scout module + tests landed isolated (no handler
@@ -133,10 +133,27 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    skeptical). The Cycle 2/3 SSE event + ScoutFinds React surface
    light up automatically on DECISION/EDGE turns — no adapter or
    frontend change needed.
-   *Open:* Cycles 5-7 (Cycle 5 unifies the two scout surfaces under
-   a registry dispatcher with confidence-based scoring; Cycle 6
-   pure-function fallback rails + telemetry; Cycle 7 cleanup +
-   README batch update).
+   *Cycle 5 outcome:* `scout(...)` is now the shared registry
+   dispatcher across claim-wedge and chat-tier inputs. `_PATTERNS`
+   dispatches by input type; `scout_claim` remains as the stable
+   claim-wedge wrapper. `SurfacedInsight.confidence` is the universal
+   sort key; deterministic `uplift_dominance` derives confidence from
+   the dominance multiple. `briarwood/value_scout/README.md` updated
+   inline for the contract change.
+   *Cycle 6 outcome:* deterministic chat-tier fallback rails
+   (`rent_angle`, `adu_signal`, `town_trend_tailwind`) are registered
+   under `UnifiedIntelligenceOutput`, so Scout can still surface Finds
+   when the LLM scout returns empty or no LLM is available. Chat-tier
+   Scout calls now record a manifest yield note
+   (`insights_generated`, `insights_surfaced`, `top_confidence`).
+   The LLM scout prompt was tuned away from synthesizer-adjacent
+   restatements and toward canonical category discipline.
+   *Cycle 7 outcome:* closeout docs reconciled across
+   `GAP_ANALYSIS.md`, `TOOL_REGISTRY.md`, `ARCHITECTURE_CURRENT.md`,
+   `CURRENT_STATE.md`, `ROADMAP.md`, `DECISIONS.md`, and the Scout
+   handoff plan. Phase 4b is complete; true parallel firing and
+   user-type conditioning remain future Layer 5 target gaps, not
+   open Phase 4b work.
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
@@ -588,7 +605,7 @@ unblocked. Stage 4 follows Phase 4b.
 
 ---
 
-### §3.2 Phase 4b — Scout buildout `[size: XL]` `[impact: Scout]`
+### ✅ §3.2 Phase 4b — Scout buildout `[size: XL]` `[impact: Scout]`
 
 **Severity:** Apex differentiation — what separates Briarwood from
 Zillow / Redfin / realtor.com. Owner direction 2026-04-26: *"Scout
@@ -596,8 +613,8 @@ needs to be the apex of the product. … Scout is going to be the thing
 that answers the question that you don't know to ask."*
 ([SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) header).
 
-**Status:** **In progress — Cycle 1 landed 2026-04-28.** Cycles 2-7
-open. Resequenced 2026-04-27 to follow AI-Native Foundation Stages
+**Status:** RESOLVED 2026-04-28 — Cycles 1-7 landed. Phase 4b Scout
+buildout complete. Resequenced 2026-04-27 to follow AI-Native Foundation Stages
 1–3 (per [DECISIONS.md](DECISIONS.md) 2026-04-27 entry). Substrate is
 richer than the original 2026-04-26 framing contemplated:
 `rent_zestimate` from CMA Cycle 3a is live, plus the full AI-Native
@@ -633,10 +650,6 @@ pipeline-adapter; baseline holds at 16 fail / 1581 pass. Browser
 smoke deferred to live UI session. See [DECISIONS.md](DECISIONS.md)
 2026-04-28 entry "Phase 4b Scout Cycle 2 landed".
 
-Cycles 3-7 open; Cycle 3 lands the dedicated drilldown surface in
-`web/src/components/chat/` plus the category → drill-in-route
-mapping.
-
 **Cycle 3 outcome (2026-04-28).** `web/src/components/chat/scout-finds.tsx`
 + `web/src/lib/chat/scout-routes.ts` ship the `ScoutFinds` drilldown
 surface; rendered between `GroundedText` and `StrategyPathCard` per
@@ -652,9 +665,6 @@ surfacing genuinely non-obvious findings, (b) LLM invents categories
 outside the canonical set — fallback works but UI badge reads odd.
 See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout
 Cycle 3 landed".
-
-Cycles 4-7 open; Cycle 4 generalizes the BROWSE wiring to DECISION
-and EDGE handlers with per-tier voice.
 
 **Cycle 4 outcome (2026-04-28).** `handle_decision` (wedge
 fall-through Layer 3 synthesizer path) and `handle_edge` now run
@@ -673,13 +683,44 @@ Cycles 2/3 light up automatically on DECISION/EDGE turns —
 See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout
 Cycle 4 landed".
 
-Cycles 5-7 open; Cycle 5 lands the registry dispatcher unifying the
-claim-wedge and chat-tier scout surfaces under one entry point with
-confidence-based scoring.
+**Cycle 5 outcome (2026-04-28).** `briarwood/value_scout/scout.py`
+now exposes `scout(input_obj, *, llm=None, intent=None, max_insights=2)`
+as the shared registry dispatcher. `_PATTERNS` is keyed by
+`VerdictWithComparisonClaim` and `UnifiedIntelligenceOutput`; the existing
+`uplift_dominance` detector stays under the claim key. `scout_claim`
+is retained indefinitely as a back-compat wrapper around `scout(claim)`.
+`SurfacedInsight.confidence` is now the universal Scout sort key:
+LLM insights keep their self-rated score, while deterministic
+`uplift_dominance` assigns `min(1.0, 0.5 + 0.1 * dominance_multiple)`.
+BROWSE / DECISION / EDGE handlers call the dispatcher while preserving
+per-tier `intent` voice. `briarwood/value_scout/README.md` was updated
+inline for the contract change. Focused tests passed; full-suite baseline
+remains off the documented handoff count (pre-Cycle-5 clean-tree run:
+20 failures / 3 errors).
 
-**Framing.** Today's Value Scout is single-pattern (`uplift_dominance`),
-claims-wedge-only, gated behind `BRIARWOOD_CLAIMS_ENABLED`, and
-sequential-then-first-non-null. The fix per
+**Cycle 6 outcome (2026-04-28).** Deterministic chat-tier fallback rails
+landed under `briarwood/value_scout/patterns/`: `rent_angle`,
+`adu_signal`, and `town_trend_tailwind`. The shared dispatcher registers
+them under `UnifiedIntelligenceOutput`, ranks them in the same confidence
+channel as LLM insights, and records a per-turn manifest note with
+`insights_generated`, `insights_surfaced`, and `top_confidence`. The LLM
+scout prompt now explicitly avoids synthesizer-adjacent restatements and
+prefers canonical categories while preserving room for evidence-specific
+new labels. Focused tests passed.
+
+**Cycle 7 outcome (2026-04-28).** Closeout docs reconciled. `GAP_ANALYSIS.md`
+Layer 5 records Scout as chat-tier live and leaves only parallel firing
+and user-type conditioning as target gaps. `TOOL_REGISTRY.md` includes
+the `value_scout` entry and `value_scout.scan` LLM surface.
+`ARCHITECTURE_CURRENT.md` records Scout in the LLM, orchestration, and
+persistence surfaces. `CURRENT_STATE.md`, this roadmap, and
+`SCOUT_HANDOFF_PLAN.md` now point the next sequence task to AI-Native
+Foundation Stage 4.
+
+**Framing.** Value Scout now has a shared dispatcher for claim-wedge and
+chat-tier inputs, deterministic chat-tier fallback rails, and an LLM scout
+surface for BROWSE / DECISION / EDGE. It is still sequential rather than
+parallel with Layer 2. The target per
 [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md): an LLM-driven scout
 that reads the full `UnifiedIntelligenceOutput` on every BROWSE/DECISION
 turn, identifies 1–2 non-obvious angles the user would care about, and
@@ -692,7 +733,7 @@ closed user feedback to learn from (Stage 2), and a dashboard
 surface where its outputs can be measured (Stage 3). Sequence is
 unblocked.
 
-**Plan doc:** [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md).
+**Plan doc:** [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) (complete).
 
 ---
 
@@ -721,6 +762,16 @@ comp-scoring + comp-confidence weights. Don't pick the items below off
 in isolation when one of these extractions would solve several at once.
 
 **Plan doc:** [SEMANTIC_AUDIT.md](SEMANTIC_AUDIT.md).
+
+**Status snapshot as of 2026-04-28.** The semantic audit itself is
+complete, and some semantic correctness work has already landed. The
+§3.3.1 pricing-view/verdict threshold drift is implemented via the shared
+`briarwood/decision_model/value_position.py` classifier and sweep tests.
+The §3.3.9 confidence-carrier work is partially implemented:
+`pricing_view_confidence` and `pricing_view_confidence_band` exist, but
+dispatch/synthesis consumers still need to hedge low-confidence
+`pricing_view` labels in prose. The rest of the umbrella remains open
+unless its individual entry below says otherwise.
 
 **Absorbed from tactical:**
 - 2026-04-24 — Editor / synthesis threshold duplication has no mechanical guard
@@ -2144,7 +2195,13 @@ ORDER BY m.created_at ASC;
 
 **Out of scope** until Stage 3 work begins. Sketches live here so Stage 3 doesn't start cold on the SQL.
 
-#### 2026-04-28 — `docs/current_docs_index.md` does not list authoritative orientation docs `[size: S]` `[impact: Docs, Process & Repo Health]`
+#### ✅ 2026-04-28 — `docs/current_docs_index.md` does not list authoritative orientation docs `[size: S]` `[impact: Docs, Process & Repo Health]`
+
+**Status:** RESOLVED 2026-04-28 — `docs/current_docs_index.md` now lists
+the same authoritative project-state docs that `CLAUDE.md` / `CODEX.md`
+send sessions to: `DECISIONS.md`, `ROADMAP.md`,
+`ARCHITECTURE_CURRENT.md`, `GAP_ANALYSIS.md`, and `TOOL_REGISTRY.md`,
+plus the now-complete handoff plans that remain useful context.
 
 **Severity:** Low — docs drift; new sessions reading the index miss the canonical orientation set.
 
@@ -2161,7 +2218,8 @@ ORDER BY m.created_at ASC;
 
 Recommendation: **(1)** if no reader habitually goes to `docs/current_docs_index.md`; otherwise **(2)** so the two stay convergent. Mechanical drift fix; do not silently reconcile per CLAUDE.md.
 
-**Out of scope** for active handoffs. ~30-min docs cleanup; pick up during any docs-touching pass.
+**Resolution.** Chose option 2: keep `current_docs_index.md` as the
+project-state index and make it converge with the root startup docs.
 
 #### 2026-04-25 — `get_cma` Step 2 still open (cache-miss audit) `[size: S]` `[impact: Property Analysis]`
 
@@ -2770,6 +2828,9 @@ heading and a `**Status:** RESOLVED YYYY-MM-DD — …` line in the rubric.
 | 13 | 2026-04-28 | Sequence step 3a — AI-Native Foundation Stage 2 — feedback loop | Stage 2 closeout (step 3 split into 3a/3b; 3b — Stage 3 dashboard — remains open) | §1 The Sequence |
 | 14 | 2026-04-28 | AI-Native Foundation Stage 3 — Business-Facing Dashboard | [DASHBOARD_HANDOFF_PLAN.md](DASHBOARD_HANDOFF_PLAN.md) Cycles 1-4 — `/api/admin/*` endpoints + `/admin` SSR pages + per-turn drill-down with feedback-loop tag highlighting | §3.1 Strategic Initiatives |
 | 15 | 2026-04-28 | Sequence step 3b — AI-Native Foundation Stage 3 — dashboard | Stage 3 closeout. With 3a + 3b both closed, sequence step 4 (Phase 4b Scout) is now unblocked | §1 The Sequence |
+| 16 | 2026-04-28 | Phase 4b — Scout buildout | [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) Cycles 1-7 — LLM Scout, ScoutFinds, shared dispatcher, deterministic rails, telemetry, and closeout docs | §3.2 Strategic Initiatives |
+| 17 | 2026-04-28 | Sequence step 4 — Phase 4b Scout | Scout closeout (step 5 — AI-Native Foundation Stage 4 — now unblocked) | §1 The Sequence |
+| 18 | 2026-04-28 | `docs/current_docs_index.md` missing authoritative orientation docs | Docs index convergence pass — added DECISIONS, ROADMAP, ARCHITECTURE_CURRENT, GAP_ANALYSIS, TOOL_REGISTRY, and complete handoff plans | §4 Medium |
 
 **Convention.** When an entry closes:
 1. Add `✅` prefix to its section heading.
