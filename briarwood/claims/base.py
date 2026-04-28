@@ -47,9 +47,18 @@ class NextQuestion(BaseModel):
 
 
 class SurfacedInsight(BaseModel):
-    """Value Scout's output. Optional — None if Scout found nothing notable."""
+    """Value Scout's output. Optional — None if Scout found nothing notable.
+
+    `scenario_id` is claims-wedge-specific (uplift_dominance pattern points
+    at a `ComparisonScenario`); it stays None for chat-tier LLM-emitted
+    insights. `confidence` and `category` are populated by the LLM scout
+    (Phase 4b Cycle 1) and remain None for the existing deterministic
+    pattern.
+    """
 
     headline: str
     reason: str
     supporting_fields: list[str]
     scenario_id: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    category: str | None = None
