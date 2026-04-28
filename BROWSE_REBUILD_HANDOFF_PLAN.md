@@ -1,8 +1,9 @@
 # Phase 4c — BROWSE Summary Card Rebuild (Handoff Plan)
 
-**Status:** APPROVED 2026-04-28 (owner sign-off after the 2026-04-28
-three-section newspaper-hierarchy reframe). Cycle 1 ready to start. No
-cycles landed.
+**Status:** Cycle 1 LANDED 2026-04-28 (tier marker + section primitive +
+Section A fully filled; Sections B/C are Cycle 1 stubs). Cycle 2 ready to
+start. Plan APPROVED 2026-04-28 with the three-section newspaper-hierarchy
+reframe.
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE walkthrough Thread 1; parking-lot entry at
 [`ROADMAP.md`](ROADMAP.md) §3.5; sequence step 6 of [`ROADMAP.md`](ROADMAP.md)
@@ -308,6 +309,28 @@ tiers after Phase 4c, file a §4 cleanup entry; do not delete in scope here.
 
 ### Cycle 1 — Tier marker + section primitive + Section A ("The Read")
 
+**Status:** ✅ **LANDED 2026-04-28.**
+
+**Closeout (2026-04-28).** All scope items shipped end-to-end. Tier marker
+plumbed through the SSE protocol (`api/events.py` → wire → `web/src/lib/chat/events.ts` → `ChatMessage.answerType`); persistence verified through both the live `message` event AND the page-load rehydration path (one cross-cutting bug surfaced and fixed mid-cycle: `api/store.py::get_conversation` was projecting message rows but never SELECTed `messages.answer_type`, so reloads after the chat-view auto-navigated to `/c/[id]` lost the marker — fixed by adding the column to the SQL SELECT and the row dict). Section primitive (`browse-section.tsx`) lands the newspaper visual rhythm: small-caps section labels with 0.14em tracking, 1px top rule, 2rem padding, no nested borders. Section A (`browse-read.tsx`) fully filled with subject line + ask/fair-value headline + stance pill + masthead `market_trend` chart + flowed `GroundedText` prose. Sections B and C are Cycle 1 stubs (`browse-scout.tsx` returns null for every input; `browse-deeper-read.tsx` renders a sub-head with a "Drilldowns coming in Cycles 2–4" placeholder). `AssistantMessage` gates the existing card stack behind `!isBrowse`; BROWSE turns short-circuit through the three new sections; DECISION / EDGE / PROJECTION / RISK / STRATEGY / RENT_LOOKUP turns render unchanged.
+
+Verification gates green: `tests/test_chat_api.py` (3/3 — assistant `message` event now pins `answer_type: "decision"` on the wire); `tests/test_api_turn_traces.py` (9/9 — confirmed `get_conversation` projection fix didn't regress turn-trace queries); `tsc --noEmit` clean; `eslint` clean (0 errors, 0 warnings); `next build` clean. Live browser smoke 2026-04-28 confirmed end-to-end render on `1008-14th-ave-belmar-nj-07719`: `THE READ` sub-head, real ask/fair-value numbers from `last_value_thesis_view`, market_trend chart inline, flowed prose with newspaper beats; `THE DEEPER READ` placeholder; old card stack gone on BROWSE; DECISION turn renders the existing card stack unchanged.
+
+**Open Design Decisions resolved at Cycle 1 start.**
+- **#1 — Tier marker mechanism.** Resolved: extend the existing `message` SSE event with optional `answer_type`. Mirrors AGENTS.md SSE-parity rule. Persistence relied on the existing `messages.answer_type` column; `attach_turn_metrics` already wrote it; `get_conversation` projection fix made it readable.
+- **#2 — Masthead chart placement.** Resolved: `market_trend` lives **inside Section A** between the headline row and the prose body. Owner verified the visual at smoke — it reads as the lead photo on the front-page story.
+- **#5 — Mobile vs. desktop.** Resolved: desktop is the primary design target; sections render the same single-column layout on mobile. No custom breakpoints in Phase 4c.
+- **#8 — Component naming.** Resolved: `BrowseSection` (primitive), `BrowseRead` (Section A), `BrowseScout` (Section B), `BrowseDeeperRead` (Section C). Placeholder names per the `ScoutFinds` convention from Phase 4b Cycle 3 — rename when the product brand finalizes.
+
+**Known Cycle 1 limitations (do not block commit; tracked for Cycle 2 / follow-up).**
+1. **Stance pill renders "Undecided" on BROWSE turns.** The stance lives on the `verdict` SSE event, which today is only emitted on the DECISION path (`api/pipeline_adapter.py:2364` — `events.verdict(_verdict_from_view(session.last_decision_view))`). BROWSE emits `value_thesis` instead, which doesn't carry stance. `BrowseRead` currently coalesces ask / fair value / address from `valueThesis` first then `verdict` (defensive); stance falls back to `verdict?.stance ?? null`. **Fix path:** either add `stance` (and `decision_stance`) to the `value_thesis` SSE event from `session.last_unified_output` OR start emitting a lightweight `verdict` event on BROWSE turns. Either is a one-call addition in `api/pipeline_adapter.py`; recommend wiring it as a Cycle 2 prerequisite so Section B's smoke also has a real stance pill.
+2. **Section B and Section C are Cycle 1 stubs.** Cycle 2 fills Section B with the existing `ScoutFinds` body inside a peer section (returns null when scout returned empty). Cycles 3–4 fill Section C drilldowns.
+3. **Page-load rehydration on conversations from before 2026-04-28.** Older assistant rows have `answer_type=NULL` and will fall through to the legacy card stack. This is intentional — those turns weren't BROWSE turns under the new render contract. New BROWSE turns from 2026-04-28 forward all rehydrate correctly (verified against `924077c8a713`).
+
+**Files touched (12 total — 8 modified, 4 new).** Server: `api/events.py`, `api/main.py`, `api/store.py`, `tests/test_chat_api.py`. TS protocol: `web/src/lib/chat/events.ts`, `web/src/lib/chat/use-chat.ts`, `web/src/lib/api.ts`, `web/src/app/c/[id]/page.tsx`. TS render: `web/src/components/chat/messages.tsx`, plus four new files: `web/src/components/chat/browse-section.tsx`, `browse-read.tsx`, `browse-scout.tsx`, `browse-deeper-read.tsx`.
+
+---
+
 **Goal.** Land the BROWSE-only render gate, the shared section primitive,
 and the first fully-filled section so the newspaper feel is visible from
 Cycle 1's browser smoke. Section B and Section C ship as empty stubs at
@@ -354,6 +377,21 @@ turn is functionally complete.
 (under prose, above card stack) into a peer section with its own sub-head.
 Section B renders null when scout returned empty, full-section when it
 fired.
+
+**Cycle 1 carry-over (resolve at Cycle 2 start, before Section B work).**
+Wire the BROWSE-tier stance pill so Section A no longer renders
+`Undecided`. Two equally cheap options — pick one at Cycle 2 start:
+- **(a)** Add `stance: str | None` and `decision_stance: str | None` to the
+  `value_thesis` SSE event in [`api/events.py`](api/events.py) and
+  [`api/pipeline_adapter.py`](api/pipeline_adapter.py); mirror in
+  [`web/src/lib/chat/events.ts`](web/src/lib/chat/events.ts); `BrowseRead`
+  coalesces stance from valueThesis when present.
+- **(b)** Emit a lightweight `verdict` event on BROWSE turns from
+  `session.last_unified_output` so the existing `verdict?.stance` branch
+  in `BrowseRead` lights up.
+Either is ~10 minutes of LLM-development work and a 1-test addition.
+Recommend (a) — narrower SSE delta and avoids "verdict" semantics on a
+BROWSE-tier surface that isn't a final decision.
 
 **Scope:**
 - Fill `BrowseScout` (Section B). When `message.scoutInsights` is non-empty: render the section sub-head (`WHAT YOU'D MISS` or similar — owner picks at cycle start), a 1-line subtitle (existing `ScoutFinds` subtitle "Angles you didn't ask about"), and the existing `ScoutFinds` component's 0/1/2 cards inside the section body. When `message.scoutInsights` is empty / null: return null. The entire section disappears — no sub-head, no rule, no placeholder.
@@ -642,40 +680,75 @@ The whole phase is done when:
 
 ## Boot prompt for the next Claude context window
 
-Once this plan is approved and Cycle 1 is the active task, paste the
-following into a fresh Claude Code session. CLAUDE.md orientation fires
-automatically; this prompt picks up from there.
+Cycle 1 is landed. Cycle 2 (Section B / `BrowseScout`) is the next move.
+Paste the block below into a fresh Claude Code session. CLAUDE.md
+orientation fires automatically; this prompt picks up from there.
 
 ```
-I'm starting Phase 4c — BROWSE summary card rebuild. The canonical plan
-is BROWSE_REBUILD_HANDOFF_PLAN.md at the repo root. Current status: plan
-approved YYYY-MM-DD; no cycles started.
+I'm continuing Phase 4c — BROWSE summary card rebuild. The canonical
+plan is BROWSE_REBUILD_HANDOFF_PLAN.md at the repo root.
+
+Current status (per the plan's status header): Cycle 1 LANDED 2026-04-28.
+Tier marker (`message.answer_type`) is on the SSE wire and persisted on
+`messages.answer_type`. The shared `BrowseSection` primitive +
+`BrowseRead` (Section A — fully filled) ship in production. Sections B
+and C are Cycle 1 stubs (`browse-scout.tsx` returns null;
+`browse-deeper-read.tsx` is a placeholder under `THE DEEPER READ`).
+DECISION / EDGE / PROJECTION / RISK / STRATEGY / RENT_LOOKUP turns
+render the legacy card stack unchanged.
+
+Cycle 2 scope is Section B fill — see BROWSE_REBUILD_HANDOFF_PLAN.md
+"Cycle 2 — Section B: Scout Finds peer section." The cycle has one
+mandatory carry-over from Cycle 1 to resolve at the start: wire the
+BROWSE-tier stance pill so Section A no longer renders "Undecided"
+(see "Cycle 1 carry-over" subsection of Cycle 2 in the plan; pick option
+(a) — add `stance` to the `value_thesis` SSE event — unless you have a
+strong reason to flip to (b)).
 
 Please:
 
 1. Run the standard CLAUDE.md orientation: read CLAUDE.md, run the
    readme-discipline drift check, verify ARCHITECTURE_CURRENT /
-   GAP_ANALYSIS / TOOL_REGISTRY are present, read DECISIONS.md (recent
-   2026-04-28 entries) and ROADMAP.md §1 + §3.4 + §3.5 + §4 High items.
+   GAP_ANALYSIS / TOOL_REGISTRY are present, read DECISIONS.md
+   (especially the 2026-04-28 entries: "Phase 4c BROWSE rebuild plan
+   approved with three-section reframe" and "Phase 4c Cycle 1 landed"),
+   and ROADMAP.md §1 step 6 + §3.4 + §3.5.
 
-2. Read BROWSE_REBUILD_HANDOFF_PLAN.md end-to-end. That's the canonical
-   to-do list for Phase 4c.
+2. Read BROWSE_REBUILD_HANDOFF_PLAN.md end-to-end — pay attention to:
+   the Cycle 1 closeout and known-limitations subsection, the Cycle 2
+   carry-over note, and the per-cycle doc-update table.
 
-3. Read briarwood/agent/dispatch.py::handle_browse, briarwood/synthesis/
-   llm_synthesizer.py::synthesize_with_llm, web/src/components/chat/
-   messages.tsx (the assistant render tree), web/src/components/chat/
-   scout-finds.tsx, and api/events.py + web/src/lib/chat/events.ts (the
-   SSE protocol pair).
+3. Read the Cycle 1 surface so you know exactly what's in front of you:
+   - `web/src/components/chat/browse-section.tsx` (shared primitive)
+   - `web/src/components/chat/browse-read.tsx` (Section A — filled)
+   - `web/src/components/chat/browse-scout.tsx` (Cycle 1 stub — Cycle 2
+     fills this in)
+   - `web/src/components/chat/browse-deeper-read.tsx` (placeholder —
+     Cycles 3–4 fill in drilldowns)
+   - `web/src/components/chat/messages.tsx` (the `isBrowse` gate around
+     line 143)
+   - `web/src/components/chat/scout-finds.tsx` (the existing component
+     Cycle 2 nests inside Section B)
+   - `api/events.py` + `web/src/lib/chat/events.ts` (the SSE protocol
+     pair — Cycle 2's stance addition lives here)
+   - `api/pipeline_adapter.py` `events.value_thesis(...)` emit sites
+     (around lines 2089 and 2664) for the stance-on-BROWSE wiring
 
-4. Tell me where we are in the cycle sequence (look at git log + git
-   status to determine which cycles have been committed). Then tell me
-   in 3-5 bullets what's been decided / what's queued / what's
-   unresolved for the cycle we're about to work on.
+4. Tell me where we are: run `git log -10` and `git status`. Confirm
+   Cycle 1's commit is on HEAD; flag if any other session has moved
+   the tree since 2026-04-28 (parallel Codex CLI / web Codex sessions
+   often run in this repo).
 
-5. Confirm: am I starting the next cycle now, or is there earlier
-   work uncommitted that needs to be reviewed / committed first?
+5. In 3-5 bullets: what's decided for Cycle 2 (per the plan), what's
+   queued (the carry-over + Section B fill), what's unresolved that
+   you need owner input on at cycle start.
 
-Do not begin code work until steps 1-5 are done and reported back.
+6. Confirm: am I starting Cycle 2 now, or is there earlier work
+   uncommitted that needs to be reviewed first?
+
+Do not begin code work until steps 1-6 are done and reported back.
+Cycle 2 is mandatory pause-for-browser-smoke at the end — do not skip
+the verification gate.
 ```
 
 ---

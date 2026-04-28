@@ -68,6 +68,12 @@ export type ChatMessage = {
   // load (api/store.py::get_conversation LEFT JOIN). The FeedbackBar
   // owns its own optimistic state; this field is the persisted truth.
   userRating?: "up" | "down" | null;
+  // Phase 4c Cycle 1: routed answer type (e.g. "browse", "decision",
+  // "edge"). Captured from the `message` SSE event when the server
+  // assigns the assistant message id. Drives tier-specific render
+  // trees — BROWSE turns render the three-section newspaper layout;
+  // every other tier renders the existing card stack.
+  answerType?: string | null;
 };
 
 export type UseChatOptions = {
@@ -264,10 +270,14 @@ export function useChat({
           break;
         case "message":
           // Server-assigned id — replace temp id on the matching role.
+          // Phase 4c Cycle 1: capture the optional `answer_type` so the
+          // assistant render tree can pick a tier-specific layout.
           if (event.role === "assistant") {
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantMsgId ? { ...m, id: event.id } : m,
+                m.id === assistantMsgId
+                  ? { ...m, id: event.id, answerType: event.answer_type ?? null }
+                  : m,
               ),
             );
           }

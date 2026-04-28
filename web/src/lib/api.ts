@@ -21,6 +21,11 @@ export type StoredMessage = {
   // user-role messages and for assistant messages that haven't been
   // rated yet. See api/store.py::get_conversation.
   user_rating: "up" | "down" | null;
+  // Phase 4c Cycle 1: routed answer type (e.g. "browse", "decision",
+  // "edge"). Stored alongside each assistant message via the
+  // messages.answer_type column. Null on user-role messages and on
+  // historical assistant messages stored before the column was wired.
+  answer_type?: string | null;
 };
 
 export type ConversationDetail = ConversationSummary & {

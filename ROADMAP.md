@@ -1547,6 +1547,8 @@ rebuild can't honestly hold together:
    Today's scout is single-pattern and claims-wedge-only. Tracked in
    [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) (Phase 4b).
 
+**Cycle 1 outcome (2026-04-28 — LANDED).** Tier marker `message.answer_type` plumbed end-to-end (SSE wire + `messages.answer_type` column projection in `get_conversation`); shared `BrowseSection` primitive + Section A (`BrowseRead`) shipped fully filled with subject line + ask/fair-value headline + masthead `market_trend` chart + flowed prose; Sections B and C are Cycle 1 stubs (`BrowseScout` returns null; `BrowseDeeperRead` is a "Drilldowns coming in Cycles 2–4" placeholder). `AssistantMessage` now gates the existing card stack behind `!isBrowse`; non-BROWSE tiers render unchanged. One known limitation deferred to Cycle 2's carry-over: the BROWSE-tier stance pill renders `Undecided` because stance lives on the `verdict` event (DECISION-only); fix is a 1-field addition to the `value_thesis` event. See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 1 closeout for the full landing notes.
+
 **Plan reframe (2026-04-28).** Owner sign-off arrived in two passes. The
 first pass approved a "one rich summary card with drilldowns" shape; the
 second pass reframed it as **three stacked sections** organized like a

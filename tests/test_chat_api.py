@@ -120,6 +120,15 @@ class ChatApiTests(unittest.TestCase):
             if payload["type"] == events.EVENT_MESSAGE and payload.get("role") == "assistant"
         )
         self.assertLess(assistant_message_index, len(payloads) - 1)
+        # Phase 4c Cycle 1: the assistant `message` event ships the routed
+        # answer_type so the React layer can pick a tier-specific render
+        # tree. The patched RouterDecision above is `AnswerType.DECISION`,
+        # so the wire payload must carry `answer_type: "decision"`.
+        assistant_message_payload = payloads[assistant_message_index]
+        self.assertEqual(
+            assistant_message_payload.get("answer_type"),
+            AnswerType.DECISION.value,
+        )
         self.assertEqual(store.added[0][1], "user")
         self.assertEqual(store.added[-1][1], "assistant")
         self.assertEqual(store.added[-1][2], "First reply.")

@@ -479,7 +479,17 @@ async def chat(req: ChatRequest) -> StreamingResponse:
             conversation_id, "assistant", assistant_text, events=collected_events
         )
         assistant_msg_id = assistant_msg["id"]
-        yield events.encode_sse(events.message_event(assistant_msg["id"], "assistant"))
+        # Phase 4c Cycle 1: ship the routed answer type alongside the
+        # assistant message id so the React layer can pick a tier-specific
+        # render tree (e.g. the BROWSE three-section layout).
+        answer_type_value = (
+            decision.answer_type.value if decision.answer_type is not None else None
+        )
+        yield events.encode_sse(
+            events.message_event(
+                assistant_msg["id"], "assistant", answer_type=answer_type_value
+            )
+        )
         yield events.encode_sse(events.done())
 
     return StreamingResponse(

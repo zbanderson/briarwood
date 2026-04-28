@@ -70,8 +70,16 @@ def conversation_event(conversation_id: str, title: str) -> dict[str, Any]:
     return {"type": EVENT_CONVERSATION, "id": conversation_id, "title": title}
 
 
-def message_event(message_id: str, role: str) -> dict[str, Any]:
-    return {"type": EVENT_MESSAGE, "id": message_id, "role": role}
+def message_event(
+    message_id: str,
+    role: str,
+    *,
+    answer_type: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"type": EVENT_MESSAGE, "id": message_id, "role": role}
+    if answer_type is not None:
+        payload["answer_type"] = answer_type
+    return payload
 
 
 def done() -> dict[str, Any]:

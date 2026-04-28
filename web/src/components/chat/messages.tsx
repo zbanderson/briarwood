@@ -23,6 +23,9 @@ import { ModuleBadges } from "./module-badges";
 import { GroundedText } from "./grounded-text";
 import { EntryPointCard } from "./entry-point-card";
 import { ScoutFinds } from "./scout-finds";
+import { BrowseRead } from "./browse-read";
+import { BrowseScout } from "./browse-scout";
+import { BrowseDeeperRead } from "./browse-deeper-read";
 
 // Lazy-load Google Maps so the client-only browser API stays out of SSR.
 const InlineMap = dynamic(
@@ -134,6 +137,10 @@ function AssistantMessage({
     compsPreview && !valueThesis && !valuationComps && !marketSupportComps,
   );
   const subjectListing = listings[0] ?? null;
+  // Phase 4c Cycle 1 — tier-aware render gate. BROWSE turns flow through
+  // the new three-section layout (BrowseRead / BrowseScout /
+  // BrowseDeeperRead); every other tier keeps the existing card stack.
+  const isBrowse = message.answerType === "browse";
 
   return (
     <div className="flex">
@@ -142,142 +149,187 @@ function AssistantMessage({
           <PartialDataBanner warnings={partialWarnings} />
         )}
 
-        {verdict && <VerdictCard verdict={verdict} />}
-
-        {showDots ? (
-          <StreamingIndicator />
-        ) : (
-          message.content && (
-            <GroundedText
-              content={message.content}
+        {/* Phase 4c Cycle 1 — BROWSE three-section newspaper layout.
+            Section A renders fully in Cycle 1 (stance pill + headline +
+            market_trend masthead + prose). Section B is a Cycle-1 stub
+            (returns null) that fills in Cycle 2. Section C is a
+            placeholder until Cycles 3-4 land the drilldowns. */}
+        {isBrowse && (
+          <>
+            <BrowseRead
+              verdict={verdict}
+              valueThesis={valueThesis}
+              charts={charts}
+              proseContent={message.content}
+              isStreaming={showDots}
               anchors={anchors}
-              muted={muted}
+              ungroundedDeclaration={muted}
             />
-          )
+            <BrowseScout insights={scoutInsights} onPrompt={onPrompt} />
+            <BrowseDeeperRead />
+          </>
         )}
+
+        {!isBrowse && verdict && <VerdictCard verdict={verdict} />}
+
+        {!isBrowse &&
+          (showDots ? (
+            <StreamingIndicator />
+          ) : (
+            message.content && (
+              <GroundedText
+                content={message.content}
+                anchors={anchors}
+                muted={muted}
+              />
+            )
+          ))}
 
         {/* Phase 4b Cycle 3 — Scout Finds renders under the synthesizer
-            prose and above the existing card stack. Empty array →
-            ScoutFinds renders nothing (its own internal guard). */}
-        <ScoutFinds insights={scoutInsights} onPrompt={onPrompt} />
-
-        {strategyPath && <StrategyPathCard strategy={strategyPath} />}
-        {strategyPath && onPrompt && (
-          <InlinePrompt
-            prompt="Walk me through the recommended path"
-            label="Drill into strategy"
-            onPick={onPrompt}
-          />
+            prose and above the existing card stack on non-BROWSE tiers.
+            On BROWSE the Scout surface migrates inside Section B
+            (BrowseScout) — see Phase 4c Cycle 2 in
+            BROWSE_REBUILD_HANDOFF_PLAN.md. */}
+        {!isBrowse && (
+          <ScoutFinds insights={scoutInsights} onPrompt={onPrompt} />
         )}
 
-        {valueThesis && <EntryPointCard thesis={valueThesis} />}
+        {/* Phase 4c Cycle 1 — non-BROWSE card stack. BROWSE turns short-
+            circuit through the three-section layout above; every other
+            tier renders the existing card stack unchanged. Cycles 2-4
+            move scout / value thesis / comps / projection / rent /
+            town / risk / confidence / strategy into Section C
+            drilldowns; until those land, nothing in this block is
+            shared with the BROWSE branch. */}
+        {!isBrowse && (
+          <>
+            {strategyPath && <StrategyPathCard strategy={strategyPath} />}
+            {strategyPath && onPrompt && (
+              <InlinePrompt
+                prompt="Walk me through the recommended path"
+                label="Drill into strategy"
+                onPick={onPrompt}
+              />
+            )}
 
-        {valueThesis && (
-          <ValueThesisCard
-            thesis={valueThesis}
-            hideCompStory={Boolean(valuationComps || marketSupportComps)}
-          />
-        )}
-        {valueThesis && onPrompt && (
-          <InlinePrompt
-            prompt="What would change your value view?"
-            label="Drill into value thesis"
-            onPick={onPrompt}
-          />
-        )}
+            {valueThesis && <EntryPointCard thesis={valueThesis} />}
 
-        {rentOutlook && <RentOutlookCard outlook={rentOutlook} />}
-        {rentOutlook && onPrompt && (
-          <InlinePrompt
-            prompt="What rent would make this deal work?"
-            label="Drill into rent"
-            onPick={onPrompt}
-          />
-        )}
+            {valueThesis && (
+              <ValueThesisCard
+                thesis={valueThesis}
+                hideCompStory={Boolean(valuationComps || marketSupportComps)}
+              />
+            )}
+            {valueThesis && onPrompt && (
+              <InlinePrompt
+                prompt="What would change your value view?"
+                label="Drill into value thesis"
+                onPick={onPrompt}
+              />
+            )}
 
-        {trustSummary && <TrustSummaryCard summary={trustSummary} />}
-        {trustSummary && onPrompt && (
-          <InlinePrompt
-            prompt="What data is missing or estimated?"
-            label="Drill into confidence"
-            onPick={onPrompt}
-          />
-        )}
+            {rentOutlook && <RentOutlookCard outlook={rentOutlook} />}
+            {rentOutlook && onPrompt && (
+              <InlinePrompt
+                prompt="What rent would make this deal work?"
+                label="Drill into rent"
+                onPick={onPrompt}
+              />
+            )}
 
-        {riskProfile && <RiskProfileCard profile={riskProfile} />}
-        {riskProfile && onPrompt && (
-          <InlinePrompt
-            prompt="What's the biggest risk here?"
-            label="Drill into risk"
-            onPick={onPrompt}
-          />
-        )}
+            {trustSummary && <TrustSummaryCard summary={trustSummary} />}
+            {trustSummary && onPrompt && (
+              <InlinePrompt
+                prompt="What data is missing or estimated?"
+                label="Drill into confidence"
+                onPick={onPrompt}
+              />
+            )}
 
-        {valuationComps && (
-          <CompsTableCard table={valuationComps} variant="valuation" />
-        )}
-        {valuationComps && onPrompt && (
-          <InlinePrompt
-            prompt="Which comps actually fed fair value?"
-            label="Drill into fair-value comps"
-            onPick={onPrompt}
-          />
-        )}
+            {riskProfile && <RiskProfileCard profile={riskProfile} />}
+            {riskProfile && onPrompt && (
+              <InlinePrompt
+                prompt="What's the biggest risk here?"
+                label="Drill into risk"
+                onPick={onPrompt}
+              />
+            )}
 
-        {marketSupportComps && (
-          <CompsTableCard table={marketSupportComps} variant="market_support" />
-        )}
-        {marketSupportComps && onPrompt && (
-          <InlinePrompt
-            prompt="How does the live market look around here?"
-            label="Drill into market support"
-            onPick={onPrompt}
-          />
-        )}
+            {valuationComps && (
+              <CompsTableCard table={valuationComps} variant="valuation" />
+            )}
+            {valuationComps && onPrompt && (
+              <InlinePrompt
+                prompt="Which comps actually fed fair value?"
+                label="Drill into fair-value comps"
+                onPick={onPrompt}
+              />
+            )}
 
-        {showCompPreview && compsPreview && <CompsPreviewCard preview={compsPreview} />}
-        {showCompPreview && compsPreview && onPrompt && (
-          <InlinePrompt
-            prompt={
-              compsPreview.count > compsPreview.comps.length
-                ? "Show me the full comp set"
-                : "Why were these comps chosen?"
-            }
-            label="Drill into comps"
-            onPick={onPrompt}
-          />
-        )}
+            {marketSupportComps && (
+              <CompsTableCard
+                table={marketSupportComps}
+                variant="market_support"
+              />
+            )}
+            {marketSupportComps && onPrompt && (
+              <InlinePrompt
+                prompt="How does the live market look around here?"
+                label="Drill into market support"
+                onPick={onPrompt}
+              />
+            )}
 
-        {townSummary && (
-          <TownSummaryCard
-            summary={townSummary}
-            onSelectSignal={
-              onSelectTownSignal
-                ? (signal) => onSelectTownSignal(signal, subjectListing)
-                : undefined
-            }
-          />
-        )}
-        {townSummary && onPrompt && (
-          <InlinePrompt
-            prompt="What's driving the town outlook?"
-            label="Drill into town context"
-            onPick={onPrompt}
-          />
-        )}
+            {showCompPreview && compsPreview && (
+              <CompsPreviewCard preview={compsPreview} />
+            )}
+            {showCompPreview && compsPreview && onPrompt && (
+              <InlinePrompt
+                prompt={
+                  compsPreview.count > compsPreview.comps.length
+                    ? "Show me the full comp set"
+                    : "Why were these comps chosen?"
+                }
+                label="Drill into comps"
+                onPick={onPrompt}
+              />
+            )}
 
-        {scenarioTable && <ScenarioTable table={scenarioTable} />}
-        {scenarioTable && onPrompt && (
-          <InlinePrompt
-            prompt="Show me the downside case in more detail"
-            label="Drill into scenarios"
-            onPick={onPrompt}
-          />
-        )}
+            {townSummary && (
+              <TownSummaryCard
+                summary={townSummary}
+                onSelectSignal={
+                  onSelectTownSignal
+                    ? (signal) => onSelectTownSignal(signal, subjectListing)
+                    : undefined
+                }
+              />
+            )}
+            {townSummary && onPrompt && (
+              <InlinePrompt
+                prompt="What's driving the town outlook?"
+                label="Drill into town context"
+                onPick={onPrompt}
+              />
+            )}
 
-        {charts.map((c, i) => (
-          <ChartFrame key={`${c.kind ?? "chart"}-${c.url ?? "native"}-${i}`} chart={c} />
-        ))}
+            {scenarioTable && <ScenarioTable table={scenarioTable} />}
+            {scenarioTable && onPrompt && (
+              <InlinePrompt
+                prompt="Show me the downside case in more detail"
+                label="Drill into scenarios"
+                onPick={onPrompt}
+              />
+            )}
+
+            {charts.map((c, i) => (
+              <ChartFrame
+                key={`${c.kind ?? "chart"}-${c.url ?? "native"}-${i}`}
+                chart={c}
+              />
+            ))}
+          </>
+        )}
 
         {researchUpdate && (
           <ResearchUpdateCard

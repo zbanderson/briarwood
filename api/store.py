@@ -173,7 +173,7 @@ class ConversationStore:
             # round-trip. Non-assistant rows always carry user_rating=NULL.
             msgs = conn.execute(
                 """SELECT m.id, m.role, m.content, m.events, m.created_at,
-                          f.rating AS user_rating
+                          m.answer_type, f.rating AS user_rating
                    FROM messages m
                    LEFT JOIN feedback f ON f.message_id = m.id
                    WHERE m.conversation_id = ?
@@ -190,6 +190,13 @@ class ConversationStore:
                     "events": json.loads(m["events"]) if m["events"] else [],
                     "created_at": m["created_at"],
                     "user_rating": m["user_rating"],
+                    # Phase 4c Cycle 1: ship the persisted answer_type so
+                    # the page-load rehydration can drive tier-aware
+                    # rendering (e.g. BROWSE three-section layout). Older
+                    # rows that predate the messages.answer_type backfill
+                    # will surface as null — those messages render the
+                    # legacy card stack via the !isBrowse fall-through.
+                    "answer_type": m["answer_type"],
                 }
             )
         conv = dict(row)

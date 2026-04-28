@@ -7,7 +7,17 @@ export type ListingsEvent = { type: "listings"; items: Listing[] };
 export type MapEvent = { type: "map"; center: [number, number]; pins: MapPin[] };
 export type SuggestionsEvent = { type: "suggestions"; items: string[] };
 export type ConversationEvent = { type: "conversation"; id: string; title: string };
-export type MessageEvent = { type: "message"; id: string; role: "user" | "assistant" };
+export type MessageEvent = {
+  type: "message";
+  id: string;
+  role: "user" | "assistant";
+  // Phase 4c Cycle 1: optional routed answer type (e.g. "browse",
+  // "decision", "edge"). Lets the assistant render tree pick a
+  // tier-specific layout (BROWSE → three-section newspaper layout;
+  // other tiers → existing card stack). Optional for back-compat with
+  // any historical messages that lacked the marker.
+  answer_type?: string | null;
+};
 export type DoneEvent = { type: "done" };
 export type ErrorEvent = { type: "error"; message: string };
 export type ChartLegendItem = {

@@ -2761,3 +2761,42 @@ entry added);
 user-memory `project_ui_enhancements.md` (weak decision summary, charts
 need work), `project_scout_apex.md` (Scout-as-peer-section rationale),
 `project_brand_evolution.md` (placeholder naming convention).
+
+## 2026-04-28 — Phase 4c Cycle 1 landed: tier marker + section primitive + Section A
+
+**Decision.** Cycle 1 of [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) landed on 2026-04-28. The tier-aware render gate is live, the shared section primitive ships the newspaper visual rhythm, and Section A ("THE READ") is fully filled end-to-end. Sections B and C are Cycle 1 stubs that fill in Cycles 2–4. The status header on the plan doc and ROADMAP.md §3.5 are updated.
+
+**What landed.**
+- `api/events.py` — `message_event(...)` extended with optional `answer_type` keyword. `EVENT_MESSAGE` payload carries the field only when present (back-compat preserved for any caller that omits it).
+- `api/main.py` — message-event emit site at `/api/chat`'s `_event_source_inner` finally now passes `decision.answer_type.value` so every routed assistant turn ships the tier marker on the wire.
+- `api/store.py::get_conversation` — bug fix surfaced during Cycle 1 browser smoke. The query was projecting message rows but never SELECTed `messages.answer_type`, so page-load rehydration after the chat-view auto-navigated to `/c/[id]` lost the tier marker and BROWSE turns rendered the legacy card stack on reload. Added `m.answer_type` to the SQL SELECT and to the row dict; persistence side (`attach_turn_metrics`, called in the chat endpoint's finally block) was already writing the column correctly.
+- `tests/test_chat_api.py` — assistant `message` event payload now pins `answer_type: "decision"` on the wire under the patched `RouterDecision(answer_type=AnswerType.DECISION)` test fixture.
+- `web/src/lib/chat/events.ts` — `MessageEvent` carries optional `answer_type: string | null`.
+- `web/src/lib/chat/use-chat.ts` — `ChatMessage.answerType?: string | null` field added; the `case "message"` reducer arm captures `event.answer_type ?? null` when the server replaces the temp message id.
+- `web/src/lib/api.ts` — `StoredMessage.answer_type?: string | null` for the page-load rehydration shape.
+- `web/src/app/c/[id]/page.tsx` — `initialMessages` mapper now projects `m.answer_type ?? null` onto `ChatMessage.answerType` so BROWSE turns rehydrate into the new layout after the chat-view auto-navigates.
+- `web/src/components/chat/browse-section.tsx` (NEW) — shared section primitive: small-caps section label (0.14em letter-spacing), 1px top rule (suppressible via `showRule={false}` on Section A), 2rem padding, optional subtitle, no nested borders.
+- `web/src/components/chat/browse-read.tsx` (NEW) — Section A ("THE READ"). Subject line + `Ask $X · Fair value $Y` headline + stance pill + masthead `market_trend` chart + flowed `GroundedText` prose. Headline data coalesces from `valueThesis` first, then `verdict` (defensive). Stance pill currently falls through to `Undecided` on BROWSE because stance lives on `verdict` and BROWSE doesn't emit it — Cycle 2 carry-over.
+- `web/src/components/chat/browse-scout.tsx` (NEW) — Cycle 1 stub returning null. Cycle 2 fills.
+- `web/src/components/chat/browse-deeper-read.tsx` (NEW) — placeholder section with sub-head + "Drilldowns coming in Cycles 2–4" line so the gate is visible end-to-end.
+- `web/src/components/chat/messages.tsx` — `AssistantMessage` adds `const isBrowse = message.answerType === "browse"`. When `isBrowse`, renders `<BrowseRead /> <BrowseScout /> <BrowseDeeperRead />` and skips the entire legacy card-stack block (verdict, prose, scout, strategy, value-thesis, rent, trust, risk, comps, town, projection, charts.map). When `!isBrowse`, the existing render tree is unchanged.
+
+**What did NOT change (intentional zero-edit surfaces).**
+- The synthesizer prompt, the synthesizer's `synthesize_with_llm` contract, and the LLM scout's contract are all untouched.
+- DECISION / EDGE / PROJECTION / RISK / STRATEGY / RENT_LOOKUP card stacks render exactly as before — confirmed by browser smoke ("should I buy 1228 Briarwood Rd, Belmar, NJ" rendered the legacy card stack unchanged).
+- `dispatch.py::handle_browse` is unchanged. The rebuild is presentation-only.
+- The synthesizer prose's `## Headline / ## Why / ## What's Interesting / ## What I'd Watch` markdown structure is untouched — Section A renders it via the existing `GroundedText` component.
+
+**Open Design Decisions resolved.**
+- **#1 — Tier marker mechanism.** Resolved: extend the existing `message` SSE event with optional `answer_type`. Persistence relied on the existing `messages.answer_type` column.
+- **#2 — Masthead chart placement.** Resolved: `market_trend` lives inside Section A between the headline row and the prose body.
+- **#5 — Mobile vs. desktop.** Resolved: desktop is the primary design target; sections render single-column on mobile with no custom breakpoints.
+- **#8 — Component naming.** Resolved: `BrowseSection` / `BrowseRead` / `BrowseScout` / `BrowseDeeperRead` placeholders, rename when product brand finalizes.
+
+**Cycle 2 carry-over: BROWSE-tier stance pill.** Section A's stance pill currently renders `Undecided` because the stance value lives on the `verdict` SSE event, which is only emitted on the DECISION path. Two equally cheap fixes; Cycle 2 picks one at start. Recommended: **(a)** add `stance: str | None` (and optionally `decision_stance: str | None`) to the `value_thesis` SSE event payload (`api/events.py::value_thesis`, `api/pipeline_adapter.py` projection from `session.last_unified_output`, mirror in `web/src/lib/chat/events.ts::ValueThesisEvent`); `BrowseRead` already coalesces stance correctly when wired. Alternative **(b)**: emit a lightweight `verdict` event on BROWSE turns from the same unified output. Recommend (a) — narrower SSE delta and avoids "verdict" semantics on a tier that isn't a final decision.
+
+**Verification.** Focused checks passed: `tests/test_chat_api.py` (3/3), `tests/test_api_turn_traces.py` (9/9 — confirmed `get_conversation` projection fix didn't regress turn-trace queries), `tsc --noEmit`, `eslint` (0 errors / 0 warnings on touched files), `next build`. Live browser smoke 2026-04-28 confirmed end-to-end render on `1008-14th-ave-belmar-nj-07719`: `THE READ` sub-head, real ask/fair-value numbers from `last_value_thesis_view`, market_trend chart inline, flowed synthesizer prose; `THE DEEPER READ` placeholder; old card stack gone on BROWSE; DECISION turn renders the existing card stack unchanged. Plan's pause-for-browser-smoke gate was honored.
+
+**One material deviation from plan, recorded.** The `api/store.py::get_conversation` projection bug was not anticipated in the plan's Cycle 1 scope — it surfaced only when the chat-view's auto-navigation to `/c/[id]` triggered page-load rehydration through `get_conversation`, where the missing column projection silently dropped `answer_type` from the rehydrated `ChatMessage`. The fix is a 2-line server change (added column to SELECT + row dict). Adding it to Cycle 1 was the right call because without it, the entire BROWSE-tier render gate would silently fail on every reload and look like a layout bug. Cross-references in the plan doc's Cycle 1 closeout subsection.
+
+**Cross-references.** [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 1 closeout (status flipped to ✅); [`ROADMAP.md`](ROADMAP.md) §1 step 6 and §3.5 (Cycle 1 outcome appended); user-memory `project_ui_enhancements.md` (weak decision summary, charts need work).
