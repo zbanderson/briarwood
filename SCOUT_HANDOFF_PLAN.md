@@ -2,7 +2,7 @@
 
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE-rebuild walkthrough. Owner framing: *"Scout needs to be the apex of the product. You have to remember what differentiates briarwood from the zillows / redfins, we're not a discovery tool we are a decision engine, and what powers that is scout. Scout is going to be the thing that answers the question that you dont know to ask."* User-memory: [project_scout_apex.md](/Users/zachanderson/.claude/projects/-Users-zachanderson-projects-briarwood/memory/project_scout_apex.md).
-**Status:** **In progress — Cycle 1 landed 2026-04-28.** Cycles 2-7 open.
+**Status:** **In progress — Cycles 1-2 landed 2026-04-28.** Cycles 3-7 open.
 Sequence position: step 4 of [`ROADMAP.md`](ROADMAP.md) §1, unblocked by
 the AI-Native Foundation umbrella's user-visible phase landing
 (steps 1, 2, 3a, 3b all ✅). Plan was originally drafted 2026-04-26
@@ -147,7 +147,9 @@ originally lacked:
 
 ### Cycle 2 — Wire scout into BROWSE handler + synthesizer prose integration
 
-**Status:** Not started. Blocks on Cycle 1.
+**Status:** ✅ **Landed 2026-04-28** (commit `038ca51`).
+
+**Closeout (2026-04-28).** All scope items shipped. `handle_browse` now calls `scout_unified` between the representation-plan computation and the synthesizer; insights are cached on `session.last_scout_insights` and passed to `synthesize_with_llm` via a new optional `scout_insights: list[SurfacedInsight] | None` kwarg. The newspaper system prompt's `## What's Interesting` beat is now an explicit "weave the highest-confidence insight, paraphrase (do NOT quote), name the supporting field, tease the drilldown" directive. New `scout_insights` SSE event in `api/events.py` + `api/pipeline_adapter.py`, mirrored in `web/src/lib/chat/events.ts` per AGENTS.md parity. `_MODULE_REGISTRY` now credits "Value Scout" so the modules-ran badge surfaces it. 8 new tests (4 synthesizer, 2 dispatch, 2 pipeline-adapter); full suite at 16 fail / 1581 pass (= 1573 + 8 new), no regressions. `drilldown_target` is emitted as null in this cycle — Cycle 3 fills the `category → drill_in_route` mapping. Browser smoke deferred (auto-mode handoff did not drive a browser); the 2026-04-26 walkthrough query "what do you think of 1008 14th Ave, Belmar, NJ" is the verification gate. See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout Cycle 2 landed" for the full closeout + Guardrail Review.
 
 **Scope:**
 - `handle_browse` (existing structure from Phase 2 / Phase 3): after `run_chat_tier_analysis` returns the artifact, call `scout_unified(unified=artifact["unified_output"], intent=..., llm=llm)`. Cache result on `session.last_scout_insights`.

@@ -1966,3 +1966,144 @@ shape); commit `0ce8598`. README updates
 intentionally deferred to Cycle 7 per the SCOUT_HANDOFF_PLAN.md
 batching convention — Cycle 7 owns the consolidated changelog
 spanning all six cycles' contract changes.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 2 landed: handle_browse + synthesizer wiring
+
+**Decision.** Cycle 2 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed via commit `038ca51` on 2026-04-28. The LLM-driven Value
+Scout is now wired into the BROWSE chat-tier path: `handle_browse`
+calls `scout_unified` between the representation-plan computation
+and the synthesizer, caches surfaced insights on
+`session.last_scout_insights`, and threads them into
+`synthesize_with_llm` via a new optional `scout_insights` kwarg.
+The synthesizer's `## What's Interesting` beat now carries an
+explicit weave-the-highest-confidence-insight directive. A new
+`scout_insights` SSE event carries the structured payload to the
+React layer for the dedicated drilldown surface that Cycle 3
+lands.
+
+**What landed.**
+- `briarwood/agent/session.py` — `last_scout_insights:
+  list[dict[str, object]] | None` field on `Session`, included
+  in `clear_response_views` reset.
+- `briarwood/synthesis/llm_synthesizer.py` —
+  `synthesize_with_llm(...)` accepts
+  `scout_insights: list[SurfacedInsight] | None = None`. When
+  non-empty, insights are serialized via `model_dump(mode="json")`
+  into the user prompt under the `scout_insights` key. Empty list
+  is treated as absent (back-compat). Newspaper system prompt
+  extended with the weave directive — paraphrase the headline (do
+  NOT quote), name a supporting field, tease the drilldown without
+  spoiling the full reason.
+- `briarwood/agent/dispatch.py::handle_browse` — runs
+  `scout_unified` after `_browse_compute_representation_plan`
+  and before `synthesize_with_llm`. Caches model-dumped insights
+  on `session.last_scout_insights` (or `None` when scout returned
+  empty). Skipped entirely when `llm` is None.
+- `api/events.py` — `EVENT_SCOUT_INSIGHTS` constant +
+  `scout_insights(items)` constructor.
+- `api/pipeline_adapter.py::_browse_stream_impl` — emits
+  `events.scout_insights(...)` from `session.last_scout_insights`
+  as a primary event between `rent_outlook` and the projection
+  scenario_table. `EVENT_SCOUT_INSIGHTS` registered in
+  `_MODULE_REGISTRY` so the modules-ran badge credits "Value
+  Scout".
+- `web/src/lib/chat/events.ts` — TypeScript mirror per AGENTS.md
+  parity rule: `ScoutInsightItem` (headline, reason, category,
+  confidence, supporting_fields, drilldown_target) +
+  `ScoutInsightsEvent` + union membership.
+
+**Open Design Decisions resolved.**
+3. **#3 — Trigger gating.** Resolved: every BROWSE turn for v1
+   when `llm` is provided (no per-turn / context gating). May
+   tighten to "every Nth turn" or "only when intent contract
+   names a primary value source" if browser smoke shows the
+   surface noisy.
+
+**Three deviations from plan, recorded for archaeology.**
+
+1. **Empty list semantically treated as absent.** Plan called
+   for "pass scout insights into `synthesize_with_llm` as a new
+   optional `scout_insights: list[SurfacedInsight]` keyword."
+   Implementation passes `scout_insights=scout_insights or None`
+   so an empty list (scout fired but produced nothing) does not
+   surface as `"scout_insights": []` in the user prompt. Reason:
+   the synthesizer's `## What's Interesting` directive becomes
+   "you must weave one of these" when the field is present;
+   passing an empty array would either confuse the model or
+   force it to invent. Treating empty as absent makes the
+   directive cleanly conditional. Pinned in
+   `test_empty_scout_insights_list_is_treated_as_absent`.
+
+2. **Scout call placement after representation plan, not
+   parallel.** The plan does not specify ordering relative to
+   `_browse_compute_representation_plan`; Cycle 1's plan
+   discusses "parallel firing alongside Layer 2 orchestration"
+   as out-of-scope target state. Cycle 2 places scout
+   sequentially between the representation plan and the
+   synthesizer because (a) scout reads `unified` only — no chart
+   dependency, (b) synthesizer reads scout output via the new
+   kwarg, (c) representation plan and scout could run in
+   parallel but Python threadpool plumbing for two LLM calls is
+   not justified at this latency budget. Revisit when profiling
+   shows scout is on the BROWSE turn's critical path.
+
+3. **`_MODULE_REGISTRY` wiring inline, not deferred.** Plan
+   describes the SSE event but doesn't explicitly call out the
+   `_MODULE_REGISTRY` registration for the modules-ran badge.
+   Added "Value Scout" inline because without it the badge would
+   silently omit scout — confusing for browser smoke ("did scout
+   actually run?"). Same shape as the existing visualizer / town
+   context entries.
+
+**Manual verification gate deferred.** The plan's verification is
+"Browser. The 2026-04-26 walkthrough query: 'what do you think of
+1008 14th Ave, Belmar, NJ'. Expected: synthesizer's 'What's
+Interesting' beat now mentions the rent angle (or ADU signal, or
+town-trend tailwind, depending on which the LLM picks)." Auto-mode
+handoff did not drive a browser session; deferred to next live UI
+smoke. The new tests cover the wiring (kwarg lands in user
+payload, session caches, SSE event emits) but only live LLM
+behavior against `gpt-4o-mini` shows whether the angle picks
+align with what an underwriter would notice on the second read —
+Cycle 2's user-visible quality bar.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag
+any guardrail holding back quality."* Walking the new BROWSE
+scout path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | Scout call gated on `llm is not None` AND `unified` non-empty AND `chat_tier_artifact is not None` | [briarwood/agent/dispatch.py](briarwood/agent/dispatch.py) | No — scout is purely additive on the BROWSE happy path; gating ensures we don't fire when there's nothing to read or no LLM to call. | Keep. |
+| 2 | Empty list treated as absent in synthesizer kwarg | [briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py) | No — sharpens the conditional directive; prevents the model from being forced to weave a missing insight. | Keep. |
+| 3 | Synthesizer prompt instructs "do NOT quote" the scout headline | [briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py) | No — keeps prose in synthesizer voice; quoted headlines read robotic and break the newspaper voice. | Keep. |
+| 4 | Synthesizer picks "exactly one insight" to weave per turn | [briarwood/synthesis/llm_synthesizer.py](briarwood/synthesis/llm_synthesizer.py) | Possibly conservative. The dedicated drilldown surface (Cycle 3) carries the rest of the cap-2 set; the prose shouldn't compete with it for surface area. Watch in browser smoke; if users want more in prose, relax to "one or two". | Keep + monitor. |
+| 5 | `drilldown_target` emitted as null in v1 | [api/pipeline_adapter.py](api/pipeline_adapter.py) | No — Cycle 3 fills the category → route mapping. Schema is forward-compatible; null is honest about "drilldown surface not built yet". | Keep until Cycle 3. |
+| 6 | Scout output not threaded into Stage 2's feedback hint | [briarwood/agent/dispatch.py](briarwood/agent/dispatch.py) | Partially — synthesizer's prompt picks up the hint via `current_feedback_hint()`, so scout output gets re-framed when a thumbs-down was recorded. But scout's own selection of which angle to emit is not currently hint-aware. If browser smoke shows scout repeatedly emitting the same dropped category, wire scout's system prompt into the hint too. Recorded in Cycle 1 Guardrail Review #4 as a watch-item. | Keep + monitor. |
+| 7 | Modules-ran badge credits "Value Scout" only when the SSE event fires | [api/pipeline_adapter.py](api/pipeline_adapter.py) | No — matches the existing convention ("ran but didn't contribute" is excluded by design). When scout fired but returned empty, the badge correctly omits Value Scout. | Keep. |
+
+**Net finding from the guardrail walk:** zero quality-blocking
+restrictions. Two pin points worth monitoring (#4 single-insight
+weave, #6 hint-unaware scout) that can change later without
+contract breaks.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 2 closeout (status flipped to ✅);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 (in progress);
+[`ROADMAP.md`](ROADMAP.md) §3.2 (Cycle 2 outcome added);
+DECISIONS.md 2026-04-28 entry "Phase 4b Scout Cycle 1 landed"
+(prior cycle); user-memory `project_scout_apex.md` (Scout =
+apex); user-memory `project_llm_guardrails.md` (the standing
+directive); commit `038ca51`. README updates
+(`briarwood/value_scout/README.md`, `briarwood/claims/README.md`,
+`briarwood/synthesis/README.md`, `briarwood/agent/README_dispatch.md`)
+intentionally deferred to Cycle 7 per the SCOUT_HANDOFF_PLAN.md
+batching convention — Cycle 7 owns the consolidated changelog
+spanning all six cycles' contract changes.

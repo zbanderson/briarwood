@@ -106,15 +106,20 @@ The ordered list of major moves. Each step carries a `[source]` tag —
     Phase 4c UI reconstruction (§3.4.7). With 3a + 3b both closed, the
     AI-Native Foundation umbrella's user-visible phase is complete and
     sequence step 4 (Phase 4b Scout) is now unblocked.
-4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycle 1 ✅ 2026-04-28**
+4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-2 ✅ 2026-04-28**
    *Why now:* Apex differentiator for Briarwood vs Zillow/Redfin/realtor.com.
    Substrate is ready (`rent_zestimate` from CMA Cycle 3a is landed).
    *Cycle 1 outcome:* LLM scout module + tests landed isolated (no handler
    wiring). `scout_unified` callable; `SurfacedInsight` extended with
-   optional `confidence` + `category`. 11 new tests; baseline holds at
-   16 fail / 1573 pass. See [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md)
-   Cycle 1 closeout and DECISIONS.md 2026-04-28 entry.
-   *Open:* Cycles 2-7 (Cycle 2 wires `handle_browse` + synthesizer prose).
+   optional `confidence` + `category`. 11 new tests.
+   *Cycle 2 outcome:* `handle_browse` calls scout between representation
+   plan and synthesizer; insights cached on `session.last_scout_insights`
+   and threaded into `synthesize_with_llm` via a new kwarg. Newspaper
+   "## What's Interesting" beat now an explicit weave-the-insight
+   directive. New `scout_insights` SSE event (Python + TS mirror).
+   8 new tests; baseline holds at 16 fail / 1581 pass.
+   *Open:* Cycles 3-7 (Cycle 3 lands the dedicated drilldown surface
+   in `web/src/components/chat/`).
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
@@ -593,7 +598,27 @@ snake_case). One deviation: scout's terminal grounding rule is
 stricter than the synthesizer's — empty contract on regen-without-
 improvement instead of keeping ungrounded prose. See [DECISIONS.md](DECISIONS.md)
 2026-04-28 entry "Phase 4b Scout Cycle 1 landed" + Guardrail Review.
-Cycles 2-7 open; Cycle 2 wires `handle_browse` + synthesizer prose.
+
+**Cycle 2 outcome (2026-04-28).** `handle_browse` calls
+`scout_unified` between the representation plan and the
+synthesizer; insights cached on `session.last_scout_insights` (or
+`None` when scout returns empty) and passed into
+`synthesize_with_llm` via a new optional `scout_insights` kwarg.
+Newspaper system prompt's `## What's Interesting` beat now carries
+an explicit "weave the highest-confidence insight, paraphrase (do
+NOT quote), name the supporting field, tease the drilldown"
+directive. New `scout_insights` SSE event (Python +
+`web/src/lib/chat/events.ts` mirror) carries the structured payload
+to the React layer with `drilldown_target: null` (Cycle 3 fills the
+mapping). `_MODULE_REGISTRY` updated so the modules-ran badge
+credits "Value Scout". 8 new tests across synthesizer / dispatch /
+pipeline-adapter; baseline holds at 16 fail / 1581 pass. Browser
+smoke deferred to live UI session. See [DECISIONS.md](DECISIONS.md)
+2026-04-28 entry "Phase 4b Scout Cycle 2 landed".
+
+Cycles 3-7 open; Cycle 3 lands the dedicated drilldown surface in
+`web/src/components/chat/` plus the category → drill-in-route
+mapping.
 
 **Framing.** Today's Value Scout is single-pattern (`uplift_dominance`),
 claims-wedge-only, gated behind `BRIARWOOD_CLAIMS_ENABLED`, and
