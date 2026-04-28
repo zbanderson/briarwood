@@ -61,6 +61,20 @@ class PricePhrasingTests(unittest.TestCase):
         self.assertEqual(result["ask_price"], 1_350_000.0)
         self.assertEqual(result["mode"], "renovated")
 
+    def test_bare_renovation_sets_mode_but_no_other_overrides(self) -> None:
+        """parse_overrides sets mode=renovated whenever _RENO_RE matches —
+        kept unchanged so downstream consumers (`inputs_with_overrides`)
+        still receive the renovation hint when the user asks about
+        scenarios. The router's what-if-price-override short-circuit was
+        tightened separately (Round 2 Cycle 2, 2026-04-28) to require a
+        material override (`ask_price` or `repair_capex_budget`) — see
+        tests/agent/test_router.py
+        ::PrecedenceTests::test_bare_renovation_does_not_trigger_what_if_override."""
+        self.assertEqual(
+            parse_overrides("Run renovation scenarios"),
+            {"mode": "renovated"},
+        )
+
     def test_capex_budget_implies_renovation_override(self) -> None:
         result = parse_overrides("what if we invested 100k into it")
         self.assertEqual(

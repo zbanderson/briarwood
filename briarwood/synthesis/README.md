@@ -1,6 +1,6 @@
 # synthesis — Deterministic Structured Synthesizer (Legacy Path)
 
-**Last Updated:** 2026-04-26 (Phase 3 Cycle C+D)
+**Last Updated:** 2026-04-26 (CMA Phase 4a Cycle 5 — comp_roster + comp citation prompts)
 **Layer:** Unified Intelligence (Layer 3 — deterministic legacy path; runs whenever the claim-object wedge is off or falls through)
 **Status:** STABLE (production default until `BRIARWOOD_CLAIMS_ENABLED` flips)
 
@@ -137,6 +137,12 @@ unified = build_unified_output(
 - **Sunset path for the legacy synthesizer.** Once `BRIARWOOD_CLAIMS_ENABLED` is default-on for all archetypes, this path becomes a fallback only. When (and how) to remove it is open.
 
 ## Changelog
+
+### 2026-04-26 (CMA Phase 4a Cycle 5 — comp roster + comp citation prompt)
+- Contract change: `synthesize_with_llm(...)` accepts an optional `comp_roster: list[dict]` keyword. Each entry carries `address`, `town`, `ask_price`, `listing_status` ("sold" | "active"), `is_cross_town` (bool). When supplied, the user payload includes `comp_roster` alongside `unified` / `intent` / `charts`, and the verifier's `structured_inputs` payload is widened to `{**unified, "comp_roster": comp_roster}` so comp ask prices count as grounded values for the numeric rule.
+- System prompts (both newspaper and plain variants) describe `comp_roster` and pin three verbatim citation patterns: SOLD same-town `"1209 16th Ave sold for $800k"`, ACTIVE `"812 16th Ave is currently asking $799k"`, SOLD cross-town `"1402 Ocean Ave in Bradley Beach sold for $760k"`. Pick comps that carry the verdict; do not enumerate the roster.
+- Wired in `handle_browse` only — other chat-tier callers (`handle_decision`, `handle_edge`, `handle_strategy`, etc.) keep the prior signature (no `comp_roster`) until they need it. The default `None` preserves back-compat: when `comp_roster` is absent the user payload omits the key entirely and the verifier's `structured_inputs` is the unmodified `unified` dict.
+- New regression tests in `tests/synthesis/test_llm_synthesizer.py`: comp_roster lands in the user prompt; comp ask prices grounded for the verifier; back-compat path (no comp_roster) unchanged; both system prompts (newspaper + plain) describe the citation patterns.
 
 ### 2026-04-26 (Phase 3 Cycle C+D)
 - Contract change: `synthesize_with_llm(...)` accepts an optional `charts: list[{kind, claim}]` keyword (Cycle C). When provided, the system prompt instructs the LLM to reference selected charts by what the user will see ("the scenario fan shows…", "the town-trend line…"). Numeric grounding rule preserved verbatim.

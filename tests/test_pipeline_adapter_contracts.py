@@ -8,6 +8,7 @@ from pathlib import Path
 
 from api import events
 from api.pipeline_adapter import (
+    _native_cma_chart,
     _native_risk_chart,
     _sanitize_valuation_module_comps,
     _seed_session_for_pinned,
@@ -725,14 +726,18 @@ class PipelineAdapterContractTests(unittest.TestCase):
 
         event_types = [event["type"] for event in emitted]
         # F2: browse has no valuation-module output, so valuation_comps must
-        # NOT be emitted here. Live market comps surface as market_support_comps.
+        # NOT be emitted here.
         self.assertNotIn(events.EVENT_VALUATION_COMPS, event_types)
-        self.assertIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
+        # CMA Phase 4a Cycle 5: BROWSE no longer emits the standalone
+        # market_support_comps panel — the cma_positioning chart surfaces
+        # the same comps with provenance markers, and emitting both caused
+        # a visible mid-stream layout reflow. DECISION / EDGE turns still
+        # emit the panel as a drilldown.
+        self.assertNotIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
         expected_head = [
             events.EVENT_TOWN_SUMMARY,
             events.EVENT_COMPS_PREVIEW,
             events.EVENT_VALUE_THESIS,
-            events.EVENT_MARKET_SUPPORT_COMPS,
             events.EVENT_STRATEGY_PATH,
             events.EVENT_RENT_OUTLOOK,
         ]
@@ -885,14 +890,18 @@ class PipelineAdapterContractTests(unittest.TestCase):
 
         event_types = [event["type"] for event in emitted]
         # F2: browse has no valuation-module output, so valuation_comps must
-        # NOT be emitted here. Live market comps surface as market_support_comps.
+        # NOT be emitted here.
         self.assertNotIn(events.EVENT_VALUATION_COMPS, event_types)
-        self.assertIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
+        # CMA Phase 4a Cycle 5: BROWSE no longer emits the standalone
+        # market_support_comps panel — the cma_positioning chart surfaces
+        # the same comps with provenance markers, and emitting both caused
+        # a visible mid-stream layout reflow. DECISION / EDGE turns still
+        # emit the panel as a drilldown.
+        self.assertNotIn(events.EVENT_MARKET_SUPPORT_COMPS, event_types)
         expected_head = [
             events.EVENT_TOWN_SUMMARY,
             events.EVENT_COMPS_PREVIEW,
             events.EVENT_VALUE_THESIS,
-            events.EVENT_MARKET_SUPPORT_COMPS,
             events.EVENT_STRATEGY_PATH,
             events.EVENT_RENT_OUTLOOK,
         ]
@@ -1532,6 +1541,91 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
         self.assertEqual(event["type"], events.EVENT_MARKET_SUPPORT_COMPS)
         self.assertEqual(event["source"], "live_market")
 
+
+
+class CmaPositioningChartProvenanceTests(unittest.TestCase):
+    """CMA Phase 4a Cycle 5: each comp dict in the cma_positioning chart
+    spec carries ``listing_status`` and ``is_cross_town`` so the React
+    frontend can render distinct markers (filled circle / open triangle /
+    filled circle with dashed outline)."""
+
+    def _build_value_view(self) -> dict[str, object]:
+        return {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "ask_price": 767000,
+            "fair_value_base": 720000,
+            "value_low": 695000,
+            "value_high": 745000,
+        }
+
+    def _build_market_view(self) -> dict[str, object]:
+        return {
+            "address": "1008 14th Avenue, Belmar, NJ 07719",
+            "comp_selection_summary": "Comp set: 2 SOLD (1 cross-town) + 1 ACTIVE.",
+            "comps": [
+                {
+                    "address": "905 13th Ave",
+                    "ask_price": 715000,
+                    "listing_status": "sold",
+                    "is_cross_town": False,
+                },
+                {
+                    "address": "1402 Ocean Ave, Bradley Beach",
+                    "ask_price": 760000,
+                    "listing_status": "sold",
+                    "is_cross_town": True,
+                },
+                {
+                    "address": "812 16th Ave",
+                    "ask_price": 799000,
+                    "listing_status": "active",
+                    "is_cross_town": False,
+                },
+            ],
+        }
+
+    def test_cma_chart_spec_carries_listing_status_and_cross_town(self) -> None:
+        event = _native_cma_chart(self._build_value_view(), market_view=self._build_market_view())
+        self.assertIsNotNone(event)
+        comps = event["spec"]["comps"]  # type: ignore[index]
+        self.assertEqual(len(comps), 3)
+        same_town_sold = next(c for c in comps if c["address"] == "905 13th Ave")
+        cross_town_sold = next(c for c in comps if c["address"] == "1402 Ocean Ave, Bradley Beach")
+        active = next(c for c in comps if c["address"] == "812 16th Ave")
+        self.assertEqual(same_town_sold["listing_status"], "sold")
+        self.assertFalse(same_town_sold["is_cross_town"])
+        self.assertEqual(cross_town_sold["listing_status"], "sold")
+        self.assertTrue(cross_town_sold["is_cross_town"])
+        self.assertEqual(active["listing_status"], "active")
+        self.assertFalse(active["is_cross_town"])
+
+    def test_cma_chart_legend_lists_provenance_markers(self) -> None:
+        event = _native_cma_chart(self._build_value_view(), market_view=self._build_market_view())
+        self.assertIsNotNone(event)
+        labels = [item["label"] for item in event["legend"]]  # type: ignore[index]
+        self.assertIn("SOLD comp", labels)
+        self.assertIn("ACTIVE comp", labels)
+        self.assertIn("Cross-town SOLD", labels)
+
+    def test_cma_chart_legacy_rows_default_provenance_to_safe_values(self) -> None:
+        """Pre-Cycle-5 cached rows lack `listing_status` / `is_cross_town`.
+        The chart payload still emits the keys (with safe defaults) so the
+        TypeScript reader doesn't have to special-case missing fields."""
+        market_view = {
+            "comps": [
+                {
+                    "address": "Legacy comp",
+                    "ask_price": 700000,
+                    # No listing_status / is_cross_town keys — pre-Cycle-5 row.
+                },
+            ],
+        }
+        event = _native_cma_chart(self._build_value_view(), market_view=market_view)
+        self.assertIsNotNone(event)
+        comps = event["spec"]["comps"]  # type: ignore[index]
+        self.assertEqual(len(comps), 1)
+        self.assertIsNone(comps[0]["listing_status"])
+        self.assertFalse(comps[0]["is_cross_town"])
 
 
 if __name__ == "__main__":

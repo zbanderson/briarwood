@@ -33,7 +33,9 @@ from briarwood.agent.llm import LLMClient, default_client
 from briarwood.agent.presentation_advisor import advise_visual_surfaces
 from briarwood.agent.router import AnswerType, RouterDecision, classify
 from briarwood.agent.session import SESSION_DIR, Session
-from briarwood.agent.turn_manifest import in_active_context
+from briarwood.agent.turn_manifest import in_active_context, record_note
+from briarwood.synthesis.feedback_hint import HINT_MANIFEST_TAG, apply_feedback_hint
+from api.store import get_store
 from briarwood.representation import RepresentationAgent
 from briarwood.representation.agent import RepresentationPlan
 from briarwood.routing_schema import (
@@ -992,6 +994,14 @@ def _native_cma_chart(
                     "source_label": row.get("source_label"),
                     "selected_by": row.get("selected_by"),
                     "feeds_fair_value": row.get("feeds_fair_value"),
+                    # CMA Phase 4a Cycle 5: provenance for the marker scheme.
+                    # ``listing_status`` is "sold" / "active" (legacy CMA rows
+                    # without provenance default to None and render as the
+                    # generic comp marker). ``is_cross_town`` qualifies SOLD
+                    # rows pulled from neighbouring towns when same-town SOLD
+                    # count was below MIN_SOLD_COUNT.
+                    "listing_status": row.get("listing_status"),
+                    "is_cross_town": bool(row.get("is_cross_town")),
                 }
                 for row in priced_rows[:8]
             ],
@@ -1001,8 +1011,9 @@ def _native_cma_chart(
         y_axis_label="Comp",
         value_format="currency",
         legend=[
-            {"label": "Comp in model", "color": "var(--chart-bull)", "style": "solid"},
-            {"label": "Comp (context)", "color": "var(--chart-neutral)", "style": "solid"},
+            {"label": "SOLD comp", "color": "var(--chart-bull)", "style": "solid"},
+            {"label": "ACTIVE comp", "color": "var(--chart-neutral)", "style": "solid"},
+            {"label": "Cross-town SOLD", "color": "var(--chart-bull)", "style": "dashed"},
             {"label": "Fair value", "color": "var(--chart-base)", "style": "dashed"},
             {"label": "Subject ask", "color": "var(--chart-bear)", "style": "dotted"},
         ],
@@ -1875,9 +1886,14 @@ async def _search_stream_impl(
 
     loop = asyncio.get_running_loop()
     try:
-        response_text = await loop.run_in_executor(
-            None, in_active_context(dispatch), text, decision, session, llm
-        )
+        with apply_feedback_hint(
+            get_store(),
+            conversation_id,
+            on_apply=lambda: record_note(HINT_MANIFEST_TAG),
+        ):
+            response_text = await loop.run_in_executor(
+                None, in_active_context(dispatch), text, decision, session, llm
+            )
     except Exception as exc:
         yield events.text_delta(f"Search failed: {exc}")
         yield events.suggestions(_suggestions_for_search(session))
@@ -2040,9 +2056,14 @@ async def _browse_stream_impl(
 
     loop = asyncio.get_running_loop()
     try:
-        response_text = await loop.run_in_executor(
-            None, in_active_context(dispatch), text, decision, session, llm
-        )
+        with apply_feedback_hint(
+            get_store(),
+            conversation_id,
+            on_apply=lambda: record_note(HINT_MANIFEST_TAG),
+        ):
+            response_text = await loop.run_in_executor(
+                None, in_active_context(dispatch), text, decision, session, llm
+            )
     except Exception as exc:
         yield events.text_delta(f"Browse failed: {exc}")
         yield events.suggestions(_suggestions_for_browse("", None, session))
@@ -2080,11 +2101,14 @@ async def _browse_stream_impl(
                 )
             if valuation_payload is not None:
                 primary_events.append(events.valuation_comps(valuation_payload))
-        market_payload = _market_support_comps_from_view(
-            session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
-        )
-        if market_payload is not None:
-            primary_events.append(events.market_support_comps(market_payload))
+        # CMA Phase 4a Cycle 5: BROWSE suppresses the standalone comp-list
+        # panel because the new `cma_positioning` chart in the BROWSE chart
+        # set already surfaces the same comps with provenance markers. Two
+        # surfaces showing the same data caused a visible mid-stream reflow
+        # ("glitch and reload" — comp panel arrives as a primary event, the
+        # chart arrives later as a secondary event). DECISION / EDGE handlers
+        # continue to emit the panel as a drilldown surface (their own emit
+        # sites are unchanged).
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))
@@ -2278,9 +2302,14 @@ async def _decision_stream_impl(
 
     loop = asyncio.get_running_loop()
     try:
-        response_text = await loop.run_in_executor(
-            None, in_active_context(dispatch), text, decision, session, llm
-        )
+        with apply_feedback_hint(
+            get_store(),
+            conversation_id,
+            on_apply=lambda: record_note(HINT_MANIFEST_TAG),
+        ):
+            response_text = await loop.run_in_executor(
+                None, in_active_context(dispatch), text, decision, session, llm
+            )
     except Exception as exc:
         yield events.text_delta(f"Decision analysis failed: {exc}")
         yield events.suggestions(_suggestions_for_decision(pinned_listing, session))
@@ -2576,9 +2605,14 @@ async def _dispatch_stream_impl(
 
     loop = asyncio.get_running_loop()
     try:
-        response_text = await loop.run_in_executor(
-            None, in_active_context(dispatch), text, decision, session, llm
-        )
+        with apply_feedback_hint(
+            get_store(),
+            conversation_id,
+            on_apply=lambda: record_note(HINT_MANIFEST_TAG),
+        ):
+            response_text = await loop.run_in_executor(
+                None, in_active_context(dispatch), text, decision, session, llm
+            )
     except Exception as exc:
         yield events.text_delta(f"{decision.answer_type.value.title()} failed: {exc}")
         yield events.suggestions(_suggestions_for_tier(decision.answer_type, pinned_listing, session))
@@ -2619,11 +2653,21 @@ async def _dispatch_stream_impl(
                 )
             if valuation_payload is not None:
                 primary_events.append(events.valuation_comps(valuation_payload))
-        market_payload = _market_support_comps_from_view(
-            session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
-        )
-        if market_payload is not None:
-            primary_events.append(events.market_support_comps(market_payload))
+        # CMA Phase 4a Cycle 5: BROWSE suppresses the standalone
+        # market_support_comps panel because the new `cma_positioning` chart
+        # in the BROWSE chart set already surfaces the same comps with
+        # provenance markers (two surfaces showing the same data caused a
+        # visible mid-stream layout reflow). DECISION / EDGE / other tiers
+        # still emit the panel as a drilldown — same suppression pattern as
+        # `_browse_stream_impl`. The condition is on the routed answer_type
+        # so a BROWSE turn that lands here via `dispatch_stream` (the
+        # generic adapter path) gets the same treatment.
+        if decision.answer_type != AnswerType.BROWSE:
+            market_payload = _market_support_comps_from_view(
+                session.last_market_support_view if isinstance(session.last_market_support_view, dict) else None
+            )
+            if market_payload is not None:
+                primary_events.append(events.market_support_comps(market_payload))
         trust_payload = session.last_trust_view or _trust_summary_from_view(session.last_value_thesis_view)
         if trust_payload is not None:
             primary_events.append(events.trust_summary(trust_payload))

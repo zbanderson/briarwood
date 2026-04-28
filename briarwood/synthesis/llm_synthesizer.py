@@ -50,6 +50,7 @@ from briarwood.agent.llm import LLMClient
 from briarwood.agent.llm_observability import complete_text_observed
 from briarwood.cost_guard import BudgetExceeded
 from briarwood.intent_contract import IntentContract
+from briarwood.synthesis.feedback_hint import current_feedback_hint
 
 from api.guardrails import VerifierReport, verify_response
 
@@ -79,6 +80,23 @@ references the substance of a chart, name what the user will see
 (e.g. "the scenario fan shows…", "the town-trend line…") so chart and
 prose tie together. Reference at most one or two charts in the body —
 do not enumerate them all.
+
+Optionally you receive `comp_roster` — the live comp set the user will
+see in the CMA chart, one dict per comp with `address`, `ask_price`,
+`listing_status` ("sold" or "active"), `is_cross_town` (bool), and
+`town`. When `comp_roster` is present, the comp anchor is no longer
+abstract: name 1–2 specific comps in the body, distinguishing closed
+sales from active asks, and qualify cross-town rows. Use this exact
+language pattern (preserve the SOLD vs ACTIVE vs cross-town split):
+
+- SOLD same-town: "1209 16th Ave sold for $800k"
+- ACTIVE: "812 16th Ave is currently asking $799k"
+- SOLD cross-town: "1402 Ocean Ave in Bradley Beach sold for $760k"
+
+Pick comps that actually carry the verdict — closest to the subject's
+ask, or the ones that clinch the premium / discount read. Do not
+enumerate the whole roster. Cite numbers verbatim from `comp_roster`
+entries; the numeric-grounding rule below covers comp asks too.
 
 Your job is to write a front-page-newspaper-style response for the
 user. The user is making a six-figure financial decision and is
@@ -161,6 +179,15 @@ flags, primary value source, optionality signals, and per-module
 evidence. You also receive an `intent` contract describing what the
 user actually asked for (the `answer_type` and `core_questions`).
 
+Optionally you receive `comp_roster` — the live comp set the user will
+see in the CMA chart. Each entry has `address`, `ask_price`,
+`listing_status` ("sold" or "active"), `is_cross_town` (bool), and
+`town`. When present, name 1–2 specific comps in the prose,
+distinguishing closed sales ("sold for $X") from active asks
+("currently asking $Y") and qualifying cross-town rows ("a $Z sale in
+[neighbor town]"). Pick comps that carry the verdict; do not enumerate
+the roster. Comp ask prices are grounded values for the numeric rule.
+
 Your job is to write 3-7 sentences of intent-aware prose for the user.
 Lead with what the user asked about. If the intent is should_i_buy,
 lead with the buy/pass framing and the supporting drivers. If
@@ -212,9 +239,10 @@ def _user_prompt(
     unified: dict[str, Any],
     intent: IntentContract,
     charts: list[dict[str, Any]] | None = None,
+    comp_roster: list[dict[str, Any]] | None = None,
 ) -> str:
-    """Serialize the unified output, intent contract, and (optionally) the
-    selected chart list as the user message."""
+    """Serialize the unified output, intent contract, the selected chart
+    list, and (optionally) the live comp roster as the user message."""
 
     intent_payload = intent.model_dump(mode="json")
     body: dict[str, Any] = {
@@ -223,7 +251,24 @@ def _user_prompt(
     }
     if charts:
         body["charts"] = charts
+    if comp_roster:
+        body["comp_roster"] = comp_roster
     return json.dumps(body, default=str, sort_keys=True)
+
+
+def _verifier_inputs(
+    unified: dict[str, Any],
+    comp_roster: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """Build the structured-inputs payload the verifier scans for grounded
+    values. The unified output is the canonical source; when comp_roster is
+    provided, comp ask prices (and per-row addresses / towns) are folded in
+    so citations like "1209 16th Ave sold for $800k" do not get flagged as
+    ungrounded."""
+
+    if not comp_roster:
+        return unified
+    return {**unified, "comp_roster": comp_roster}
 
 
 def _regen_user_prompt(original_user: str, report: VerifierReport) -> str:
@@ -257,6 +302,7 @@ def synthesize_with_llm(
     llm: LLMClient | None,
     max_tokens: int = 360,
     charts: list[dict[str, Any]] | None = None,
+    comp_roster: list[dict[str, Any]] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Render intent-aware prose from a full UnifiedIntelligenceOutput.
 
@@ -276,8 +322,16 @@ def synthesize_with_llm(
     if llm is None or not unified:
         return "", {"empty": True, "reason": "llm_or_unified_missing"}
 
-    user_prompt = _user_prompt(unified, intent, charts=charts)
+    user_prompt = _user_prompt(unified, intent, charts=charts, comp_roster=comp_roster)
+    verifier_inputs = _verifier_inputs(unified, comp_roster)
     system_prompt = _resolve_system_prompt()
+    # Stage 2 read-back: when the conversation has a recent thumbs-down,
+    # append a "vary your framing" directive so the next turn doesn't
+    # repeat the framing that just got rated unfavorably. Numeric / citation
+    # rules from the base prompt are unchanged.
+    hint = current_feedback_hint()
+    if hint:
+        system_prompt = f"{system_prompt}\n\n{hint}"
     surface = "synthesis.llm"
     metadata = {
         "tier": "synthesis_llm",
@@ -309,7 +363,7 @@ def synthesize_with_llm(
     if not raw:
         return "", {"empty": True, "reason": "blank_draft"}
 
-    report = verify_response(raw, unified, tier="synthesis_llm")
+    report = verify_response(raw, verifier_inputs, tier="synthesis_llm")
     flagged_count = sum(
         1 for v in report.violations if v.kind in _STRICT_KINDS
     )
@@ -341,7 +395,7 @@ def synthesize_with_llm(
             raw2 = ""
 
         if raw2:
-            report2 = verify_response(raw2, unified, tier="synthesis_llm")
+            report2 = verify_response(raw2, verifier_inputs, tier="synthesis_llm")
             # Keep the regen only when it actually reduced violations.
             if report2.sentences_with_violations < report.sentences_with_violations:
                 raw = raw2

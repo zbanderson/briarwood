@@ -317,3 +317,135 @@ def test_kill_switch_off_value_keeps_newspaper(monkeypatch) -> None:
     )
     system = llm.calls[0]["system"]
     assert "## Headline" in system
+
+
+def _comp_roster() -> list[dict[str, Any]]:
+    """Mixed roster: same-town SOLD, cross-town SOLD, and ACTIVE — covers all
+    three citation patterns the Cycle 5 prompt requires."""
+    return [
+        {
+            "address": "1209 16th Ave",
+            "town": "Belmar",
+            "ask_price": 800000,
+            "listing_status": "sold",
+            "is_cross_town": False,
+        },
+        {
+            "address": "1402 Ocean Ave",
+            "town": "Bradley Beach",
+            "ask_price": 760000,
+            "listing_status": "sold",
+            "is_cross_town": True,
+        },
+        {
+            "address": "812 16th Ave",
+            "town": "Belmar",
+            "ask_price": 799000,
+            "listing_status": "active",
+            "is_cross_town": False,
+        },
+    ]
+
+
+def test_comp_roster_lands_in_user_prompt() -> None:
+    """CMA Phase 4a Cycle 5: when the BROWSE caller passes comp_roster, the
+    synthesizer threads it into the user payload alongside the unified
+    output and the intent so the LLM has the rows to cite."""
+
+    llm = _ScriptedLLM(["At $1,499,000 the listing reads as a measured buy."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+        comp_roster=_comp_roster(),
+    )
+    user_prompt = llm.calls[0]["user"]
+    assert '"comp_roster"' in user_prompt
+    assert '"1209 16th Ave"' in user_prompt
+    assert '"1402 Ocean Ave"' in user_prompt
+    assert '"is_cross_town": true' in user_prompt
+    # listing_status round-trips so the LLM can pick the citation pattern.
+    assert '"sold"' in user_prompt
+    assert '"active"' in user_prompt
+
+
+def test_comp_roster_numeric_values_are_grounded_for_verifier() -> None:
+    """A draft that cites a comp's ask_price verbatim must NOT trip the
+    verifier — comp prices are folded into the structured-inputs payload
+    when comp_roster is supplied."""
+
+    draft = (
+        "At a $1,499,000 ask the listing sits roughly 3.9% under the "
+        "$1,560,000 anchor; 1209 16th Ave sold for $800,000, while "
+        "812 16th Ave is currently asking $799,000."
+    )
+    llm = _ScriptedLLM([draft])
+    prose, report = synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+        comp_roster=_comp_roster(),
+    )
+    assert prose == draft
+    # 800,000 and 799,000 from comp_roster — verifier must accept both.
+    assert report["sentences_with_violations"] == 0
+
+
+def test_comp_roster_absent_does_not_change_back_compat_path() -> None:
+    """Pre-Cycle-5 callers (handle_decision, handle_edge, etc.) don't pass
+    comp_roster. The user payload omits the key entirely and verifier
+    behaviour matches the prior contract."""
+
+    llm = _ScriptedLLM(["Plain prose without comp citation."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    user_prompt = llm.calls[0]["user"]
+    assert '"comp_roster"' not in user_prompt
+
+
+def test_system_prompt_describes_comp_citation_pattern() -> None:
+    """The newspaper system prompt names the three citation patterns
+    (SOLD same-town, ACTIVE, SOLD cross-town) so the LLM has explicit
+    language guidance, not just a field description."""
+
+    llm = _ScriptedLLM(["ok."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    system = llm.calls[0]["system"]
+    assert "comp_roster" in system
+    # Each of the three citation patterns is named verbatim.
+    assert "sold for" in system.lower()
+    assert "currently asking" in system.lower()
+    assert "cross-town" in system.lower()
+
+
+def test_plain_prompt_also_describes_comp_roster() -> None:
+    """The kill-switch plain-prose prompt keeps the comp-citation guidance —
+    the marker scheme + provenance are voice-independent."""
+
+    import os
+
+    prior = os.environ.get("BRIARWOOD_SYNTHESIS_NEWSPAPER")
+    os.environ["BRIARWOOD_SYNTHESIS_NEWSPAPER"] = "0"
+    try:
+        llm = _ScriptedLLM(["ok."])
+        synthesize_with_llm(
+            unified=_unified_with_numbers(),
+            intent=_intent("browse"),
+            llm=llm,
+        )
+        system = llm.calls[0]["system"]
+        assert "comp_roster" in system
+        assert "sold for" in system.lower()
+        assert "currently asking" in system.lower()
+    finally:
+        if prior is None:
+            os.environ.pop("BRIARWOOD_SYNTHESIS_NEWSPAPER", None)
+        else:
+            os.environ["BRIARWOOD_SYNTHESIS_NEWSPAPER"] = prior

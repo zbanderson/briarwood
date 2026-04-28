@@ -19,6 +19,7 @@ from briarwood.agents.rent_context.unit_rent_estimator import (
     total_annual_income,
 )
 from briarwood.evidence import build_section_evidence
+from briarwood.modules import comp_scoring
 from briarwood.modules.market_value_history import MarketValueHistoryModule, get_market_value_history_payload
 from briarwood.schemas import ModuleResult, PropertyInput, UnitDetail
 from briarwood.valuation_constraints import is_nonstandard_product
@@ -183,26 +184,58 @@ def _enrich_comp_intelligence(
 
 
 def _score_comp(comp, property_input: PropertyInput):
-    proximity_score = _proximity_score(getattr(comp, "distance_to_subject_miles", None))
-    recency_score = _recency_score(getattr(comp, "sale_age_days", None))
-    similarity_score = float(getattr(comp, "similarity_score", 0.0) or 0.0)
-    data_quality_score = _data_quality_score(comp)
-    weighted_score = round(
-        proximity_score * 0.30
-        + recency_score * 0.25
-        + similarity_score * 0.30
-        + data_quality_score * 0.15,
-        3,
+    """Score an Engine A AdjustedComparable. Delegates to comp_scoring
+    for the math; segmentation bucket is Engine-A-specific and stays here.
+
+    Lifted in CMA Phase 4a Cycle 3b. Engine A behavior is preserved for
+    typical saved-comp inputs (4+ of 6 fields populated); only edge-case
+    very-incomplete comps see the new ``DATA_QUALITY_FLOOR_DEGRADED=0.3``
+    baseline (was previously hitting the 0.2 floor).
+    """
+    scores = comp_scoring.score_comp_inputs(
+        listing_status=getattr(comp, "listing_status", None),
+        distance_miles=getattr(comp, "distance_to_subject_miles", None),
+        sale_age_days=getattr(comp, "sale_age_days", None),
+        days_on_market=getattr(comp, "days_on_market", None),
+        similarity_score=float(getattr(comp, "similarity_score", 0.0) or 0.0),
+        present_fields=_count_present_engine_a_fields(comp),
+        total_fields=6,
+        verification_status=getattr(comp, "sale_verification_status", None),
+        # Outlier filter not applied to Engine A comps in Cycle 3b — saved
+        # comps are pre-vetted and don't carry tax_assessed_value at this
+        # layer. Cycle 3c applies the filter at the merger boundary.
+        extracted_price=None,
+        tax_assessed_value=None,
     )
     return comp.model_copy(
         update={
             "segmentation_bucket": _segmentation_bucket(comp, property_input),
-            "proximity_score": round(proximity_score, 3),
-            "recency_score": round(recency_score, 3),
-            "data_quality_score": round(data_quality_score, 3),
-            "weighted_score": weighted_score,
+            "proximity_score": scores.proximity_score,
+            "recency_score": scores.recency_score,
+            "data_quality_score": scores.data_quality_score,
+            "weighted_score": scores.weighted_score,
         }
     )
+
+
+def _count_present_engine_a_fields(comp) -> int:
+    """The 6-field completeness check Engine A's data quality score uses.
+
+    Carried over from the original ``_data_quality_score`` body. Caller
+    passes the count plus ``total_fields=6`` to ``comp_scoring``.
+    """
+    present = 0
+    for value in (
+        getattr(comp, "bedrooms", None),
+        getattr(comp, "bathrooms", None),
+        getattr(comp, "sqft", None),
+        getattr(comp, "lot_size", None),
+        getattr(comp, "distance_to_subject_miles", None),
+        getattr(comp, "sale_verification_status", None),
+    ):
+        if value not in (None, "", []):
+            present += 1
+    return present
 
 
 def _segmentation_bucket(comp, property_input: PropertyInput) -> str:
@@ -229,53 +262,34 @@ def _segmentation_bucket(comp, property_input: PropertyInput) -> str:
 
 
 def _proximity_score(distance_miles: float | None) -> float:
-    if distance_miles is None:
-        return 0.55
-    if distance_miles <= 0.25:
-        return 0.95
-    if distance_miles <= 0.5:
-        return 0.88
-    if distance_miles <= 1.0:
-        return 0.78
-    if distance_miles <= 2.0:
-        return 0.64
-    return 0.42
+    """Backwards-compat wrapper around comp_scoring.score_proximity.
+
+    Other modules in briarwood/modules/ import this name; keep it as a
+    thin delegator for now. Cycle 3c+ should call score_proximity directly.
+    """
+    return comp_scoring.score_proximity(distance_miles)
 
 
 def _recency_score(sale_age_days: int | None) -> float:
-    if sale_age_days is None:
-        return 0.5
-    if sale_age_days <= 90:
-        return 0.95
-    if sale_age_days <= 180:
-        return 0.88
-    if sale_age_days <= 365:
-        return 0.78
-    if sale_age_days <= 730:
-        return 0.62
-    return 0.4
+    """Backwards-compat wrapper around comp_scoring.score_recency_sold.
+
+    Engine A's original behavior — SOLD recency only. For ACTIVE-aware
+    callers, use ``comp_scoring.score_recency`` with explicit listing_status.
+    """
+    return comp_scoring.score_recency_sold(sale_age_days)
 
 
 def _data_quality_score(comp) -> float:
-    present = 0
-    total = 6
-    for value in (
-        getattr(comp, "bedrooms", None),
-        getattr(comp, "bathrooms", None),
-        getattr(comp, "sqft", None),
-        getattr(comp, "lot_size", None),
-        getattr(comp, "distance_to_subject_miles", None),
-        getattr(comp, "sale_verification_status", None),
-    ):
-        if value not in (None, "", []):
-            present += 1
-    base = present / total
-    verification = str(getattr(comp, "sale_verification_status", "") or "").lower()
-    if verification in {"public_record_verified", "mls_verified"}:
-        base += 0.08
-    elif verification in {"questioned", "unverified"}:
-        base -= 0.10
-    return max(0.2, min(base, 1.0))
+    """Backwards-compat wrapper around comp_scoring.score_data_quality.
+
+    Engine-A-specific 6-field completeness check; verification tier comes
+    from ``sale_verification_status``.
+    """
+    return comp_scoring.score_data_quality(
+        present_fields=_count_present_engine_a_fields(comp),
+        total_fields=6,
+        verification_status=getattr(comp, "sale_verification_status", None),
+    )
 
 
 def _bucket_range(comps: list, explanation: str) -> ComparableValueRange | None:

@@ -1,12 +1,12 @@
 # current_value — Scoped Registry Model
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-28
 **Status:** READY
 **Registry:** scoped
 
 ## Purpose
 
-`current_value` produces Briarwood's *pre-macro-nudge* fair-value estimate — the same comp-driven engine output that sits inside `valuation`, but without the ≤ 3% HPI-momentum confidence nudge applied on top. It answers the orchestrator's question *"what is this worth before any macro-side adjustment?"* — useful for scenario modeling, stress testing, and any caller that needs to isolate comp-driven fair value from macro signals. Under the hood it delegates to the legacy `CurrentValueModule`, which composes four internal anchors (comparable sales, market-value history, income support, and hybrid primary-plus-accessory value) into a single reconciled number.
+`current_value` produces Briarwood's *pre-macro-nudge* fair-value estimate — the same comp-driven engine output that sits inside `valuation`, but without the ≤ 3% HPI-momentum confidence nudge applied on top. It answers the orchestrator's question *"what is this worth before any macro-side adjustment?"* — useful for scenario modeling, stress testing, and any caller that needs to isolate comp-driven fair value from macro signals. Under the hood it delegates to the legacy `CurrentValueModule`, which composes five internal anchors (comparable sales, market-value history, backdated listing alignment, income support, and town prior) into a single reconciled number.
 
 ## When to call `current_value` vs. `valuation`
 
@@ -57,8 +57,10 @@ The only material difference at the ExecutionContext level: `context.macro_conte
 | Field | Type | Range / Units | Notes |
 |-------|------|---------------|-------|
 | `data.legacy_payload.briarwood_current_value` | `float \| None` | USD | Reconciled fair value; null when data too sparse. Identical to `valuation`'s number on the same inputs. |
-| `data.legacy_payload.mispricing_pct` | `float \| None` | signed fraction | vs. listing ask. |
-| `data.legacy_payload.pricing_view` | `str` | enum | `"fair" \| "undervalued" \| "overvalued" \| "unavailable"`. |
+| `data.legacy_payload.mispricing_pct` | `float \| None` | signed fraction | `(briarwood_current_value - ask_price) / ask_price`. |
+| `data.legacy_payload.pricing_view` | `str` | enum | `"appears undervalued" \| "appears fairly priced" \| "appears overpriced" \| "unavailable"`. Derived by `briarwood.decision_model.value_position`. |
+| `data.legacy_payload.pricing_view_confidence` | `float \| None` | 0-1 | Confidence attached to the categorical pricing label, using the weaker available signal from BCV confidence and comp confidence. |
+| `data.legacy_payload.pricing_view_confidence_band` | `str \| None` | enum | `"high" \| "medium" \| "low" \| "very_low"`; same band thresholds as claim confidence. |
 | `data.legacy_payload.value_low`, `value_high` | `float \| None` | USD | Engine-supplied confidence band. |
 | `data.legacy_payload.all_in_basis` | `float \| None` | USD | True cost-to-own anchor. |
 | `confidence` | `float` | 0.0–1.0 | **Pre-macro** engine confidence. |
@@ -78,7 +80,7 @@ The only material difference at the ExecutionContext level: `context.macro_conte
 
 - Never raises. All exceptions are caught and replaced with a fallback `ModulePayload` (`mode="fallback"`, `confidence=0.08`).
 - `applies_macro_nudge` is always `False` (this is the definitional contract of `current_value`).
-- `pricing_view == "unavailable"` when sparse facts or contradictions prevent a stable comp read (delegated to `CurrentValueModule` per [current_value.py:57-59](current_value.py#L57-L59)).
+- `pricing_view == "unavailable"` when sparse facts or contradictions prevent a stable comp read (delegated to `CurrentValueModule` per [current_value.py:57-62](current_value.py#L57-L62)).
 - Deterministic for a fixed input — no LLM calls, no randomness.
 - Payload field names under `data.legacy_payload` are preserved unchanged from `CurrentValueOutput` so direct callers can migrate to or from this scoped wrapper without reshaping.
 
@@ -113,7 +115,8 @@ context = ExecutionContext(
 
 payload = run_current_value(context)
 # payload["data"]["legacy_payload"]["briarwood_current_value"] ≈ 790_000
-# payload["data"]["legacy_payload"]["pricing_view"]            == "overvalued"
+# payload["data"]["legacy_payload"]["pricing_view"]            == "appears overpriced"
+# payload["data"]["legacy_payload"]["pricing_view_confidence"] ≈ 0.70
 # payload["confidence"]                                        ∈ [0, 1]  (pre-macro)
 # payload["assumptions_used"]["applies_macro_nudge"]           == False
 ```
@@ -121,7 +124,7 @@ payload = run_current_value(context)
 ## Hardcoded Values & TODOs
 
 - `required_fields` hardcoded at [current_value_scoped.py](current_value_scoped.py): `["purchase_price", "sqft", "beds", "baths", "town", "state"]` — mirrors `valuation`.
-- Thresholds for `pricing_view` transitions live inside `CurrentValueModule`; see its source for specifics.
+- Thresholds for `pricing_view` transitions live in `briarwood/decision_model/value_position.py` and are shared with the editor and claim verdict synthesizer.
 
 ## Blockers for Tool Use
 
@@ -135,6 +138,10 @@ payload = run_current_value(context)
 - No direct LLM calls; no cost.
 
 ## Changelog
+
+### 2026-04-28
+- Contract change: `pricing_view` now uses the shared deterministic value-position classifier in `briarwood/decision_model/value_position.py`, aligning current-value prose with editor and claim verdict labels.
+- Added `pricing_view_confidence` and `pricing_view_confidence_band` to the legacy payload/metrics so the categorical price label carries confidence.
 
 ### 2026-04-24
 - Initial README created.

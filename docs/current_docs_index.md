@@ -6,6 +6,8 @@ Use this file as the starting point for product and implementation work.
 
 - `AGENTS.md`
   Repo rules for routing, scoped execution, UI direction, and agent behavior
+- `CURRENT_STATE.md`
+  Short bootstrap context for fresh AI sessions and handoff continuity
 - `docs/scoped_execution_support.md`
   Current V2 scoped execution coverage and fallback status
 - `docs/operational_model_sweep.md`

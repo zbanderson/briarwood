@@ -312,11 +312,127 @@ function AssistantMessage({
 
         {verifierReport && <VerifierReasoningPanel report={verifierReport} />}
 
+        {!message.isStreaming && message.id && !message.id.startsWith("a-") && (
+          <FeedbackBar
+            messageId={message.id}
+            initialRating={message.userRating ?? null}
+          />
+        )}
+
         {message.critic && (
           <CriticPanel critic={message.critic} shipped={message.content} />
         )}
       </div>
     </div>
+  );
+}
+
+function FeedbackBar({
+  messageId,
+  initialRating,
+}: {
+  messageId: string;
+  initialRating: "up" | "down" | null;
+}) {
+  // Each AssistantMessage is keyed on message.id by the parent, so a
+  // navigation to a different conversation remounts this component and
+  // reads initialRating fresh. Within a single session the prop is
+  // stable; the local state owns optimistic updates.
+  const [rating, setRating] = useState<"up" | "down" | null>(initialRating);
+  const [pending, setPending] = useState<"up" | "down" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (next: "up" | "down") => {
+    if (pending !== null) return;
+    const previous = rating;
+    setRating(next);
+    setPending(next);
+    setError(null);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message_id: messageId, rating: next }),
+      });
+      if (!res.ok) {
+        throw new Error(`Couldn't save (${res.status})`);
+      }
+    } catch (err) {
+      setRating(previous);
+      setError((err as Error).message);
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const baseClass = cn(
+    "inline-flex items-center justify-center h-7 w-7 rounded-md",
+    "border border-transparent text-[var(--color-text-faint)]",
+    "hover:text-[var(--color-text)] hover:bg-[var(--color-surface)]",
+    "transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+  );
+  const activeClass = "border-[var(--color-border)] text-[var(--color-text)] bg-[var(--color-surface)]";
+
+  return (
+    <div className="mt-3 flex items-center gap-1 text-xs">
+      <button
+        type="button"
+        aria-label="This response was helpful"
+        aria-pressed={rating === "up"}
+        disabled={pending !== null}
+        onClick={() => submit("up")}
+        className={cn(baseClass, rating === "up" && activeClass)}
+      >
+        <ThumbIcon direction="up" filled={rating === "up"} />
+      </button>
+      <button
+        type="button"
+        aria-label="This response was not helpful"
+        aria-pressed={rating === "down"}
+        disabled={pending !== null}
+        onClick={() => submit("down")}
+        className={cn(baseClass, rating === "down" && activeClass)}
+      >
+        <ThumbIcon direction="down" filled={rating === "down"} />
+      </button>
+      {error && (
+        <span
+          role="alert"
+          className="ml-2 text-[var(--color-text-faint)]"
+        >
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ThumbIcon({
+  direction,
+  filled,
+}: {
+  direction: "up" | "down";
+  filled: boolean;
+}) {
+  // Inline SVG so we don't pull in an icon library for two glyphs. The
+  // up/down variant is a single rotation of the same path.
+  const transform = direction === "down" ? "rotate(180 12 12)" : undefined;
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    >
+      <g transform={transform}>
+        <path d="M7 10v10H4V10h3z" />
+        <path d="M7 10l4-7c1.4 0 2.4 1 2.2 2.4L13 9h5.5c1.1 0 1.9 1 1.7 2.1l-1.4 7c-.2 1.1-1.1 1.9-2.2 1.9H9c-1.1 0-2-.9-2-2V10z" />
+      </g>
+    </svg>
   );
 }
 

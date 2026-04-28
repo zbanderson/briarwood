@@ -43,6 +43,30 @@ class _FakeStore:
         mid = f"{role}-{len(self.added)}"
         return {"id": mid, "role": role, "content": content, "events": events or []}
 
+    def insert_turn_trace(self, manifest: dict[str, object]) -> None:
+        if not hasattr(self, "turn_traces"):
+            self.turn_traces: list[dict[str, object]] = []
+        self.turn_traces.append(manifest)
+
+    def attach_turn_metrics(
+        self,
+        message_id: str,
+        *,
+        turn_trace_id: str | None,
+        latency_ms: int | None,
+        answer_type: str | None,
+        success_flag: bool | None,
+    ) -> None:
+        if not hasattr(self, "metrics_attached"):
+            self.metrics_attached: list[dict[str, object]] = []
+        self.metrics_attached.append({
+            "message_id": message_id,
+            "turn_trace_id": turn_trace_id,
+            "latency_ms": latency_ms,
+            "answer_type": answer_type,
+            "success_flag": success_flag,
+        })
+
 
 async def _fake_decision_stream(*args, **kwargs):
     del args, kwargs

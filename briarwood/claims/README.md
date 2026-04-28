@@ -1,12 +1,12 @@
 # claims — Claim-Object Pipeline (Phase 3 Wedge)
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-28 (CMA Phase 4a Cycle 6 — graft now routes through canonical scoped runner)
 **Layer:** Unified Intelligence + adapter (Layer 3 — feature-flagged wedge in front of legacy synthesis)
 **Status:** EXPERIMENTAL (feature-flagged)
 
 ## Purpose
 
-The `claims/` package is the Phase 3 wedge that replaces Briarwood's legacy structured-output synthesis with a typed, validated claim-object pipeline for the DECISION/LOOKUP path on pinned listings. It is gated by the `BRIARWOOD_CLAIMS_ENABLED` feature flag (and an optional per-property allowlist). Pipeline order: `build_claim_for_property` runs the routed analysis through the existing orchestrator, grafts a post-hoc `ComparableSalesModule` run (because the scoped registry doesn't surface comparable_sales), and hands a `VerdictWithComparisonClaim` to the wedge. The wedge then routes via `scout_claim` (Value Scout) → `edit_claim` (Editor) → `render_claim` (Representation). On any failure the wedge falls through to the legacy synthesis path; the user-facing stream stays the same shape regardless. The package ships with exactly one archetype (`VERDICT_WITH_COMPARISON`) — the registry shape is multi-archetype so additions land without changing callers.
+The `claims/` package is the Phase 3 wedge that replaces Briarwood's legacy structured-output synthesis with a typed, validated claim-object pipeline for the DECISION/LOOKUP path on pinned listings. It is gated by the `BRIARWOOD_CLAIMS_ENABLED` feature flag (and an optional per-property allowlist). Pipeline order: `build_claim_for_property` runs the routed analysis through the existing orchestrator, grafts a `comparable_sales` entry via the canonical scoped runner `run_comparable_sales` (because the orchestrator's routed run surfaces `comparable_sales` only as an internal dependency of `valuation`), and hands a `VerdictWithComparisonClaim` to the wedge. The wedge then routes via `scout_claim` (Value Scout) → `edit_claim` (Editor) → `render_claim` (Representation). On any failure the wedge falls through to the legacy synthesis path; the user-facing stream stays the same shape regardless. The package ships with exactly one archetype (`VERDICT_WITH_COMPARISON`) — the registry shape is multi-archetype so additions land without changing callers.
 
 ## Location
 
@@ -28,7 +28,7 @@ The `claims/` package is the Phase 3 wedge that replaces Briarwood's legacy stru
 - **Called by:** `_maybe_handle_via_claim` wedge at [briarwood/agent/dispatch.py:1809](../agent/dispatch.py#L1809). The wedge is itself called from the DECISION handler.
 - **Calls:**
   - `run_briarwood_analysis_with_artifacts` ([briarwood/orchestrator.py](../orchestrator.py)) for the routed analysis.
-  - `ComparableSalesModule` ([briarwood/modules/comparable_sales.py](../modules/comparable_sales.py)) directly via post-hoc graft at [pipeline.py:62-88](pipeline.py#L62-L88) — see Known Rough Edges.
+  - `run_comparable_sales(context)` ([briarwood/modules/comparable_sales_scoped.py](../modules/comparable_sales_scoped.py)) via post-hoc graft at [pipeline.py:62-114](pipeline.py#L62-L114) — see Known Rough Edges. Replaces the prior direct `ComparableSalesModule()` instantiation as of CMA Phase 4a Cycle 6.
   - `scout_claim` ([briarwood/value_scout/scout.py:26](../value_scout/scout.py#L26)).
   - `edit_claim` ([briarwood/editor/validator.py:32](../editor/validator.py#L32)).
   - `render_claim` ([briarwood/claims/representation/verdict_with_comparison.py:52](representation/verdict_with_comparison.py#L52)).
@@ -66,7 +66,9 @@ The wedge entrypoint `_maybe_handle_via_claim` additionally consumes `text`, `de
 - **Imports:**
   - `briarwood.orchestrator.run_briarwood_analysis_with_artifacts` — reuses the routed-execution stack, no parallel orchestrator.
   - `briarwood.runner_routed._scoped_synthesizer` — synthesizer hook for the orchestrator call.
-  - `briarwood.modules.comparable_sales.ComparableSalesModule` — graft target.
+  - `briarwood.modules.comparable_sales_scoped.run_comparable_sales` — graft entry point (canonical scoped runner; replaces the prior `ComparableSalesModule` direct call as of CMA Phase 4a Cycle 6).
+  - `briarwood.modules.comparable_sales.ComparableSalesOutput` — pydantic shape used to repackage the scoped wrapper's `legacy_payload` so the synthesizer's existing `payload.comps_used` access path remains stable.
+  - `briarwood.execution.context.ExecutionContext` — built from `PropertyInput.to_dict()` and passed to the scoped runner.
   - `briarwood.inputs.property_loader.load_property_from_json` — input loading.
   - `briarwood.agent.overrides.inputs_with_overrides`, `briarwood.agent.tools.SAVED_PROPERTIES_DIR`.
 - **Coupled to:** `briarwood/editor/checks.py` (threshold constants must agree — see Known Rough Edges and [ROADMAP.md](../../ROADMAP.md)). Coupled to `briarwood/value_scout/` for the insight graft. Coupled to `briarwood/agent/dispatch.py` for the wedge entry.
@@ -78,8 +80,8 @@ The wedge entrypoint `_maybe_handle_via_claim` additionally consumes `text`, `de
 - `ComparisonScenario.metric_range[low] <= metric_range[high]` — enforced by `validate_range_ordering` at [verdict_with_comparison.py:47-54](verdict_with_comparison.py#L47-L54).
 - `Confidence.score` is in `[0, 1]`; `Confidence.band` derives from `from_score` thresholds at [base.py:21-31](base.py#L21-L31): `>= 0.90 → "high"`, `>= 0.70 → "medium"`, `>= 0.50 → "low"`, else `"very_low"`.
 - The wedge gracefully falls back to legacy synthesis on three failure paths: build raises, editor rejects, render raises. None of those cause user-facing errors.
-- The post-hoc `ComparableSalesModule` graft is idempotent: skipped at [pipeline.py:77-78](pipeline.py#L77-L78) if `outputs.comparable_sales` is already present, and exception-safe at [pipeline.py:79-82](pipeline.py#L79-L82).
-- Synthesizer thresholds at [synthesis/verdict_with_comparison.py:39-43](synthesis/verdict_with_comparison.py#L39-L43): `SMALL_SAMPLE_THRESHOLD = 5`, `VALUE_FIND_THRESHOLD = -5.0`, `OVERPRICED_THRESHOLD = 5.0`. **Must agree with editor's mirror constants** at [briarwood/editor/checks.py:14-20](../editor/checks.py#L14-L20) — see Known Rough Edges.
+- The post-hoc `comparable_sales` graft at [pipeline.py:62-114](pipeline.py#L62-L114) is idempotent: skipped if `outputs.comparable_sales` is already present, and gracefully no-ops when the scoped runner returns its fallback payload (no `legacy_payload`) or when shape validation fails.
+- Synthesizer thresholds: price-label thresholds (`VALUE_FIND_THRESHOLD = -5.0`, `OVERPRICED_THRESHOLD = 5.0`) are imported from [briarwood/decision_model/value_position.py](../decision_model/value_position.py) and shared with the editor and current-value pricing view. `SMALL_SAMPLE_THRESHOLD = 5` remains local to [synthesis/verdict_with_comparison.py](synthesis/verdict_with_comparison.py) and must agree with the editor's small-sample check — see Known Rough Edges.
 
 ## State & Side Effects
 
@@ -113,8 +115,8 @@ claim = build_claim_for_property("NJ-0000001", user_text="Is this a buy?")
 
 ## Known Rough Edges
 
-- **Post-hoc `ComparableSalesModule` graft.** [pipeline.py:62-88](pipeline.py#L62-L88) runs `ComparableSalesModule` directly because the scoped execution registry does not surface `comparable_sales` as a top-level module. The comment at [pipeline.py:67-72](pipeline.py#L67-L72) explicitly documents this gap. Cross-ref [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → "ComparableSalesModule is not in the scoped registry" — promoting it would let the graft go away.
-- **Threshold duplication with editor.** `SMALL_SAMPLE_THRESHOLD`, `VALUE_FIND_THRESHOLD`, `OVERPRICED_THRESHOLD` live both in [synthesis/verdict_with_comparison.py:39-43](synthesis/verdict_with_comparison.py#L39-L43) and (mirrored) in [briarwood/editor/checks.py:14-20](../editor/checks.py#L14-L20). The editor explicitly does not import from this package to avoid a layering violation. Silent drift is the hazard. See [ROADMAP.md](../../ROADMAP.md) "Editor / synthesis threshold duplication has no mechanical guard."
+- **Post-hoc `comparable_sales` graft.** [pipeline.py:62-114](pipeline.py#L62-L114) calls `run_comparable_sales(context)` (canonical scoped runner) and repackages the resulting `data.legacy_payload` as a `ComparableSalesOutput` instance under `outputs["comparable_sales"]["payload"]`. The graft is still required because the orchestrator's routed run surfaces `comparable_sales` only as an internal dependency of `valuation`, not as a top-level entry in `module_results["outputs"]` — the synthesizer would otherwise see no comp set and produce zero scenarios. Eligible for full removal if/when the orchestrator's chat-tier execution surfaces `comparable_sales` as a first-class output (open question — see consolidated chat-tier execution roadmap entry).
+- **Small-sample threshold duplication with editor.** Price-label thresholds now live in [briarwood/decision_model/value_position.py](../decision_model/value_position.py), so synthesis and editor no longer mirror those constants. `SMALL_SAMPLE_THRESHOLD` still lives in both [synthesis/verdict_with_comparison.py](synthesis/verdict_with_comparison.py) and [briarwood/editor/checks.py](../editor/checks.py); silent drift is still possible for caveat coverage.
 - **Single archetype.** Only `VERDICT_WITH_COMPARISON` is implemented. The six others in [archetypes.py:11-17](archetypes.py#L11-L17) are reserved as comments. Adding one requires: a new archetype enum value, a new Pydantic schema, a new synthesizer, a new representation renderer, an entry in `map_to_archetype`, and (often) editor checks specific to the archetype's invariants.
 - **Routing is narrow.** `map_to_archetype` returns `VERDICT_WITH_COMPARISON` only for `AnswerType.DECISION` or `AnswerType.LOOKUP` AND `has_pinned_listing=True`. All other intent/state combinations route to legacy.
 - **Cache trace recovery.** [pipeline.py:91-106](pipeline.py#L91-L106) recovers `interaction_trace` from either the top-level artifact OR the unified output — needed because the orchestrator's synthesis cache hit does not emit the trace at the top level. Brittle; surface as a "Contract change:" entry if the orchestrator's cache shape changes.
@@ -130,6 +132,16 @@ claim = build_claim_for_property("NJ-0000001", user_text="Is this a buy?")
 - **When to flip `BRIARWOOD_CLAIMS_ENABLED` to default-on.** Open product call; gated on rejection-rate signal from the SSE `claim_rejected` event.
 
 ## Changelog
+
+### 2026-04-28 (Semantic Value Consistency — shared value-position classifier)
+- Contract change: `verdict.label` classification now imports the shared deterministic price-label thresholds from `briarwood/decision_model/value_position.py`, matching the editor and current-value pricing view.
+
+### 2026-04-28 (CMA Phase 4a Cycle 6 — graft now routes through canonical scoped runner)
+- **Contract change (internal, no user-visible behavior change):** the post-hoc `comparable_sales` graft at [pipeline.py:62-114](pipeline.py#L62-L114) now calls `run_comparable_sales(context)` (canonical scoped runner) instead of instantiating `ComparableSalesModule` directly. The graft repackages the scoped wrapper's `data.legacy_payload` as a `ComparableSalesOutput` pydantic instance under `outputs["comparable_sales"]["payload"]`, preserving the existing field-access shape (`payload.comps_used`) that the verdict_with_comparison synthesizer reads.
+- **Why:** consistency with every other comp-sales caller (now uniformly through the wrapper's error contract, mode inference, and missing-input flagging via `module_payload_from_legacy_result`); closes a long-standing ROADMAP cleanup item from the 2026-04-24 promotion handoff.
+- **Imports updated:** `briarwood.modules.comparable_sales.ComparableSalesModule` removed; `briarwood.modules.comparable_sales_scoped.run_comparable_sales`, `briarwood.modules.comparable_sales.ComparableSalesOutput`, and `briarwood.execution.context.ExecutionContext` added.
+- **Test contract updated:** `tests/claims/test_pipeline.py` patches `run_comparable_sales` instead of `ComparableSalesModule`; the legacy `test_swallows_module_exception` case is replaced by `test_skips_when_scoped_returns_fallback`, which pins the new fallback handling (scoped runner's `mode="fallback"` path returns no `legacy_payload`, so the graft no-ops). All 82 claims tests green.
+- **Graft is still load-bearing.** The orchestrator's routed run surfaces `comparable_sales` only as an internal dependency of `valuation`; without the graft, the synthesizer's `_iter_comps` would return empty and every claim would produce `insufficient_data`. Full removal is deferred until top-level surfacing is reconsidered.
 
 ### 2026-04-24
 - Initial README created.

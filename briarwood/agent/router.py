@@ -29,7 +29,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from briarwood.agent.llm import LLMClient
 from briarwood.agent.llm_observability import complete_structured_observed
@@ -171,7 +171,15 @@ _LLM_SYSTEM = (
     "Classify the user turn into EXACTLY ONE answer_type and also infer "
     "telemetry-only user_type metadata. user_type must not change answer_type. "
     "Respond with strict JSON: {\"answer_type\": <one>, "
-    "\"persona_type\": <one>, \"use_case_type\": <one>, \"reason\": <short>}. "
+    "\"persona_type\": <one>, \"use_case_type\": <one>, "
+    "\"confidence\": <float 0-1>, \"reason\": <short>}. "
+    "confidence is a float in [0.0, 1.0] reflecting how certain you are "
+    "about the chosen answer_type. 1.0 = unambiguous (canonical phrasing for "
+    "the chosen bucket); 0.7 = clear but with a near second-choice; 0.5 = "
+    "could plausibly be one of 2-3 buckets; <0.4 = genuinely don't know — "
+    "still pick the safer bucket. Be honest; under-confidence is preferred "
+    "to false certainty. Downstream observability and dashboards key on this "
+    "value to flag low-confidence turns for review. "
     "persona_type values: first_time_buyer, investor, developer, agent_or_advisor, unknown. "
     "use_case_type values: owner_occupant, rental, flip, house_hack, development, unknown. "
     "Types: "
@@ -192,6 +200,9 @@ _LLM_SYSTEM = (
     "the price (not just state it) is decision. Requires either a decisive verb OR an analysis ask. "
     "comparison = compare two or more specific properties. "
     "search = find other properties matching criteria (beds/price/distance/similar). "
+    "Also list/show-imperatives that name plural artifacts the user is asking the "
+    "system to enumerate from inventory: 'show me listings here', 'list the properties', "
+    "'what's available'. (NOT 'show me the comps' — see edge.) "
     "research = town-level news, zoning, permits, development context. "
     "visualize = user asks for a chart, plot, gauge, or says 'show me the X picture'. "
     "rent_lookup = how much could it rent, rental income, rental profile, NOI. "
@@ -200,8 +211,19 @@ _LLM_SYSTEM = (
     "what this becomes over time, scenarios, renovation budget questions, ARV, resale-after-renovation, "
     "'what if we invested 100k', 'if we renovated it', 'what could we sell it for'. "
     "risk = 'what could go wrong', 'downside', 'worst case', 'risks', 'red flags', 'what am i missing'. "
+    "RISK enumerates downside factors; it does NOT cover sensitivity / counterfactual "
+    "questions (those are edge). "
     "edge = 'where's the value', 'what's the edge', 'why is this a deal', 'value thesis', 'angle', 'catch'. "
+    "ALSO sensitivity / counterfactual / 'what would change my mind' phrasings: "
+    "'what would change your view', 'what would shift the number', 'how sensitive is X', "
+    "'what assumption is load-bearing', 'what if X were different'. "
+    "ALSO comp-set follow-ups on a pinned property: 'show me the comps', 'list the comps', "
+    "'what are the comps', 'why were these comps chosen', 'explain your comp choice'. "
     "strategy = 'best way to play', 'flip vs rent vs hold', 'primary or rental', 'what strategy'. "
+    "ALSO escalation phrasings on a pinned property — the user has seen the first-read "
+    "and is asking for next-step direction: 'recommended path', 'walk me through the "
+    "recommended path', 'what should I do here', 'next move', 'what's the play', "
+    "'how should I approach this'. "
     "chitchat = ONLY greetings, thanks, small-talk like 'hi' or 'ok'. "
     "Never classify a substantive real-estate question as chitchat. "
     "Tie-break rule: if the question is layered ('for a family', 'as an investment', "
@@ -218,11 +240,23 @@ _LLM_SYSTEM = (
     "'price analysis' / 'analyze the price' / 'how is this priced' / 'is this priced right' / "
     "'is this a fair price' / 'thoughts on the price' -> decision "
     "(these ask for analysis of the price, not the price as a single fact). "
+    "'recommended path' / 'walk me through the recommended path' / 'what should I do here' / "
+    "'next move' / 'what's the play' -> strategy (escalation from a browse-style first read). "
+    "'what would change your view' / 'what would shift the number' / 'how sensitive is X' / "
+    "'what assumption is load-bearing' / 'what if X were different' -> edge "
+    "(counterfactual / sensitivity, NOT risk — risk enumerates downside, edge surfaces what would shift the read). "
+    "'show me the listings' / 'list the properties' / 'what is available' -> search. "
+    "'show me the comps' / 'list the comps' / 'what are the comps' / 'why were these comps chosen' / "
+    "'explain your comp choice' -> edge (comp-set follow-up on a pinned property). "
     "Example: 'what do you think of 526 W End Ave?' is BROWSE, not DECISION — the user is asking "
     "for a first read, not a buy/pass call. Decision requires explicit buy/pass/underwrite verb. "
     "Counter-example: 'what is the price analysis for 526 W End Ave?' is DECISION, not LOOKUP — "
     "the user is asking for analysis of the price, not the asking price as a number. "
-    "Counter-example: 'what is the asking price of 526 W End Ave?' is LOOKUP — single fact, no analysis."
+    "Counter-example: 'what is the asking price of 526 W End Ave?' is LOOKUP — single fact, no analysis. "
+    "Counter-example: 'what do you think of X' is BROWSE; 'walk me through the recommended path for X' "
+    "is STRATEGY — the user has escalated from first-read to next-step recommendation. "
+    "Counter-example: 'what could go wrong with X' is RISK; 'what would change your view of X' is EDGE — "
+    "downside enumeration vs counterfactual / sensitivity to assumptions."
 )
 
 
@@ -237,7 +271,14 @@ _RENT_LOOKUP_HINT_RE = re.compile(
 )
 
 _PROJECTION_OVERRIDE_HINT_RE = re.compile(
-    r"\b(arv|after repair value|sell it for|resale|turn around and sell|flip)\b",
+    # Defense in depth (Round 2 Cycle 2, 2026-04-28): even if `parse_overrides`
+    # returns mode-only for an unrelated reason, scenario / renovation
+    # imperatives in the override branch route to PROJECTION rather than
+    # falling through to DECISION. Pairs with the `parse_overrides` Layer A
+    # tightening that should keep us out of this branch in the first place.
+    r"\b(arv|after repair value|sell it for|resale|turn around and sell|flip|"
+    r"renovation scenarios?|run scenarios?|scenario|"
+    r"5[- ]year|ten[- ]year|outlook)\b",
     re.IGNORECASE,
 )
 
@@ -255,6 +296,7 @@ class RouterClassification(BaseModel):
     answer_type: AnswerType
     persona_type: PersonaType
     use_case_type: UseCaseType
+    confidence: float = Field(ge=0.0, le=1.0)
     reason: str = ""
 
 
@@ -368,10 +410,22 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
     # What-if price overrides are inherently decisions. Only consulted when
     # no cache rule fired — avoids the override parser's false positives on
     # street numbers ("for 526") or bed counts ("4-bed") hijacking the turn.
+    # Tightened 2026-04-28 (Round 2 Cycle 2): only short-circuit on
+    # *material* overrides — explicit price (`ask_price`) or capex
+    # (`repair_capex_budget`). A bare `mode="renovated"` signal flows
+    # through to the LLM (which classifies the actual question intent);
+    # downstream dispatch handlers still receive the full overrides dict
+    # via `_parse_turn_overrides` so the renovation context is preserved
+    # in the analysis pipeline. See DECISIONS.md "Router Quality Round 2"
+    # for the bare-renovation false-positive that prompted this tightening.
     try:
         from briarwood.agent.overrides import parse_overrides
 
-        has_override = bool(parse_overrides(text))
+        parsed_overrides = parse_overrides(text)
+        has_override = (
+            "ask_price" in parsed_overrides
+            or "repair_capex_budget" in parsed_overrides
+        )
     except Exception:
         has_override = False
     if has_override:
@@ -402,9 +456,14 @@ def classify(text: str, *, client: LLMClient | None = None) -> RouterDecision:
     if client is not None:
         llm_result = _llm_classify(text, client)
         if llm_result is not None:
+            # Plumb the LLM's confidence through with a 0.4 floor — keeps
+            # every successful classification above the 0.3 default-fallback
+            # threshold while preserving real signal above that. Documented
+            # as a deliberate guardrail in DECISIONS.md 2026-04-28 Round 2.
+            confidence = max(float(llm_result.confidence), 0.4)
             return RouterDecision(
                 answer_type=llm_result.answer_type,
-                confidence=0.6,
+                confidence=confidence,
                 target_refs=refs,
                 reason="llm classify",
                 llm_suggestion=llm_result.answer_type,

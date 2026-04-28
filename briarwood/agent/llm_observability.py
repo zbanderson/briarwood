@@ -13,6 +13,8 @@ import logging
 import os
 import time
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 from pydantic import BaseModel
@@ -20,6 +22,12 @@ from pydantic import BaseModel
 from briarwood.cost_guard import BudgetExceeded
 
 _logger = logging.getLogger(__name__)
+
+# JSONL sink path. Default mirrors api/store.py's data/web/conversations.db
+# pattern — a per-record JSON line under data/. Override via env var for
+# tests and one-off dev shells. Never break a turn on a write failure.
+_DEFAULT_JSONL_PATH = "data/llm_calls.jsonl"
+_JSONL_PATH_ENV = "BRIARWOOD_LLM_JSONL_PATH"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -89,8 +97,40 @@ class LLMCallLedger:
             )
         except Exception:  # observability must never break a turn
             pass
+        try:
+            self._write_jsonl(record)
+        except Exception as exc:  # noqa: BLE001 — observability must never break a turn
+            print(f"[llm_calls.jsonl] write failed: {exc}", flush=True)
+
+    def _write_jsonl(self, record: LLMCallRecord) -> None:
+        payload = asdict(record)
+        if not self.debug_payloads_enabled:
+            payload.pop("debug_payload", None)
+        # Stamp at write time — LLMCallRecord carries duration_ms but no
+        # absolute timestamp, so the JSONL needs its own anchor for
+        # cross-record ordering and time-window queries.
+        payload["recorded_at"] = datetime.now(timezone.utc).isoformat()
+        # Stage 3 dashboard: link the call back to its turn so admin can
+        # rank turns by total LLM cost. None when no turn is active
+        # (offline scripts, batch jobs, tests). Lazy import mirrors the
+        # ``record_llm_call_summary`` import above for the same cycle reason.
+        try:
+            from briarwood.agent.turn_manifest import current_manifest
+
+            manifest = current_manifest()
+            if manifest is not None:
+                payload["turn_id"] = manifest.turn_id
+        except Exception:  # observability must never break a turn
+            pass
+        path = Path(os.environ.get(_JSONL_PATH_ENV, _DEFAULT_JSONL_PATH))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, default=str) + "\n")
 
     def clear(self) -> None:
+        # In-memory only — the JSONL sink is durable and not truncated by
+        # tests. Test isolation: point BRIARWOOD_LLM_JSONL_PATH at a tmp
+        # file rather than relying on clear() to wipe state.
         self.records.clear()
 
 

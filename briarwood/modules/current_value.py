@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from briarwood.agents.current_value import CurrentValueAgent, CurrentValueInput, CurrentValueOutput
+from briarwood.decision_model.value_position import classify_value_position
 from briarwood.field_audit import audit_property_fields
 from briarwood.evidence import build_section_evidence
 from briarwood.modules.comparable_sales import ComparableSalesModule, get_comparable_sales_payload
@@ -57,6 +58,8 @@ class CurrentValueModule:
                     "briarwood_current_value": None,
                     "mispricing_pct": None,
                     "pricing_view": "unavailable",
+                    "pricing_view_confidence": None,
+                    "pricing_view_confidence_band": None,
                 },
                 section_evidence=build_section_evidence(
                     property_input,
@@ -154,8 +157,11 @@ class CurrentValueModule:
                 "comp_confidence_score": comparable_sales.comp_confidence_score,
             }
         )
+        output = self._with_value_position(output)
         output = self._apply_input_confidence_caps(output=output, income=income)
+        output = self._with_value_position(output)
         output = self._apply_hybrid_adjustment(output=output, hybrid_value=hybrid_value)
+        output = self._with_value_position(output)
 
         if hybrid_value.is_hybrid and hybrid_value.base_case_hybrid_value is not None:
             summary = (
@@ -189,6 +195,8 @@ class CurrentValueModule:
                 "basis_mispricing_pct": round(basis_mispricing_pct, 4) if basis_mispricing_pct is not None else None,
                 "listing_ask_price": round(float(property_input.purchase_price), 2) if property_input.purchase_price is not None else None,
                 "pricing_view": output.pricing_view,
+                "pricing_view_confidence": output.pricing_view_confidence,
+                "pricing_view_confidence_band": output.pricing_view_confidence_band,
                 "all_in_basis": round(output.all_in_basis, 2) if output.all_in_basis is not None else None,
                 "capex_basis_used": round(output.capex_basis_used, 2) if output.capex_basis_used is not None else None,
                 "capex_basis_source": output.capex_basis_source,
@@ -276,6 +284,22 @@ class CurrentValueModule:
             return output
         return output.model_copy(update={"confidence": round(confidence, 2), "warnings": warnings})
 
+    def _with_value_position(self, output: CurrentValueOutput) -> CurrentValueOutput:
+        value_position = classify_value_position(
+            bcv=output.briarwood_current_value,
+            ask=output.ask_price,
+            bcv_confidence=output.confidence,
+            comp_confidence=output.comp_confidence_score,
+        )
+        confidence = value_position.confidence
+        return output.model_copy(
+            update={
+                "pricing_view": value_position.pricing_view,
+                "pricing_view_confidence": round(confidence.score, 2) if confidence is not None else None,
+                "pricing_view_confidence_band": confidence.band if confidence is not None else None,
+            }
+        )
+
     def _apply_hybrid_adjustment(self, *, output: CurrentValueOutput, hybrid_value: object) -> CurrentValueOutput:
         if not getattr(hybrid_value, "is_hybrid", False):
             return output
@@ -304,7 +328,6 @@ class CurrentValueModule:
                 "value_high": round(float(high_value), 2),
                 "mispricing_amount": round(float(mispricing_amount), 2),
                 "mispricing_pct": round(float(mispricing_pct), 4),
-                "pricing_view": self.agent._pricing_view(float(mispricing_pct)),
                 "confidence": confidence,
                 "assumptions": assumptions,
                 "warnings": warnings,

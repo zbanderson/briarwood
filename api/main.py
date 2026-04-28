@@ -9,7 +9,8 @@ and re-streams to the browser. SSE wire format is owned here; see api/events.py.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, AsyncIterator
+import os
+from typing import Any, AsyncIterator, Literal
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -20,7 +21,17 @@ from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from briarwood.intelligence_capture import (
+    append_intelligence_capture,
+    build_user_feedback_record,
+)
+
 from api import events
+from api.admin_metrics import (
+    compose_metrics,
+    compose_recent_turns,
+    compose_turn_detail,
+)
 from api.mock_listings import looks_like_listing_query, map_payload_for, mock_listings_for
 from api.pipeline_adapter import (
     browse_stream,
@@ -129,6 +140,59 @@ def rename_conversation(conversation_id: str, body: RenameRequest) -> dict[str, 
 @app.delete("/api/conversations/{conversation_id}")
 def delete_conversation(conversation_id: str) -> dict[str, str]:
     get_store().delete_conversation(conversation_id)
+    return {"status": "ok"}
+
+
+# --- Feedback endpoint (AI-Native Foundation Stage 2) ---
+
+class FeedbackRequest(BaseModel):
+    message_id: str
+    rating: Literal["up", "down"]
+    # `comment` reserved for v2 (per FEEDBACK_LOOP_HANDOFF_PLAN.md ODD #2);
+    # accepted on the wire so the v2 client can ship without an API change,
+    # but ignored in v1.
+    comment: str | None = None
+
+
+# ODD #1 boundary translator: the API contract follows ROADMAP §3.1
+# Stage 2 ("up"/"down"); the existing `build_user_feedback_record` helper
+# and `briarwood/feedback/analyzer.py` keys are "yes"/"partially"/"no".
+# Map at the boundary so the helper, the analyzer's threshold logic, and
+# the 6,290 historical-shaped records all keep working unchanged.
+_RATING_API_TO_RECORD = {"up": "yes", "down": "no"}
+
+
+@app.post("/api/feedback")
+def submit_feedback(body: FeedbackRequest) -> dict[str, str]:
+    store = get_store()
+    try:
+        row = store.upsert_feedback(
+            message_id=body.message_id,
+            rating=body.rating,
+            comment=None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    # Mirror into the analyzer's JSONL hopper. The SQLite row is the
+    # source of truth; a JSONL failure is logged with a `[feedback.jsonl]`
+    # prefix and swallowed (never break the user's action). Pattern
+    # mirrors Stage 1's `[turn_traces]` / `[messages.metrics]` discipline.
+    try:
+        record = build_user_feedback_record(
+            rating=_RATING_API_TO_RECORD[body.rating],
+            analysis_id=body.message_id,
+            analysis_confidence=row.get("confidence"),
+            analysis_decision=row.get("answer_type") or "",
+            analysis_depth="",
+        )
+        append_intelligence_capture(record)
+    except Exception as exc:  # noqa: BLE001 — observability must never break a turn
+        print(
+            f"[feedback.jsonl] mirror failed for {body.message_id}: {exc}",
+            flush=True,
+        )
+
     return {"status": "ok"}
 
 
@@ -258,6 +322,11 @@ async def chat(req: ChatRequest) -> StreamingResponse:
     # Persist the user turn before streaming the assistant response.
     user_msg = store.add_message(conversation_id, "user", last.content)
 
+    # Captured inside _event_source_inner once the assistant row is
+    # written; read inside event_source's finally to backfill metric
+    # columns. Stays None when the inner generator errors before line 398.
+    assistant_msg_id: str | None = None
+
     async def event_source() -> AsyncIterator[str]:
         # Per-turn manifest — populated as the turn unfolds, emitted to
         # stderr at the end when BRIARWOOD_TRACE=1. Always created, even
@@ -267,9 +336,20 @@ async def chat(req: ChatRequest) -> StreamingResponse:
             async for chunk in _event_source_inner():
                 yield chunk
         finally:
-            end_turn()
+            finalized = end_turn()
+            if finalized is not None:
+                store.insert_turn_trace(finalized.to_jsonable())
+                if assistant_msg_id is not None:
+                    store.attach_turn_metrics(
+                        assistant_msg_id,
+                        turn_trace_id=finalized.turn_id,
+                        latency_ms=int(finalized.duration_ms_total),
+                        answer_type=finalized.answer_type,
+                        success_flag=True,
+                    )
 
     async def _event_source_inner() -> AsyncIterator[str]:
+        nonlocal assistant_msg_id
         # Surface conversation id immediately so the client can navigate.
         if created_new:
             yield events.encode_sse(events.conversation_event(conversation_id, conv["title"] if not created_new else _derive_title(last.content)))
@@ -398,6 +478,7 @@ async def chat(req: ChatRequest) -> StreamingResponse:
         assistant_msg = store.add_message(
             conversation_id, "assistant", assistant_text, events=collected_events
         )
+        assistant_msg_id = assistant_msg["id"]
         yield events.encode_sse(events.message_event(assistant_msg["id"], "assistant"))
         yield events.encode_sse(events.done())
 
@@ -414,6 +495,50 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# --- Admin dashboard endpoints (AI-Native Foundation Stage 3) ---
+#
+# All three endpoints are gated behind ``BRIARWOOD_ADMIN_ENABLED=1``. When
+# the env var is unset (or anything other than "1"), the surface returns
+# 404 — not 403 — so a probe of a non-admin host doesn't reveal that the
+# surface exists. Single-user local product today; real auth is a Stage
+# 3.5+ conversation.
+
+_ADMIN_FLAG = "BRIARWOOD_ADMIN_ENABLED"
+
+
+def _admin_enabled() -> bool:
+    return os.environ.get(_ADMIN_FLAG, "").strip() == "1"
+
+
+def _require_admin() -> None:
+    if not _admin_enabled():
+        raise HTTPException(status_code=404, detail="not found")
+
+
+@app.get("/api/admin/metrics")
+def admin_metrics(days: int = Query(7, ge=1, le=90)) -> dict[str, Any]:
+    _require_admin()
+    return compose_metrics(get_store(), days=days)
+
+
+@app.get("/api/admin/turns/recent")
+def admin_recent_turns(
+    days: int = Query(7, ge=1, le=90),
+    limit: int = Query(10, ge=1, le=100),
+) -> dict[str, Any]:
+    _require_admin()
+    return compose_recent_turns(get_store(), days=days, limit=limit)
+
+
+@app.get("/api/admin/turns/{turn_id}")
+def admin_turn_detail(turn_id: str) -> dict[str, Any]:
+    _require_admin()
+    payload = compose_turn_detail(get_store(), turn_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="turn not found")
+    return payload
 
 
 @app.get("/api/street-view")

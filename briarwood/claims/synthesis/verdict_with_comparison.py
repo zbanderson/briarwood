@@ -31,6 +31,11 @@ from briarwood.claims.verdict_with_comparison import (
     Verdict,
     VerdictWithComparisonClaim,
 )
+from briarwood.decision_model.value_position import (
+    OVERPRICED_THRESHOLD_PCT,
+    VALUE_FIND_THRESHOLD_PCT,
+    classify_ask_vs_fmv_delta_pct,
+)
 
 METHOD_NAME = "comparable_sales_v1"
 MIN_SCENARIO_SAMPLE = 1
@@ -39,8 +44,8 @@ MIN_SCENARIO_SAMPLE = 1
 SMALL_SAMPLE_THRESHOLD = 5
 
 # Delta thresholds (in percent) for verdict label.
-VALUE_FIND_THRESHOLD = -5.0
-OVERPRICED_THRESHOLD = 5.0
+VALUE_FIND_THRESHOLD = VALUE_FIND_THRESHOLD_PCT
+OVERPRICED_THRESHOLD = OVERPRICED_THRESHOLD_PCT
 
 
 def build_verdict_with_comparison_claim(
@@ -149,11 +154,10 @@ def _build_verdict(
 
 
 def _verdict_label(delta_pct: float) -> str:
-    if delta_pct <= VALUE_FIND_THRESHOLD:
-        return "value_find"
-    if delta_pct >= OVERPRICED_THRESHOLD:
-        return "overpriced"
-    return "fair"
+    label = classify_ask_vs_fmv_delta_pct(delta_pct)
+    if label == "insufficient_data":
+        return "fair"
+    return label
 
 
 def _format_headline(label: str, *, ask: float, fmv: float, delta_pct: float) -> str:

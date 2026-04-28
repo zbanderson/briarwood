@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { getChartSurface } from "@/lib/chat/chart-surface";
 import type {
@@ -652,14 +652,49 @@ function CmaPositioningChart({
         {spec.comps.map((comp, index) => {
           if (!isNumber(comp.ask_price)) return null;
           const y = rowY(index);
-          const tone = comp.feeds_fair_value ? CHART.bull : CHART.neutral;
+          const cx = xForValue(comp.ask_price);
+          const isActive = comp.listing_status === "active";
+          const isCrossTown = !isActive && Boolean(comp.is_cross_town);
+          // SOLD = filled circle (CHART.bull). ACTIVE = open triangle
+          // (stroke-only on CHART.neutral). Cross-town SOLD = filled circle
+          // with a dashed CHART.base outline. Unknown listing_status
+          // (legacy / pre-Cycle-5 payloads) keeps the prior `feeds_fair_value`
+          // colouring so cached transcripts don't degrade.
+          let marker: ReactNode;
+          if (isActive) {
+            marker = (
+              <polygon
+                points={`${cx},${y - 6} ${cx - 6},${y + 5} ${cx + 6},${y + 5}`}
+                fill="none"
+                stroke={CHART.neutral}
+                strokeWidth="1.5"
+              />
+            );
+          } else if (comp.listing_status === "sold") {
+            marker = isCrossTown ? (
+              <circle
+                cx={cx}
+                cy={y}
+                r="6"
+                fill={CHART.bull}
+                stroke={CHART.base}
+                strokeDasharray="2 2"
+                strokeWidth="1.5"
+              />
+            ) : (
+              <circle cx={cx} cy={y} r="6" fill={CHART.bull} />
+            );
+          } else {
+            const tone = comp.feeds_fair_value ? CHART.bull : CHART.neutral;
+            marker = <circle cx={cx} cy={y} r="6" fill={tone} />;
+          }
           return (
             <g key={`${comp.address ?? "comp"}-${index}`}>
               <text x="28" y={y + 4} fontSize="10" fill="var(--color-text-muted)">
                 {comp.address?.slice(0, 18) ?? `Comp ${index + 1}`}
               </text>
-              <circle cx={xForValue(comp.ask_price)} cy={y} r="6" fill={tone} />
-              <text x={xForValue(comp.ask_price) + 10} y={y + 4} fontSize="10" fill="var(--color-text)">
+              {marker}
+              <text x={cx + 10} y={y + 4} fontSize="10" fill="var(--color-text)">
                 {money(comp.ask_price)}
               </text>
             </g>

@@ -3276,6 +3276,53 @@ class BrowseContextFollowupTests(unittest.TestCase):
         self.assertEqual(out.answer_type, AnswerType.EDGE)
         self.assertEqual(out.reason, "comp-set rewrite")
 
+    def test_comp_set_followup_widened_phrasings_rewrite_to_edge(self) -> None:
+        """Widened 2026-04-28 to catch 'show me the comps' / 'list the comps'
+        / 'what are the comps' / 'explain your comp choice' / 'why were the
+        comps' — all comp-set follow-ups on a pinned property. See
+        ROADMAP.md §4 'Audit router classification boundaries' 2026-04-28
+        and ROUTER_AUDIT_HANDOFF_PLAN.md Cycle 3."""
+        session = Session(current_property_id=REF)
+        widened = [
+            "Show me the comps",
+            "show me your comps",
+            "list the comps",
+            "list your comps",
+            "what are the comps",
+            "what comps did you use",
+            "explain your comp choice",
+            "explain the comp selection",
+            "explain your comps",
+            "why were the comps chosen",
+            "why were these comps chosen",
+        ]
+        misses: list[tuple[str, AnswerType]] = []
+        for text in widened:
+            out = contextualize_decision(
+                text,
+                RouterDecision(
+                    AnswerType.BROWSE, confidence=0.6, target_refs=[], reason="llm classify"
+                ),
+                session,
+            )
+            if out.answer_type is not AnswerType.EDGE or out.reason != "comp-set rewrite":
+                misses.append((text, out.answer_type))
+        self.assertEqual(misses, [], f"comp-set widening missed: {misses}")
+
+    def test_comp_set_widening_does_not_match_market_context(self) -> None:
+        """Negative case: 'comparable sales market' is town/market context,
+        NOT a comp-set follow-up. Pinned so the widened regex doesn't drag
+        market-research turns into EDGE."""
+        session = Session(current_property_id=REF)
+        out = contextualize_decision(
+            "tell me about the comparable sales market in Belmar",
+            RouterDecision(
+                AnswerType.RESEARCH, confidence=0.6, target_refs=[], reason="llm classify"
+            ),
+            session,
+        )
+        self.assertEqual(out.answer_type, AnswerType.RESEARCH)
+
     def test_entry_point_followup_rewrites_to_edge(self) -> None:
         session = Session(current_property_id=REF)
         out = contextualize_decision(
@@ -3409,16 +3456,19 @@ class MicroLocationHandlerTests(unittest.TestCase):
 
 
 class BrowseChartSetEnforcementTests(unittest.TestCase):
-    """Phase 3 Cycle B (revised 2026-04-26): the BROWSE chart set is fixed
-    at [market_trend, value_opportunity, scenario_fan]. The agent's prompt
+    """CMA Phase 4a Cycle 5 (2026-04-26): the BROWSE chart set is
+    [market_trend, cma_positioning, value_opportunity, scenario_fan] when
+    the comp set is present, and falls back to the legacy 3-chart set
+    [market_trend, value_opportunity, scenario_fan] when the comp set is
+    empty (so the user never sees an empty CMA frame). The agent's prompt
     has strong defaults but in practice gpt-4o-mini drifts (e.g. picks
-    cma_positioning instead of market_trend). The enforcer rewrites the
-    plan deterministically so the user always sees the named 3."""
+    cma_positioning when market_trend was wanted). The enforcer rewrites
+    the plan deterministically."""
 
     def test_enforcer_inserts_missing_kinds(self) -> None:
         from briarwood.agent.dispatch import _enforce_browse_chart_set
 
-        # Agent picked the wrong chart set (cma_positioning, scenario_fan).
+        # Agent picked an incomplete set (cma_positioning + scenario_fan only).
         plan = {
             "selections": [
                 {
@@ -3441,23 +3491,50 @@ class BrowseChartSetEnforcementTests(unittest.TestCase):
         }
         out = _enforce_browse_chart_set(plan)
         kinds = [sel["chart_id"] for sel in out["selections"]]
-        self.assertEqual(kinds, ["market_trend", "value_opportunity", "scenario_fan"])
+        self.assertEqual(
+            kinds,
+            ["market_trend", "cma_positioning", "value_opportunity", "scenario_fan"],
+        )
         # The agent's claim for scenario_fan must be preserved.
         scenario_claim = next(
             sel for sel in out["selections"] if sel["chart_id"] == "scenario_fan"
         )["claim"]
         self.assertEqual(scenario_claim, "Bear case is well below today's basis.")
+        # The agent's claim for cma_positioning is preserved too, but its
+        # source_view is canonicalised to last_value_thesis_view (the
+        # 2026-04-26 two-view defensive fix).
+        cma_sel = next(
+            sel for sel in out["selections"] if sel["chart_id"] == "cma_positioning"
+        )
+        self.assertEqual(cma_sel["claim"], "Comp asks cluster near subject ask.")
+        self.assertEqual(cma_sel["source_view"], "last_value_thesis_view")
 
     def test_enforcer_synthesizes_default_claims_when_missing(self) -> None:
         from briarwood.agent.dispatch import _enforce_browse_chart_set
 
-        # Empty plan → all three forced with defaults.
+        # Empty plan → all four forced with default claims.
         out = _enforce_browse_chart_set({"selections": []})
         kinds = [sel["chart_id"] for sel in out["selections"]]
-        self.assertEqual(kinds, ["market_trend", "value_opportunity", "scenario_fan"])
+        self.assertEqual(
+            kinds,
+            ["market_trend", "cma_positioning", "value_opportunity", "scenario_fan"],
+        )
         for sel in out["selections"]:
             self.assertTrue(sel["claim"])
             self.assertFalse(sel["flagged"])
+
+    def test_enforcer_drops_cma_positioning_when_no_comp_set(self) -> None:
+        """When the market-support view is empty, the enforcer falls back
+        to the legacy 3-chart set so BROWSE never paints an empty CMA
+        frame. Caller signals this via include_cma_positioning=False."""
+        from briarwood.agent.dispatch import _enforce_browse_chart_set
+
+        out = _enforce_browse_chart_set(
+            {"selections": []},
+            include_cma_positioning=False,
+        )
+        kinds = [sel["chart_id"] for sel in out["selections"]]
+        self.assertEqual(kinds, ["market_trend", "value_opportunity", "scenario_fan"])
 
     def test_enforcer_pins_canonical_source_views(self) -> None:
         """Even when the agent picks the right chart kind, the enforcer

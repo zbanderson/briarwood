@@ -1262,3 +1262,605 @@ principles being operationalized); [`design_doc.md`](design_doc.md) § 7
 (the dual feedback loops being closed); [`ROADMAP.md`](ROADMAP.md)
 2026-04-27 umbrella entry "AI-Native Foundation";
 [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md) (the deferred handoff).
+
+---
+
+## 2026-04-28 — AI-Native Foundation Stage 1 landed: persistence, JSONL sink, message metrics
+
+**Decision.** AI-Native Foundation Stage 1 (§3.1 of [`ROADMAP.md`](ROADMAP.md))
+landed via [`PERSISTENCE_HANDOFF_PLAN.md`](PERSISTENCE_HANDOFF_PLAN.md)
+Cycles 1-4. Three artifacts now persist by default for every chat
+turn: the new `turn_traces` table in
+[`data/web/conversations.db`](api/store.py), the new
+`data/llm_calls.jsonl` JSONL sink, and four metric columns on the
+existing `messages` table (`latency_ms`, `answer_type`, `success_flag`,
+`turn_trace_id`). All three write paths are exception-safe with
+`[turn_traces]` / `[llm_calls.jsonl]` / `[messages.metrics]` prefix
+logs on failure — observability never breaks a turn. See
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence" for
+the system-level shape.
+
+**Four deviations from the plan, recorded for archaeology.**
+
+1. **Failure-swallow lives inside the methods, not at the call site.**
+   The plan sketched `try/except` wrappers at each `api/main.py` call
+   site (Cycle 1 Scope, Cycle 3 Scope) but also said in §"Failure
+   semantics" that "every persistence write is wrapped in `try: ...
+   except Exception:`." Resolved by putting the try/except inside
+   `insert_turn_trace`, `attach_turn_metrics`, and `_write_jsonl` so
+   the call sites stay simple and future callers (Cycle 4 smoke
+   matrix, Stage 3 admin scripts) inherit the same safety. Same
+   observable behavior, single layer of defense instead of two. The
+   prefix log convention (`[turn_traces]`, `[llm_calls.jsonl]`,
+   `[messages.metrics]`) is preserved verbatim.
+
+2. **Test files live at `tests/test_api_*.py`, not `tests/api/`.** The
+   plan called for `tests/api/test_turn_traces.py` and
+   `tests/api/test_messages_metrics.py`. Discovered at first test run
+   that `tests/api/__init__.py` shadows the top-level `api/` package
+   on import — Python resolves `from api.store import ...` to the
+   empty test directory and fails with `ModuleNotFoundError`. The
+   repo's existing convention is flat (`tests/test_chat_api.py`,
+   `tests/test_api_strategy.py`); switched to `tests/test_api_turn_traces.py`
+   and folded all messages-metrics tests into the same file. Five new
+   tests in Cycle 1 (round-trip + minimal + db-error swallow + finalize
+   path + delete-cascade), five in Cycle 2 (JSONL write + payload
+   exclusion default + payload included on flag + write-error swallow
+   + manifest-mirror regression), four in Cycle 3 (idempotent schema +
+   metrics update + missing message + assistant-only metrics). Total
+   14 new tests; suite delta 1496 → 1510 passed, 16 failures unchanged
+   (all pre-existing).
+
+3. **Added `tests/conftest.py` to redirect the JSONL during test runs.**
+   Not in plan. Without it, every test that exercises an LLM mock
+   would write to the real `data/llm_calls.jsonl` — corrupting the
+   very observability artifact this stage is trying to make
+   trustworthy. The `pytest_sessionstart` hook in
+   [tests/conftest.py](tests/conftest.py) sets
+   `BRIARWOOD_LLM_JSONL_PATH` to a per-session tmp file; tests can
+   still override per-function via `monkeypatch.setenv`. Defense in
+   depth: also added `data/llm_calls.jsonl` to `.gitignore` so any
+   stray writes don't reach commits.
+
+4. **`messages.success_flag` semantic locked to v1 (a).** Per the
+   plan's open design decision #2, three options were offered: (a)
+   manifest reached `end_turn` without exception, (b) no
+   `events.error(...)` emitted during the stream, (c) user followed
+   up positively. Locked to (a) — easiest to populate, ~always True
+   under normal flow. Deliberately revisitable when Stage 2 (user
+   feedback loop) lands and option (c) becomes implementable.
+
+**Why these all stayed in scope.** Each deviation was a quality call
+in service of the same outcome: the artifacts must be trustworthy from
+day one (test pollution → conftest), the failure semantics convention
+must be uniformly applied (single-layer swallow), the test discovery
+must just work (flat filenames), and the success_flag must be honest
+about what it currently measures (locked to (a) explicitly so it can
+be widened later without a silent semantic shift).
+
+**Manual verification gate deferred.** The plan's success criteria
+include "chat one turn end-to-end, then run `sqlite3 ... 'SELECT
+turn_id, answer_type, duration_ms_total, json_array_length(modules_run)
+FROM turn_traces ORDER BY started_at DESC LIMIT 1'`" plus the smoke
+matrix across BROWSE / DECISION / LOOKUP / EDGE / RESEARCH /
+RENT_LOOKUP / CHITCHAT. Auto-mode handoff did not drive a browser
+session; deferred to next live UI smoke.
+
+**Cross-references.** [`PERSISTENCE_HANDOFF_PLAN.md`](PERSISTENCE_HANDOFF_PLAN.md)
+(canonical scope); [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md)
+§"Persistence" (system-level shape post-landing);
+[`ROADMAP.md`](ROADMAP.md) §3.1 Stage 1 (closeout entry with `✅`
+prefix and `**Status:**` line); [`ROADMAP.md`](ROADMAP.md) §10 Resolved
+Index rows 6, 7, 8.
+
+---
+
+## 2026-04-28 — Router classification audit Cycle 1-4 landed
+
+**Decision.** Audit-against-corpus work for the §4 ROADMAP entry
+*"2026-04-25 — Audit router classification boundaries with real
+traffic"* landed via [`ROUTER_AUDIT_HANDOFF_PLAN.md`](ROUTER_AUDIT_HANDOFF_PLAN.md)
+Cycles 1-4 on 2026-04-28. Stage 1's `turn_traces` provided the corpus
+the entry was waiting on. Two artifacts changed: `_LLM_SYSTEM` in
+[`briarwood/agent/router.py`](briarwood/agent/router.py) (prompt
+expansion) and `_COMP_SET_RE` in
+[`briarwood/agent/dispatch.py`](briarwood/agent/dispatch.py) (regex
+widening). 14 new tests; suite delta +14 passes; 16 pre-existing
+failures unchanged.
+
+**The corpus** (Cycle 1 — read-only).
+
+| # | Text | Was | Should be | Source |
+|---|------|-----|-----------|--------|
+| 1 | "Why were these comps chosen?" (pinned) | RESEARCH | EDGE | ROADMAP 2026-04-25 |
+| 2 | "show me the comps" (pinned) | BROWSE | EDGE | ROADMAP 2026-04-26 |
+| 3 | "Show me listings here" | BROWSE | SEARCH | ROADMAP 2026-04-25 |
+| 4 | "Walk me through the recommended path" (pinned) | BROWSE | STRATEGY | turn_traces 2026-04-28 |
+| 5 | "What would change your value view?" (pinned) | RISK | EDGE | turn_traces 2026-04-28 |
+
+Plus 8 synthetic boundary cases pinned in `LLM_CANNED` /
+`PromptContentRegressionTests` to harden against future prompt edits.
+
+**The five prompt edits** (Cycle 2):
+1. STRATEGY definition expansion — escalation phrasings added
+   ("recommended path", "walk me through", "what should I do here",
+   "next move", "what's the play", "how should I approach this").
+2. EDGE definition expansion — sensitivity / counterfactual phrasings
+   added ("what would change your view", "what would shift the
+   number", "how sensitive is X", "what assumption is load-bearing",
+   "what if X were different") AND comp-set follow-ups ("show me the
+   comps", "list the comps", "what are the comps", "why were these
+   comps chosen", "explain your comp choice").
+3. SEARCH definition expansion — list/show-imperative phrasings naming
+   plural inventory artifacts ("show me listings here", "list the
+   properties", "what is available") with explicit guard "(NOT 'show
+   me the comps' — see edge.)" so comp-set phrasings stay in EDGE.
+4. RISK definition tightened — explicit "RISK enumerates downside
+   factors; it does NOT cover sensitivity / counterfactual questions
+   (those are edge)" sentence so the LLM doesn't drag sensitivity
+   questions in by default.
+5. 3 new IMPORTANT MAPPINGS lines + 2 new counter-example pairs
+   (BROWSE↔STRATEGY escalation boundary, RISK↔EDGE downside vs
+   sensitivity boundary).
+
+**The regex widening** (Cycle 3). `_COMP_SET_RE` at
+[briarwood/agent/dispatch.py:2720-2727](briarwood/agent/dispatch.py#L2720-L2727)
+now also catches "show me the comps", "list the comps", "what are the
+comps", "what comps did you use", "why were the comps", "explain your
+comp choice / selection / comps". Negative case ("the comparable sales
+market in Belmar" — town context, NOT comp-set followup) pinned in the
+dispatch test so future widening doesn't drag market-research turns
+into EDGE.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag any
+guardrail holding back quality."* Walking the router path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | LLM `max_attempts=2` | [router.py:319](briarwood/agent/router.py#L319) | No — two tries handles transient transport failures cleanly. | Keep. |
+| 2 | LLM `max_tokens=120` | [router.py:324](briarwood/agent/router.py#L324) | No — output is `answer_type` + 3 enum fields + a short reason; 120 is comfortable. | Keep. |
+| 3 | `RouterClassification` `extra="forbid"` strict schema | [router.py:253](briarwood/agent/router.py#L253) | No — strict mode catches LLM non-compliance loudly so the regex fallback can take over. | Keep. |
+| 4 | **`confidence=0.6` hardcode on every LLM-classified turn** | [router.py:407](briarwood/agent/router.py#L407) | **YES** — every successful classification gets the same 0.6 regardless of model signal. Every miss in the 2026-04-28 corpus came back at exactly `conf=0.60` for this reason. The classifier's actual confidence is invisible downstream. Defeats Stage 3's planned "low-confidence drill-down." | **Filed as new ROADMAP §4 Medium entry "Router LLM `confidence=0.6` cap collapses classifier signal" 2026-04-28.** Out of scope for this handoff (Cycles 1-4 were prompt + regex only); ~30-min fix when next in the file. |
+| 5 | `CHITCHAT → BROWSE` post-LLM coercion | [router.py:333-334](briarwood/agent/router.py#L333-L334) | No — catches a known LLM failure mode (substantive question dumped in CHITCHAT) without masking the real signal. | Keep. |
+| 6 | `_CACHE_RULES` short-circuit before LLM | [router.py:114-139](briarwood/agent/router.py#L114-L139) | No — narrow + high-precision (greetings, compare/vs only). | Keep. |
+| 7 | Price-override short-circuit before LLM | [router.py:371-400](briarwood/agent/router.py#L371-L400) | No — requires a concrete price token via `parse_overrides`; the path is deterministic and rarely fires on ambiguous turns. | Keep. |
+| 8 | Default fallback to LOOKUP at `conf=0.3` | [router.py:419-425](briarwood/agent/router.py#L419-L425) | No — last-resort safety net when LLM and cache both fail. | Keep. |
+| 9 | `BRIARWOOD_LLM_RESPONSE_CACHE` env-gated cache | [llm_observability.py:152-156](briarwood/agent/llm_observability.py#L152-L156) | Off by default — not currently restricting. WOULD be a problem if turned on with a stale prompt; the cache key includes prompt hash so the new prompt invalidates old entries. | Keep gated; document cache-key behavior if anyone ever turns it on. |
+
+**Net finding from the guardrail walk:** one real restriction (#4),
+filed as a follow-on. Everything else is intentional and defensible.
+
+---
+
+**Three plan deviations, recorded for archaeology.**
+
+1. **Cycle 1's corpus aggregation lives in this entry, not in a
+   separate file.** The plan called for a "in-PR-comment / in-DECISIONS
+   table"; landed in DECISIONS — same outcome, lower file-count.
+2. **One regression test failed initially due to a tense mismatch**
+   ("escalation from first-read" vs the prompt's "escalated from
+   first-read"). Fixed in the test; wording in the prompt kept as
+   "escalated" (more natural in context). Recorded so future grep on
+   "escalation" still finds the boundary marker.
+3. **The `_COMP_SET_RE` regex deliberately does NOT widen to bare
+   "the comparable sales"** — that phrase shows up in market-research
+   contexts ("the comparable sales market in Belmar"). The dispatch
+   test pins this negative case so a future widening can't silently
+   drag RESEARCH turns into EDGE.
+
+**Manual verification gate deferred.** The plan's verification gate is
+"re-run today's three turns; each should now classify into BROWSE /
+STRATEGY / EDGE." Auto-mode handoff did not drive a browser session;
+deferred to next live UI smoke. The static prompt-content +
+LLM_CANNED tests cover the prompt-shape and structured-output
+plumbing; only the live LLM behavior against `gpt-4o-mini` requires
+manual verification.
+
+**Cross-references.** [`ROUTER_AUDIT_HANDOFF_PLAN.md`](ROUTER_AUDIT_HANDOFF_PLAN.md)
+(canonical scope); [`briarwood/agent/README_router.md`](briarwood/agent/README_router.md)
+Changelog 2026-04-28 (contract change notes);
+[`ROADMAP.md`](ROADMAP.md) §4 Medium "Audit router classification
+boundaries" (closeout entry with `✅` prefix and `**Status:**` line);
+[`ROADMAP.md`](ROADMAP.md) §4 Medium "Router LLM `confidence=0.6` cap
+collapses classifier signal" (the filed-during-this-handoff guardrail
+follow-on); [`ROADMAP.md`](ROADMAP.md) §10 Resolved Index row 9;
+user-memory `project_llm_guardrails.md` (the directive that drove the
+Guardrail Review section).
+
+---
+
+## 2026-04-28 — Router Quality Round 2 landed
+
+**Decision.** Two guardrail-loosening fixes from the 2026-04-28 router-audit
+Round 1 landed via [`ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md`](ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md)
+Cycles 1-3 on 2026-04-28. Both were filed as §4 Medium ROADMAP entries
+during Round 1's closeout; both close here. Per the standing
+`project_llm_guardrails.md` directive: these ARE the guardrail
+loosening, so the Guardrail Review for this round is short — both
+fixes themselves are the actions the prior reviews flagged.
+
+**Fix 1 — LLM confidence flows through to `RouterDecision.confidence`.**
+- `RouterClassification` Pydantic schema gained `confidence: float`
+  (`Field(ge=0, le=1)`) at
+  [briarwood/agent/router.py:255](briarwood/agent/router.py#L255).
+- `_LLM_SYSTEM` updated to ask for the score with semantic anchors
+  (1.0 = canonical, 0.7 = near second-choice, 0.5 = ambiguous, <0.4 =
+  genuinely don't know — under-confidence preferred to false certainty).
+- `classify` plumbs `result.confidence` into `RouterDecision.confidence`
+  with `max(..., 0.4)` floor at
+  [briarwood/agent/router.py:411-414](briarwood/agent/router.py#L411-L414).
+  The floor is documented as a deliberate guardrail — keeps every
+  successful classification above the 0.3 default-fallback bucket.
+
+**Fix 2 — `parse_overrides` bare-renovation false-positive resolved at
+the router layer (not the parser layer).** The original ROADMAP
+recommendation was to tighten `parse_overrides` itself; that path
+broke an existing rent-override regression test
+(`test_renovation_override_with_rent_question_routes_to_rent_lookup`)
+because the test relied on the mode-only signal triggering the
+override branch. Cleaner approach landed:
+- `parse_overrides` is unchanged — `mode="renovated"` is still set
+  whenever `_RENO_RE` matches. Downstream consumers
+  (`inputs_with_overrides` at
+  [briarwood/agent/overrides.py:191-215](briarwood/agent/overrides.py#L191-L215))
+  continue to receive the renovation hint cleanly.
+- `classify` tightens its `has_override` check at
+  [briarwood/agent/router.py:380-389](briarwood/agent/router.py#L380-L389)
+  to require a *material* override (`ask_price` or
+  `repair_capex_budget`). Bare `mode="renovated"` no longer triggers
+  the what-if-price-override short-circuit; those turns flow to the
+  LLM classifier so e.g. "Run renovation scenarios" gets PROJECTION
+  instead of DECISION.
+- `_PROJECTION_OVERRIDE_HINT_RE` widened (Layer B) to catch
+  `renovation scenarios?`, `run scenarios?`, `scenario`, `5-year`,
+  `ten-year`, `outlook`. Defense in depth: when a real
+  what-if-price override IS present, scenario / forecasting phrasings
+  route to PROJECTION rather than defaulting to DECISION.
+
+**Plan deviations.**
+
+1. **Layer A landed in `router.py`, not `overrides.py`.** The plan
+   called for tightening `parse_overrides` to only set `mode` when
+   paired with a value-question / price / capex. Implementation
+   started there but broke
+   `test_renovation_override_with_rent_question_routes_to_rent_lookup`,
+   which relied on mode-only triggering the override branch with a
+   rent-hint sub-route. Reverted Layer A in `overrides.py` and
+   instead tightened the *router*'s `has_override` check to only
+   short-circuit on material overrides. Net result is identical for
+   the bare-renovation case (no short-circuit; LLM classifies),
+   preserves `parse_overrides`'s downstream contract, and keeps the
+   regression test intent (now reframed to use an explicit `if I
+   bought... at 1.3M`).
+2. **Test fixture sweep was wider than expected.** Adding `confidence`
+   to `RouterClassification` required updating every fake LLM that
+   constructs it: 3 fakes in `tests/agent/test_router.py`, 1 in
+   `tests/test_intent_contract.py`, 1 in `tests/agent/test_rendering.py`.
+   All updated to pass `confidence=0.7` by default. (Same shape as
+   the 2026-04-24 router schema-fix entry — Pydantic strict-mode
+   schema additions cascade through every test fake.)
+
+**Test results.** Round 2 deltas in `tests/agent/test_router.py`,
+`tests/agent/test_overrides.py`, `tests/test_intent_contract.py`,
+`tests/agent/test_rendering.py`: +6 new tests, 5 fixture updates, 1
+existing test reframed. Full agent + integration suite (425 tests):
+424 pass, 1 pre-existing failure (`test_promote_unsaved_address` —
+unrelated, in baseline 16). Baseline holds.
+
+**Manual verification gate deferred.** Re-run the 2026-04-28 smoke:
+- "Walk me through the recommended path" should still classify as
+  STRATEGY (Round 1 fix preserved).
+- "What would change your value view?" should still classify as
+  EDGE (Round 1 fix preserved).
+- "Run renovation scenarios" should now classify as PROJECTION (was
+  DECISION via the override false-positive — Round 2 Fix 2).
+- `turn_traces.confidence` for new chats should vary, no longer
+  always 0.6 (Round 2 Fix 1).
+
+**Cross-references.** [`ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md`](ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md)
+(canonical scope, marked ✅ on landing);
+[`briarwood/agent/README_router.md`](briarwood/agent/README_router.md)
+Changelog 2026-04-28 (Round 2);
+[`ROADMAP.md`](ROADMAP.md) §4 Medium both entries (`confidence=0.6
+cap` and `parse_overrides bare-renovation`) marked ✅;
+[`ROADMAP.md`](ROADMAP.md) §10 Resolved Index rows 10 and 11;
+DECISIONS.md 2026-04-28 entry "Router classification audit Cycle
+1-4 landed" (the prior round, which surfaced both fixes via its
+Guardrail Review); user-memory `project_llm_guardrails.md` (the
+standing directive); user-memory `feedback_size_for_llm_dev.md`
+(LLM-time sizing convention adopted this session;
+ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md was the first plan written
+under it — sized at "M (~30-45 min LLM time)" instead of the
+human-hour framing prior plans used).
+
+---
+
+## 2026-04-28 — AI-Native Foundation Stage 2 landed: feedback loop closed
+
+**Decision.** AI-Native Foundation Stage 2 (§3.1 of [`ROADMAP.md`](ROADMAP.md))
+landed via [`FEEDBACK_LOOP_HANDOFF_PLAN.md`](FEEDBACK_LOOP_HANDOFF_PLAN.md)
+Cycles 1-4 on 2026-04-28. The user-feedback loop (Loop 2 —
+Communication Calibration — per [`design_doc.md`](design_doc.md) § 7) is
+now closed end-to-end: write-side via `POST /api/feedback` + a
+`feedback` SQLite table + a thumbs UI in every assistant message
+bubble, and read-side via an in-flight synthesis hint that fires when
+the same conversation has a recent thumbs-down. The closure gate
+("turn N+1 visibly influenced") is satisfied and auditable in SQL via
+the `feedback:recent-thumbs-down-influenced-synthesis` manifest tag.
+See [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence"
+for the system-level shape.
+
+**Owner-resolved design decisions during plan-mode pass.** The
+2026-04-28 plan-mode pass surfaced ten ODDs; four required owner
+sign-off:
+
+1. **Rating semantics — response-quality vs asset-quality** (CLAUDE.md
+   contradiction-flag). ROADMAP scoped this as response-quality
+   thumbs (Loop 2). The owner clarified intent leaned toward
+   asset-quality but agreed with the recommendation to ship Loop 2 in
+   Stage 2 and file asset-rating as separate future work. Tier label
+   for asset-rating's middle option (when built): **`mixed`** —
+   reads as a real judgment rather than a non-answer. Filed for
+   future scope, not addressed in this stage.
+2. **Rating vocabulary — `"up"|"down"` (API) vs
+   `"yes"|"partially"|"no"` (existing helper).** Resolved: map at
+   the API boundary. `_RATING_API_TO_RECORD = {"up": "yes",
+   "down": "no"}` in `api/main.py`. The existing
+   `build_user_feedback_record` helper and the analyzer's
+   threshold-recommendation logic at
+   [`briarwood/feedback/analyzer.py:306-353`](briarwood/feedback/analyzer.py#L306-L353)
+   stay untouched.
+3. **Read-back consumer.** Resolved: in-flight synthesis hint (option
+   a). The hint appends a "vary your framing" sentence to the
+   synthesizer's system prompt; numeric / citation rules unchanged.
+   `record_note` tag fires on the manifest so the loop closure is
+   auditable in `turn_traces.notes`.
+4. **Sequence-step closure convention.** Resolved: split §1 sequence
+   step 3 into 3a (Stage 2) and 3b (Stage 3). Closeout flips 3a to
+   ✅; 3b stays open for the dashboard handoff.
+
+Plus one in-pass scope filing: charting library upgrade is out of
+scope here, filed as ROADMAP §3.4.7 *"Evaluate React-native charting
+library to replace Plotly-iframe"* (size L; depends on Stage 2).
+
+**Five plan deviations, recorded for archaeology.**
+
+1. **Test count came in higher than estimated.** Plan estimated 6
+   for Cycle 1 + 1 for Cycle 2 + 3 for Cycle 3 = 10. Actual: 8 +
+   1 + 7 = 16 (plus the rehydration test = 17 wait, count is 24
+   per ROADMAP §3.1 closeout — recounting: Cycle 1 wrote 8 in
+   `test_api_feedback.py`, Cycle 2 added 1 more rehydration test
+   in the same file (now 9 total), Cycle 3 wrote 7 in
+   `test_feedback_readback.py`. Suite delta: ~+16). Defensive
+   guard tests (None store, None conversation_id, raising store)
+   were cheap to add and protect against future regression.
+2. **`comment` field accepted on the wire but ignored.** Per ODD
+   #2 (column reserved for v2 with no v2 client today). Wire
+   acceptance means the v2 client can ship without an API change
+   — schema-level forward compatibility for free.
+3. **ContextVar for the read-back hint instead of kwarg
+   passthrough.** Plumbing a `prior_feedback_hint` kwarg through
+   `synthesize_with_llm` would have meant 7 surgical edits at
+   the dispatch handler call sites
+   (`briarwood/agent/dispatch.py` handle_browse / handle_decision
+   / handle_research / handle_rent_lookup / handle_risk /
+   handle_edge / handle_strategy). The seam stays at exactly two
+   files (entry layer that sets, synthesizer that reads) by
+   using a `ContextVar` in
+   [`briarwood/synthesis/feedback_hint.py`](briarwood/synthesis/feedback_hint.py).
+   The existing `briarwood.agent.turn_manifest.in_active_context`
+   decorator already propagates contextvars across the threadpool
+   boundary, so the pattern composes cleanly with what dispatch
+   does today. Future maintainers: the implicit coupling is
+   documented in the module docstring.
+4. **Module placement: `briarwood/synthesis/feedback_hint.py`,
+   not `briarwood/feedback/`.** The synthesizer is the only
+   consumer of the hint; placing the helper next to its consumer
+   honors the "code lives where it's used" instinct better than
+   placing it under `briarwood/feedback/` (where the analyzer
+   lives). The two surfaces are read-back paths but for
+   different consumers.
+5. **Dropped a prop-syncing `useEffect` on the FeedbackBar
+   (Cycle 2).** ESLint's `react-hooks/set-state-in-effect`
+   flagged the initial draft. Confirmed the parent
+   (`MessageList`) keys `AssistantMessage` on `m.id`, so a
+   conversation switch already remounts the bar fresh; the
+   effect was redundant. Mount-time prop init is enough.
+
+**Manual verification gates deferred.** The plan's success-criteria
+include three live UI smoke checks: (a) chat → 👎 → confirm SQLite
+row + JSONL line; (b) refresh → confirm rating rehydrates; (c) chat
+→ 👎 → chat follow-up → confirm `turn_traces.notes` carries the
+audit tag. Auto-mode handoff did not drive a browser session;
+deferred to next live UI smoke. The new tests
+(`tests/test_api_feedback.py` + `tests/test_feedback_readback.py`)
+cover the persistence contract, the boundary translator, the JSONL
+mirror, the rehydration LEFT JOIN, and the contextvar lifecycle —
+only live LLM behavior + browser rendering require manual
+verification.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag any
+guardrail holding back quality."* Walking the new feedback path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | `Literal["up", "down"]` rating in `FeedbackRequest` | [api/main.py FeedbackRequest](api/main.py) | No — the binary scope is the spec; broader rating is filed as future work, not held back here. | Keep. |
+| 2 | `_RATING_API_TO_RECORD` boundary translator only maps two values | [api/main.py](api/main.py) | No — but a future tier-3 rating ("mixed") would need the map widened. Note the pin point. | Keep + note. |
+| 3 | `upsert_feedback` rejects non-assistant role | [api/store.py](api/store.py) | No — rating user messages or system messages is meaningless; the guard prevents data shape errors. | Keep. |
+| 4 | Synthesis hint is a single-sentence directive, not a structured rewrite recipe | [briarwood/synthesis/feedback_hint.py](briarwood/synthesis/feedback_hint.py) | No — leaves the synthesizer free to interpret "vary your framing" as it sees fit. Avoiding over-prescription is the point. | Keep. |
+| 5 | Synthesis hint reads only `limit=3` recent ratings | [briarwood/synthesis/feedback_hint.py](briarwood/synthesis/feedback_hint.py) | Possibly — a long conversation with one early thumbs-down at message 1 then twenty thumbs-up after won't trigger the hint on message 22. That's by design (recency-weighted). Could matter if the user revisits a similar property a week later in a long conversation. Watch for it. | Keep + monitor. |
+| 6 | JSONL mirror is exception-swallowing | [api/main.py submit_feedback](api/main.py) | No — observability must never break a turn (Stage 1 pattern). | Keep. |
+| 7 | `recent_feedback_for_conversation` failure → no-op hint | [briarwood/synthesis/feedback_hint.py](briarwood/synthesis/feedback_hint.py) | No — a misbehaving feedback table cannot break synthesis; correct posture. | Keep. |
+| 8 | FeedbackBar disabled while `pending !== null` | [web/src/components/chat/messages.tsx](web/src/components/chat/messages.tsx) | No — prevents the user from spamming opposite ratings during an in-flight POST and corrupting the optimistic state. | Keep. |
+| 9 | FeedbackBar suppressed while `isStreaming` | [web/src/components/chat/messages.tsx](web/src/components/chat/messages.tsx) | No — rating an in-flight response would ship a half-formed signal. | Keep. |
+
+**Net finding from the guardrail walk:** zero restrictions blocking
+quality. One pin point worth monitoring (#5: 3-row recency window)
+that can widen later if needed without contract change.
+
+**Cross-references.** [`FEEDBACK_LOOP_HANDOFF_PLAN.md`](FEEDBACK_LOOP_HANDOFF_PLAN.md)
+(canonical scope, marked ✅ on landing);
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence"
+(post-landing system shape); [`ROADMAP.md`](ROADMAP.md) §3.1 Stage 2
+(closeout entry with `✅` prefix and `**Status:**` line);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence steps 3a (closed) and 3b
+(remaining open); [`ROADMAP.md`](ROADMAP.md) §10 Resolved Index rows
+12 and 13; [`ROADMAP.md`](ROADMAP.md) §3.4.7 (charting library
+upgrade filed during this stage); user-memory `project_scout_apex.md`
+(downstream Scout buildout inherits this closed feedback signal);
+user-memory `project_llm_guardrails.md` (the standing directive).
+
+---
+
+## 2026-04-28 — AI-Native Foundation Stage 3 landed: read-side admin surface
+
+**Decision.** AI-Native Foundation Stage 3 (§3.1 of [`ROADMAP.md`](ROADMAP.md))
+landed via [`DASHBOARD_HANDOFF_PLAN.md`](DASHBOARD_HANDOFF_PLAN.md)
+Cycles 1-4 on 2026-04-28. The substrate that Stages 1+2 wrote
+(`turn_traces`, `data/llm_calls.jsonl`, `feedback`) now has a read-side
+UI: three FastAPI admin endpoints behind a `BRIARWOOD_ADMIN_ENABLED=1`
+env-gate, plus two Next server-component routes (`/admin` for
+top-line weekly aggregates, `/admin/turn/[turn_id]` for the per-turn
+drill-down). With 3a + 3b both closed, sequence step 4 (Phase 4b
+Scout) is unblocked.
+
+**Owner-resolved design decisions.**
+
+1. **Charting library v1.** Locked at plan-mode pass: plain HTML/CSS
+   bars; chart-library evaluation deferred to Phase 4c UI
+   reconstruction (ROADMAP §3.4.7 sequencing note added during this
+   pass). Stage 3's dashboard is deliberately a small visual surface
+   so the eval, when it runs, has clean canvas under real
+   BROWSE-rebuild layout pressure rather than a half-mixed chart
+   stack to inherit.
+2. **Auth gate.** Locked: `BRIARWOOD_ADMIN_ENABLED=1` env var, FastAPI
+   returns 404 (not 403) when unset so a probe doesn't reveal the
+   surface exists. Single-user local product today; real auth is a
+   Stage 3.5+ conversation.
+3. **JSONL parse-on-request.** Locked: read the whole file on every
+   metrics request. Today's file is a few thousand lines; parse is
+   sub-100ms. v2 path (SQLite cost table) deferred until the JSONL
+   grows past a few hundred MB.
+
+**One scope addition during Cycle 1: turn_id linkage on JSONL writes.**
+The plan assumed `LLMCallSummary` carried `cost_usd`. It does not —
+`LLMCallSummary` only persists surface/provider/model/status/duration/
+attempts; cost lives in the JSONL alone. Without a `turn_id` field on
+the JSONL records, the "Top-10 highest-cost turns" metric required by
+ROADMAP §3.1 Stage 3 was uncomputable.
+
+Resolved by adding 8 lines to
+[`briarwood/agent/llm_observability.py::LLMCallLedger._write_jsonl`](briarwood/agent/llm_observability.py)
+to look up `current_manifest().turn_id` at write time and stamp it on
+the JSONL payload. Lazy import + try/except mirrors the existing
+manifest-mirror pattern; observability never breaks a turn. New
+records carry `turn_id`; pre-Stage-3 records do not, and are excluded
+from the top-N cost ranking (the dashboard's empty-state notice
+explains this so the owner doesn't read the empty table as broken).
+
+**Five plan deviations, recorded for archaeology.**
+
+1. **Test count came in higher than estimated** (19 vs 8 in Cycle 1).
+   Defensive coverage on the JSONL aggregator (corrupt-line skip,
+   missing-file no-op, missing turn_id exclusion, percentile math
+   with linear interp) plus end-to-end endpoint gating tests for all
+   three endpoints under both env states.
+2. **JSONL `turn_id` linkage shipped as part of Cycle 1, not as a
+   prior Stage 1 follow-on.** The plan flagged the gap during
+   drafting but estimated cost weighed in favor of doing it inline
+   here. 8 LOC; failure-safe; no schema change. The alternative —
+   skip the metric — would have left ROADMAP §3.1 Stage 3's
+   "Top-10 highest-cost turns" requirement unimplemented.
+3. **Module placement: new `api/admin_metrics.py` for the JSONL
+   aggregators.** The compose layer (`compose_metrics`,
+   `compose_recent_turns`, `compose_turn_detail`) lives next to the
+   JSONL parsing helpers. Rationale: the helpers have no SQLite
+   dependency and are testable in isolation; placing them on the
+   `ConversationStore` would have crossed dependency lines (store
+   shouldn't know about JSONL paths).
+4. **TurnTrace JSON column deserialization in `get_turn_trace`** is
+   defensive: a corrupt JSON column leaves the raw string in place
+   rather than raising, so the dashboard surfaces a corrupt-row
+   signal rather than crashing. Mirrors the Stage 1 pattern.
+5. **Top-N tables share a single `Table` component** with bar-width
+   visualization driven by per-row `(bar / barMax)`. Avoids a chart
+   library while still reading visually. The owner-locked decision
+   on charting kept this from sprawling.
+6. **One self-inflicted regression caught + fixed during closeout.**
+   `tests/test_api_admin.py::ComposeIntegrationTests::test_compose_recent_turns_with_no_data_returns_empty_lists`
+   passed in isolation but failed in the full suite (17 failed
+   / 1561 passed). Root cause: the suite's `pytest_sessionstart`
+   hook redirects `BRIARWOOD_LLM_JSONL_PATH` to a single per-session
+   tmp file. Other tests' LLM call mocks accumulate JSONL records
+   over the session; with the new `turn_id` field stamped on every
+   record, `top_costliest_turns` saw non-empty data when the test
+   expected empty. Fixed by adding per-test JSONL isolation to
+   `ComposeIntegrationTests` (override `BRIARWOOD_LLM_JSONL_PATH` in
+   `setUp`, restore in `tearDown`). Also tightened
+   `test_compose_metrics_with_no_data_returns_empty_aggregates` to
+   assert `cost_by_surface == []` — the prior version didn't, which
+   is why only one of the two compose-integration tests caught the
+   pollution. Suite returned to baseline 16 failures / 1562 passed.
+
+**Manual verification gates deferred** (auto-mode does not drive a
+browser):
+- `BRIARWOOD_ADMIN_ENABLED=1 uvicorn api.main:app --reload` →
+  `cd web && npm run dev` → visit `/admin` → confirm latency, cost,
+  thumbs sections populate from real data after some chat turns.
+- Click into a slowest-turn row → confirm the drill-down loads with
+  the full manifest.
+- Chat → 👎 → chat a follow-up → drill into the follow-up turn →
+  confirm the `feedback:recent-thumbs-down-influenced-synthesis`
+  note renders with the amber highlight. (This is the visible
+  closure-loop audit affordance the dashboard is uniquely
+  positioned to surface.)
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag any
+guardrail holding back quality."* Walking the new admin path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | `BRIARWOOD_ADMIN_ENABLED` env-gate, 404 on unset | [api/main.py admin endpoints](api/main.py) | No — single-user local product; obscurity-by-default is correct posture. Trivial to flip. | Keep. |
+| 2 | `days` query param clamped to [1, 90] | [api/main.py admin_metrics](api/main.py) | No — outside this window the cost goes from sub-100ms to "scan the entire JSONL." Bounding the input is appropriate. | Keep. |
+| 3 | `limit` query param clamped to [1, 100] | [api/main.py admin_recent_turns](api/main.py) | No — the dashboard renders top-10 by default; the cap protects against a runaway client request scanning every turn in history. | Keep. |
+| 4 | JSONL parse skips corrupt lines silently | [api/admin_metrics.py _iter_jsonl_records](api/admin_metrics.py) | No — observability must never break a request. Corrupt lines are individual turns; a pathological producer would surface in the count anyway. | Keep. |
+| 5 | Top-10 cost ranking excludes records without turn_id | [api/admin_metrics.py top_costliest_turns](api/admin_metrics.py) | No — pre-Stage-3 records lack the linkage by design. Dashboard's empty-state notice explains. New records will populate the ranking going forward. | Keep + document. |
+| 6 | `compose_metrics` reads the JSONL on every call | [api/admin_metrics.py](api/admin_metrics.py) | Possibly at scale (years of data), not at v1 scale. Latency budget is fine for now. | Keep + monitor. |
+| 7 | Admin route unlinked from main UI | [web/src/components/chat/sidebar.tsx](web/src/components/chat/sidebar.tsx) | No — discoverability via URL only is correct posture for a single-user local admin surface. | Keep. |
+| 8 | TurnTrace JSON column deserialization is defensive | [api/store.py get_turn_trace](api/store.py) | No — keeps a corrupt row visible rather than crashing the entire detail page. | Keep. |
+
+**Net finding from the guardrail walk:** zero quality-blocking
+restrictions. Two pin points worth monitoring (#5 — pre-Stage-3 cost
+records exclusion; #6 — JSONL scale) that can change later without
+contract changes.
+
+**Cross-references.** [`DASHBOARD_HANDOFF_PLAN.md`](DASHBOARD_HANDOFF_PLAN.md)
+(canonical scope, marked ✅ on landing);
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence"
+(post-landing system shape, read-side surface added);
+[`ROADMAP.md`](ROADMAP.md) §3.1 Stage 3 (closeout entry with `✅`
+prefix and `**Status:**` line); [`ROADMAP.md`](ROADMAP.md) §1
+sequence step 3b (now closed; 4 — Phase 4b Scout — unblocked);
+[`ROADMAP.md`](ROADMAP.md) §10 Resolved Index rows 14 and 15;
+[`ROADMAP.md`](ROADMAP.md) §3.4.7 (charting library upgrade — Stage
+3 deliberately did NOT pull this in; bound to Phase 4c UI
+reconstruction); [`FEEDBACK_LOOP_HANDOFF_PLAN.md`](FEEDBACK_LOOP_HANDOFF_PLAN.md)
+(Stage 2's closure-loop tag is what the drill-down highlights);
+user-memory `project_scout_apex.md` (Phase 4b Scout buildout, now
+unblocked); user-memory `project_llm_guardrails.md` (the standing
+directive).

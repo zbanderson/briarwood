@@ -55,6 +55,20 @@ class SearchApiZillowListingCandidate:
     listing_status: str | None
     listing_url: str | None
     rent_zestimate: float | None = None
+    # CMA Phase 4a Cycle 3a — Zillow-rich fields the probe found we throw
+    # away today. All optional with None defaults; backwards-compatible.
+    # Bridge to ComparableProperty happens in CMA Cycle 3c (e.g., date_sold
+    # → ComparableProperty.sale_date, home_type → property_type override).
+    lot_sqft: float | None = None  # actual square feet, post unit conversion
+    date_sold: str | None = None  # ISO datetime string (e.g., "2026-04-20T07:00:00Z")
+    days_on_market: int | None = None  # mapped from raw days_on_zillow
+    latitude: float | None = None
+    longitude: float | None = None
+    tax_assessed_value: float | None = None
+    zestimate: float | None = None  # Zillow's AVM number
+    home_type: str | None = None  # Zillow literal (e.g., "SINGLE_FAMILY", "MULTI_FAMILY")
+    listing_type: str | None = None  # e.g., "Owner Occupied", "Non Owner Occupied"
+    broker: str | None = None
 
 
 class SearchApiZillowClient:
@@ -296,6 +310,20 @@ class SearchApiZillowClient:
                     listing_status=_clean_text(row.get("listing_status")),
                     listing_url=_clean_text(row.get("listing_url")),
                     rent_zestimate=_to_float(row.get("rent_zestimate")),
+                    # CMA Phase 4a Cycle 3a — Zillow-rich fields. Already
+                    # extracted by _normalize_listing into the row dict;
+                    # pass through here. None-defaults keep older cached
+                    # payloads compatible.
+                    lot_sqft=_to_float(row.get("lot_sqft")),
+                    date_sold=_clean_text(row.get("date_sold")),
+                    days_on_market=_to_int(row.get("days_on_market")),
+                    latitude=_to_float(row.get("latitude")),
+                    longitude=_to_float(row.get("longitude")),
+                    tax_assessed_value=_to_float(row.get("tax_assessed_value")),
+                    zestimate=_to_float(row.get("zestimate")),
+                    home_type=_clean_text(row.get("home_type")),
+                    listing_type=_clean_text(row.get("listing_type")),
+                    broker=_clean_text(row.get("broker")),
                 )
             )
         return candidates
@@ -446,7 +474,7 @@ def _normalize_listing(candidate: dict[str, Any], *, source_url: str, address_hi
             or candidate.get("living_area_sqft")
             or detail_dict.get("sqft")
         ),
-        "lot_sqft": _to_int(candidate.get("lot_size") or candidate.get("lot_sqft") or detail_dict.get("lot_sqft")),
+        "lot_sqft": _normalize_lot_size(candidate, detail_dict),
         "property_type": _clean_text(candidate.get("home_type") or candidate.get("property_type") or detail_dict.get("home_type")),
         "year_built": _to_int(candidate.get("year_built") or detail_dict.get("year_built")),
         "days_on_market": _to_int(candidate.get("days_on_zillow") or candidate.get("days_on_market") or detail_dict.get("days_on_market")),
@@ -457,7 +485,53 @@ def _normalize_listing(candidate: dict[str, Any], *, source_url: str, address_hi
         "rent_zestimate": _to_float(candidate.get("rent_zestimate") or detail_dict.get("rent_zestimate")),
         "price_history": candidate.get("price_history") or detail_dict.get("price_history") or [],
         "tax_history": candidate.get("tax_history") or detail_dict.get("tax_history") or [],
+        # CMA Phase 4a Cycle 3a — Zillow-rich fields. All optional in the
+        # raw payload; missing values normalize to None.
+        "date_sold": _clean_text(candidate.get("date_sold") or detail_dict.get("date_sold")),
+        "latitude": _to_float(candidate.get("latitude") or detail_dict.get("latitude")),
+        "longitude": _to_float(candidate.get("longitude") or detail_dict.get("longitude")),
+        "tax_assessed_value": _to_float(candidate.get("tax_assessed_value") or detail_dict.get("tax_assessed_value")),
+        "zestimate": _to_float(candidate.get("zestimate") or detail_dict.get("zestimate")),
+        "home_type": _clean_text(candidate.get("home_type") or detail_dict.get("home_type")),
+        "listing_type": _clean_text(candidate.get("listing_type") or detail_dict.get("listing_type")),
+        "broker": _clean_text(candidate.get("broker") or detail_dict.get("broker")),
     }
+
+
+def _normalize_lot_size(
+    candidate: dict[str, Any],
+    detail_dict: dict[str, Any],
+) -> float | None:
+    """Resolve lot size to actual square feet, handling the Zillow-acres quirk.
+
+    SearchApi's Zillow rows label lot size as ``lot_sqft`` but populate it in
+    ``lot_area_unit`` units (often acres). A 0.33-acre lot returns
+    ``lot_sqft: 0.33``; we want 14,375 sqft. Heuristics applied in priority
+    order:
+
+    1. Prefer explicit ``lot_size`` (legacy SearchApi field — usually sqft).
+    2. If ``lot_area_unit == "acres"``, convert ``lot_sqft`` (which is acres)
+       via ``× 43560``.
+    3. If raw value looks like a small number (< 100), assume acres.
+    4. Otherwise treat as sqft.
+
+    Returns None when no usable input is present.
+    """
+    legacy_lot = _to_float(candidate.get("lot_size") or detail_dict.get("lot_size"))
+    if legacy_lot is not None:
+        return legacy_lot
+    raw_value = _to_float(candidate.get("lot_sqft") or detail_dict.get("lot_sqft"))
+    if raw_value is None:
+        return None
+    unit = (
+        candidate.get("lot_area_unit")
+        or detail_dict.get("lot_area_unit")
+        or ""
+    )
+    unit_str = str(unit).strip().lower() if unit else ""
+    if unit_str == "acres" or (unit_str == "" and raw_value < 100):
+        return raw_value * 43_560.0
+    return raw_value
 
 
 def _compose_address(candidate: dict[str, Any]) -> str | None:

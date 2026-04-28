@@ -2718,7 +2718,12 @@ _CASH_FLOW_RE = re.compile(
     re.IGNORECASE,
 )
 _COMP_SET_RE = re.compile(
-    r"\b(?:full )?comp set\b|\bwhich comps\b|\bwhy were these comps chosen\b|\bdrill into (?:the )?cma\b",
+    r"\b(?:full )?comp set\b|"
+    r"\b(?:which|what) comps\b|"
+    r"\bwhy were (?:these |the )?comps\b|"
+    r"\bdrill into (?:the )?cma\b|"
+    r"\b(?:show me|list|what are)\s+(?:the |your )?comps\b|"
+    r"\bexplain (?:your |the )?(?:comp choice|comp selection|comps)\b",
     re.IGNORECASE,
 )
 _ENTRY_POINT_RE = re.compile(
@@ -2917,12 +2922,21 @@ def _comp_row_from_cma(comp: ComparableProperty) -> dict[str, object]:
     return {
         "property_id": comp.property_id,
         "address": comp.address,
+        # CMA Phase 4a Cycle 5: `town` makes cross-town comp citations
+        # resolvable in synthesizer prose ("a $760k sale in Bradley
+        # Beach"). Same-town comps carry the town for symmetry.
+        "town": comp.town,
         "beds": comp.beds,
         "baths": comp.baths,
         "ask_price": comp.ask_price,
         "blocks_to_beach": comp.blocks_to_beach,
         "source_label": comp.source_label,
         "source_summary": comp.source_summary,
+        # CMA Phase 4a Cycle 5: provenance carries through to the chart
+        # marker scheme so the user can tell SOLD vs ACTIVE (vs cross-town
+        # SOLD) at a glance.
+        "listing_status": comp.listing_status,
+        "is_cross_town": comp.is_cross_town,
     }
 
 
@@ -4433,12 +4447,20 @@ def _browse_projection_from_artifact(
 
 
 # Phase 3 Cycle B (revised 2026-04-26): BROWSE-tier turns surface a fixed,
-# user-named 3-chart set. The agent's intent-keyed prompt has strong defaults
+# user-named chart set. The agent's intent-keyed prompt has strong defaults
 # for this set, but in practice gpt-4o-mini drifts (e.g. picks
 # `cma_positioning` instead of `market_trend`). For BROWSE the chart kinds
 # are pinned; the agent's role narrows to producing per-chart `claim` text
 # (the italic caption) and informing prose. Source views are the canonical
 # choice for each chart kind, so the chart-frame rendering is deterministic.
+#
+# CMA Phase 4a Cycle 5 (2026-04-26): `cma_positioning` joins the set as the
+# 2nd chart so comp evidence sits between the market trend and the
+# fair-value read. It is gated on the comp set actually being present —
+# `_browse_compute_representation_plan` passes
+# ``include_cma_positioning=False`` when the market-support view is empty
+# (no comps survived the Cycle 2 invariants), which drops the chart from
+# the enforced set so the user never sees an empty CMA frame.
 _BROWSE_CHART_SET: list[tuple[str, str, str, str]] = [
     # (chart_id, source_view, claim_type, default_claim_text)
     (
@@ -4446,6 +4468,12 @@ _BROWSE_CHART_SET: list[tuple[str, str, str, str]] = [
         "last_market_history_view",
         "market_position",
         "Town-level home values across the available history window — the market context the property sits in.",
+    ),
+    (
+        "cma_positioning",
+        "last_value_thesis_view",
+        "comp_evidence",
+        "Where the live SOLD and ACTIVE comps sit relative to the subject's ask and Briarwood's fair-value read.",
     ),
     (
         "value_opportunity",
@@ -4462,11 +4490,19 @@ _BROWSE_CHART_SET: list[tuple[str, str, str, str]] = [
 ]
 
 
-def _enforce_browse_chart_set(plan_dict: dict[str, object]) -> dict[str, object]:
+def _enforce_browse_chart_set(
+    plan_dict: dict[str, object],
+    *,
+    include_cma_positioning: bool = True,
+) -> dict[str, object]:
     """Rewrite an agent plan dict so it carries exactly the BROWSE chart set
     in the canonical order, preserving the agent's per-chart `claim` text
     when it picked the same kind, and synthesizing a default claim when it
     did not.
+
+    When ``include_cma_positioning`` is False (no usable comp set), the
+    `cma_positioning` entry is skipped so the BROWSE turn renders the
+    legacy 3-chart set instead of an empty CMA frame.
 
     Operates on the dict form (model_dump output) so the caller can keep
     passing the result through Pydantic validation if it wants to."""
@@ -4484,6 +4520,8 @@ def _enforce_browse_chart_set(plan_dict: dict[str, object]) -> dict[str, object]
 
     forced: list[dict[str, object]] = []
     for chart_id, source_view, claim_type, default_claim in _BROWSE_CHART_SET:
+        if chart_id == "cma_positioning" and not include_cma_positioning:
+            continue
         existing = by_kind.get(chart_id)
         if existing is not None and not existing.get("flagged"):
             forced.append(
@@ -4552,7 +4590,7 @@ def _browse_compute_representation_plan(
     plan_dict: dict[str, object] = {"selections": []}
     if llm is not None:
         try:
-            agent = RepresentationAgent(llm_client=llm, max_selections=3)
+            agent = RepresentationAgent(llm_client=llm, max_selections=4)
             plan = agent.plan(
                 unified_model,
                 user_question=user_question,
@@ -4564,10 +4602,25 @@ def _browse_compute_representation_plan(
         except Exception as exc:  # noqa: BLE001
             logger.debug("representation plan: agent failed: %s", exc)
 
+    # CMA Phase 4a Cycle 5: include `cma_positioning` only when the
+    # market-support view actually carries comps (Engine B's
+    # `validate_cma_result` already drops the view when the comp set is
+    # empty or fails invariants — `_build_market_support_view` returns
+    # ``None`` in that case, and an empty `comps` list is the same signal).
+    market_support = (
+        session.last_market_support_view
+        if isinstance(session.last_market_support_view, dict)
+        else None
+    )
+    include_cma = bool(market_support and market_support.get("comps"))
+
     # Enforce the BROWSE chart set regardless of what the agent picked. The
     # agent's per-chart claim is preserved for the kinds it did pick; missing
     # kinds get a deterministic default claim.
-    plan_dict = _enforce_browse_chart_set(plan_dict)
+    plan_dict = _enforce_browse_chart_set(
+        plan_dict,
+        include_cma_positioning=include_cma,
+    )
 
     try:
         session.last_representation_plan = plan_dict
@@ -4741,7 +4794,7 @@ def _browse_thesis_from_artifact(
 ) -> dict[str, object]:
     """Project the value-thesis fields ``get_cma`` reads from a chat-tier artifact.
 
-    Cycle 5 cleanup item from FOLLOW_UPS.md "``get_cma`` internally calls
+    Cycle 5 cleanup item from ROADMAP.md "``get_cma`` internally calls
     ``get_value_thesis``, leaking 5 module re-runs into the chat-tier path"
     2026-04-25. ``get_cma`` reads six thesis keys (``ask_price``,
     ``fair_value_base``, ``value_low``, ``value_high``, ``pricing_view``,
@@ -4973,11 +5026,26 @@ def handle_browse(
                 intent=intent,
                 llm=llm,
             )
+            # CMA Phase 4a Cycle 5: pass the live comp roster so the
+            # synthesizer can cite specific comps with provenance
+            # ("1209 16th Ave sold for $800k", "812 16th Ave is currently
+            # asking $799k", "a $760k sale in Bradley Beach"). The roster
+            # mirrors session.last_market_support_view["comps"] — same
+            # rows as the cma_positioning chart.
+            comp_roster: list[dict[str, object]] | None = None
+            market_support = session.last_market_support_view
+            if isinstance(market_support, dict):
+                roster_candidate = market_support.get("comps")
+                if isinstance(roster_candidate, list) and roster_candidate:
+                    comp_roster = [
+                        row for row in roster_candidate if isinstance(row, dict)
+                    ] or None
             synth_prose, synth_report = synthesize_with_llm(
                 unified=unified,
                 intent=intent,
                 llm=llm,
                 charts=chart_summary,
+                comp_roster=comp_roster,
             )
             if synth_prose:
                 response = synth_prose

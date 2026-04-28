@@ -10,6 +10,11 @@ from briarwood.agents.current_value.schemas import (
     CurrentValueWeights,
 )
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
+from briarwood.decision_model.value_position import (
+    classify_bcv_vs_ask_delta_pct,
+    classify_value_position,
+    pricing_view_for_label,
+)
 
 
 class CurrentValueAgent:
@@ -194,7 +199,16 @@ class CurrentValueAgent:
         )
         mispricing_amount = briarwood_current_value - input_data.ask_price
         mispricing_pct = mispricing_amount / input_data.ask_price if input_data.ask_price else 0.0
-        pricing_view = self._pricing_view(mispricing_pct)
+        value_position = classify_value_position(
+            bcv=briarwood_current_value,
+            ask=input_data.ask_price,
+            bcv_confidence=confidence,
+            comp_confidence=(
+                comparable_sales_confidence
+                if comparable_sales_value is not None
+                else None
+            ),
+        )
 
         if confidence < 0.45:
             warnings.append("Current value confidence is low because one or more core valuation inputs are missing or weak.")
@@ -206,7 +220,17 @@ class CurrentValueAgent:
             value_high=round(value_high, 2),
             mispricing_amount=round(mispricing_amount, 2),
             mispricing_pct=round(mispricing_pct, 4),
-            pricing_view=pricing_view,
+            pricing_view=value_position.pricing_view,
+            pricing_view_confidence=(
+                round(value_position.confidence.score, 2)
+                if value_position.confidence is not None
+                else None
+            ),
+            pricing_view_confidence_band=(
+                value_position.confidence.band
+                if value_position.confidence is not None
+                else None
+            ),
             components=CurrentValueComponents(
                 comparable_sales_value=self._round_or_none(comparable_sales_value),
                 market_adjusted_value=self._round_or_none(market_adjusted_value),
@@ -442,13 +466,8 @@ class CurrentValueAgent:
         return max(0.0, current_value * (1 - band_pct)), current_value * (1 + band_pct)
 
     def _pricing_view(self, mispricing_pct: float) -> str:
-        if mispricing_pct >= 0.08:
-            return "appears undervalued"
-        if mispricing_pct >= -0.03:
-            return "appears fairly priced"
-        if mispricing_pct >= -0.10:
-            return "appears fully valued"
-        return "appears overpriced"
+        label = classify_bcv_vs_ask_delta_pct(mispricing_pct * 100.0)
+        return pricing_view_for_label(label)
 
     def _parse_date(self, value: object) -> date | None:
         if not isinstance(value, str) or not value.strip():

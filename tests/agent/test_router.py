@@ -74,6 +74,24 @@ LLM_CANNED: list[tuple[str, AnswerType]] = [
     ("Tell me about 1008 14th Avenue, Belmar, NJ 07719", AnswerType.BROWSE),
     ("What do you think of 526-west-end-ave?", AnswerType.BROWSE),
     ("Your take on 526-west-end-ave?", AnswerType.BROWSE),
+    # STRATEGY escalation phrasings — added 2026-04-28 after live-traffic miss
+    # where "Walk me through the recommended path" classified as BROWSE and
+    # re-ran the full first-read instead of routing to handle_strategy.
+    # See ROADMAP.md §4 "Audit router classification boundaries" 2026-04-28
+    # additions and ROUTER_AUDIT_HANDOFF_PLAN.md.
+    ("Walk me through the recommended path", AnswerType.STRATEGY),
+    ("What should I do here?", AnswerType.STRATEGY),
+    ("What's the play here?", AnswerType.STRATEGY),
+    # EDGE sensitivity / counterfactual phrasings — added 2026-04-28 after
+    # live-traffic miss where "What would change your value view?" classified
+    # as RISK. RISK enumerates downside; EDGE surfaces what would shift the read.
+    ("What would change your view of 526?", AnswerType.EDGE),
+    ("What would shift the number?", AnswerType.EDGE),
+    ("How sensitive is your number?", AnswerType.EDGE),
+    # SEARCH list/show-imperative phrasings — already in ROADMAP entry items
+    # 3-4. "show me X" with X = listings/properties is SEARCH, not BROWSE.
+    ("Show me the listings here", AnswerType.SEARCH),
+    ("List the properties in Belmar", AnswerType.SEARCH),
 ]
 
 
@@ -97,6 +115,7 @@ class ScriptedLLM:
             answer_type=answer,
             persona_type=PersonaType.UNKNOWN,
             use_case_type=UseCaseType.UNKNOWN,
+            confidence=0.7,
             reason="scripted",
         )
 
@@ -150,6 +169,7 @@ class LLMClassifyTests(unittest.TestCase):
                     answer_type=AnswerType.BROWSE,
                     persona_type=PersonaType.INVESTOR,
                     use_case_type=UseCaseType.RENTAL,
+                    confidence=0.8,
                     reason="investment browse",
                 )
 
@@ -171,6 +191,7 @@ class LLMClassifyTests(unittest.TestCase):
                     answer_type=AnswerType.CHITCHAT,
                     persona_type=PersonaType.UNKNOWN,
                     use_case_type=UseCaseType.UNKNOWN,
+                    confidence=0.5,
                     reason="unclear",
                 )
 
@@ -191,6 +212,48 @@ class LLMClassifyTests(unittest.TestCase):
         decision = classify("ruminate on this property", client=BadLLM())
         self.assertIs(decision.answer_type, AnswerType.LOOKUP)
         self.assertEqual(decision.reason, "default fallback")
+
+    def test_llm_confidence_flows_through_to_decision(self) -> None:
+        """Plumbed 2026-04-28 (Round 2 Cycle 1). Previously every LLM
+        classification was hardcoded to 0.6; now the LLM's emitted
+        confidence flows through (with a 0.4 floor)."""
+
+        class HighConfidenceLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+                raise AssertionError("router should use complete_structured")
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                return schema(
+                    answer_type=AnswerType.BROWSE,
+                    persona_type=PersonaType.UNKNOWN,
+                    use_case_type=UseCaseType.UNKNOWN,
+                    confidence=0.92,
+                    reason="canonical browse phrasing",
+                )
+
+        decision = classify("What do you think of 526?", client=HighConfidenceLLM())
+        self.assertEqual(decision.confidence, 0.92)
+        self.assertEqual(decision.reason, "llm classify")
+
+    def test_llm_confidence_floored_at_0_4(self) -> None:
+        """The 0.4 floor keeps every LLM classification above the 0.3
+        default-fallback bucket. Documented as a deliberate guardrail."""
+
+        class LowConfidenceLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 400) -> str:
+                raise AssertionError("router should use complete_structured")
+
+            def complete_structured(self, *, system, user, schema, model=None, max_tokens=600):
+                return schema(
+                    answer_type=AnswerType.BROWSE,
+                    persona_type=PersonaType.UNKNOWN,
+                    use_case_type=UseCaseType.UNKNOWN,
+                    confidence=0.1,
+                    reason="genuinely don't know",
+                )
+
+        decision = classify("ambiguous text", client=LowConfidenceLLM())
+        self.assertEqual(decision.confidence, 0.4)
 
     def test_router_classification_schema_has_no_ref_sibling_defaults(self) -> None:
         """OpenAI strict mode ignores siblings to `$ref`, so a Pydantic
@@ -214,11 +277,37 @@ class PrecedenceTests(unittest.TestCase):
         self.assertEqual(decision.reason, "what-if price override")
 
     def test_renovation_override_with_rent_question_routes_to_rent_lookup(self) -> None:
+        # Round 2 Cycle 2 (2026-04-28) tightened the router's
+        # what-if-price-override branch to require a material override
+        # (ask_price / repair_capex_budget). This test now uses an
+        # explicit "if I bought... at 1.3M" framing to exercise the
+        # override+rent-question path; the prior mode-only signal no
+        # longer triggers the branch by design.
         decision = classify(
-            "what would a fully renovated 3 bed 2 bath house rent for in belmar, maybe we can buy it, live there, renovate, rent it"
+            "if I bought a fully renovated 3 bed 2 bath house at 1.3M, what would it rent for"
         )
         self.assertIs(decision.answer_type, AnswerType.RENT_LOOKUP)
         self.assertEqual(decision.reason, "override with rent question")
+
+    def test_bare_renovation_does_not_trigger_what_if_override(self) -> None:
+        """Round 2 Cycle 2 (2026-04-28): 'Run renovation scenarios' must
+        NOT short-circuit to DECISION via the what-if-price-override
+        branch. With Layer A tightening, parse_overrides returns empty
+        for bare-renovation, so has_override is False and the turn
+        falls through to the LLM (or the no-LLM default fallback)."""
+        decision = classify("Run renovation scenarios")
+        self.assertNotEqual(decision.reason, "what-if price override")
+
+    def test_renovation_scenarios_with_price_routes_to_projection(self) -> None:
+        """Layer B widening: when has_override is True AND the text
+        carries a 'renovation scenarios' / 'scenario' / 'run scenarios'
+        token, the override branch routes to PROJECTION rather than
+        defaulting to DECISION."""
+        decision = classify(
+            "if I bought at 1.3M what would the renovation scenarios look like"
+        )
+        self.assertIs(decision.answer_type, AnswerType.PROJECTION)
+        self.assertEqual(decision.reason, "override with projection question")
 
 
 class InfrastructureTests(unittest.TestCase):
@@ -287,6 +376,68 @@ class PromptContentRegressionTests(unittest.TestCase):
         # Both poles of the boundary must be named.
         self.assertIn("'what is the price analysis", prompt)
         self.assertIn("'what is the asking price", prompt)
+
+    def test_strategy_includes_escalation_phrasings(self) -> None:
+        """STRATEGY must absorb 'recommended path' / 'walk me through' /
+        'what should I do here' / 'next move'. Added 2026-04-28 after the
+        live-traffic miss where 'Walk me through the recommended path'
+        re-ran the full BROWSE cascade instead of routing to STRATEGY."""
+        prompt = self._prompt()
+        self.assertIn("recommended path", prompt)
+        self.assertIn("walk me through the recommended path", prompt)
+        self.assertIn("what should i do here", prompt)
+        self.assertIn("next move", prompt)
+
+    def test_edge_includes_sensitivity_phrasings(self) -> None:
+        """EDGE must absorb sensitivity / counterfactual phrasings.
+        Added 2026-04-28 after the live-traffic miss where 'What would
+        change your value view?' classified as RISK. The boundary is
+        'what would *shift* my view' (EDGE) vs 'what could *go wrong*'
+        (RISK)."""
+        prompt = self._prompt()
+        self.assertIn("what would change your view", prompt)
+        self.assertIn("what would shift the number", prompt)
+        self.assertIn("how sensitive", prompt)
+        self.assertIn("load-bearing", prompt)
+
+    def test_edge_absorbs_comp_set_followups(self) -> None:
+        """Comp-set follow-ups on a pinned property are EDGE, not RESEARCH
+        or BROWSE. Pinned in the prompt so the LLM has a clear mapping."""
+        prompt = self._prompt()
+        self.assertIn("show me the comps", prompt)
+        self.assertIn("list the comps", prompt)
+        self.assertIn("why were these comps chosen", prompt)
+        self.assertIn("explain your comp choice", prompt)
+
+    def test_search_includes_list_imperative_phrasings(self) -> None:
+        """SEARCH must absorb 'show me listings' / 'list the properties'
+        — list-style imperatives that name plural inventory artifacts."""
+        prompt = self._prompt()
+        self.assertIn("show me listings here", prompt)
+        self.assertIn("list the properties", prompt)
+
+    def test_browse_to_strategy_boundary_example_present(self) -> None:
+        """Counter-example pair pinning the BROWSE→STRATEGY escalation
+        boundary so a future prompt edit can't silently regress it."""
+        prompt = self._prompt()
+        self.assertIn("'walk me through the recommended path for x'", prompt)
+        self.assertIn("escalated from first-read", prompt)
+
+    def test_prompt_asks_for_confidence_score(self) -> None:
+        """Round 2 Cycle 1 added an explicit ask for `confidence` in the
+        JSON response. Pin so a future prompt edit can't silently remove
+        the field — without it, every LLM call comes back without a
+        confidence and Pydantic validation fails."""
+        prompt = self._prompt()
+        self.assertIn("\"confidence\": <float 0-1>", prompt)
+        self.assertIn("under-confidence is preferred to false certainty", prompt)
+
+    def test_risk_to_edge_boundary_example_present(self) -> None:
+        """Counter-example pair pinning the RISK vs EDGE boundary —
+        downside enumeration vs counterfactual / sensitivity."""
+        prompt = self._prompt()
+        self.assertIn("'what could go wrong with x' is risk", prompt)
+        self.assertIn("'what would change your view of x' is edge", prompt)
 
 
 if __name__ == "__main__":

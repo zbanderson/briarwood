@@ -110,7 +110,7 @@ intent_fit: [LOOKUP, COMPARISON, DECISION, BROWSE]
 inputs:
   property_data.town: str                                # required
   property_data.state: str                               # required
-  property_data.sqft: int                                # required (15% tolerance)
+  property_data.sqft: int                                # required (sliding score penalty, not hard tolerance — see notes)
   property_data.beds: int                                # required
   property_data.baths: float                             # required
   property_data.property_type: str                       # optional
@@ -160,12 +160,12 @@ invariants:
 blockers_for_tool_use: []
 notes:
   - Promoted to scoped registry in Handoff 3 (2026-04-24). See PROMOTION_PLAN.md entry 1.
-  - **Engine A vs Engine B (status as of CMA Phase 4a Cycles 3a-3c, 2026-04-26):** Engine A (saved comps, this entry) and Engine B (`get_cma` in briarwood/agent/tools.py) now share one scoring pipeline at briarwood/modules/comp_scoring.py. Engine B issues SOLD + ACTIVE SearchApi calls per turn, scores all rows uniformly via Engine A's lifted scoring functions, and uses saved comps as defensive fallback. Per-row `listing_status` provenance ("sold" / "active") flows end-to-end. Tracked in CMA_HANDOFF_PLAN.md; Cycles 4-6 still open.
-  - Graft retirement: briarwood/claims/pipeline.py:62-88 ad-hoc instantiation now unnecessary; retirement tracked in ROADMAP.md (not in H3 scope).
-  - Data source: data/comps/sales_comps.json (shared with location_intelligence). For Engine B's user-facing CMA path, this file is now defensive fallback only — primary source is SearchApi Zillow SOLD + ACTIVE.
-  - Hardcoded: 15% sqft tolerance for comp matching; ADU cap rate 0.08; ADU expense ratio 0.30.
-  - Cross-town comps TODO flagged in base_comp_selector.py — Cycle 4 of CMA_HANDOFF_PLAN.md.
-  - Renovation premium TODO: estimate_comp_renovation_premium() not yet fed through — Cycle 4 of CMA_HANDOFF_PLAN.md.
+  - **Engine A vs Engine B (status as of CMA Phase 4a closeout, 2026-04-28):** Engine A (saved comps, this entry) and Engine B (`get_cma` in briarwood/agent/tools.py) share one scoring pipeline at briarwood/modules/comp_scoring.py (landed Cycles 3a-3c, 2026-04-26). Engine B issues SOLD + ACTIVE SearchApi calls per turn (with cross-town SOLD expansion when same-town SOLD count is below `MIN_SOLD_COUNT`, landed Cycle 4 2026-04-26), scores all rows uniformly via Engine A's lifted scoring functions, and uses saved comps as defensive fallback. Per-row `listing_status` ("sold" / "active") and `is_cross_town` provenance flows end-to-end. The BROWSE chart set is `[market_trend, cma_positioning, value_opportunity, scenario_fan]` (4 charts; landed Cycle 5 2026-04-26). Phase 4a closed in Cycle 6 (2026-04-28); the historical handoff plan is at CMA_HANDOFF_PLAN.md.
+  - Graft retirement (partial — landed CMA Phase 4a Cycle 6, 2026-04-28): briarwood/claims/pipeline.py:62-114 now calls `run_comparable_sales(context)` instead of instantiating `ComparableSalesModule` directly. The graft itself remains required for shape adaptation (orchestrator's routed run doesn't surface `comparable_sales` as a top-level output). Full removal tracked under ROADMAP §4 High *Consolidate chat-tier execution*.
+  - Data source: data/comps/sales_comps.json (shared with location_intelligence). For Engine B's user-facing CMA path, this file is defensive fallback only — primary source is SearchApi Zillow SOLD + ACTIVE.
+  - Hardcoded: ADU cap rate 0.08; ADU expense ratio 0.30. Sqft scoring is a sliding penalty in briarwood/agents/comparable_sales/agent.py:429-444 (`score -= min(sqft_gap * 0.45, 0.28)`) with rationale thresholds at 10% and 20% gap — no hard tolerance band.
+  - Cross-town comps: same-town only for Engine A (saved comps, this entry — provider filters strictly same-town at briarwood/modules/comparable_sales.py:76-86). Engine B (live Zillow path) has cross-town SOLD expansion via `cma_invariants.TOWN_ADJACENCY`. There is no `base_comp_selector.py` file in the repo.
+  - Renovation premium pass-through to live (Engine B) comps deferred to a future cycle. See ROADMAP §4 Medium *Renovation premium pass-through to live comps*.
   - See README_comparable_sales.md for the full contract.
 ```
 

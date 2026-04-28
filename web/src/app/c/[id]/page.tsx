@@ -40,6 +40,7 @@ export default async function ConversationPage({
       id: m.id,
       role: m.role,
       content: m.content,
+      userRating: m.user_rating,
     };
     // Rehydrate every structured event the SSE reducer in use-chat.ts knows
     // about, so a page refresh on /c/[id] restores cards + badges that came

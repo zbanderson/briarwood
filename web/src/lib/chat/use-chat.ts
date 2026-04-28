@@ -60,6 +60,10 @@ export type ChatMessage = {
   // F7: degradation notices emitted when a non-core enrichment fails.
   partialDataWarnings?: PartialDataWarningEvent[];
   isStreaming?: boolean;
+  // Stage 2 feedback loop: rehydrated from the feedback table on page
+  // load (api/store.py::get_conversation LEFT JOIN). The FeedbackBar
+  // owns its own optimistic state; this field is the persisted truth.
+  userRating?: "up" | "down" | null;
 };
 
 export type UseChatOptions = {

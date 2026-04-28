@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from briarwood.agents.market_history.schemas import HistoricalValuePoint
@@ -91,6 +93,8 @@ class CurrentValueOutput(BaseModel):
     net_opportunity_delta_value: float | None = None
     net_opportunity_delta_pct: float | None = None
     pricing_view: str
+    pricing_view_confidence: float | None = Field(default=None, ge=0, le=1)
+    pricing_view_confidence_band: Literal["high", "medium", "low", "very_low"] | None = None
     components: CurrentValueComponents
     weights: CurrentValueWeights
     value_drivers: list[CurrentValueTraceItem] = Field(default_factory=list)

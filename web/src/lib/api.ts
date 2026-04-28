@@ -17,6 +17,10 @@ export type StoredMessage = {
   content: string;
   events: Array<Record<string, unknown>>;
   created_at: number;
+  // LEFT JOIN'd from the feedback table on hydration. Always null for
+  // user-role messages and for assistant messages that haven't been
+  // rated yet. See api/store.py::get_conversation.
+  user_rating: "up" | "down" | null;
 };
 
 export type ConversationDetail = ConversationSummary & {

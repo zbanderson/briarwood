@@ -118,6 +118,28 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 - Needs Layer 1 (user type) to be useful. Without it, scout insights are generic, which defeats the "two-steps-ahead" framing.
 - The `uplift_dominance` pattern's v1 returns "first non-null"; Phase B is marked as adding scoring to select "strongest". That scoring logic is shared across all future patterns and should be designed before the pattern count grows.
 
+**Substrate added 2026-04-28 (AI-Native Foundation Stages 1-3).** Scout
+inherits a richer foundation than was available when this gap was
+written:
+- Every turn's `UnifiedIntelligenceOutput` is persisted in
+  `turn_traces` (Stage 1) so Scout patterns can correlate across
+  turns / properties.
+- `data/llm_calls.jsonl` carries per-call cost + duration with
+  `turn_id` linkage so `value_scout.scan` will be measurable per
+  turn from day one.
+- The `/admin` dashboard (Stage 3) gives the owner a read surface
+  where scout's outputs can be evaluated against the cost they
+  incur (top-10 highest-cost turns, drill-down to manifest with
+  the `synthesis.llm` + `value_scout.scan` calls listed side-by-side).
+- The closed user-feedback loop (Stage 2) means a thumbs-down on a
+  scout-influenced turn flows back into the next turn's framing
+  via the existing `feedback:recent-thumbs-down-influenced-synthesis`
+  hint mechanism. Scout doesn't need its own loop wiring — it
+  rides the synthesis hint.
+
+These together close the "we ship scout but can't evaluate it"
+risk that would have been live in a 2026-04-26 build.
+
 ---
 
 ## Layer 6 — Conversational Delivery
@@ -158,26 +180,44 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 
 ### Prompt/response logging?
 
-**Partial.**
-- Router writes low-confidence / fallback classifications to `data/agent_feedback/untracked.jsonl` (per [briarwood/agent/router.py](briarwood/agent/router.py) docstring).
-- Cost per call is recorded via [briarwood/cost_guard.py](briarwood/cost_guard.py).
-- Composer emits a `verifier_report` SSE event with grounding violations, but full prompt/response bodies aren't systematically logged anywhere inspectable.
-- Representation Agent, claim-prose LLM, and local-intelligence extraction don't emit comparable telemetry.
+**Substantially closed 2026-04-28** by AI-Native Foundation Stages 1+3.
 
-Action item: create a shared LLM call ledger that records call site, prompt tier,
-provider/model, structured-vs-prose mode, latency, token/cost estimate,
-fallback reason, verifier outcome, and whether the user saw LLM prose or a
-deterministic fallback. See `ROADMAP.md`.
+- **Per-turn manifest with full module + LLM attribution** persists to
+  the new `turn_traces` table in `data/web/conversations.db` (Stage 1).
+  One row per chat turn with `answer_type`, `confidence`,
+  `classification_reason`, `dispatch`, `duration_ms_total`, plus JSON
+  columns for `modules_run`, `llm_calls_summary`, `tool_calls`, `notes`.
+- **Per-LLM-call ledger** persists to `data/llm_calls.jsonl` (Stage 1).
+  One JSON line per call with `surface`, `provider`, `model`,
+  `prompt_hash`, `response_hash`, `status`, `attempts`, `duration_ms`,
+  `cache_hit`, `error_type`, `input_tokens`, `output_tokens`,
+  `cost_usd`, plus `recorded_at` and `turn_id` (Stage 3 addition for
+  per-turn cost aggregation). Full prompt/response bodies excluded by
+  default; flip `BRIARWOOD_LLM_DEBUG_PAYLOADS=1` to attach them.
+- **Read-side admin surface** at `/admin` (Stage 3, behind
+  `BRIARWOOD_ADMIN_ENABLED=1`) renders weekly aggregates of latency
+  by `answer_type`, cost by `surface`, thumbs ratio, top-10 slowest
+  turns, top-10 highest-cost turns, with per-turn drill-down.
+
+Remaining gap: structured-output prompt/response cache hit ratio
+(only LLM-response cache today, not prompt cache). Defer until
+prompt-cache integration is on a roadmap.
+
+Cross-reference: [`PERSISTENCE_HANDOFF_PLAN.md`](PERSISTENCE_HANDOFF_PLAN.md),
+[`DASHBOARD_HANDOFF_PLAN.md`](DASHBOARD_HANDOFF_PLAN.md),
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) §"Persistence".
 
 ### Caching?
 
 - Synthesis cache in the orchestrator ([briarwood/orchestrator.py](briarwood/orchestrator.py)).
 - Per-turn `session.last_*_view` stored in [briarwood/agent/session.py](briarwood/agent/session.py).
 - Cache key requires `execution_mode` (recent commit `1c21bdb`: `fix(orchestrator): require execution_mode in build_cache_key`).
-- No LLM-response caching.
+- LLM-response cache exists but is **off by default** (`BRIARWOOD_LLM_RESPONSE_CACHE` env-gated, in-process only) — see [briarwood/agent/llm_observability.py:175-211](briarwood/agent/llm_observability.py#L175-L211).
 
-Action item: defer response caching until the call ledger exists; without
-telemetry, cache hits would hide prompt quality and fallback behavior.
+The "defer response caching until the call ledger exists" gate is now
+satisfied (Stage 1 ledger landed 2026-04-28, Stage 3 dashboard 2026-04-28).
+Turning the cache on is a roadmap-level decision; the prerequisite
+telemetry exists.
 
 ### Retry?
 

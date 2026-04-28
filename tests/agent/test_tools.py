@@ -285,11 +285,18 @@ class ContractToolTests(unittest.TestCase):
         self.assertEqual(result.address, "1600 L Street, Belmar, NJ 07719")
         self.assertEqual(len(result.comps), 1)
         self.assertEqual(result.comps[0].property_id, "1302-l-street")
-        self.assertIn("Live Zillow market comps", result.comp_selection_summary or "")
+        # CMA Phase 4a Cycle 3c — comp_selection_summary now describes the
+        # merge composition (e.g., "Comp set: 1 SOLD + 1 ACTIVE.") rather
+        # than the pre-Cycle-3c "Live Zillow market comps ranked..." string.
+        self.assertIn("Comp set:", result.comp_selection_summary or "")
+        self.assertTrue(
+            "SOLD" in (result.comp_selection_summary or "")
+            or "ACTIVE" in (result.comp_selection_summary or "")
+        )
         self.assertTrue(any("ATTOM sale history confirmed" in note for note in result.confidence_notes))
 
     def test_get_cma_skips_internal_value_thesis_when_caller_provides_thesis(self) -> None:
-        """FOLLOW_UPS.md "get_cma internally calls get_value_thesis" 2026-04-25.
+        """ROADMAP.md "get_cma internally calls get_value_thesis" 2026-04-25.
 
         When a caller (typically the chat-tier consolidated path) passes a
         pre-computed thesis dict, ``get_cma`` must skip the internal

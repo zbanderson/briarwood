@@ -197,6 +197,8 @@ class CurrentValueAgentTests(unittest.TestCase):
 
         self.assertGreater(result.mispricing_pct, 0)
         self.assertEqual(result.pricing_view, "appears undervalued")
+        self.assertIsNotNone(result.pricing_view_confidence)
+        self.assertIsNotNone(result.pricing_view_confidence_band)
 
     def test_range_widens_when_confidence_is_low(self) -> None:
         high_confidence = CurrentValueAgent().run(

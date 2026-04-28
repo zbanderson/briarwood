@@ -1,12 +1,12 @@
 # valuation — Scoped Registry Model
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-28
 **Status:** READY
 **Registry:** scoped
 
 ## Purpose
 
-`valuation` produces Briarwood's fair-value estimate for a property — the anchor every downstream decision-tier question depends on. It returns the current value in dollars, the signed mispricing percentage versus the listing ask, a `pricing_view` label (`fair`, `undervalued`, `overvalued`, `unavailable`), and a confidence score. Under the hood it reuses the legacy `CurrentValueModule`, which composes four internal anchors (comparable sales, market-value history, income support, and hybrid primary-plus-accessory value) into a single reconciled number, then applies a bounded macro nudge (≤ 3%) on the county's HPI momentum to adjust confidence. Call this tool any time the user's intent needs "what is this worth?" — it is a prerequisite for `risk_model`, `resale_scenario`, `rental_option`, `arv_model`, and `opportunity_cost`.
+`valuation` produces Briarwood's fair-value estimate for a property — the anchor every downstream decision-tier question depends on. It returns the current value in dollars, the signed BCV-vs-ask gap, a `pricing_view` label (`appears undervalued`, `appears fairly priced`, `appears overpriced`, or `unavailable`), pricing-label confidence, and an overall confidence score. Under the hood it reuses the legacy `CurrentValueModule`, which composes five internal anchors (comparable sales, market-value history, backdated listing alignment, income support, and town prior) into a single reconciled number, then applies a bounded macro nudge (≤ 3%) on the county's HPI momentum to adjust confidence. Call this tool any time the user's intent needs "what is this worth?" — it is a prerequisite for `risk_model`, `resale_scenario`, `rental_option`, `arv_model`, and `opportunity_cost`.
 
 ## When to call `valuation` vs. `current_value`
 
@@ -67,9 +67,11 @@ Inputs arrive via `ExecutionContext` ([briarwood/execution/context.py:8](../exec
 | Field | Type | Range / Units | Notes |
 |-------|------|---------------|-------|
 | `briarwood_current_value` | `float \| None` | USD | Reconciled fair value; null when data too sparse. |
-| `mispricing_pct` | `float \| None` | signed fraction | `(ask_price − briarwood_current_value) / briarwood_current_value`. |
+| `mispricing_pct` | `float \| None` | signed fraction | `(briarwood_current_value − ask_price) / ask_price`. |
 | `basis_mispricing_pct` | `float \| None` | signed fraction | Same but vs. all-in basis instead of ask, when `all_in_basis` is present at [current_value.py:175-179](current_value.py#L175-L179). |
-| `pricing_view` | `str` | enum | `"fair" \| "undervalued" \| "overvalued" \| "unavailable"`. |
+| `pricing_view` | `str` | enum | `"appears undervalued" \| "appears fairly priced" \| "appears overpriced" \| "unavailable"`. Derived by `briarwood.decision_model.value_position`, shared with editor and claim verdict paths. |
+| `pricing_view_confidence` | `float \| None` | 0-1 | Confidence attached to the categorical pricing label, using the weaker available signal from BCV confidence and comp confidence. |
+| `pricing_view_confidence_band` | `str \| None` | enum | `"high" \| "medium" \| "low" \| "very_low"`; same thresholds as claim confidence. |
 | `all_in_basis` | `float \| None` | USD | True cost-to-own anchor; see Known Rough Edges. |
 | `confidence` | `float` | 0.0-1.0 | Post-macro-nudge, clamped; rounded to 4 decimals at [valuation.py:51-53](valuation.py#L51-L53). |
 | `summary` | `str` | prose | One-sentence narrative, built in `CurrentValueModule._build_summary` around [current_value.py:162-170](current_value.py#L162-L170). |
@@ -91,7 +93,7 @@ Inputs arrive via `ExecutionContext` ([briarwood/execution/context.py:8](../exec
 - Never raises. All exceptions are caught at [valuation.py:55-63](valuation.py#L55-L63) and replaced with a fallback `ModulePayload` whose `warnings` carry the exception type + message and `assumptions_used.fallback_reason == "sparse_or_contradictory_inputs"`.
 - Macro nudge is bounded: `MACRO_MAX_NUDGE = 0.03` at [valuation.py:12](valuation.py#L12). `apply_macro_nudge` clamps the raw HPI signal so the final confidence shift never exceeds ±3%.
 - `confidence` remains in `[0.0, 1.0]` after the nudge; `apply_macro_nudge` rounds to 4 decimals at [valuation.py:52](valuation.py#L52).
-- `pricing_view == "unavailable"` whenever sparse facts or contradictions prevent a stable comp read (per [current_value.py:57-59](current_value.py#L57-L59)).
+- `pricing_view == "unavailable"` whenever sparse facts or contradictions prevent a stable comp read (per [current_value.py:57-62](current_value.py#L57-L62)).
 - Deterministic for a fixed input — no LLM calls, no randomness.
 - Comp-driven value estimation remains the dominant signal; the macro nudge only modestly reinforces or discounts the reported confidence (module docstring at [valuation.py:20-22](valuation.py#L20-L22)).
 
@@ -116,8 +118,9 @@ context = ExecutionContext(
 
 payload = run_valuation(context)
 # payload["output"]["briarwood_current_value"]     ≈ 790_000
-# payload["output"]["mispricing_pct"]              ≈ 0.076
-# payload["output"]["pricing_view"]                == "overvalued"
+# payload["output"]["mispricing_pct"]              ≈ -0.071
+# payload["output"]["pricing_view"]                == "appears overpriced"
+# payload["output"]["pricing_view_confidence"]     ∈ [0, 1]
 # payload["confidence"]                            ∈ [0, 1]
 # payload["meta"]["macro_nudge"]["adjusted_confidence"] is not None
 ```
@@ -125,7 +128,7 @@ payload = run_valuation(context)
 ## Hardcoded Values & TODOs
 
 - `MACRO_MAX_NUDGE = 0.03` at [valuation.py:12](valuation.py#L12) — per-dimension cap on the macro HPI confidence adjustment. Not configurable.
-- The legacy `CurrentValueModule` carries the full comp / history / income / hybrid weighting logic; thresholds for `pricing_view` transitions live inside that module rather than in `valuation.py`. Changes to those thresholds are not surfaced here — treat `CurrentValueModule` as the authoritative source.
+- The legacy `CurrentValueModule` carries the full comp / history / income / town-prior weighting logic; thresholds for `pricing_view` transitions live in `briarwood/decision_model/value_position.py`, not in `valuation.py`.
 - `required_fields` hardcoded at [valuation.py:48](valuation.py#L48) and [valuation.py:62](valuation.py#L62): `["purchase_price", "sqft", "beds", "baths", "town", "state"]`.
 
 ## Blockers for Tool Use
@@ -141,6 +144,11 @@ payload = run_valuation(context)
 - No direct LLM calls; no cost. (Sub-agents of the internal modules may call LLMs; see the respective legacy module's README once written.)
 
 ## Changelog
+
+### 2026-04-28
+- Contract change: `pricing_view` now uses the shared deterministic value-position classifier in `briarwood/decision_model/value_position.py`, aligning valuation output with editor checks and claim verdict labels.
+- Added `pricing_view_confidence` and `pricing_view_confidence_band` to valuation metrics.
+- Corrected the documented `mispricing_pct` sign convention to match the code path: `(BCV - ask) / ask`.
 
 ### 2026-04-24
 - Initial README created.

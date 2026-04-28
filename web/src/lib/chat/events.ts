@@ -61,6 +61,12 @@ export type CmaPositioningChartSpec = {
     source_label?: string | null;
     selected_by?: string | null;
     feeds_fair_value?: boolean | null;
+    // CMA Phase 4a Cycle 5: provenance for the marker scheme. SOLD = filled
+    // circle, ACTIVE = open triangle, cross-town SOLD = filled circle with
+    // dashed outline. Legacy/missing values default to the generic SOLD
+    // marker for back-compat with pre-Cycle-5 cached payloads.
+    listing_status?: "sold" | "active" | null;
+    is_cross_town?: boolean | null;
   }>;
 };
 export type RiskBarChartSpec = {

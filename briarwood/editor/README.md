@@ -1,6 +1,6 @@
 # editor — Claim-Object Validator
 
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-28
 **Layer:** Unified Intelligence (Layer 3 — narrow structural validator)
 **Status:** EXPERIMENTAL
 
@@ -27,7 +27,7 @@ The editor is the pass/fail gate that sits between Synthesis and Representation 
 - **Check order** (fixed; diagnostic readability only — every check always runs per [validator.py:17-24](validator.py#L17-L24)):
   1. `check_schema_conformance` ([checks.py:23](checks.py#L23)) — trivial today; Pydantic has already validated. Kept as a named function so future non-Pydantic invariants land here.
   2. `check_scenario_data_completeness` ([checks.py:32](checks.py#L32)) — `scenario.sample_size > 0` for every scenario in `comparison.scenarios`.
-  3. `check_verdict_delta_coherence` ([checks.py:44](checks.py#L44)) — `verdict.label` matches the threshold rule on `ask_vs_fmv_delta_pct` (`<= -5% → value_find`, `>= +5% → overpriced`, else `fair`). `insufficient_data` is an escape hatch and is not coherence-checked.
+  3. `check_verdict_delta_coherence` ([checks.py:44](checks.py#L44)) — `verdict.label` matches the shared value-position threshold rule on `ask_vs_fmv_delta_pct` (`<= -5% → value_find`, `>= +5% → overpriced`, else `fair`). `insufficient_data` is an escape hatch and is not coherence-checked.
   4. `check_emphasis_coherence` ([checks.py:69](checks.py#L69)) — when `comparison.emphasis_scenario_id` is set, it must match the `surfaced_insight.scenario_id`.
   5. `check_caveat_for_gap` ([checks.py:99](checks.py#L99)) — any scenario with `sample_size < 5` must be named in at least one caveat's text (loose match on scenario `label` or `id`).
 
@@ -51,7 +51,7 @@ None. The editor is entirely deterministic — pure Python, no LLM calls.
 ## Dependencies on Other Modules
 
 - **Schema dependency on:** [briarwood/claims/verdict_with_comparison.py](../claims/verdict_with_comparison.py) — the editor imports `VerdictWithComparisonClaim` directly. Any change to `verdict.label`, `verdict.ask_vs_fmv_delta_pct`, `comparison.scenarios[i].sample_size`, `comparison.scenarios[i].id/label`, `comparison.emphasis_scenario_id`, `surfaced_insight.scenario_id`, or `caveats[i].text` is a potentially-breaking contract change for the editor.
-- **Threshold dependency on:** [briarwood/claims/synthesis/verdict_with_comparison.py](../claims/synthesis/verdict_with_comparison.py) — `VALUE_FIND_THRESHOLD_PCT`, `OVERPRICED_THRESHOLD_PCT`, and `SMALL_SAMPLE_THRESHOLD` in [checks.py:14-20](checks.py#L14-L20) mirror the synthesizer's thresholds. [checks.py:18-20](checks.py#L18-L20) explicitly documents the no-import rule ("the editor does not import from synthesis to avoid a layering violation"). Risk: silent drift if either side changes without the other. See Known Rough Edges.
+- **Threshold dependency on:** [briarwood/decision_model/value_position.py](../decision_model/value_position.py) — `VALUE_FIND_THRESHOLD_PCT`, `OVERPRICED_THRESHOLD_PCT`, and `classify_ask_vs_fmv_delta_pct` are imported from the deterministic decision-model source of truth. `SMALL_SAMPLE_THRESHOLD` remains editor-local and must continue to agree with the claim synthesizer's small-sample caveat threshold.
 - **Imports:** only `briarwood.claims.verdict_with_comparison` and sibling `briarwood.editor.checks`. No network, disk, or LLM clients.
 - **Coupled to:** [briarwood/agent/dispatch.py:1865](../agent/dispatch.py#L1865) (caller), [api/events.py:302-317](../../api/events.py#L302-L317) (downstream SSE builder), [briarwood/value_scout/scout.py](../value_scout/scout.py) (must have already grafted `surfaced_insight` before the editor runs, or `check_emphasis_coherence` can over-fail).
 
@@ -96,7 +96,7 @@ result = edit_claim(claim)
 
 ## Known Rough Edges
 
-- **Threshold duplication with synthesis (documented drift risk).** `VALUE_FIND_THRESHOLD_PCT = -5.0`, `OVERPRICED_THRESHOLD_PCT = 5.0`, and `SMALL_SAMPLE_THRESHOLD = 5` live in [checks.py:14-20](checks.py#L14-L20) and must match the synthesizer's constants at [briarwood/claims/synthesis/verdict_with_comparison.py](../claims/synthesis/verdict_with_comparison.py). The comment at [checks.py:18-20](checks.py#L18-L20) names the hazard: "Must agree with the synthesizer's SMALL_SAMPLE_THRESHOLD; the editor does not import from synthesis to avoid a layering violation." Cross-ref [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → Hardcoded values (claim-object thresholds).
+- **Small-sample threshold duplication with synthesis.** The price-label thresholds now come from [briarwood/decision_model/value_position.py](../decision_model/value_position.py), so editor and claim verdict labels share one deterministic source. `SMALL_SAMPLE_THRESHOLD = 5` still lives in [checks.py](checks.py) and must match the synthesizer's caveat threshold at [briarwood/claims/synthesis/verdict_with_comparison.py](../claims/synthesis/verdict_with_comparison.py). Cross-ref [ARCHITECTURE_CURRENT.md](../../ARCHITECTURE_CURRENT.md) Known Rough Edges → Hardcoded values (claim-object thresholds).
 - **Single-archetype today.** Only `VerdictWithComparisonClaim` is supported. Additional archetypes listed in [briarwood/claims/archetypes.py](../claims/archetypes.py) would need their own check sets or a generalized dispatch inside `edit_claim`. See Open Product Decisions.
 - **Pass/fail with no loop-back** per [validator.py:5-7](validator.py#L5-L7) docstring. On rejection, dispatch falls through to legacy synthesis; the editor offers no hint to Synthesis for a retry.
 - **`check_schema_conformance` is a stub** ([checks.py:23-29](checks.py#L23-L29)). It returns `[]` unconditionally today because Pydantic already validated. Harmless but visible in the check registry — do not mistake it for active validation.
@@ -108,10 +108,13 @@ result = edit_claim(claim)
 (Pulled from [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md); no editor-specific decisions invented here.)
 
 - **Intent-satisfaction vs. structural coherence.** [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 3 frames the Unified Intelligence layer as asking "does this answer the user's intent?" — a broader question than what the editor checks today. Whether the editor should grow into that role, or a separate intent-satisfaction LLM step should sit next to it (analogous to the grounding verifier in [briarwood/agent/composer.py](../agent/composer.py)), is not yet decided.
-- **Threshold drift defense.** The threshold duplication is called out explicitly in the code but has no mechanical guard. Cross-reference the `NEW-V-003` precedent in [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 3 Risks (prompt/validator contract drift recently caught the lead recommendation verb stripping). A shared constants module or a test that imports both sides is an open design question.
+- **Small-sample threshold drift defense.** Price-label thresholds now use a shared constants/classification module. `SMALL_SAMPLE_THRESHOLD` still has no mechanical guard between editor and synthesis; a shared constant or equality test remains an open design question.
 - **Archetype expansion strategy.** As more claim archetypes land (see [briarwood/claims/archetypes.py](../claims/archetypes.py)), whether the editor dispatches by archetype, registers per-archetype check tuples, or hands off to per-archetype editors is undecided. See [DECISIONS.md](../../DECISIONS.md) for related framing.
 
 ## Changelog
+
+### 2026-04-28
+- Contract change: verdict delta coherence now imports price-label thresholds and classification from `briarwood/decision_model/value_position.py`, matching the claim synthesizer and current-value pricing view.
 
 ### 2026-04-24
 - Initial README created.

@@ -28,6 +28,7 @@ from briarwood.agent.turn_manifest import traced_tool
 from briarwood.data_sources.attom_client import AttomClient
 from briarwood.data_sources.google_maps_client import GoogleMapsClient
 from briarwood.data_sources.searchapi_zillow_client import SearchApiZillowClient
+from briarwood.modules import cma_invariants, comp_scoring
 
 SAVED_PROPERTIES_DIR = Path("data/saved_properties")
 
@@ -168,6 +169,24 @@ class ComparableProperty:
     selection_rationale: str | None = None
     source_label: str | None = None
     source_summary: str | None = None
+    # CMA Phase 4a Cycle 2 — extended provenance + Zillow-rich fields. All
+    # optional; populated when comps come from the SearchApi-backed pipeline
+    # (SOLD or ACTIVE) post-CMA-Cycle-3a. Older callers that don't set them
+    # see None — backwards-compatible.
+    listing_status: str | None = None  # "sold" | "active" | None
+    sale_date: str | None = None  # ISO date string; SOLD only
+    days_on_market: int | None = None  # ACTIVE only; from days_on_zillow
+    tax_assessed_value: float | None = None
+    zestimate: float | None = None
+    rent_zestimate: float | None = None  # load-bearing for Phase 4b Scout rent-angle pattern
+    latitude: float | None = None
+    longitude: float | None = None
+    lot_sqft: float | None = None
+    # CMA Phase 4a Cycle 4 — cross-town provenance. True when this comp
+    # came from a neighboring town (per ``cma_invariants.TOWN_ADJACENCY``)
+    # because same-town SOLD inventory was below ``MIN_SOLD_COUNT``.
+    # Default False keeps existing callers backwards-compatible.
+    is_cross_town: bool = False
 
 
 @dataclass(frozen=True)
@@ -1858,6 +1877,18 @@ def get_cma(
     subject_ask = thesis.get("ask_price")
     live_source = _live_zillow_cma_candidates(property_id, summary, subject_ask)
     live_rows = live_source["rows"]
+
+    # CMA Cycle 3c — score every row uniformly, drop outliers, sort by
+    # weighted_score. Subject lat/lon not yet plumbed through summary.json
+    # (a future cycle); for now distance falls back to None and proximity
+    # uses the neutral 0.55 score. Town/state filter still constrains
+    # geography upstream.
+    scored_rows = _score_and_filter_comp_rows(live_rows)
+    dropped_outliers = len(live_rows) - len(scored_rows)
+    # Cap total comps shown to a reasonable number — a CMA of 20+ comps is
+    # noise; pick the top 10 by weighted_score.
+    selected_rows = scored_rows[:10]
+
     comps = [
         ComparableProperty(
             property_id=str(row.get("property_id") or ""),
@@ -1871,11 +1902,22 @@ def get_cma(
             selection_rationale=str(row.get("selection_rationale") or "same town and bedroom count, ranked toward the subject's pricing and layout"),
             source_label=_comp_source_label(_comp_origin_from_row(row)),
             source_summary=str(row.get("source_summary") or live_source["summary"]),
+            # CMA Cycle 2 + 3a Zillow-rich fields propagated from the merger.
+            listing_status=row.get("listing_status"),
+            sale_date=row.get("sale_date") if isinstance(row.get("sale_date"), str) else None,
+            days_on_market=row.get("days_on_market") if isinstance(row.get("days_on_market"), int) else None,
+            tax_assessed_value=_numeric_or_none(row.get("tax_assessed_value")),
+            zestimate=_numeric_or_none(row.get("zestimate")),
+            rent_zestimate=_numeric_or_none(row.get("rent_zestimate")),
+            latitude=_numeric_or_none(row.get("latitude")),
+            longitude=_numeric_or_none(row.get("longitude")),
+            lot_sqft=_numeric_or_none(row.get("lot_sqft")),
+            is_cross_town=bool(row.get("is_cross_town")),
         )
-        for row in live_rows
+        for row in selected_rows
     ]
-    confidence_notes = []
-    missing_fields = []
+    confidence_notes: list[str] = []
+    missing_fields: list[str] = []
     if not comps:
         confidence_notes.append("No nearby live or saved comps matched the current CMA filters.")
     confidence_notes.extend(_attom_subject_cma_notes(property_id, summary))
@@ -1883,7 +1925,8 @@ def get_cma(
         missing_fields.append("fair_value_base")
     if thesis.get("ask_price") is None:
         missing_fields.append("ask_price")
-    return CMAResult(
+
+    result = CMAResult(
         property_id=property_id,
         address=summary.get("address"),
         town=summary.get("town"),
@@ -1899,6 +1942,22 @@ def get_cma(
         confidence_notes=confidence_notes,
         missing_fields=missing_fields,
     )
+
+    # Cycle 2 invariant validation. Surfaces qualifications (e.g.
+    # "active-only" when SOLD count is below floor) into confidence_notes
+    # so the synthesizer can soften prose. Doesn't suppress the result —
+    # callers (Cycle 5 chart enforcer) decide whether to render based on
+    # validation.passes.
+    validation = cma_invariants.validate_cma_result(
+        result,
+        dropped_outliers=dropped_outliers,
+    )
+    if validation.suppressed_reason:
+        confidence_notes.append(validation.suppressed_reason)
+    for qualification in validation.qualifications:
+        confidence_notes.append(qualification)
+
+    return result
 
 
 def _rank_cma_candidates(
@@ -1941,39 +2000,36 @@ def _fallback_saved_cma_candidates(
     return selected, "Saved Briarwood comps ranked by matching layout and price."
 
 
-def _live_zillow_cma_candidates(
-    property_id: str,
-    summary: dict[str, Any],
+def _zillow_search_for_status(
+    client: SearchApiZillowClient,
+    *,
+    town: str,
+    state: str,
+    beds: int | None,
+    listing_status: str,
+    subject_address: str | None,
     subject_ask: float | None,
-) -> dict[str, Any]:
-    town = summary.get("town") if isinstance(summary.get("town"), str) else None
-    state = summary.get("state") if isinstance(summary.get("state"), str) else None
-    address = summary.get("address") if isinstance(summary.get("address"), str) else None
-    beds = summary.get("beds") if isinstance(summary.get("beds"), int) else None
-    client = SearchApiZillowClient()
-    if not town or not state or not client.is_configured:
-        rows, summary_line = _fallback_saved_cma_candidates(
-            property_id,
-            summary,
-            subject_ask,
-        )
-        return {"rows": rows, "summary": summary_line}
+) -> list[dict[str, Any]]:
+    """Issue a single SearchApi call for the given listing_status and
+    return filtered comp-row dicts tagged with provenance.
 
+    Each row carries ``listing_status`` (the canonical "sold"/"active"
+    used downstream) plus the rich Zillow fields (``date_sold``,
+    ``days_on_market``, ``tax_assessed_value``, ``zestimate``,
+    ``rent_zestimate``, ``latitude``/``longitude``, ``lot_sqft``,
+    ``sqft``) populated post-CMA-Cycle-3a.
+    """
     response = client.search_listings(
         query=f"{town}, {state}",
-        max_results=12,
+        listing_status=listing_status,
+        max_results=20,
         beds_min=max(1, beds - 1) if isinstance(beds, int) else None,
     )
     if not response.ok:
-        rows, summary_line = _fallback_saved_cma_candidates(
-            property_id,
-            summary,
-            subject_ask,
-        )
-        return {"rows": rows, "summary": summary_line}
-
-    normalized_subject = _norm_address_text(address)
-    live_rows: list[dict[str, Any]] = []
+        return []
+    canonical_status = "sold" if listing_status == "sold" else "active"
+    normalized_subject = _norm_address_text(subject_address)
+    rows: list[dict[str, Any]] = []
     for candidate in client.to_listing_candidates(response.normalized_payload):
         if normalized_subject and _norm_address_text(candidate.address) == normalized_subject:
             continue
@@ -1986,7 +2042,7 @@ def _live_zillow_cma_candidates(
         if isinstance(subject_ask, (int, float)) and isinstance(candidate.price, (int, float)):
             if float(candidate.price) < float(subject_ask) * 0.65 or float(candidate.price) > float(subject_ask) * 1.35:
                 continue
-        live_rows.append(
+        rows.append(
             {
                 "property_id": candidate.zpid or _existing_or_slugified_property_id(candidate.address or ""),
                 "address": candidate.address,
@@ -1996,23 +2052,289 @@ def _live_zillow_cma_candidates(
                 "baths": candidate.baths,
                 "ask_price": candidate.price,
                 "blocks_to_beach": None,
-                "selection_rationale": "live Zillow listing in the same market, filtered toward the subject's layout and price",
+                "selection_rationale": (
+                    "live Zillow sold comp"
+                    if canonical_status == "sold"
+                    else "live Zillow active listing — current market competition"
+                ),
                 "source_kind": "live_market_comp",
-                "source_summary": "Live Zillow market comp used as a real-time pricing anchor.",
+                "source_summary": (
+                    "Live Zillow closed sale used as a fair-value anchor."
+                    if canonical_status == "sold"
+                    else "Live Zillow active listing — what this property is competing against right now."
+                ),
+                # CMA Cycle 3c provenance + Cycle 3a Zillow-rich fields.
+                "listing_status": canonical_status,
+                "sale_date": candidate.date_sold,
+                "days_on_market": candidate.days_on_market,
+                "sqft": candidate.sqft,
+                "lot_sqft": candidate.lot_sqft,
+                "latitude": candidate.latitude,
+                "longitude": candidate.longitude,
+                "tax_assessed_value": candidate.tax_assessed_value,
+                "zestimate": candidate.zestimate,
+                "rent_zestimate": candidate.rent_zestimate,
+                "home_type": candidate.home_type,
             }
         )
-    ranked = _rank_cma_candidates(live_rows, summary=summary, subject_ask=subject_ask)[:4]
-    if ranked:
-        return {
-            "rows": ranked,
-            "summary": "Live Zillow market comps ranked toward the subject's layout and price.",
-        }
-    rows, summary_line = _fallback_saved_cma_candidates(
-        property_id,
-        summary,
-        subject_ask,
+    return rows
+
+
+def _live_zillow_cma_candidates(
+    property_id: str,
+    summary: dict[str, Any],
+    subject_ask: float | None,
+) -> dict[str, Any]:
+    """Coordinate the 3-source comp pipeline: Zillow SOLD + Zillow ACTIVE
+    + saved-comps fallback.
+
+    SOLD provides the closed-sale anchor (what buyers actually paid).
+    ACTIVE provides the competition picture (what the subject is competing
+    against right now). Saved fallback covers the gap when SearchApi
+    inventory is thin (rare for our markets per CMA_SOLD_PROBE_2026-04-26).
+
+    Each returned row carries ``listing_status`` provenance ("sold" /
+    "active"). Caller (``get_cma``) scores each row via
+    ``comp_scoring.score_comp_inputs`` and validates the merged set via
+    ``cma_invariants.validate_cma_result``.
+
+    Refactored in CMA Phase 4a Cycle 3c. Replaces the prior single-call
+    ACTIVE-only behavior with the unified merger.
+    """
+    town = summary.get("town") if isinstance(summary.get("town"), str) else None
+    state = summary.get("state") if isinstance(summary.get("state"), str) else None
+    address = summary.get("address") if isinstance(summary.get("address"), str) else None
+    beds = summary.get("beds") if isinstance(summary.get("beds"), int) else None
+    client = SearchApiZillowClient()
+
+    # If we have no usable filters or no SearchApi key, fall back entirely
+    # to saved comps. (Pre-Cycle-3c behavior preserved for this edge case.)
+    if not town or not state or not client.is_configured:
+        rows, summary_line = _fallback_saved_cma_candidates(
+            property_id,
+            summary,
+            subject_ask,
+        )
+        for row in rows:
+            row.setdefault("listing_status", "sold")  # saved comps are closed sales
+        return {"rows": rows, "summary": summary_line}
+
+    sold_rows = _zillow_search_for_status(
+        client,
+        town=town,
+        state=state,
+        beds=beds,
+        listing_status="sold",
+        subject_address=address,
+        subject_ask=subject_ask,
     )
-    return {"rows": rows, "summary": summary_line}
+    active_rows = _zillow_search_for_status(
+        client,
+        town=town,
+        state=state,
+        beds=beds,
+        listing_status="for_sale",
+        subject_address=address,
+        subject_ask=subject_ask,
+    )
+
+    # Per Cycle 2 invariant: emit telemetry when either SearchApi path
+    # returns empty. Surfaced in the comp_selection_summary so the per-turn
+    # manifest shows the merge composition.
+    sold_empty = not sold_rows
+    active_empty = not active_rows
+
+    # CMA Phase 4a Cycle 4 — cross-town SOLD expansion. Triggered only when
+    # same-town SOLD count is below ``MIN_SOLD_COUNT``. Iterates the town's
+    # neighbors per ``cma_invariants.TOWN_ADJACENCY`` and issues SOLD-only
+    # SearchApi calls for each. Cross-town rows are tagged with
+    # ``is_cross_town=True`` and a neighbor-aware ``selection_rationale``
+    # so prose / chart caption can distinguish. ACTIVE expansion is
+    # intentionally NOT done — "what's competing" is inherently same-town.
+    cross_town_sold_rows: list[dict[str, Any]] = []
+    if len(sold_rows) < cma_invariants.MIN_SOLD_COUNT:
+        for neighbor in cma_invariants.neighbors_for_town(town):
+            neighbor_rows = _zillow_search_for_status(
+                client,
+                town=neighbor,
+                state=state,
+                beds=beds,
+                listing_status="sold",
+                subject_address=address,
+                subject_ask=subject_ask,
+            )
+            for row in neighbor_rows:
+                row["is_cross_town"] = True
+                row["selection_rationale"] = (
+                    f"live Zillow sold comp from neighboring {neighbor}"
+                )
+                row["source_summary"] = (
+                    f"Live Zillow closed sale from neighboring {neighbor}, "
+                    "used as a fair-value anchor when same-town inventory is thin."
+                )
+            cross_town_sold_rows.extend(neighbor_rows)
+
+    # Dedup by canonical address. SOLD wins over ACTIVE on collision (a
+    # closed sale is the stronger signal than an unresolved ask). Same-town
+    # SOLD wins over cross-town SOLD on collision (rare, but possible if
+    # Zillow's town field disagrees with our adjacency keys).
+    seen_addresses: set[str] = set()
+    merged: list[dict[str, Any]] = []
+    for row in sold_rows:
+        canonical = _norm_address_text(row.get("address"))
+        if canonical and canonical not in seen_addresses:
+            seen_addresses.add(canonical)
+            merged.append(row)
+    cross_town_added = 0
+    for row in cross_town_sold_rows:
+        canonical = _norm_address_text(row.get("address"))
+        if canonical and canonical not in seen_addresses:
+            seen_addresses.add(canonical)
+            merged.append(row)
+            cross_town_added += 1
+    for row in active_rows:
+        canonical = _norm_address_text(row.get("address"))
+        if canonical and canonical not in seen_addresses:
+            seen_addresses.add(canonical)
+            merged.append(row)
+
+    # Saved fallback when combined live count is below the MIN_TOTAL floor.
+    saved_supplement_count = 0
+    if len(merged) < cma_invariants.MIN_TOTAL_COMP_COUNT:
+        saved_rows, _ = _fallback_saved_cma_candidates(property_id, summary, subject_ask)
+        for row in saved_rows:
+            canonical = _norm_address_text(row.get("address"))
+            if not canonical or canonical in seen_addresses:
+                continue
+            seen_addresses.add(canonical)
+            row.setdefault("listing_status", "sold")  # saved are closed sales
+            merged.append(row)
+            saved_supplement_count += 1
+
+    # Build the comp_selection_summary string. Reflects the merge composition
+    # — used by the chart layer's caption + the synthesizer's prose.
+    same_town_sold_count = len(sold_rows)
+    total_sold_live = same_town_sold_count + cross_town_added
+    parts: list[str] = []
+    if total_sold_live:
+        if cross_town_added:
+            parts.append(f"{total_sold_live} SOLD ({cross_town_added} cross-town)")
+        else:
+            parts.append(f"{total_sold_live} SOLD")
+    elif sold_empty:
+        parts.append("0 SOLD (live empty)")
+    if active_rows:
+        parts.append(f"{len(active_rows)} ACTIVE")
+    elif active_empty:
+        parts.append("0 ACTIVE (live empty)")
+    if saved_supplement_count:
+        parts.append(f"{saved_supplement_count} saved fallback")
+    summary_line = (
+        ("Comp set: " + " + ".join(parts) + ".")
+        if parts
+        else "No nearby comps from any source."
+    )
+    return {"rows": merged, "summary": summary_line}
+
+
+def _score_and_filter_comp_rows(
+    rows: list[dict[str, Any]],
+    *,
+    subject_lat: float | None = None,
+    subject_lon: float | None = None,
+) -> list[dict[str, Any]]:
+    """Apply unified scoring (CMA Cycle 3b) + outlier filtering (Cycle 2)
+    to the merged comp rows. Returns rows enriched with ``weighted_score``,
+    sorted descending.
+
+    Outliers (per ``cma_invariants.is_outlier_by_tax_assessment``) are
+    filtered out before sorting. Distance is computed when subject lat/lon
+    is known; otherwise proximity falls back to the neutral 0.55 score
+    (town/state filter already provides geographic constraint).
+    """
+    scored: list[dict[str, Any]] = []
+    for row in rows:
+        # Compute distance per row (Zillow comps have lat/lon; saved comps
+        # may not — graceful None).
+        distance: float | None = None
+        if (
+            subject_lat is not None
+            and subject_lon is not None
+            and isinstance(row.get("latitude"), (int, float))
+            and isinstance(row.get("longitude"), (int, float))
+        ):
+            distance = comp_scoring.distance_miles(
+                subject_lat,
+                subject_lon,
+                float(row["latitude"]),
+                float(row["longitude"]),
+            )
+
+        # Compute sale_age_days from sale_date when present.
+        sale_age_days: int | None = None
+        sale_date = row.get("sale_date")
+        if isinstance(sale_date, str) and sale_date:
+            sale_age_days = _days_since_iso(sale_date)
+
+        # Field-completeness count for data_quality scoring (parallel to
+        # Engine A's 6-field check; uses the comp-shaped fields available
+        # on Zillow rows).
+        present_fields = sum(
+            1
+            for v in (
+                row.get("beds"),
+                row.get("baths"),
+                row.get("sqft"),
+                row.get("lot_sqft"),
+                distance,
+                row.get("listing_status"),
+            )
+            if v not in (None, "", [])
+        )
+
+        scores = comp_scoring.score_comp_inputs(
+            listing_status=row.get("listing_status"),
+            distance_miles=distance,
+            sale_age_days=sale_age_days,
+            days_on_market=row.get("days_on_market"),
+            similarity_score=0.0,  # Engine A's similarity engine doesn't apply here
+            present_fields=present_fields,
+            total_fields=6,
+            verification_status="zillow_listing" if row.get("source_kind") == "live_market_comp" else "public_record_verified",
+            extracted_price=row.get("ask_price"),
+            tax_assessed_value=row.get("tax_assessed_value"),
+        )
+        if scores.is_outlier:
+            continue
+        row["weighted_score"] = scores.weighted_score
+        row["proximity_score"] = scores.proximity_score
+        row["recency_score"] = scores.recency_score
+        row["data_quality_score"] = scores.data_quality_score
+        if distance is not None:
+            row["distance_to_subject_miles"] = round(distance, 3)
+        scored.append(row)
+
+    # Sort by weighted_score descending — best comps first.
+    scored.sort(key=lambda r: float(r.get("weighted_score") or 0.0), reverse=True)
+    return scored
+
+
+def _days_since_iso(iso_date: str) -> int | None:
+    """Days between today and an ISO date/datetime string. None on parse
+    failure. Used to convert Zillow's ``date_sold`` (e.g. ``"2026-04-20T07:00:00Z"``)
+    into ``sale_age_days`` for the recency scorer.
+    """
+    if not isinstance(iso_date, str) or not iso_date:
+        return None
+    try:
+        # Strip time component if present.
+        date_part = iso_date.split("T")[0]
+        parsed = datetime.fromisoformat(date_part).date()
+    except (ValueError, AttributeError):
+        return None
+    today = datetime.now(UTC).date()
+    delta = (today - parsed).days
+    return max(delta, 0)
 
 
 def _attom_subject_cma_notes(property_id: str, summary: dict[str, Any]) -> list[str]:

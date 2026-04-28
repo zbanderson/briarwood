@@ -18,8 +18,10 @@ from briarwood.agent.overrides import inputs_with_overrides
 from briarwood.agent.tools import SAVED_PROPERTIES_DIR, ToolUnavailable
 from briarwood.claims.synthesis import build_verdict_with_comparison_claim
 from briarwood.claims.verdict_with_comparison import VerdictWithComparisonClaim
+from briarwood.execution.context import ExecutionContext
 from briarwood.inputs.property_loader import load_property_from_json
-from briarwood.modules.comparable_sales import ComparableSalesModule
+from briarwood.modules.comparable_sales import ComparableSalesOutput
+from briarwood.modules.comparable_sales_scoped import run_comparable_sales
 from briarwood.orchestrator import run_briarwood_analysis_with_artifacts
 from briarwood.runner_routed import _scoped_synthesizer
 from briarwood.schemas import PropertyInput
@@ -63,28 +65,53 @@ def _inject_comparable_sales(
     module_results: dict[str, Any],
     property_input: PropertyInput,
 ) -> None:
-    """Run ComparableSalesModule and graft its output under ``outputs.comparable_sales``.
+    """Graft ``comparable_sales`` into ``module_results["outputs"]`` for the synthesizer.
 
-    The scoped execution registry doesn't surface ``comparable_sales`` as a
-    top-level module (it's consumed internally by valuation), so the
-    synthesizer's expected path ``outputs["comparable_sales"].payload.comps_used``
-    is absent at runtime. Running the module directly here fills that gap
-    without editing ``briarwood/modules/``.
+    The scoped execution registry surfaces ``comparable_sales`` only as an
+    internal dependency of ``valuation``; the routed analysis returned by
+    ``run_briarwood_analysis_with_artifacts`` therefore omits it from
+    ``module_results["outputs"]``. The verdict_with_comparison synthesizer
+    reads ``outputs["comparable_sales"].payload.comps_used`` to assemble its
+    scenario tiers, so this helper materializes that entry.
+
+    Goes through the canonical scoped runner ``run_comparable_sales`` (Phase
+    4a Cycle 6, retiring the prior direct ``ComparableSalesModule`` call) so
+    error contract, mode inference, and missing-input flagging are consistent
+    with every other comp-sales caller. The scoped wrapper's
+    ``data.legacy_payload`` is repackaged as a ``ComparableSalesOutput``
+    pydantic instance under the ``payload`` key — preserving the field-access
+    shape the synthesizer expects (``comps_used`` lives at the same
+    attribute, just one wrapper layer removed).
     """
     outputs = module_results.get("outputs")
     if not isinstance(outputs, dict):
         return
     if isinstance(outputs.get("comparable_sales"), Mapping):
         return
+
+    context = ExecutionContext(
+        property_id=str(property_input.property_id or ""),
+        property_data=property_input.to_dict(),
+    )
+    scoped = run_comparable_sales(context)
+
+    data = scoped.get("data") if isinstance(scoped, Mapping) else None
+    if not isinstance(data, Mapping):
+        return
+    legacy_payload = data.get("legacy_payload")
+    if not isinstance(legacy_payload, Mapping):
+        return  # fallback path — no comp set to graft.
+
     try:
-        result = ComparableSalesModule().run(property_input)
+        payload = ComparableSalesOutput.model_validate(legacy_payload)
     except Exception:
         return
+
     outputs["comparable_sales"] = {
-        "module_name": result.module_name,
-        "payload": result.payload,
-        "metrics": dict(result.metrics or {}),
-        "summary": result.summary,
+        "module_name": str(data.get("module_name") or "comparable_sales"),
+        "payload": payload,
+        "metrics": dict(data.get("metrics") or {}),
+        "summary": str(data.get("summary") or ""),
     }
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -10,17 +11,29 @@ ROOT = Path(__file__).resolve().parents[1]
 CAPTURE_PATH = ROOT / "data" / "learning" / "intelligence_feedback.jsonl"
 
 
+def _resolve_capture_path() -> Path:
+    """Resolve the active capture path, honoring BRIARWOOD_INTEL_FEEDBACK_PATH.
+
+    The env override exists so test runs can redirect feedback writes to a
+    tmp file (set in tests/conftest.py) instead of polluting the real
+    analyzer input at data/learning/intelligence_feedback.jsonl.
+    """
+    override = os.environ.get("BRIARWOOD_INTEL_FEEDBACK_PATH")
+    return Path(override) if override else CAPTURE_PATH
+
+
 def append_intelligence_capture(record: dict[str, Any]) -> Path:
     """Append one lightweight intelligence interaction record to JSONL storage."""
 
-    CAPTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    target = _resolve_capture_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "captured_at": datetime.now(timezone.utc).isoformat(),
         **dict(record),
     }
-    with CAPTURE_PATH.open("a", encoding="utf-8") as handle:
+    with target.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True, default=str) + "\n")
-    return CAPTURE_PATH
+    return target
 
 
 def build_routed_capture_record(

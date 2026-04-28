@@ -1,6 +1,6 @@
 # agent/router — Intent Router (AnswerType Classification)
 
-**Last Updated:** 2026-04-25
+**Last Updated:** 2026-04-28 (Round 2)
 **Layer:** Intent (Layer 1 — answer-type half; user-type does not exist yet)
 **Status:** STABLE
 
@@ -141,6 +141,116 @@ decision = classify("compare 526-w-end-ave-avon-by-the-sea-nj vs 526-west-end-av
 - **When to start collecting user-type signal in the router** even before downstream consumes it — answers the "looser routing generates training signal that needs to be keyed to user type" risk in [GAP_ANALYSIS.md](../../GAP_ANALYSIS.md) Layer 1 Risks.
 
 ## Changelog
+
+### 2026-04-28 (Round 2)
+
+Two guardrail-loosening fixes per `project_llm_guardrails.md`,
+landed via [`ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md`](../../ROUTER_QUALITY_ROUND2_HANDOFF_PLAN.md):
+
+- **`RouterClassification` schema gains `confidence: float`** (constrained
+  `[0.0, 1.0]` via `pydantic.Field(ge=0, le=1)`) at
+  [router.py:255](router.py#L255). `_LLM_SYSTEM` updated to ask the LLM
+  for the score with explicit semantic anchors (1.0 = canonical, 0.7 =
+  near second-choice, 0.5 = ambiguous, <0.4 = genuinely unknown).
+- **`classify` plumbs LLM-emitted confidence into `RouterDecision.confidence`**
+  at [router.py:411-414](router.py#L411-L414) — replaces the prior
+  hardcoded `0.6`. A `max(llm.confidence, 0.4)` floor is applied
+  deliberately to keep every successful classification above the 0.3
+  default-fallback bucket. Stage 3 dashboards now have a real signal
+  to drive low-confidence drill-downs.
+- **`_PROJECTION_OVERRIDE_HINT_RE` widened** at
+  [router.py:239-249](router.py#L239-L249) to catch `renovation
+  scenarios?`, `run scenarios?`, `scenario`, `5-year`, `ten-year`,
+  `outlook`. Defense in depth: when a real what-if-price override IS
+  present, scenario / forecasting phrasings now route to PROJECTION
+  rather than defaulting to DECISION.
+- **Router's `has_override` tightened** at
+  [router.py:380-389](router.py#L380-L389) to require a *material*
+  override (`ask_price` or `repair_capex_budget`). A bare
+  `mode="renovated"` from `parse_overrides` no longer triggers the
+  what-if-price-override short-circuit — those turns flow to the LLM
+  classifier so e.g. "Run renovation scenarios" gets correctly
+  classified as PROJECTION instead of DECISION (the verdict-with-comparison
+  wedge was firing on plain scenario requests). `parse_overrides`
+  itself is unchanged so downstream dispatch handlers still receive
+  the renovation hint via `inputs_with_overrides`.
+- **Updated test fixtures** in `tests/agent/test_router.py`,
+  `tests/test_intent_contract.py`, `tests/agent/test_rendering.py`:
+  every `complete_structured` fake now passes `confidence=0.7`. Plus
+  3 new `LLMClassifyTests` for the confidence flow + 1 new
+  `PromptContentRegressionTests` pinning the prompt's confidence ask
+  + 2 new `PrecedenceTests` for the bare-renovation contract change.
+  One existing test
+  (`test_renovation_override_with_rent_question_routes_to_rent_lookup`)
+  reframed to use an explicit `if I bought... at 1.3M` price instead
+  of relying on the now-removed mode-only short-circuit.
+- **Contract change:** `RouterDecision.confidence` for LLM-classified
+  turns is now the LLM's emission floored at 0.4, not the constant
+  0.6. Callers that filtered on `confidence == 0.6` (none known) need
+  to update. `parse_overrides`'s contract is unchanged; the change is
+  in how the router *consumes* that output.
+- Surfaced by 2026-04-28 router-audit Round 1 smoke. The
+  `confidence=0.6` cap was identified in Round 1's Guardrail Review;
+  the bare-renovation false-positive was identified in Round 1
+  post-landing smoke. Both filed as §4 Medium ROADMAP entries on
+  2026-04-28; both resolved here in Round 2.
+
+### 2026-04-28
+
+- Prompt content expansion to `_LLM_SYSTEM` ([router.py:169-244](router.py#L169-L244))
+  closing three boundary gaps surfaced by Stage 1 turn-trace evidence:
+  - **STRATEGY bucket** absorbs escalation phrasings on a pinned property:
+    "recommended path", "walk me through the recommended path", "what
+    should I do here", "next move", "what's the play". Previously these
+    re-ran the BROWSE first-read.
+  - **EDGE bucket** absorbs sensitivity / counterfactual phrasings:
+    "what would change your view", "what would shift the number", "how
+    sensitive is X", "what assumption is load-bearing". Previously these
+    routed to RISK (which enumerates downside, not sensitivity).
+  - **EDGE bucket** also absorbs comp-set follow-ups on a pinned
+    property: "show me the comps", "list the comps", "what are the
+    comps", "why were these comps chosen", "explain your comp choice".
+  - **SEARCH bucket** absorbs list-imperative phrasings naming plural
+    inventory artifacts: "show me listings here", "list the properties",
+    "what is available". With explicit guard "(NOT 'show me the comps' —
+    see edge.)" so the comp-set phrasings stay in EDGE.
+  - **3 new IMPORTANT MAPPINGS lines** for the above.
+  - **2 new counter-example pairs:** BROWSE↔STRATEGY (escalation
+    boundary) and RISK↔EDGE (downside vs sensitivity boundary).
+  - **RISK definition tightened:** explicit "RISK enumerates downside
+    factors; it does NOT cover sensitivity / counterfactual questions
+    (those are edge)" sentence added so the LLM doesn't drag
+    sensitivity questions into RISK by default.
+- `_COMP_SET_RE` widened in [briarwood/agent/dispatch.py:2720-2727](dispatch.py#L2720-L2727)
+  to catch "show me the comps", "list the comps", "what are the comps",
+  "what comps did you use", "why were the comps", "explain your comp
+  choice / selection / comps". Negative case ("comparable sales market"
+  in town context) deliberately not matched and pinned in the dispatch
+  test.
+- Regression tests added to [tests/agent/test_router.py](../../tests/agent/test_router.py):
+  6 new `LLM_CANNED` cases (3 STRATEGY, 3 EDGE) + 2 SEARCH cases; 6 new
+  `PromptContentRegressionTests` pinning the new bucket sentences,
+  IMPORTANT MAPPINGS, and counter-example pairs. Also 2 new tests in
+  [tests/agent/test_dispatch.py](../../tests/agent/test_dispatch.py)
+  for the widened regex (positive list + negative case).
+- **Contract change:** STRATEGY now absorbs escalation phrasings that
+  previously fell to BROWSE; EDGE now absorbs sensitivity phrasings
+  that previously fell to RISK. Callers that depend on "anything with
+  'value' in it routes to RISK" should expect those to flow to EDGE
+  now. Callers that gate on STRATEGY hitting only literal "what
+  strategy" phrasings should expect a broader STRATEGY surface.
+- Surfaced by 2026-04-28 AI-Native Foundation Stage 1 post-landing UI
+  smoke. The `turn_traces` table is the corpus this audit was waiting
+  on. See [ROUTER_AUDIT_HANDOFF_PLAN.md](../../ROUTER_AUDIT_HANDOFF_PLAN.md)
+  and [DECISIONS.md](../../DECISIONS.md) 2026-04-28 entry "Router
+  classification audit Cycle 1-4 landed" for the full corpus + the
+  Guardrail Review.
+- **Guardrail flag (DEFERRED, not fixed this pass):** every successful
+  LLM classification is hardcoded to `confidence=0.6` at
+  [router.py:407](router.py#L407) regardless of the model's actual
+  signal. This collapses the classifier's confidence signal — the
+  reason every miss in the 2026-04-28 corpus came back at exactly
+  `conf=0.60`. Filed as a follow-on under §4 Medium of ROADMAP.md.
 
 ### 2026-04-25
 - Prompt content change to `_LLM_SYSTEM` ([router.py:169-219](router.py#L169-L219)):

@@ -95,6 +95,7 @@ class _VisualizeLLM:
             answer_type=AnswerType.VISUALIZE,
             persona_type=PersonaType.UNKNOWN,
             use_case_type=UseCaseType.UNKNOWN,
+            confidence=0.7,
             reason="scripted-visualize",
         )
 

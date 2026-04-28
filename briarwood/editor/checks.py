@@ -9,10 +9,15 @@ a fixed order; checks do not know about one another.
 from __future__ import annotations
 
 from briarwood.claims.verdict_with_comparison import VerdictWithComparisonClaim
+from briarwood.decision_model.value_position import (
+    OVERPRICED_THRESHOLD_PCT as CANONICAL_OVERPRICED_THRESHOLD_PCT,
+    VALUE_FIND_THRESHOLD_PCT as CANONICAL_VALUE_FIND_THRESHOLD_PCT,
+    classify_ask_vs_fmv_delta_pct,
+)
 
-# Mirrors the synthesizer's thresholds. If those drift, this catches it.
-VALUE_FIND_THRESHOLD_PCT = -5.0
-OVERPRICED_THRESHOLD_PCT = 5.0
+# Imported from the deterministic decision-model source of truth.
+VALUE_FIND_THRESHOLD_PCT = CANONICAL_VALUE_FIND_THRESHOLD_PCT
+OVERPRICED_THRESHOLD_PCT = CANONICAL_OVERPRICED_THRESHOLD_PCT
 
 # Sample size below which a scenario must carry a caveat. Must agree with
 # the synthesizer's SMALL_SAMPLE_THRESHOLD; the editor does not import from
@@ -51,13 +56,7 @@ def check_verdict_delta_coherence(claim: VerdictWithComparisonClaim) -> list[str
     delta = claim.verdict.ask_vs_fmv_delta_pct
     if label == "insufficient_data":
         return []
-    expected: str
-    if delta <= VALUE_FIND_THRESHOLD_PCT:
-        expected = "value_find"
-    elif delta >= OVERPRICED_THRESHOLD_PCT:
-        expected = "overpriced"
-    else:
-        expected = "fair"
+    expected = classify_ask_vs_fmv_delta_pct(delta)
     if label != expected:
         return [
             f"Verdict label '{label}' does not match delta {delta:.2f}% "

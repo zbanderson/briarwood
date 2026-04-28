@@ -51,7 +51,7 @@ The "Run analysis" flow for a saved property, end-to-end:
 3. FastAPI calls into [api/pipeline_adapter.py](api/pipeline_adapter.py), which classifies the turn via `classify_turn()` → `briarwood.agent.router.classify()` at [briarwood/agent/router.py:105](briarwood/agent/router.py#L105). Router produces a `RouterDecision` with an `AnswerType` (one of 14 values).
 4. The adapter dispatches to a tier-specific stream: `search_stream`, `browse_stream`, `decision_stream`, or the generic `dispatch_stream`. For DECISION, control enters `handle_decision()` at [briarwood/agent/dispatch.py:1887](briarwood/agent/dispatch.py#L1887).
 5. Inside the decision handler, a feature-flag check at [briarwood/agent/dispatch.py:1809-1883](briarwood/agent/dispatch.py#L1809-L1883) uses `claims_enabled_for(property_id)` from [briarwood/feature_flags.py:22](briarwood/feature_flags.py#L22). Branching:
-   - **Flag on**: `build_claim_for_property()` at [briarwood/claims/pipeline.py:28](briarwood/claims/pipeline.py#L28) runs `run_briarwood_analysis_with_artifacts()`, grafts a `ComparableSalesModule` run post-hoc at [briarwood/claims/pipeline.py:62-88](briarwood/claims/pipeline.py#L62-L88), and calls `build_verdict_with_comparison_claim()`. The claim goes through `scout_claim()` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) (one pattern registered: `uplift_dominance`), then `edit_claim()` at [briarwood/editor/validator.py](briarwood/editor/validator.py) (5 checks). On pass, `render_claim()` at [briarwood/claims/representation/verdict_with_comparison.py:52](briarwood/claims/representation/verdict_with_comparison.py#L52) emits prose + chart + suggestions events. On editor failure, the handler emits `EVENT_CLAIM_REJECTED` and falls back to the legacy path.
+   - **Flag on**: `build_claim_for_property()` at [briarwood/claims/pipeline.py:28](briarwood/claims/pipeline.py#L28) runs `run_briarwood_analysis_with_artifacts()`, grafts a `comparable_sales` entry via the canonical scoped runner `run_comparable_sales(context)` at [briarwood/claims/pipeline.py:62-114](briarwood/claims/pipeline.py#L62-L114), and calls `build_verdict_with_comparison_claim()`. The claim goes through `scout_claim()` at [briarwood/value_scout/scout.py](briarwood/value_scout/scout.py) (one pattern registered: `uplift_dominance`), then `edit_claim()` at [briarwood/editor/validator.py](briarwood/editor/validator.py) (5 checks). On pass, `render_claim()` at [briarwood/claims/representation/verdict_with_comparison.py:52](briarwood/claims/representation/verdict_with_comparison.py#L52) emits prose + chart + suggestions events. On editor failure, the handler emits `EVENT_CLAIM_REJECTED` and falls back to the legacy path.
    - **Flag off**: handler runs the scoped-execution registry via `briarwood.orchestrator.run_briarwood_analysis_with_artifacts()`, synthesizes through [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py), and emits events directly.
 6. Responses stream back as SSE events defined in [api/events.py](api/events.py) (22 event types).
 7. The `useChat` hook in [web/src/lib/chat/use-chat.ts](web/src/lib/chat/use-chat.ts) deserializes events and assembles `ChatMessage` objects with structured payloads.
@@ -93,7 +93,7 @@ All defined in [briarwood/execution/registry.py](briarwood/execution/registry.py
 
 ### Legacy modules (not in scoped registry)
 
-These predate the scoped pattern and are callable only from within other modules (or via post-hoc grafts like [briarwood/claims/pipeline.py:62-88](briarwood/claims/pipeline.py#L62-L88)). Each exposes a class with a `run(property_input)` method returning a `ModuleResult`.
+These predate the scoped pattern and are callable only from within other modules (or via the post-hoc graft at [briarwood/claims/pipeline.py:62-114](briarwood/claims/pipeline.py#L62-L114), which as of CMA Phase 4a Cycle 6 routes through the canonical scoped runner `run_comparable_sales` and reads the `ComparableSalesOutput` pydantic shape only to repackage `data.legacy_payload`). Each exposes a class with a `run(property_input)` method returning a `ModuleResult`.
 
 | Model | File | Role |
 |-------|------|------|
@@ -213,13 +213,167 @@ Chat components in [web/src/components/chat/](web/src/components/chat/):
 
 The SSE protocol in [api/events.py](api/events.py) defines 22 event types: `text_delta`, `tool_call`, `tool_result`, `listings`, `map`, `suggestions`, `verdict`, `chart`, `scenario_table`, `comparison_table`, `town_summary`, `comps_preview`, `risk_profile`, `value_thesis`, `valuation_comps`, `market_support_comps`, `strategy_path`, `rent_outlook`, `research_update`, `trust_summary`, `modules_ran`, `grounding_annotations`, `verifier_report`, `partial_data_warning`, `claim_rejected`, `conversation`, `message`, `done`, `error`.
 
+## Persistence
+
+The chat-tier observability layer writes three durable artifacts (added
+2026-04-28 as AI-Native Foundation Stage 1; see
+[PERSISTENCE_HANDOFF_PLAN.md](PERSISTENCE_HANDOFF_PLAN.md) and
+[ROADMAP.md](ROADMAP.md) §3.1). All three are populated by default — no
+env-var gating — and all three are exception-safe (a write failure logs
+with a `[turn_traces]` / `[llm_calls.jsonl]` / `[messages.metrics]`
+prefix and never breaks a turn).
+
+- **`turn_traces` table** in [`data/web/conversations.db`](api/store.py).
+  One row per chat turn, finalized in the `event_source` finally block
+  at [api/main.py:269-288](api/main.py) from the `TurnManifest` returned
+  by `end_turn()` ([briarwood/agent/turn_manifest.py:185](briarwood/agent/turn_manifest.py#L185)).
+  Schema declared in `_init_schema` at [api/store.py:48-91](api/store.py#L48-L91);
+  insert path at `insert_turn_trace` ([api/store.py:155](api/store.py)).
+  JSON columns (`modules_run`, `modules_skipped`, `llm_calls_summary`,
+  `tool_calls`, `notes`, `wedge`) carry the full
+  `TurnManifest.to_jsonable()` shape. Indexes on `(conversation_id,
+  started_at)` and `started_at`. `conversation_id` declared `ON DELETE
+  SET NULL` and `delete_conversation` applies it explicitly so traces
+  survive conversation deletion (deliberate divergence from the
+  `messages.ON DELETE CASCADE` semantic).
+- **`data/llm_calls.jsonl`** — one JSON line per LLM call. Sink lives
+  in `LLMCallLedger.append` at
+  [briarwood/agent/llm_observability.py:80-103](briarwood/agent/llm_observability.py#L80-L103),
+  mirroring every record the ledger receives. Excludes `debug_payload`
+  unless `BRIARWOOD_LLM_DEBUG_PAYLOADS=1`. Adds an ISO-8601
+  `recorded_at` at write time (the dataclass carries no absolute
+  timestamp). Path overridable via `BRIARWOOD_LLM_JSONL_PATH`. Test
+  runs are isolated by [tests/conftest.py](tests/conftest.py), which
+  redirects the env var to a per-session tmp file so the production
+  artifact isn't polluted.
+- **Metric columns on `messages`** — `latency_ms`, `answer_type`,
+  `success_flag`, `turn_trace_id` (FK → `turn_traces.turn_id`,
+  `ON DELETE SET NULL`). Added via idempotent `ALTER TABLE ADD COLUMN`
+  migrations ([api/store.py:93-104](api/store.py#L93-L104)) so
+  re-running `_init_schema` is a no-op. Backfilled forward only; null
+  on rows from before Stage 1 landed. Populated on the assistant
+  message row in the same `event_source` finally block via
+  `ConversationStore.attach_turn_metrics` ([api/store.py:117-152](api/store.py#L117-L152)).
+  `success_flag=True` semantically means "the manifest reached
+  `end_turn` without exception" (v1; revisited when Stage 2 — the
+  feedback loop — lands).
+
+The owner-visible payoff: any `sqlite3 data/web/conversations.db`
+query can now answer "what was the slowest turn this week" or "which
+`answer_type` is the most expensive on average" without grepping logs.
+The single concrete success-criteria query from the plan
+(`SELECT answer_type, AVG(duration_ms_total) FROM turn_traces GROUP BY 1`)
+returns real numbers as soon as the API has served any traffic. Stage 3
+(admin dashboard, [ROADMAP.md](ROADMAP.md) §3.1) is the read-side UI
+that consumes these artifacts.
+
+**Stage 2 — User feedback loop (added 2026-04-28).** A fourth durable
+artifact joined the persistence layer with the
+[`FEEDBACK_LOOP_HANDOFF_PLAN.md`](FEEDBACK_LOOP_HANDOFF_PLAN.md) Cycles
+1-4 landing:
+
+- **`feedback` table** in [`data/web/conversations.db`](api/store.py).
+  One row per rated assistant message. PK on `message_id`; FKs declared
+  to `messages` (`ON DELETE CASCADE`) and `turn_traces` (`ON DELETE SET
+  NULL`). Schema in `_init_schema` at
+  [api/store.py:68-83](api/store.py#L68-L83); upsert path at
+  `ConversationStore.upsert_feedback` ([api/store.py:155](api/store.py)).
+  `INSERT OR REPLACE` semantics on revision (last-write-wins per
+  `message_id`); `created_at` preserved across revisions, `updated_at`
+  advanced. Indexes on `(conversation_id, created_at)` and
+  `(rating, created_at)`. `delete_conversation` applies the CASCADE
+  explicitly (FK enforcement is off project-wide).
+- **JSONL mirror** — every successful POST also appends to
+  `data/learning/intelligence_feedback.jsonl` via the existing
+  `build_user_feedback_record` → `append_intelligence_capture` chain,
+  so the analyzer at
+  [`briarwood/feedback/analyzer.py`](briarwood/feedback/analyzer.py)
+  picks up ratings without a code change. The wire vocabulary
+  (`"up"|"down"`) is translated at the API boundary to the helper's
+  vocabulary (`"yes"|"no"`) so the analyzer's
+  threshold-recommendation logic at
+  [briarwood/feedback/analyzer.py:306-353](briarwood/feedback/analyzer.py#L306-L353)
+  keeps working unchanged. Path overridable via
+  `BRIARWOOD_INTEL_FEEDBACK_PATH`; [tests/conftest.py](tests/conftest.py)
+  redirects per session so test runs don't pollute the analyzer hopper.
+- **Read-back consumer** — when the same conversation has a recent
+  thumbs-down, the next turn's synthesizer system prompt gains a
+  "vary your framing" directive. Implemented via a `ContextVar` in
+  [`briarwood/synthesis/feedback_hint.py`](briarwood/synthesis/feedback_hint.py),
+  set by `apply_feedback_hint` in
+  [api/pipeline_adapter.py](api/pipeline_adapter.py) entry points
+  (browse / decision / search / dispatch streams) and read by
+  `synthesize_with_llm`. Manifest carries the
+  `feedback:recent-thumbs-down-influenced-synthesis` tag so the loop
+  closure surfaces in `turn_traces.notes` for SQL audit. Numeric and
+  citation rules from the base synthesis prompt are unchanged; the
+  hint only affects framing.
+
+**Stage 3 — Read-side admin surface (added 2026-04-28).** The
+substrate above (Stages 1+2) gained a read-side UI with
+[`DASHBOARD_HANDOFF_PLAN.md`](DASHBOARD_HANDOFF_PLAN.md) Cycles 1-4:
+
+- **Three FastAPI admin endpoints** under `/api/admin/*` in
+  [api/main.py](api/main.py), all gated behind
+  `BRIARWOOD_ADMIN_ENABLED=1` (404 when unset, not 403, so a probe
+  doesn't reveal the surface exists). `GET /api/admin/metrics?days=N`
+  returns latency-by-answer_type + cost-by-surface + thumbs ratio.
+  `GET /api/admin/turns/recent?days=N&limit=M` returns top-N slowest
+  + top-N highest-cost. `GET /api/admin/turns/{turn_id}` returns the
+  full per-turn manifest plus any feedback rows that joined to its
+  messages.
+- **SQL aggregators** on `ConversationStore` in
+  [api/store.py](api/store.py):
+  `latency_durations_by_answer_type`, `thumbs_ratio_since`,
+  `top_slowest_turns`, `get_turn_trace` (deserializes JSON columns
+  defensively — leaves raw string in place on corrupt JSON rather
+  than raising), `feedback_for_turn` (LEFT JOIN via
+  `messages.turn_trace_id`).
+- **JSONL aggregators** in the new
+  [api/admin_metrics.py](api/admin_metrics.py) module:
+  `cost_by_surface`, `top_costliest_turns`. Read-and-aggregate-on-request
+  pattern; today's JSONL is a few thousand lines, parse is sub-100ms.
+  v2 path (SQLite cost table) deferred until file grows past a few
+  hundred MB.
+- **`turn_id` linkage on JSONL writes** added during Cycle 1 — small
+  scope addition over the original Stage 1 plan. The
+  `LLMCallLedger._write_jsonl` path now looks up
+  `current_manifest().turn_id` at write time and stamps it on the
+  payload; failure-safe via the same try/except pattern as the
+  manifest-mirror lookup. New JSONL records carry `turn_id`;
+  pre-Stage-3 records do not, and are excluded from the top-N cost
+  ranking (the dashboard's empty-state notice explains this so the
+  empty table doesn't read as broken).
+- **Next server-component routes** at
+  `web/src/app/admin/page.tsx` (top-line metrics; 1d/7d/30d window
+  switch; plain HTML/CSS bar-width visualizations — chart-library
+  evaluation deferred to Phase 4c UI reconstruction per ROADMAP
+  §3.4.7) and `web/src/app/admin/turn/[turn_id]/page.tsx` (full
+  manifest drill-down; the `feedback:recent-thumbs-down-influenced-synthesis`
+  note tag renders highlighted as the closure-loop audit affordance
+  from Stage 2). Unlinked from the main UI by design.
+
+**Deferred follow-ons:**
+- (Stage 1) JSONL rotation/compaction policy (file under operational
+  backlog when size becomes an issue); top-level analytic query
+  sketches to seed Stage 3's dashboard.
+- (Stage 2) Asset-quality rating (different signal from
+  response-quality thumbs; feeds Stage 4 — Loop 1 Model Accuracy —
+  rather than Loop 2). Tier label `mixed` reserved for the middle
+  option when built. Comment column reserved on the `feedback`
+  table; v2 client can ship without an API change.
+- (Stage 3) JSONL → SQLite cost table when file grows past a few
+  hundred MB; real auth on the admin surface (currently env-gate
+  only); chart-library swap (bound to Phase 4c UI reconstruction
+  per §3.4.7).
+
 ## Known Rough Edges
 
 File-path-cited, no editorial framing.
 
 ### Structural
 
-- **`comparable_sales` is in the scoped registry as of Handoff 3 (2026-04-24).** Registered at [briarwood/execution/registry.py:270-284](briarwood/execution/registry.py#L270-L284) with runner [briarwood/modules/comparable_sales_scoped.py](briarwood/modules/comparable_sales_scoped.py). The post-hoc graft at [briarwood/claims/pipeline.py:62-88](briarwood/claims/pipeline.py#L62-L88) still runs `ComparableSalesModule()` directly because it writes the legacy `{module_name, payload, metrics, summary}` shape that [briarwood/claims/synthesis/verdict_with_comparison.py:413-425](briarwood/claims/synthesis/verdict_with_comparison.py#L413-L425) `_iter_comps` expects, while the scoped runner emits the canonical `ModulePayload` (`data.legacy_payload.comps_used`) shape. The graft retirement is tracked separately — see ROADMAP.md *"Retire the ad-hoc `ComparableSalesModule()` graft in claims/pipeline.py"* 2026-04-24.
+- **`comparable_sales` is in the scoped registry as of Handoff 3 (2026-04-24).** Registered at [briarwood/execution/registry.py:270-284](briarwood/execution/registry.py#L270-L284) with runner [briarwood/modules/comparable_sales_scoped.py](briarwood/modules/comparable_sales_scoped.py). The post-hoc graft at [briarwood/claims/pipeline.py:62-114](briarwood/claims/pipeline.py#L62-L114) routes through the canonical scoped runner `run_comparable_sales(context)` as of CMA Phase 4a Cycle 6 (2026-04-28). The graft repackages the scoped wrapper's `data.legacy_payload` as a `ComparableSalesOutput` pydantic instance under `outputs["comparable_sales"]["payload"]` so [briarwood/claims/synthesis/verdict_with_comparison.py:413-425](briarwood/claims/synthesis/verdict_with_comparison.py#L413-L425) `_iter_comps` can keep using its `payload.comps_used` access path. The graft itself is still required because the orchestrator's routed run does not surface `comparable_sales` as a top-level entry in `module_results["outputs"]` (it runs only as an internal dependency of `valuation`); full removal is gated on top-level surfacing — see ROADMAP §4 High *Consolidate chat-tier execution*.
 - **`decision_model/scoring.py`'s `calculate_final_score` was deleted 2026-04-24** (Handoff 4). It and its supporting chain (`FinalScore`/`CategoryScore`/`SubFactorScore` dataclasses, all `_calculate_*` category builders, all `_score_*` helpers, the entire `lens_scoring.py` file) had zero production callers and were removed. Production synthesis at [briarwood/synthesis/structured.py](briarwood/synthesis/structured.py) was never coupled to this path. The `estimate_comp_renovation_premium` function + its utility helpers were preserved — they are called 7× from `briarwood/components.py`. See DECISIONS.md 2026-04-24 "PROMOTION_PLAN.md entry 15 scope-limit paragraph corrected."
 - **`security_model.py` is a stub.** [briarwood/modules/security_model.py](briarwood/modules/security_model.py) has minimal implementation; no downstream consumers.
 - **Resolver has no state-aware disambiguation.** For ambiguous queries like "526 West End Ave" the saved-properties directory contains three colliding slugs (`526-w-end-ave-avon-by-the-sea-nj`, `526-w-end-ave-statesville-nc-28677`, `526-west-end-ave`). The token-overlap scorer at [briarwood/agent/resolver.py:92-160](briarwood/agent/resolver.py#L92-L160) correctly returns ambiguity (None + ranked candidates); the risk is that downstream callers consume `ranked[0]` instead of presenting the disambiguation prompt.
@@ -230,8 +384,9 @@ File-path-cited, no editorial framing.
 - ADU cap rate `_DEFAULT_ADU_CAP_RATE = 0.08` and expense ratio `_ADU_EXPENSE_RATIO = 0.30` hardcoded in [briarwood/modules/comparable_sales.py](briarwood/modules/comparable_sales.py) (lines 28 and 32). They feed the `additional_unit_income_value` decomposition `ComparableSalesModule` performs; `unit_income_offset` and `hybrid_value` consume that decomposition transitively but do not define the constants themselves.
 - Risk thresholds hardcoded in [briarwood/modules/risk_model.py](briarwood/modules/risk_model.py): `OVERPRICED_THRESHOLD = 0.15`, `UNDERPRICED_THRESHOLD = -0.10`.
 - Claim-object thresholds hardcoded in [briarwood/claims/synthesis/verdict_with_comparison.py](briarwood/claims/synthesis/verdict_with_comparison.py): `VALUE_FIND` at delta ≤ -5%, `OVERPRICED` at delta ≥ +5%, sample-size-caveat threshold at 5 properties.
-- Cross-town comp TODO in `base_comp_selector.py`.
-- Renovation-premium TODO in comparable_sales agent (`estimate_comp_renovation_premium` not yet fed through).
+- Cross-town comp expansion landed in CMA Phase 4a Cycle 4 (2026-04-26). Engine B's `get_cma` queries each neighbor in [briarwood/modules/cma_invariants.py](briarwood/modules/cma_invariants.py)'s `TOWN_ADJACENCY` map for SOLD listings when same-town SOLD count is below `MIN_SOLD_COUNT`; rows tag `is_cross_town=True`. Engine A (saved comps) is still strictly same-town — its provider filters at [briarwood/modules/comparable_sales.py:76-86](briarwood/modules/comparable_sales.py#L76-L86) by normalized town. There is no `base_comp_selector.py` file in the repo; the same-town filter has no TODO comment.
+- Sqft matching uses a sliding score penalty at [briarwood/agents/comparable_sales/agent.py:429-444](briarwood/agents/comparable_sales/agent.py#L429-L444) — `score -= min(sqft_gap * 0.45, 0.28)` with rationale thresholds at 10% and 20% gap. There is no hard 15% tolerance band; weak-sqft matches degrade their score and flow downstream as cautions on the comp.
+- Renovation-premium pass-through to live (Engine B) comps deferred — `estimate_comp_renovation_premium` is internal to Engine A. See ROADMAP §4 Medium *Renovation premium pass-through to live comps*.
 
 ### Historical audit cross-references (still live)
 
