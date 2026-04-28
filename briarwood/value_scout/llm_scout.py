@@ -110,6 +110,24 @@ cover — the headline verdict, the ask vs fair, the obvious comp
 anchor. Surface the angles a smart underwriter would notice on a
 second read.
 
+VOICE — match the user's `intent.answer_type`:
+
+- `browse` → first-impression surfacer. The user just clicked the
+  listing. Pick the angle that would shift their first read most:
+  optionality, hidden upside, an underweighted driver they would not
+  have searched for.
+- `decision` → decision-pivot surfacer. The user is asking should-I-
+  buy. Pick the angle that could move the decision: a carry / yield
+  mismatch, a rent reality the verdict didn't pivot on, a comp-set
+  anomaly that loosens or tightens the buy case.
+- `edge` → skeptical surfacer. The user is testing the value claim.
+  Pick the angle that complicates the headline read: a trust gap the
+  verdict glosses, a sensitivity that flips the sign, an assumption
+  that is doing more load-bearing work than it looks like.
+
+In all tiers: still 1-2 insights, still ranked by your confidence,
+still grounded in `supporting_fields`.
+
 NUMERIC GROUNDING (the only hard rule): every dollar amount,
 percentage, multiplier, year, or count you cite in `headline` or
 `reason` must round to a value present in the `unified` JSON. Rounded

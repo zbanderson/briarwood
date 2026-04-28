@@ -2407,10 +2407,28 @@ def handle_decision(
                 decision.answer_type.value,
                 float(decision.confidence or 0.0),
             )
+            # Phase 4b Cycle 4: run the LLM scout on DECISION turns
+            # (the wedge fall-through path), cache insights on the
+            # session for the SSE adapter to emit, and pass them to
+            # the synthesizer so the `## What's Interesting` beat
+            # weaves a decision-pivot angle.
+            from briarwood.value_scout import scout_unified
+
+            scout_insights, _scout_report = scout_unified(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            session.last_scout_insights = (
+                [insight.model_dump(mode="json") for insight in scout_insights]
+                if scout_insights
+                else None
+            )
             synth_prose, synth_report = synthesize_with_llm(
                 unified=unified,
                 intent=intent,
                 llm=llm,
+                scout_insights=scout_insights or None,
             )
             if synth_prose:
                 cleaned = synth_prose
@@ -4116,10 +4134,28 @@ def handle_edge(
                 decision.answer_type.value,
                 float(decision.confidence or 0.0),
             )
+            # Phase 4b Cycle 4: run the LLM scout on EDGE turns,
+            # cache insights on the session, and pass them to the
+            # synthesizer. The scout's per-tier voice (set via the
+            # intent contract) biases toward skeptical / risk-adjacent
+            # angles for EDGE.
+            from briarwood.value_scout import scout_unified
+
+            scout_insights, _scout_report = scout_unified(
+                unified=unified_full,
+                intent=intent,
+                llm=llm,
+            )
+            session.last_scout_insights = (
+                [insight.model_dump(mode="json") for insight in scout_insights]
+                if scout_insights
+                else None
+            )
             synth_prose, synth_report = synthesize_with_llm(
                 unified=unified_full,
                 intent=intent,
                 llm=llm,
+                scout_insights=scout_insights or None,
             )
             if synth_prose:
                 narrative = synth_prose
