@@ -106,9 +106,15 @@ The ordered list of major moves. Each step carries a `[source]` tag —
     Phase 4c UI reconstruction (§3.4.7). With 3a + 3b both closed, the
     AI-Native Foundation umbrella's user-visible phase is complete and
     sequence step 4 (Phase 4b Scout) is now unblocked.
-4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]`
+4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycle 1 ✅ 2026-04-28**
    *Why now:* Apex differentiator for Briarwood vs Zillow/Redfin/realtor.com.
    Substrate is ready (`rent_zestimate` from CMA Cycle 3a is landed).
+   *Cycle 1 outcome:* LLM scout module + tests landed isolated (no handler
+   wiring). `scout_unified` callable; `SurfacedInsight` extended with
+   optional `confidence` + `category`. 11 new tests; baseline holds at
+   16 fail / 1573 pass. See [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md)
+   Cycle 1 closeout and DECISIONS.md 2026-04-28 entry.
+   *Open:* Cycles 2-7 (Cycle 2 wires `handle_browse` + synthesizer prose).
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
@@ -568,17 +574,26 @@ needs to be the apex of the product. … Scout is going to be the thing
 that answers the question that you don't know to ask."*
 ([SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) header).
 
-**Status:** Drafted; **all prerequisites closed 2026-04-28 — ready
-to start.** Resequenced 2026-04-27 to follow AI-Native Foundation
-Stages 1–3 (per [DECISIONS.md](DECISIONS.md) 2026-04-27 entry).
-Substrate is now richer than the original 2026-04-26 framing
-contemplated: `rent_zestimate` from CMA Cycle 3a is live, plus the
-full AI-Native Foundation surface (`turn_traces`,
-`data/llm_calls.jsonl` with `turn_id` linkage, `feedback` table,
-closed synthesis hint, `/admin` evaluation surface). See
-[`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md) "State of the repo
-at handoff" → "AI-Native Foundation substrate added 2026-04-28" for
-how this changes Scout's Cycles 6-7.
+**Status:** **In progress — Cycle 1 landed 2026-04-28.** Cycles 2-7
+open. Resequenced 2026-04-27 to follow AI-Native Foundation Stages
+1–3 (per [DECISIONS.md](DECISIONS.md) 2026-04-27 entry). Substrate is
+richer than the original 2026-04-26 framing contemplated:
+`rent_zestimate` from CMA Cycle 3a is live, plus the full AI-Native
+Foundation surface (`turn_traces`, `data/llm_calls.jsonl` with
+`turn_id` linkage, `feedback` table, closed synthesis hint, `/admin`
+evaluation surface). See [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+"State of the repo at handoff" → "AI-Native Foundation substrate
+added 2026-04-28" for how this changes Scout's Cycles 6-7.
+
+**Cycle 1 outcome (2026-04-28).** LLM scout module
+(`briarwood/value_scout/llm_scout.py::scout_unified`) + 11 tests
+landed isolated; no handler wiring yet. `SurfacedInsight` extended
+with optional `confidence` (numeric `[0,1]`) + `category` (free-form
+snake_case). One deviation: scout's terminal grounding rule is
+stricter than the synthesizer's — empty contract on regen-without-
+improvement instead of keeping ungrounded prose. See [DECISIONS.md](DECISIONS.md)
+2026-04-28 entry "Phase 4b Scout Cycle 1 landed" + Guardrail Review.
+Cycles 2-7 open; Cycle 2 wires `handle_browse` + synthesizer prose.
 
 **Framing.** Today's Value Scout is single-pattern (`uplift_dominance`),
 claims-wedge-only, gated behind `BRIARWOOD_CLAIMS_ENABLED`, and

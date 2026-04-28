@@ -1864,3 +1864,105 @@ reconstruction); [`FEEDBACK_LOOP_HANDOFF_PLAN.md`](FEEDBACK_LOOP_HANDOFF_PLAN.md
 user-memory `project_scout_apex.md` (Phase 4b Scout buildout, now
 unblocked); user-memory `project_llm_guardrails.md` (the standing
 directive).
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 1 landed: LLM scout module + tests
+
+**Decision.** Cycle 1 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed via commit `0ce8598` on 2026-04-28. The LLM-driven Value Scout
+is now a callable, fully tested module with no chat-tier handler
+wiring yet (Cycle 2 takes that). This is the first step of Phase 4b
+(ROADMAP.md §1 sequence step 4); the apex-differentiator buildout per
+the user-memory `project_scout_apex.md` framing.
+
+**What landed.**
+- `briarwood/value_scout/llm_scout.py` —
+  `scout_unified(*, unified, intent, llm, max_insights=2) ->
+  tuple[list[SurfacedInsight], dict]`. One LLM call via
+  `complete_structured_observed` at surface `value_scout.scan`.
+  Numeric grounding via `verify_response`; single regen at surface
+  `value_scout.scan.regen` when threshold-level violations are
+  present.
+- `briarwood/claims/base.py` — `SurfacedInsight` extended with
+  optional `confidence: float | None`
+  (`Field(default=None, ge=0.0, le=1.0)`) and `category: str | None`.
+  Default `None` preserves back-compat for the existing
+  `uplift_dominance` pattern; `scenario_id` was already nullable so
+  no schema-side change for the chat-tier-vs-claim-wedge split.
+- `briarwood/value_scout/__init__.py` — re-exports `scout_unified`
+  alongside the existing `scout_claim`.
+- `tests/value_scout/test_llm_scout.py` — 11 tests covering clean
+  draft, `max_insights` cap, regen-on-ungrounded-and-keep,
+  regen-without-improvement-returns-empty, missing inputs, blank
+  response, no-response, persistent exception, manifest surface
+  label, prompt regression.
+
+**Open Design Decisions resolved.**
+1. **#1 — Per-insight confidence scoring.** Resolved: numeric
+   `[0, 1]`. Schema enforces with `Field(ge=0, le=1)`; the prompt
+   asks the LLM for a self-rated score with semantic anchors (1.0 =
+   canonical, 0.7 = solid, 0.5 = borderline, < 0.4 = better not to
+   surface). Banding deferred to Cycle 5 if/when patterns coexist.
+2. **#2 — Insight cap per turn.** Resolved: 2 for v1. May tighten
+   to 1 after Cycle 2's browser smoke if surface feels noisy.
+
+**One deviation from plan, recorded for archaeology.**
+
+**Stricter terminal grounding rule than the synthesizer.** The plan
+called for "regen kept only when violations strictly decrease (mirror
+the synthesizer's pattern)" but the test scope explicitly required
+"regen-without-improvement returns the empty contract." The two are
+asymmetric: the synthesizer keeps the original draft when regen does
+not improve and surfaces it with violations recorded; scout in this
+landing returns the empty contract instead. Reasoning: the
+synthesizer has a caller fallback (`compose_browse_surface` in
+`handle_browse`) when prose is empty, so surfacing imperfect prose
+plus a violations report is a reasonable middle ground. Scout has no
+caller fallback for an ungrounded "what's interesting" beat —
+surfacing one would defeat the numeric guardrail without recourse.
+Resolved by honoring the test scope (the strict rule). Plan prose
+(`Cycles → Cycle 1 → Scope`) and code agree post-landing; the README
+copy that ships in Cycle 7 will state the asymmetry plainly.
+
+**Manual verification gate deferred.** No browser smoke required —
+Cycle 1 lands the module callable but unwired. Cycle 2's `handle_browse`
+integration is the first cycle that surfaces scout output to the user
+and gets a browser smoke gate.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag any
+guardrail holding back quality."* Walking the new scout path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | `complete_structured_observed` `max_attempts=2` retry budget | shared infra at [briarwood/agent/llm_observability.py](briarwood/agent/llm_observability.py) | No — same default the router uses; transient transport failures get one retry, persistent failures fall through cleanly. | Keep. |
+| 2 | `_ScoutScanResult` Pydantic strict-mode (`extra="forbid"`) on the structured-output schema | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | No — strict mode catches LLM non-compliance loudly so the empty-contract path can take over. Mirrors `RouterClassification`. | Keep. |
+| 3 | Numeric grounding via `verify_response` + single-regen pattern | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | This IS the numeric guardrail the user-memory entry explicitly preserves. Mandatory. | Keep. |
+| 4 | **Empty-contract-on-regen-without-improvement (stricter than synthesizer)** | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | Possibly tight. The conservative posture is correct given no caller fallback exists for an ungrounded scout angle. Could relax to "keep best-effort with violations report" later if browser smoke shows scout dropping too often. Watch for it during Cycle 2. | Keep + monitor. |
+| 5 | `max_insights=2` cap | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | No — Open Design Decision #2 resolved here; bias toward fewer/cleaner insights. May tighten to 1 after smoke. | Keep + monitor. |
+| 6 | Empty-contract on missing `unified` or missing `llm` (cheap pre-LLM gate) | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | No — matches the synthesizer's `llm_or_unified_missing` posture; saves a guaranteed-failure LLM call. | Keep. |
+| 7 | `BudgetExceeded` re-raise from observability wrapper, caught + mapped to empty contract here | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | No — preserves the cost-guard semantics other LLM call sites already use. | Keep. |
+| 8 | `category` is free-form `str` (not `Literal`) | [briarwood/value_scout/llm_scout.py](briarwood/value_scout/llm_scout.py) | No — deliberately permissive in v1 so the LLM can invent categories that fit a property. Will tighten when patterns coexist (Cycle 5). | Keep. |
+
+**Net finding from the guardrail walk:** zero quality-blocking
+restrictions. Guardrail #4 (terminal-empty-on-regen-failure) is the
+one to watch — if Cycle 2 browser smoke shows scout silently dropping
+on properties where it should fire, relax to "keep with violations
+report" and surface the report in the `/admin` drill-down.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 1 closeout (status flipped to ✅);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 (in progress);
+[`ROADMAP.md`](ROADMAP.md) §3.2 (status updated);
+user-memory `project_scout_apex.md` (Scout = apex; Cycle 1 first step);
+user-memory `project_llm_guardrails.md` (drove the Guardrail Review
+shape); commit `0ce8598`. README updates
+(`briarwood/value_scout/README.md`, `briarwood/claims/README.md`)
+intentionally deferred to Cycle 7 per the SCOUT_HANDOFF_PLAN.md
+batching convention — Cycle 7 owns the consolidated changelog
+spanning all six cycles' contract changes.

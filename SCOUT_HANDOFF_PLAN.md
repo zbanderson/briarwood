@@ -2,7 +2,7 @@
 
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE-rebuild walkthrough. Owner framing: *"Scout needs to be the apex of the product. You have to remember what differentiates briarwood from the zillows / redfins, we're not a discovery tool we are a decision engine, and what powers that is scout. Scout is going to be the thing that answers the question that you dont know to ask."* User-memory: [project_scout_apex.md](/Users/zachanderson/.claude/projects/-Users-zachanderson-projects-briarwood/memory/project_scout_apex.md).
-**Status:** Drafted; **all prerequisites closed 2026-04-28 — ready to start.**
+**Status:** **In progress — Cycle 1 landed 2026-04-28.** Cycles 2-7 open.
 Sequence position: step 4 of [`ROADMAP.md`](ROADMAP.md) §1, unblocked by
 the AI-Native Foundation umbrella's user-visible phase landing
 (steps 1, 2, 3a, 3b all ✅). Plan was originally drafted 2026-04-26
@@ -107,7 +107,9 @@ originally lacked:
 
 ### Cycle 1 — LLM scout module + grounding + tests
 
-**Status:** Not started.
+**Status:** ✅ **Landed 2026-04-28** (commit `0ce8598`).
+
+**Closeout (2026-04-28).** All scope items shipped. `briarwood/value_scout/llm_scout.py::scout_unified` is callable but not wired to any chat-tier handler — Cycle 2 takes that. `SurfacedInsight` extended with optional `confidence` (Field ge=0, le=1) + `category`; `scenario_id` already nullable so no schema-side change. Existing `scout_claim` and `uplift_dominance` unchanged. 11 new tests in `tests/value_scout/test_llm_scout.py`; full suite at 16 fail / 1573 pass (= 1562 baseline + 11 new), no regressions. One deviation from plan: scout's terminal grounding rule is **stricter** than the synthesizer's — when regen does not strictly reduce violations, scout returns the empty contract rather than surfacing ungrounded insights. The Cycle 1 test description ("regen-without-improvement returns the empty contract") explicitly required this asymmetry; reasoning is that there is no caller fallback for an ungrounded "what's interesting" beat. See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout Cycle 1 landed" for the full closeout + Guardrail Review. README updates (`briarwood/value_scout/README.md`, `briarwood/claims/README.md`) intentionally deferred to Cycle 7 per this plan's batching convention.
 
 **Why first.** Land the new LLM scout as a callable, tested module before any handler integration. Mirrors Phase 2 Cycle 2 pattern — new function lands in isolation, then handlers get rewired in subsequent cycles.
 
