@@ -5,6 +5,7 @@ from pathlib import Path
 
 from api.store import ConversationStore
 from briarwood.eval.alignment import compute_alignment_score
+from briarwood.eval.model_alignment_backfill import backfill_model_alignment
 from briarwood.feedback.model_alignment_analyzer import analyze_rows
 from briarwood.modules.comparable_sales_scoped import receive_feedback as receive_comp_feedback
 from briarwood.modules.current_value_scoped import receive_feedback as receive_current_value_feedback
@@ -21,6 +22,52 @@ def _outcome() -> dict[str, object]:
         "outcome_type": "sale_price",
         "outcome_value": 1_000_000,
         "outcome_date": "2026-04-01",
+    }
+
+
+def _write_outcome_file(tmp_path: Path, *, property_id: str | None = "NJ-1") -> Path:
+    path = tmp_path / "outcomes.jsonl"
+    row = {
+        "address": "1 Main St, Belmar, NJ",
+        "outcome_type": "sale_price",
+        "outcome_value": 1_000_000,
+        "outcome_date": "2026-04-01",
+    }
+    if property_id is not None:
+        row["property_id"] = property_id
+    path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_saved_property(tmp_path: Path, *, property_id: str = "NJ-1") -> Path:
+    root = tmp_path / "saved_properties"
+    property_dir = root / property_id
+    property_dir.mkdir(parents=True)
+    (property_dir / "inputs.json").write_text(
+        json.dumps(
+            {
+                "property_id": property_id,
+                "facts": {"address": "1 Main St, Belmar, NJ"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (property_dir / "summary.json").write_text(
+        json.dumps({"property_id": property_id, "address": "1 Main St, Belmar, NJ"}),
+        encoding="utf-8",
+    )
+    return root
+
+
+def _valuation_runner(_context: object) -> dict[str, object]:
+    return {
+        "confidence": 0.81,
+        "data": {
+            "legacy_payload": {
+                "briarwood_current_value": 900_000,
+                "pricing_view": "discounted",
+            }
+        },
     }
 
 
@@ -131,6 +178,69 @@ def test_comparable_sales_receive_feedback_records_metric_value(tmp_path: Path) 
     assert result["status"] == "recorded"
     assert rows[0]["predicted_value"] == 940_000
     assert rows[0]["underperformed"] is False
+
+
+def test_model_alignment_backfill_dry_run_uses_saved_property_match(tmp_path: Path) -> None:
+    saved_properties = _write_saved_property(tmp_path)
+    outcomes = _write_outcome_file(tmp_path)
+
+    result = backfill_model_alignment(
+        outcomes_path=outcomes,
+        saved_properties_dir=saved_properties,
+        modules=["valuation"],
+        dry_run=True,
+        runners={"valuation": _valuation_runner},
+    )
+
+    assert result.error is None
+    assert result.recorded == 1
+    assert result.properties_matched == 1
+    assert result.rows[0]["module_name"] == "valuation"
+    assert result.rows[0]["underperformed"] is True
+
+
+def test_model_alignment_backfill_records_and_skips_duplicates(tmp_path: Path) -> None:
+    saved_properties = _write_saved_property(tmp_path)
+    outcomes = _write_outcome_file(tmp_path)
+    store = _store(tmp_path)
+
+    first = backfill_model_alignment(
+        outcomes_path=outcomes,
+        saved_properties_dir=saved_properties,
+        modules=["valuation"],
+        store=store,
+        runners={"valuation": _valuation_runner},
+    )
+    second = backfill_model_alignment(
+        outcomes_path=outcomes,
+        saved_properties_dir=saved_properties,
+        modules=["valuation"],
+        store=store,
+        runners={"valuation": _valuation_runner},
+    )
+
+    rows = store.model_alignment_rows(module_name="valuation")
+    assert first.recorded == 1
+    assert second.recorded == 0
+    assert second.skipped[0].reason == "duplicate_alignment_row"
+    assert len(rows) == 1
+    assert rows[0]["property_id"] == "NJ-1"
+
+
+def test_model_alignment_backfill_matches_outcome_by_address(tmp_path: Path) -> None:
+    saved_properties = _write_saved_property(tmp_path)
+    outcomes = _write_outcome_file(tmp_path, property_id=None)
+
+    result = backfill_model_alignment(
+        outcomes_path=outcomes,
+        saved_properties_dir=saved_properties,
+        modules=["valuation"],
+        dry_run=True,
+        runners={"valuation": _valuation_runner},
+    )
+
+    assert result.recorded == 1
+    assert result.rows[0]["evidence"]["match_method"] == "address"
 
 
 def test_model_alignment_analyzer_surfaces_candidates(tmp_path: Path) -> None:

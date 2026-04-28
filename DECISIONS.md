@@ -2605,3 +2605,39 @@ tuning candidates. Auto-recalibration remains out of scope.
 [`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and §3.1 Stage 4;
 [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) Persistence;
 [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) Feedback / model-accuracy cluster.
+
+---
+
+## 2026-04-28 — Stage 4 saved-property alignment backfill runner landed
+
+**Decision.** Stage 4 now includes a separate saved-property alignment
+backfill runner. The JSONL outcome backfill remains responsible for
+attaching ground-truth outcomes to historical
+`data/learning/intelligence_feedback.jsonl` rows; the new runner is
+responsible for turning a manual outcome file into durable
+`model_alignment` rows by re-running the Stage 4 priority modules against
+matched saved properties.
+
+**What landed.**
+- `briarwood/eval/model_alignment_backfill.py` resolves outcome rows to
+  `data/saved_properties/<property_id>` by exact `property_id` first and
+  normalized address second.
+- `scripts/backfill_model_alignment.py` runs `current_value`, `valuation`,
+  and `comparable_sales` for matched saved properties, then records rows
+  through the existing record-only receiver hooks.
+- The runner supports `--dry-run`, custom SQLite DB paths for verification,
+  and duplicate protection by default. Duplicate insertion requires
+  `--allow-duplicates`.
+
+**Guardrails.**
+- The runner does not mutate `turn_traces`, module weights, thresholds,
+  prompts, or semantic labels.
+- Address-only matches remain strict: ambiguous saved-property matches are
+  skipped rather than guessed.
+- No real outcome data was added in this change; the owner still needs to
+  supply `data/outcomes/` rows before Stage 4 can be marked resolved.
+
+**Cross-references.** [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md)
+Cycle 2 / Cycle 4b; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and
+§3.1 Stage 4; [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) Stage 4;
+[`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) Feedback / model-accuracy cluster.

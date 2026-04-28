@@ -87,6 +87,7 @@ blockers_for_tool_use:
 notes:
   - Receivers exposed by current_value, valuation, and comparable_sales scoped modules
   - Durable store: api.store model_alignment table
+  - Alignment backfill: scripts/backfill_model_alignment.py
   - Analyzer: briarwood.feedback.model_alignment_analyzer
 ```
 
@@ -113,6 +114,7 @@ blockers_for_tool_use:
 notes:
   - CLI: scripts/ingest_outcomes.py
   - JSONL backfill: scripts/backfill_outcomes.py
+  - Saved-property alignment backfill: scripts/backfill_model_alignment.py
 ```
 
 ---

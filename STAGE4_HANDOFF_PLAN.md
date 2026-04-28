@@ -2,8 +2,10 @@
 
 **Status:** Implementation substrate landed 2026-04-28. Outcome ingestion,
 backfill, `model_alignment`, receiver hooks, and analyzer reporting are
-implemented. Real outcome data still needs to be supplied and run through the
-backfill before human tuning candidates can be reviewed against live rows.
+implemented. A saved-property alignment backfill runner now connects a manual
+outcome file to priority module calls and `model_alignment` rows. Real outcome
+data still needs to be supplied and run through the backfills before human
+tuning candidates can be reviewed against live rows.
 **Size:** M-L (~1-2 handoffs; recommended 5 cycles + closeout).
 **Sequence position:** Step 5 of [`ROADMAP.md`](ROADMAP.md) section 1. Phase 4b
 Scout is complete as of 2026-04-28; Phase 4c BROWSE summary rebuild stays
@@ -48,8 +50,9 @@ Five additive pieces plus closeout:
    properties. Manual CSV/JSON is the v1 source; public-record automation
    can follow later.
 2. **One-shot backfill.** Attach outcome data to historical
-   `data/learning/intelligence_feedback.jsonl` rows and persisted
-   `turn_traces` / feedback-linked rows where a property match is possible.
+   `data/learning/intelligence_feedback.jsonl` rows and generate
+   `model_alignment` rows from saved-property module calls where a property
+   match is possible.
 3. **Real module feedback receivers.** Implement `receive_feedback()` for
    `current_value`, `valuation`, and `comparable_sales` first.
 4. **Persist module confidence-vs-outcome alignment.** Add a
@@ -218,10 +221,11 @@ human-reviewed later. They should not silently change module weights.
 **Pause gate.** Confirm the owner has an initial outcome file or wants a
 sample template committed.
 
-### Cycle 2 - One-shot backfill into JSONL and persisted turn rows
+### Cycle 2 - One-shot backfill into JSONL and alignment rows
 
 **Status:** Landed 2026-04-28 for JSONL backfill. Persisted turn rows are not
-mutated; `model_alignment` rows are the durable store.
+mutated; `model_alignment` rows are the durable store. A saved-property
+alignment backfill runner was added in the implementation follow-on.
 
 **Scope.**
 - Add `scripts/backfill_outcomes.py` or extend the existing
@@ -235,6 +239,11 @@ mutated; `model_alignment` rows are the durable store.
   is weak, emit an unmatched report rather than writing alignment.
 - Do not mutate `turn_traces` in v1. Alignment rows in Cycle 3 are the durable
   store.
+- Run priority modules for matched saved properties with
+  `scripts/backfill_model_alignment.py`. It supports `--dry-run`, strict
+  property-id/address matching through the outcome contract, duplicate
+  protection, and the Stage 4 priority modules only:
+  `current_value`, `valuation`, and `comparable_sales`.
 
 **Tests.**
 - Dry-run does not write.
@@ -242,6 +251,9 @@ mutated; `model_alignment` rows are the durable store.
 - Existing non-null outcomes are not overwritten unless
   `--overwrite-outcome` is explicitly passed.
 - Ambiguous matches are reported, not guessed.
+- Alignment backfill dry-run produces rows without mutating SQLite.
+- Re-running the alignment backfill skips duplicate rows unless
+  `--allow-duplicates` is explicitly passed.
 
 ### Cycle 3 - `model_alignment` table + module feedback receivers
 
@@ -304,6 +316,27 @@ mutated; `model_alignment` rows are the durable store.
 - Mixed module rows aggregate correctly.
 - Candidate list includes only high-confidence underperformance rows.
 - JSON output is stable enough for future admin integration.
+
+### Cycle 4b - Saved-property alignment backfill runner
+
+**Status:** Landed 2026-04-28.
+
+**Scope.**
+- Add `briarwood/eval/model_alignment_backfill.py` and
+  `scripts/backfill_model_alignment.py`.
+- Resolve manual outcome rows to saved properties by exact `property_id`
+  first and normalized address second.
+- Build an `ExecutionContext` from `data/saved_properties/<id>/inputs.json`
+  and `summary.json`, run the Stage 4 priority modules, and record alignment
+  rows through the existing record-only receiver hooks.
+- Keep the runner offline and deterministic with `--dry-run` and duplicate
+  protection by default.
+
+**Tests.**
+- Property-id and address matching.
+- Dry-run row generation without DB mutation.
+- Real insert through the receiver hook using a temp SQLite store.
+- Duplicate skip on repeat runs.
 
 ### Cycle 5 - Optional admin read surface, minimal only
 
@@ -385,7 +418,8 @@ Focused checks should gate each cycle:
 - `venv/bin/python -m pytest tests/test_api_turn_traces.py tests/test_api_feedback.py tests/test_api_admin.py`
   when touching persistence/admin read paths.
 - New tests for `briarwood/eval/outcomes.py`,
-  `briarwood/eval/alignment.py`, and the alignment analyzer.
+  `briarwood/eval/alignment.py`, `briarwood/eval/model_alignment_backfill.py`,
+  and the alignment analyzer.
 - CLI dry-run against a tiny fixture outcome file.
 - `venv/bin/python -m pytest tests/test_feedback_loop.py` if
   `feedback/analyzer.py` changes.
@@ -404,6 +438,8 @@ handoff count: 20 failures / 3 errors.
   safe match exists.
 - `current_value`, `valuation`, and `comparable_sales` can record alignment
   rows against actual sale outcomes.
+- `scripts/backfill_model_alignment.py` can generate persisted alignment rows
+  from saved-property module calls once a real outcome file is supplied.
 - The analyzer reports high-confidence underperformance examples with
   enough evidence for a human to decide whether to tune a prompt/weight.
 - No code path automatically changes module weights, thresholds, or prompts.

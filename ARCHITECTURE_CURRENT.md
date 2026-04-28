@@ -380,6 +380,14 @@ before the loop has live rows to review.
   script attaches outcome objects to matching
   `data/learning/intelligence_feedback.jsonl` rows, preserves a `.bak`, and
   refuses to overwrite non-null outcomes unless explicitly requested.
+- **Alignment backfill** in
+  [briarwood/eval/model_alignment_backfill.py](briarwood/eval/model_alignment_backfill.py)
+  and [scripts/backfill_model_alignment.py](scripts/backfill_model_alignment.py).
+  It resolves outcome rows to saved properties by strict `property_id` first
+  and normalized address second, builds an `ExecutionContext` from
+  `data/saved_properties/<id>/inputs.json`, runs `current_value`,
+  `valuation`, and `comparable_sales`, and records `model_alignment` rows.
+  It supports `--dry-run` and skips duplicate rows by default.
 - **`model_alignment` table** in [`data/web/conversations.db`](api/store.py).
   Declared in `ConversationStore._init_schema`; insert/read helpers are
   `insert_model_alignment` and `model_alignment_rows`. Rows carry

@@ -224,6 +224,11 @@ Foundation Stage 4 added the mechanics Loop 1 was missing:
   validation via [scripts/ingest_outcomes.py](scripts/ingest_outcomes.py).
 - One-shot JSONL outcome backfill via
   [scripts/backfill_outcomes.py](scripts/backfill_outcomes.py).
+- Saved-property alignment backfill via
+  [scripts/backfill_model_alignment.py](scripts/backfill_model_alignment.py),
+  which runs the Stage 4 priority modules for outcome-matched saved
+  properties and records durable alignment rows with dry-run and duplicate
+  protection.
 - Durable per-module `model_alignment` rows in
   [api/store.py](api/store.py), storing prediction, confidence, actual
   outcome, absolute error, absolute percentage error, alignment score, and

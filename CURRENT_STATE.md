@@ -86,10 +86,11 @@ The latest documented work centers on:
 - Phase 4a CMA closeout: live SOLD/ACTIVE comp support and
   SearchApi-backed `rent_zestimate` substrate
 - AI-Native Stage 4 implementation substrate: manual outcome loader,
-  outcome backfill, `model_alignment` table, record-only feedback hooks
-  for `current_value` / `valuation` / `comparable_sales`, and analyzer
-  reporting are landed. Real outcome data still needs to be supplied and
-  run through the backfill before human tuning candidates can be reviewed
+  JSONL outcome backfill, saved-property alignment backfill,
+  `model_alignment` table, record-only feedback hooks for `current_value` /
+  `valuation` / `comparable_sales`, and analyzer reporting are landed.
+  Real outcome data still needs to be supplied and run through the
+  backfills before human tuning candidates can be reviewed
 - remaining post-Scout sequence work: run Stage 4 against real outcome
   data, then Phase 4c BROWSE summary card rebuild
 

@@ -159,9 +159,10 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
    *Status:* Implementation substrate landed 2026-04-28 via
    [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md): manual outcome
-   ingestion, one-shot backfill, `model_alignment`, module receiver hooks,
-   and analyzer reporting. Still needs a real outcome file/backfill run
-   before human tuning candidates can be reviewed.
+   ingestion, one-shot JSONL backfill, saved-property alignment backfill,
+   `model_alignment`, module receiver hooks, and analyzer reporting. Still
+   needs a real outcome file/backfill run before human tuning candidates can
+   be reviewed.
 6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner; parking lot]`
    *Why now:* Substrate (real comps + Scout outputs) finally available; the
    rebuilt summary card needs both to honestly hold together.
@@ -533,9 +534,10 @@ useless if the owner can't see them.
 **Status:** Implementation substrate landed 2026-04-28 —
 [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) is the canonical
 handoff plan. Outcome ingestion, one-shot JSONL backfill,
-`model_alignment`, record-only module feedback hooks, and analyzer
-reporting are implemented. The loop still needs a real outcome file and
-backfill run before live human tuning candidates can be reviewed.
+saved-property alignment backfill, `model_alignment`, record-only module
+feedback hooks, and analyzer reporting are implemented. The loop still
+needs a real outcome file and backfill run before live human tuning
+candidates can be reviewed.
 
 Source: "~1-2 handoffs."
 
@@ -595,6 +597,10 @@ cannot compute the confidence-vs-outcome correlation it is built for.
   `data/learning/intelligence_feedback.jsonl` rows when a strict match
   exists; it preserves a `.bak`, supports `--dry-run`, and refuses to
   overwrite non-null outcomes unless explicitly requested.
+- `briarwood/eval/model_alignment_backfill.py` and
+  `scripts/backfill_model_alignment.py` resolve outcome rows to saved
+  properties, run `current_value`, `valuation`, and `comparable_sales`, and
+  record `model_alignment` rows with `--dry-run` and duplicate protection.
 - `api/store.py` now declares `model_alignment` plus insert/read helpers.
 - `briarwood/eval/alignment.py` computes absolute error, absolute pct
   error, alignment score, high-confidence flag, and underperformance flag.
@@ -618,8 +624,9 @@ cannot compute the confidence-vs-outcome correlation it is built for.
   for any module-touch handoff.
 
 **Remaining gate before marking resolved:** supply a real outcome file under
-`data/outcomes/`, run the backfill, record at least one real alignment row,
-and review the analyzer output for human tuning candidates. No
+`data/outcomes/`, run the JSONL and alignment backfills, record at least one
+real alignment row, and review the analyzer output for human tuning
+candidates. No
 auto-recalibration should run as part of that gate.
 
 **Sequencing note:** Stage 4 can sensibly run *after* Phase 4b (Scout) —
