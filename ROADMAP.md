@@ -106,7 +106,7 @@ The ordered list of major moves. Each step carries a `[source]` tag —
     Phase 4c UI reconstruction (§3.4.7). With 3a + 3b both closed, the
     AI-Native Foundation umbrella's user-visible phase is complete and
     sequence step 4 (Phase 4b Scout) is now unblocked.
-4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-2 ✅ 2026-04-28**
+4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-3 ✅ 2026-04-28**
    *Why now:* Apex differentiator for Briarwood vs Zillow/Redfin/realtor.com.
    Substrate is ready (`rent_zestimate` from CMA Cycle 3a is landed).
    *Cycle 1 outcome:* LLM scout module + tests landed isolated (no handler
@@ -118,8 +118,15 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    "## What's Interesting" beat now an explicit weave-the-insight
    directive. New `scout_insights` SSE event (Python + TS mirror).
    8 new tests; baseline holds at 16 fail / 1581 pass.
-   *Open:* Cycles 3-7 (Cycle 3 lands the dedicated drilldown surface
-   in `web/src/components/chat/`).
+   *Cycle 3 outcome:* `ScoutFinds` React component lands as the
+   dedicated drilldown surface between synthesizer prose and the
+   card stack. `category → drill-in route` mapping in TS
+   (`scout-routes.ts`) with graceful fallback for LLM-invented
+   categories. Live browser smoke confirmed end-to-end render.
+   Two prompt-tuning items filed for Cycle 6 (scout angles too
+   synthesizer-adjacent; LLM invents categories outside canonical
+   set).
+   *Open:* Cycles 4-7 (Cycle 4 generalizes wiring to DECISION + EDGE).
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
@@ -619,6 +626,25 @@ smoke deferred to live UI session. See [DECISIONS.md](DECISIONS.md)
 Cycles 3-7 open; Cycle 3 lands the dedicated drilldown surface in
 `web/src/components/chat/` plus the category → drill-in-route
 mapping.
+
+**Cycle 3 outcome (2026-04-28).** `web/src/components/chat/scout-finds.tsx`
++ `web/src/lib/chat/scout-routes.ts` ship the `ScoutFinds` drilldown
+surface; rendered between `GroundedText` and `StrategyPathCard` per
+OD #6. Open Design Decisions resolved: #4 existing module routes
+only, #5 `ScoutFinds` placeholder name with "Scout Finds" /
+"Angles you didn't ask about" UI copy (per `project_brand_evolution.md`),
+#6 placement under prose. Verified via `tsc --noEmit` + ESLint +
+`next build` + live browser smoke end-to-end render. React-render
+unit tests deferred (no JS test framework in repo; meta-infra
+decision). Two browser-smoke findings filed for Cycle 6:
+(a) scout angles overlap the synthesizer's `## Why` beat instead of
+surfacing genuinely non-obvious findings, (b) LLM invents categories
+outside the canonical set — fallback works but UI badge reads odd.
+See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout
+Cycle 3 landed".
+
+Cycles 4-7 open; Cycle 4 generalizes the BROWSE wiring to DECISION
+and EDGE handlers with per-tier voice.
 
 **Framing.** Today's Value Scout is single-pattern (`uplift_dominance`),
 claims-wedge-only, gated behind `BRIARWOOD_CLAIMS_ENABLED`, and

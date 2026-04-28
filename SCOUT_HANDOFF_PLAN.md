@@ -2,7 +2,7 @@
 
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE-rebuild walkthrough. Owner framing: *"Scout needs to be the apex of the product. You have to remember what differentiates briarwood from the zillows / redfins, we're not a discovery tool we are a decision engine, and what powers that is scout. Scout is going to be the thing that answers the question that you dont know to ask."* User-memory: [project_scout_apex.md](/Users/zachanderson/.claude/projects/-Users-zachanderson-projects-briarwood/memory/project_scout_apex.md).
-**Status:** **In progress — Cycles 1-2 landed 2026-04-28.** Cycles 3-7 open.
+**Status:** **In progress — Cycles 1-3 landed 2026-04-28.** Cycles 4-7 open.
 Sequence position: step 4 of [`ROADMAP.md`](ROADMAP.md) §1, unblocked by
 the AI-Native Foundation umbrella's user-visible phase landing
 (steps 1, 2, 3a, 3b all ✅). Plan was originally drafted 2026-04-26
@@ -174,7 +174,9 @@ originally lacked:
 
 ### Cycle 3 — Dedicated drilldown surface in BROWSE (frontend)
 
-**Status:** Not started. Blocks on Cycle 2.
+**Status:** ✅ **Landed 2026-04-28** (commit `919f0fe`).
+
+**Closeout (2026-04-28).** All scope items shipped. Component name `ScoutFinds` (placeholder per `project_brand_evolution.md` memory; user-facing header "Scout Finds" with subtitle "Angles you didn't ask about"); category → drill-in mapping centralized in `web/src/lib/chat/scout-routes.ts` covering 6 known categories with graceful fallback for LLM-invented ones; component renders 0-2 cards (own internal null guard). Position: between `GroundedText` and `StrategyPathCard` per OD #6 default. Verification via `tsc --noEmit` clean, ESLint clean (1 pre-existing warning unrelated), `next build` clean, **live browser smoke 2026-04-28 confirmed end-to-end render** (SSE event → reducer → ScoutFinds with category badges + confidence% + headline + reason + Drill-in buttons). React-render unit tests deferred — repo has no JS test framework; meta-infra decision out of cycle. Two browser-smoke findings filed for Cycle 6 prompt tuning: (a) scout's angles too synthesizer-adjacent (restate `## Why` beat instead of surfacing genuinely non-obvious like $8k Zillow rent vs $2.3k working rent gap), (b) LLM invents categories outside canonical set (`optional_signal` etc.) — fallback handles cleanly but visible label reads odd. See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout Cycle 3 landed".
 
 **Scope:**
 - New React component `WorthACloserLook` (or similar name — owner picks at start of cycle) in `web/src/components/chat/`. Renders 1-2 scout insight cards: each has a category badge, the headline, a one-line reason, and a "Drill in →" link.

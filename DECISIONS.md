@@ -2107,3 +2107,114 @@ directive); commit `038ca51`. README updates
 intentionally deferred to Cycle 7 per the SCOUT_HANDOFF_PLAN.md
 batching convention — Cycle 7 owns the consolidated changelog
 spanning all six cycles' contract changes.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 3 landed: ScoutFinds drilldown surface
+
+**Decision.** Cycle 3 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed via commit `919f0fe` on 2026-04-28. The dedicated drilldown
+surface for Scout-surfaced angles now renders in BROWSE between the
+synthesizer prose and the existing card stack. **Live browser smoke
+2026-04-28 confirmed end-to-end render** (SSE event arrives → reducer
+populates session → `ScoutFinds` renders with category badges,
+confidence percent, headline, reason, and category-routed Drill-in
+buttons).
+
+**What landed (4 files).**
+- `web/src/lib/chat/scout-routes.ts` — pure category → `{prompt, label}`
+  mapping covering 6 known categories (`rent_angle`, `town_trend`,
+  `adu_signal`, `comp_anomaly`, `carry_yield_mismatch`, `optionality`).
+  Unknown / null categories fall back to a generic "Tell me more" prompt
+  — no 404 path.
+- `web/src/components/chat/scout-finds.tsx` — `ScoutFinds` React
+  component. Renders 0-2 cards (own internal null guard). Category
+  badge + confidence% + headline + one-line reason + Drill-in button
+  per insight. Defensive UI cap-2 mirrors the LLM scout cap.
+- `web/src/lib/chat/use-chat.ts` — `ChatMessage.scoutInsights` field +
+  `case "scout_insights"` reducer mirroring existing pattern.
+- `web/src/components/chat/messages.tsx` — `<ScoutFinds insights={...}
+  onPrompt={onPrompt}/>` rendered between `GroundedText` and
+  `StrategyPathCard`.
+
+**Open Design Decisions resolved.**
+- **#4 — Drilldown grammar.** Resolved: existing module drill-in routes
+  only (plan default). Centralized in `scout-routes.ts`. Unknown
+  categories fall through to a generic follow-up — graceful degradation.
+- **#5 — Surface name.** Resolved: `ScoutFinds` placeholder per
+  `project_brand_evolution.md` memory. UI header "Scout Finds" with
+  subtitle "Angles you didn't ask about." Rename when product brand
+  finalizes (ScoutAI / PropertyScout TBD).
+- **#6 — Placement.** Resolved: under synthesizer prose, above card
+  stack (plan default). Pairs the `## What's Interesting` beat with
+  the dedicated drilldown card.
+
+**Two browser-smoke findings filed for Cycle 6.**
+1. **Scout angles too synthesizer-adjacent.** Both turns' first scout
+   insight restated "ask is 6% above fair value" — exactly what the
+   `## Why` beat already covers. Genuinely non-obvious angles (e.g.
+   $8k Zillow market rent vs $2.3k working rent — 3.4× gap visible in
+   the unified output) were not picked up. Cycle 6 owns scout prompt
+   tuning; this is the iteration target.
+2. **LLM invents categories outside the canonical set.** Smoke surfaced
+   `optional_signal` (not in mapping). The fallback handles it
+   gracefully but the visible badge "OPTIONAL SIGNAL" reads odd. Two
+   options: (a) tighten scout prompt to a fixed enum, (b) loosen UI
+   to format unknown categories more gracefully + expand the explicit
+   mapping. Recommend (b) — preserves the "permitted to invent"
+   flexibility. Cycle 6.
+
+**Three plan deviations, recorded for archaeology.**
+
+1. **First-turn render quirk during smoke.** First BROWSE turn after
+   `dev_chat.py` start did NOT render `ScoutFinds` despite the
+   `scout_insights` SSE event arriving (verified via DevTools network
+   tab). Second turn rendered correctly. Diagnosed as a Turbopack
+   bundle-refresh quirk for newly-created component files: the dev
+   server starts before the browser-side bundle has the new module
+   resolved. Hot-reload catches up by Turn 2. Not a code bug; will
+   not repeat in production builds. Documented for the next person
+   who hits this.
+2. **No JS test framework added.** Plan called for "React component
+   render test for 0/1/2 insights" + "drilldown click target test."
+   The repo has no Vitest / Jest / Testing Library configured. Adding
+   one is a meta-infra decision out of Cycle 3 scope. Verification
+   relied on `tsc --noEmit` + ESLint + `next build` + live browser
+   smoke. Real React-render coverage is a follow-up worth filing.
+3. **`ScoutFinds` is a placeholder name.** The owner explicitly framed
+   the component name as non-load-bearing ("we can call it ScoutFinds
+   for now maybe and we can always switch it"). The internal
+   filename, class name, and UI header all use this name; expect a
+   batch rename when the product brand finalizes per
+   `project_brand_evolution.md`.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+The user-memory entry says *"Loosen LLM invocation broadly; perfect
+product first, optimize cost later. Numeric guardrail stays. Flag
+any guardrail holding back quality."* Walking the new frontend path:
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | UI cap-2 on insight cards (defensive vs LLM cap-2) | [scout-finds.tsx](web/src/components/chat/scout-finds.tsx) | No — mirrors the server-side cap; protects against surface drift if the cap changes server-side without UI update. | Keep. |
+| 2 | `ScoutFinds` returns null on empty insights | [scout-finds.tsx](web/src/components/chat/scout-finds.tsx) | No — plan-mandated empty state. | Keep. |
+| 3 | Unknown categories use fallback prompt | [scout-routes.ts](web/src/lib/chat/scout-routes.ts) | No — keeps surface from breaking when LLM invents categories; graceful path. | Keep. |
+| 4 | Drill-in routes limited to existing module surfaces | [scout-routes.ts](web/src/lib/chat/scout-routes.ts) | Possibly — ad-hoc deep links would let cards land on the specific evidence field, not just the surface. Owner picked existing routes for v1; revisit per Cycle 6 telemetry. | Keep + monitor (per OD #4). |
+| 5 | `formatCategory` simple capitalization | [scout-finds.tsx](web/src/components/chat/scout-finds.tsx) | Minor — produces "Optional signal" badge when LLM invents `optional_signal`. Not a quality block, just a polish item. Cycle 6 handles. | Keep + iterate. |
+
+**Net finding from the guardrail walk:** zero quality-blocking
+restrictions. Two pin points (#4 ad-hoc deep links, #5 category
+formatting) carried as Cycle 6 watch-items.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 3 closeout (status flipped to ✅);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 (in progress);
+[`ROADMAP.md`](ROADMAP.md) §3.2 (Cycle 3 outcome added);
+DECISIONS.md 2026-04-28 entry "Phase 4b Scout Cycle 2 landed"
+(prior cycle); user-memory `project_scout_apex.md`;
+user-memory `project_brand_evolution.md` (ScoutFinds naming
+direction); user-memory `project_llm_guardrails.md`; commit `919f0fe`.
+README updates intentionally deferred to Cycle 7 per the
+SCOUT_HANDOFF_PLAN.md batching convention.
