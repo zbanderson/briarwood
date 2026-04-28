@@ -106,7 +106,7 @@ The ordered list of major moves. Each step carries a `[source]` tag —
     Phase 4c UI reconstruction (§3.4.7). With 3a + 3b both closed, the
     AI-Native Foundation umbrella's user-visible phase is complete and
     sequence step 4 (Phase 4b Scout) is now unblocked.
-4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-3 ✅ 2026-04-28**
+4. **Phase 4b — Scout buildout** `[DECISIONS.md 2026-04-27]` — **In progress; Cycles 1-4 ✅ 2026-04-28**
    *Why now:* Apex differentiator for Briarwood vs Zillow/Redfin/realtor.com.
    Substrate is ready (`rent_zestimate` from CMA Cycle 3a is landed).
    *Cycle 1 outcome:* LLM scout module + tests landed isolated (no handler
@@ -126,7 +126,17 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    Two prompt-tuning items filed for Cycle 6 (scout angles too
    synthesizer-adjacent; LLM invents categories outside canonical
    set).
-   *Open:* Cycles 4-7 (Cycle 4 generalizes wiring to DECISION + EDGE).
+   *Cycle 4 outcome:* Same scout-then-synthesize wiring from Cycle 2
+   applied to `handle_decision` (wedge fall-through path) and
+   `handle_edge`. Per-tier VOICE block added to scout system prompt
+   (browse = first-impression / decision = decision-pivot / edge =
+   skeptical). The Cycle 2/3 SSE event + ScoutFinds React surface
+   light up automatically on DECISION/EDGE turns — no adapter or
+   frontend change needed.
+   *Open:* Cycles 5-7 (Cycle 5 unifies the two scout surfaces under
+   a registry dispatcher with confidence-based scoring; Cycle 6
+   pure-function fallback rails + telemetry; Cycle 7 cleanup +
+   README batch update).
 5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
@@ -645,6 +655,27 @@ Cycle 3 landed".
 
 Cycles 4-7 open; Cycle 4 generalizes the BROWSE wiring to DECISION
 and EDGE handlers with per-tier voice.
+
+**Cycle 4 outcome (2026-04-28).** `handle_decision` (wedge
+fall-through Layer 3 synthesizer path) and `handle_edge` now run
+`scout_unified` before `synthesize_with_llm` and pass insights via
+the kwarg from Cycle 2. Section-followup composers
+(`comp_set`, `entry_point`, `value_change`, etc.) are intentionally
+untouched. Per-tier VOICE block added to
+`briarwood/value_scout/llm_scout.py::_SYSTEM_PROMPT`:
+`browse` = first-impression surfacer, `decision` = decision-pivot
+surfacer, `edge` = skeptical surfacer (mirrors synthesizer Phase 3
+Cycle D pattern). The SSE event + ScoutFinds React surface from
+Cycles 2/3 light up automatically on DECISION/EDGE turns —
+`session.last_scout_insights` is the single signal source for
+`_browse_stream_impl` and DECISION/EDGE flow through the same
+`dispatch_stream`. Browser smoke deferred to next live session.
+See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout
+Cycle 4 landed".
+
+Cycles 5-7 open; Cycle 5 lands the registry dispatcher unifying the
+claim-wedge and chat-tier scout surfaces under one entry point with
+confidence-based scoring.
 
 **Framing.** Today's Value Scout is single-pattern (`uplift_dominance`),
 claims-wedge-only, gated behind `BRIARWOOD_CLAIMS_ENABLED`, and

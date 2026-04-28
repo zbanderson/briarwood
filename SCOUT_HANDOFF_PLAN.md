@@ -2,7 +2,7 @@
 
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE-rebuild walkthrough. Owner framing: *"Scout needs to be the apex of the product. You have to remember what differentiates briarwood from the zillows / redfins, we're not a discovery tool we are a decision engine, and what powers that is scout. Scout is going to be the thing that answers the question that you dont know to ask."* User-memory: [project_scout_apex.md](/Users/zachanderson/.claude/projects/-Users-zachanderson-projects-briarwood/memory/project_scout_apex.md).
-**Status:** **In progress — Cycles 1-3 landed 2026-04-28.** Cycles 4-7 open.
+**Status:** **In progress — Cycles 1-4 landed 2026-04-28.** Cycles 5-7 open.
 Sequence position: step 4 of [`ROADMAP.md`](ROADMAP.md) §1, unblocked by
 the AI-Native Foundation umbrella's user-visible phase landing
 (steps 1, 2, 3a, 3b all ✅). Plan was originally drafted 2026-04-26
@@ -200,7 +200,9 @@ originally lacked:
 
 ### Cycle 4 — Generalize to DECISION + EDGE handlers
 
-**Status:** Not started. Blocks on Cycle 2 + 3.
+**Status:** ✅ **Landed 2026-04-28** (commit `cc50f77`).
+
+**Closeout (2026-04-28).** All scope items shipped. `handle_decision` (the wedge fall-through Layer 3 synthesizer path, around `dispatch.py:2410`) and `handle_edge` (around `dispatch.py:4137`) now run `scout_unified` before `synthesize_with_llm`, cache insights on `session.last_scout_insights` (or `None` on empty), and pass them through via the kwarg from Cycle 2. The wedge-active DECISION path and the section-followup composers (`comp_set`, `entry_point`, `value_change`, etc.) are intentionally untouched — those are surgical generations, not full intent-aware prose. Per-tier voice landed in `briarwood/value_scout/llm_scout.py::_SYSTEM_PROMPT` as a new VOICE block: `browse` = first-impression surfacer, `decision` = decision-pivot surfacer, `edge` = skeptical surfacer (mirrors the synthesizer's Phase 3 Cycle D pattern). The Cycle 2/3 SSE event + ScoutFinds React surface light up automatically on DECISION/EDGE turns — `_browse_stream_impl` already reads from `session.last_scout_insights`, no adapter changes needed. Browser smoke deferred. See [DECISIONS.md](DECISIONS.md) 2026-04-28 entry "Phase 4b Scout Cycle 4 landed".
 
 **Scope:**
 - `handle_decision`: after the wedge falls through (or when wedge is disabled), call `scout_unified` and pipe insights to the Layer 3 synthesizer the same way Cycle 2 did for BROWSE. Wedge-active path is unchanged for now (claim renderer keeps its existing structure).

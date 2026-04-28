@@ -2218,3 +2218,111 @@ user-memory `project_brand_evolution.md` (ScoutFinds naming
 direction); user-memory `project_llm_guardrails.md`; commit `919f0fe`.
 README updates intentionally deferred to Cycle 7 per the
 SCOUT_HANDOFF_PLAN.md batching convention.
+
+---
+
+## 2026-04-28 — Phase 4b Scout Cycle 4 landed: DECISION + EDGE + per-tier voice
+
+**Decision.** Cycle 4 of [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+landed via commit `cc50f77` on 2026-04-28. The Cycle 2 BROWSE wiring
+pattern (scout before synthesizer, cache on session, pass via kwarg)
+is now generalized to `handle_decision` (wedge fall-through path)
+and `handle_edge`. The scout system prompt gained a per-tier VOICE
+block matching the synthesizer's Phase 3 Cycle D pattern.
+
+**What landed (2 files).**
+- `briarwood/agent/dispatch.py::handle_decision` (around line 2410) —
+  on the decision_summary Layer 3 synthesizer path, runs
+  `scout_unified` first, caches `session.last_scout_insights`, and
+  passes `scout_insights` to `synthesize_with_llm`. Wedge-active
+  DECISION path (claims renderer) is unchanged. Composer fallback
+  is unchanged.
+- `briarwood/agent/dispatch.py::handle_edge` (around line 4137) —
+  same pattern on the EDGE Layer 3 synthesizer path. Section
+  followups (`comp_set`, `entry_point`, `value_change`,
+  `compose_section_followup`) intentionally not wired — those are
+  surgical generations, not full intent-aware prose, and the scout's
+  full-unified-output substrate would distract from the section the
+  user specifically asked about.
+- `briarwood/value_scout/llm_scout.py::_SYSTEM_PROMPT` — extended
+  with a VOICE block: `browse` = first-impression surfacer,
+  `decision` = decision-pivot surfacer, `edge` = skeptical surfacer.
+  Single prompt with intent-keyed voice (mirrors synthesizer pattern,
+  not a separate per-tier prompt). All tiers still cap at 1-2
+  insights, still ranked by confidence, still grounded in
+  `supporting_fields`.
+
+**What did NOT change (intentional zero-edit surfaces).**
+- `api/pipeline_adapter.py` — `_browse_stream_impl` already reads
+  from `session.last_scout_insights`. DECISION and EDGE turns flow
+  through `dispatch_stream` which surfaces the same session field —
+  no adapter change needed.
+- `web/src/components/chat/scout-finds.tsx` — already renders for
+  any message that has `scoutInsights`. DECISION and EDGE turns
+  trigger the same React render path as BROWSE.
+- `web/src/lib/chat/use-chat.ts` — `case "scout_insights"` already
+  handles the event regardless of which handler emitted it.
+
+The implication is significant: the SSE protocol Cycle 2 chose
+(session-cached insights → primary event in the stream) made
+Cycle 4 a 2-file change instead of a multi-file frontend rewire.
+Same shape would extend to handle_strategy / handle_projection /
+handle_rent_lookup if Cycle 5 expands scope, with no frontend or
+adapter changes needed.
+
+**Verification.** `tests/value_scout/`, `tests/agent/test_dispatch.py`,
+and `tests/synthesis/` all green (140 passed) — only the pre-existing
+baseline failure (`test_interaction_trace_attached`) shows up, which
+is one of the documented 16. Browser smoke deferred to next live
+session; expected first DECISION turn to surface decision-pivot scout
+output, EDGE turn to surface a skeptical scout output.
+
+**Open Design Decisions resolved.**
+- **#7 — Per-tier voice splitting.** Resolved: single prompt with
+  intent-keyed VOICE block (mirrors synthesizer's Phase 3 Cycle D
+  pattern). Separate per-tier prompts deferred — single prompt
+  composes cleanly with the existing scout grounding rule and avoids
+  prompt-set drift.
+
+**Two minor deviations from plan.**
+
+1. **DECISION wedge-active path intentionally not wired.** Plan says
+   "after the wedge falls through (or when wedge is disabled), call
+   `scout_unified`." I implemented the fall-through-only branch.
+   The wedge-active path (when claims renderer fires) keeps its
+   existing render contract; surfacing scout there would compete
+   with the editor's coherence checks. Cycle 5's registry dispatcher
+   refactor will unify both surfaces; until then keeping the wedge
+   path stable is the safer posture.
+2. **`handle_edge` section-followups intentionally not wired.**
+   `compose_section_followup` paths (mode-specific narrow generations
+   for comp_set / entry_point / value_change / trust / downside / etc.)
+   keep their tight composer calls. Adding scout there would inflate
+   surgical follow-up generations into full unified-output reads —
+   wrong tradeoff for tight follow-ups.
+
+---
+
+### Guardrail Review (per `project_llm_guardrails.md` directive)
+
+| # | Guardrail | Location | Restricting quality? | Action |
+|---|-----------|----------|----------------------|--------|
+| 1 | Scout call gated on `chat_tier_artifact is not None` AND `unified` non-empty AND `llm` provided | [dispatch.py](briarwood/agent/dispatch.py) | No — same gate as the synthesizer; scout fires when there's substrate to read. | Keep. |
+| 2 | Wedge-active DECISION path bypasses scout | [dispatch.py](briarwood/agent/dispatch.py) | Possibly — wedge-active turns currently get no scout output. Cycle 5's registry refactor is the right place to unify. | Keep until Cycle 5. |
+| 3 | EDGE section-followups bypass scout | [dispatch.py](briarwood/agent/dispatch.py) | No — surgical follow-ups don't need full-unified-output substrate. | Keep. |
+| 4 | Per-tier VOICE block added to scout system prompt | [llm_scout.py](briarwood/value_scout/llm_scout.py) | No — single prompt with intent-keyed voice; mirrors synthesizer pattern; no new failure modes. | Keep. |
+
+**Net finding from the guardrail walk:** zero quality-blocking
+restrictions. One pin point (#2 wedge-active bypass) carried as
+Cycle 5 dependency — registry dispatcher will unify the two scout
+surfaces.
+
+**Cross-references.** [`SCOUT_HANDOFF_PLAN.md`](SCOUT_HANDOFF_PLAN.md)
+Cycle 4 closeout (status flipped to ✅);
+[`ROADMAP.md`](ROADMAP.md) §1 sequence step 4 (in progress, Cycles
+1-4 closed);
+[`ROADMAP.md`](ROADMAP.md) §3.2 (Cycle 4 outcome added);
+DECISIONS.md prior cycle entries (Cycles 1, 2, 3); user-memory
+`project_scout_apex.md`; user-memory `project_llm_guardrails.md`;
+commit `cc50f77`. README updates remain deferred to Cycle 7 per the
+SCOUT_HANDOFF_PLAN.md batching convention.
