@@ -1,11 +1,31 @@
 # AI-Native Foundation Stage 4 - Close The Model-Accuracy Loop
 
-**Status:** Implementation substrate landed 2026-04-28. Outcome ingestion,
-backfill, `model_alignment`, receiver hooks, and analyzer reporting are
-implemented. A saved-property alignment backfill runner now connects a manual
-outcome file to priority module calls and `model_alignment` rows. Real outcome
-data still needs to be supplied and run through the backfills before human
-tuning candidates can be reviewed against live rows.
+**Status:** ✅ COMPLETE 2026-04-28. Substrate landed earlier the same day
+(outcome ingestion, JSONL + saved-property alignment backfills,
+`model_alignment`, receiver hooks, analyzer reporting). Loop 1 was then
+exercised end-to-end against an owner-estimate outcome row at
+`data/outcomes/property_outcomes.jsonl`
+(`526-w-end-ave-avon-by-the-sea-nj`, expected close $1.385M).
+
+The first run surfaced a real intake bug: `facts.town` was
+`"Avon By The Sea Nj"` (state suffix glued onto town string by the
+URL parser), so the comp-store town-key lookup returned zero matches
+and `comparable_sales` collapsed to `mode: fallback`, confidence 0;
+`current_value` / `valuation` returned a heavily market-adjusted-down
+$935K (APE 32%). Town string corrected on this saved property; re-run
+produced 3 honest `model_alignment` rows: `current_value` and
+`valuation` at $1,311,200 (APE 5.33%, alignment_score 0.73);
+`comparable_sales` at $1,484,741 from 5 same-town SFR comps + rental
+income (APE 7.20%, alignment_score 0.64). All confidences (0.51–0.59)
+sit below the 0.75 high-confidence threshold, so no human-review tuning
+candidates surfaced; analyzer CLI prints the module-summary report;
+dedupe verified on re-run. The intake parser bug is filed in
+`ROADMAP.md` §4 (appended to the existing "Zillow URL-intake address
+normalization regression" entry — same root cause); the comp-store
+canonicalization issue (Avon By The Sea split into 91 + 72 spelling
+variants) is a new §4 entry. Real public-record / ATTOM-automated
+outcome ingestion is the next slice — see new §4 "Backfill
+`data/outcomes/` from ATTOM sale-history endpoint."
 **Size:** M-L (~1-2 handoffs; recommended 5 cycles + closeout).
 **Sequence position:** Step 5 of [`ROADMAP.md`](ROADMAP.md) section 1. Phase 4b
 Scout is complete as of 2026-04-28; Phase 4c BROWSE summary rebuild stays

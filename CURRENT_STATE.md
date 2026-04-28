@@ -85,14 +85,20 @@ The latest documented work centers on:
   feedback loop, and `/admin` read-side dashboard
 - Phase 4a CMA closeout: live SOLD/ACTIVE comp support and
   SearchApi-backed `rent_zestimate` substrate
-- AI-Native Stage 4 implementation substrate: manual outcome loader,
-  JSONL outcome backfill, saved-property alignment backfill,
-  `model_alignment` table, record-only feedback hooks for `current_value` /
-  `valuation` / `comparable_sales`, and analyzer reporting are landed.
-  Real outcome data still needs to be supplied and run through the
-  backfills before human tuning candidates can be reviewed
-- remaining post-Scout sequence work: run Stage 4 against real outcome
-  data, then Phase 4c BROWSE summary card rebuild
+- AI-Native Stage 4 closeout (2026-04-28): substrate landed; Loop 1
+  exercised against the owner-estimate outcome row at
+  `data/outcomes/property_outcomes.jsonl`
+  (`526-w-end-ave-avon-by-the-sea-nj`). The first run surfaced an
+  intake bug — `facts.town` was `"Avon By The Sea Nj"` (state suffix
+  glued onto town string), breaking the comp-store lookup. Town
+  corrected on this property; re-run produced 3 honest alignment rows
+  (`current_value` / `valuation` $1,311,200 at APE 5.33%,
+  `comparable_sales` $1,484,741 at APE 7.20%, all confidences 0.51-0.59).
+  Loop 1 closed AND surfaced its first defect (intake normalizer bug
+  filed in ROADMAP §4). Public-record / ATTOM-automated outcome
+  ingestion still a follow-up
+- remaining post-Scout sequence work: Phase 4c BROWSE summary card
+  rebuild (sequence step 6 — now unblocked)
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued
 fixes. Do not rely on this summary when exact details matter.

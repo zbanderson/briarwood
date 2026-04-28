@@ -154,15 +154,33 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    handoff plan. Phase 4b is complete; true parallel firing and
    user-type conditioning remain future Layer 5 target gaps, not
    open Phase 4b work.
-5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]`
+5. **AI-Native Foundation Stage 4 — model-accuracy loop** `[DECISIONS.md 2026-04-27]` ✅ RESOLVED 2026-04-28
    *Why now:* Scout shipped; close Loop 1 (per
    [`design_doc.md`](design_doc.md) § 7) with real outcome data.
-   *Status:* Implementation substrate landed 2026-04-28 via
-   [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md): manual outcome
+   *Outcome:* Implementation substrate landed 2026-04-28 via
+   [`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (manual outcome
    ingestion, one-shot JSONL backfill, saved-property alignment backfill,
-   `model_alignment`, module receiver hooks, and analyzer reporting. Still
-   needs a real outcome file/backfill run before human tuning candidates can
-   be reviewed.
+   `model_alignment`, module receiver hooks, analyzer reporting). Loop 1
+   was then exercised end-to-end against the owner-estimate outcome row
+   (`526-w-end-ave-avon-by-the-sea-nj`, expected close $1.385M;
+   `data/outcomes/property_outcomes.jsonl`). The first run flagged a real
+   intake bug: `inputs.json:facts.town` was `"Avon By The Sea Nj"` (state
+   glued onto town string), so the comp store's town-keyed lookup found
+   zero matches and `comparable_sales` returned `mode: fallback`,
+   confidence 0; `current_value` / `valuation` returned a heavily
+   market-adjusted-down $935K vs ask $1.49M. Town string fixed in place
+   for this property; re-run produced 3 honest `model_alignment` rows —
+   `current_value` and `valuation` at $1,311,200 (APE 5.33%,
+   alignment_score 0.73) and `comparable_sales` at $1,484,741 from 5
+   same-town SFR comps + rental income (APE 7.20%, alignment_score 0.64).
+   All confidences (0.51–0.59) sit below the 0.75 high-confidence
+   threshold, so no human-review tuning candidates surfaced; analyzer
+   prints clean module-summary report; dedupe verified. Loop 1
+   mechanically closed AND surfaced its first real defect (the intake
+   normalizer bug, now tracked in §4). Sequence step 6 (Phase 4c BROWSE
+   rebuild) now unblocked. Real public-record sale ingestion remains a
+   follow-up under §4 ("Automate public-record outcome ingestion") and
+   the new ATTOM-outcome adapter slice.
 6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner; parking lot]`
    *Why now:* Substrate (real comps + Scout outputs) finally available; the
    rebuilt summary card needs both to honestly hold together.
@@ -529,15 +547,42 @@ useless if the owner can't see them.
 - The owner can answer "which `answer_type` is the most expensive on
   average and why?" without writing SQL.
 
-#### Stage 4 — Close The Model-Accuracy Loop `[size: M-L]` `[impact: Data, Persistence & Feedback]`
+#### ✅ Stage 4 — Close The Model-Accuracy Loop `[size: M-L]` `[impact: Data, Persistence & Feedback]`
 
-**Status:** Implementation substrate landed 2026-04-28 —
-[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) is the canonical
-handoff plan. Outcome ingestion, one-shot JSONL backfill,
-saved-property alignment backfill, `model_alignment`, record-only module
-feedback hooks, and analyzer reporting are implemented. The loop still
-needs a real outcome file and backfill run before live human tuning
-candidates can be reviewed.
+**Status:** RESOLVED 2026-04-28. Implementation substrate landed earlier
+the same day via
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (outcome ingestion,
+one-shot JSONL backfill, saved-property alignment backfill,
+`model_alignment`, record-only module feedback hooks, analyzer
+reporting). Loop 1 was then exercised end-to-end against an
+owner-estimate outcome row at
+`data/outcomes/property_outcomes.jsonl`
+(`526-w-end-ave-avon-by-the-sea-nj`, expected close $1.385M).
+
+The first run surfaced a real intake bug. The saved property's
+`facts.town` field was `"Avon By The Sea Nj"` (state suffix glued onto
+town string), so the town-keyed comp store lookup returned zero matches
+and `comparable_sales` ran in `mode: fallback` with confidence 0;
+`current_value` / `valuation` returned a heavily market-adjusted-down
+$935K (APE 32.49%). The town string was corrected on this property
+(`Avon By The Sea`) and the backfill re-run produced 3 honest alignment
+rows:
+
+- `current_value`: $1,311,200, APE 5.33%, confidence 0.51, alignment_score 0.73
+- `valuation`:     $1,311,200, APE 5.33%, confidence 0.51, alignment_score 0.73
+- `comparable_sales`: $1,484,741 from 5 same-town SFR comps + rental
+  income, APE 7.20%, confidence 0.59, alignment_score 0.64
+
+All confidences sit below the 0.75 high-confidence threshold, so the
+analyzer surfaces no human-review tuning candidates. The pre- and
+post-fix rows both persist (5 rows total) as an honest audit trail of
+what the data corruption hid. Dedupe verified on re-run. The loop has
+now closed against a real outcome AND surfaced its first defect — the
+intake normalizer bug is filed in §4.
+
+Real public-record sale ingestion still queued under §4
+"Automate public-record outcome ingestion" — the proposed
+`scripts/fetch_attom_outcomes.py` slice belongs there.
 
 Source: "~1-2 handoffs."
 
@@ -623,11 +668,12 @@ cannot compute the confidence-vs-outcome correlation it is built for.
 - The analyzer report becomes part of the standard pre-handoff review
   for any module-touch handoff.
 
-**Remaining gate before marking resolved:** supply a real outcome file under
-`data/outcomes/`, run the JSONL and alignment backfills, record at least one
-real alignment row, and review the analyzer output for human tuning
-candidates. No
-auto-recalibration should run as part of that gate.
+**Resolution gate (closed 2026-04-28):** owner-supplied outcome file at
+`data/outcomes/property_outcomes.jsonl` (one row, expected close on 526 W
+End Ave) ran through `scripts/backfill_model_alignment.py`; 2
+`model_alignment` rows persisted; analyzer report printed; dedupe verified
+on re-run. No auto-recalibration ran. Public-record sale ingestion remains
+a separate follow-up.
 
 **Sequencing note:** Stage 4 can sensibly run *after* Phase 4b (Scout) —
 Scout will benefit from Stages 1–3 but doesn't strictly need Loop 1
@@ -1727,6 +1773,24 @@ parses the URL slug and may be uppercasing/lowercasing inconsistently.
 **Out of scope** for CMA Phase 4a (which is focused on the
 search-listings CMA path, not the URL-intake hydration path).
 
+**Updated 2026-04-28 (Stage 4 closeout):** This same parser bug
+corrupts `facts.town` in `data/saved_properties/<id>/inputs.json` —
+state suffix glues onto the town string (e.g.,
+`"Avon By The Sea Nj"`). Downstream impact: the comp store is keyed by
+`town.strip().upper().replace(' ', '-')`, so the corrupted town hits
+zero matches and `comparable_sales` collapses to `mode: fallback` with
+confidence 0; `current_value` and `valuation` similarly lose
+town-context anchoring and underpredict by ~30%. Stage 4 alignment
+backfill on `526-w-end-ave-avon-by-the-sea-nj` was the canonical
+reproducer: APE 32% pre-fix vs 5–7% post-fix across all three priority
+modules. Implies every property onboarded via the broken URL parser
+since the regression has the same data hazard. Suggested expansion of
+the fix: along with the parser fix, add a one-shot scan
+(`scripts/audit_saved_property_facts.py`?) that finds saved
+`inputs.json` rows where `facts.town` ends in the state code and
+corrects them. Two-letter state codes ending in `Nj` / `Ny` /
+`Nc` / etc. are the matchable signature.
+
 #### 2026-04-26 — Renovation premium pass-through to live comps (deferred from Cycle 4.3) `[size: M]` `[impact: Property Analysis]`
 
 **Severity:** Medium — Engine A computes a measured renovation premium
@@ -1761,6 +1825,101 @@ comp.
 
 **Out of scope** for the current CMA Phase 4a Cycle 4 work. Originally
 scoped as Cycle 4.3; deferred per the Cycle 4 wrap-up.
+
+#### 2026-04-28 — Comp store town-name canonicalization (Avon By The Sea split into 91 + 72 spelling variants) `[size: S]` `[impact: Property Analysis]`
+
+**Severity:** Medium — silently halves the available comp pool for any
+Avon-By-The-Sea property and likely affects other towns with
+hyphenation variants. Surfaced during Stage 4 Loop 1 closeout.
+
+**Files:**
+- [data/comps/sales_comps.json](data/comps/sales_comps.json) — 3,919
+  rows; town breakdown shows `"Avon By The Sea": 91` AND
+  `"Avon-by-the-Sea": 72` as separate buckets.
+- [briarwood/agents/comparable_sales/store.py:66](briarwood/agents/comparable_sales/store.py#L66)
+  — `JsonComparableSalesStore` keys by `town.strip().upper().replace(' ', '-')`
+  → produces `AVON-BY-THE-SEA` for both forms but only after
+  same-string lookup.
+- Bulk ingestion sources to audit:
+  [`briarwood/agents/comparable_sales/sr1a_parser.py`](briarwood/agents/comparable_sales/sr1a_parser.py),
+  [`ingest_public_bulk.py`](briarwood/agents/comparable_sales/ingest_public_bulk.py),
+  ATTOM bulk-fetch path under `scripts/fetch_attom_sales.py`.
+
+**Issue:** The 3,919-row comp store has both `"Avon By The Sea"` (91
+rows, mostly SR1A public records) and `"Avon-by-the-Sea"` (72 rows,
+likely ATTOM-sourced) as distinct town strings. Same physical town,
+two buckets. `JsonComparableSalesStore`'s town-key normalizer runs on
+`.strip().upper().replace(' ', '-')`, so the two strings produce
+different keys (`AVON-BY-THE-SEA` is the same, but lookups by source
+town string don't pre-normalize the user's town input). Net effect: a
+property looked up as `"Avon By The Sea"` likely sees only the 91
+SR1A-sourced rows, missing the 72 ATTOM-sourced rows. Other towns
+(Wall vs Wall Township: 890 vs 61 rows) have similar splits.
+
+**Suggested fix:**
+1. Add a single `_canonicalize_town(name: str) -> str` helper to
+   `briarwood/data_quality/normalizers.py` (or co-locate in
+   `comparable_sales/store.py`) that does
+   `re.sub(r'[\s\-]+', ' ', name).strip().title()` plus a small
+   alias map (`Avon-by-the-Sea` → `Avon By The Sea`,
+   `Wall Township` → `Wall`, etc.).
+2. Apply on every ingestion entrypoint AND on every lookup-key
+   construction.
+3. One-shot rewrite of `data/comps/sales_comps.json` to canonicalize
+   existing rows (preserve as `.bak`).
+4. Regression test with the 526 W End scenario and the Wall/Wall
+   Township pair.
+
+**Out of scope** for Stage 4 closeout. Tracked here so future CMA work
+or BROWSE rebuild (Phase 4c) can pull it in when comp coverage is the
+limiting factor.
+
+#### 2026-04-28 — Backfill `data/outcomes/` from ATTOM sale-history endpoint `[size: M]` `[impact: Data, Persistence & Feedback]`
+
+**Severity:** Medium — Stage 4 Loop 1 closeout established the manual
+outcome ingestion path; ATTOM's `sale_history_snapshot()` /
+`sale_history_detail()` is the natural automated source for backfilling
+real (public-record) outcomes per saved property without waiting for
+each property to record a sale through other channels. Codex flagged
+this in 3:19 PM 2026-04-28 conversation; surfaces here as the
+implementation slice.
+
+**Files:**
+- [scripts/fetch_attom_sales.py](scripts/fetch_attom_sales.py) — already
+  calls ATTOM `/sale/snapshot` for comp store enrichment; pattern
+  reusable.
+- [briarwood/data_sources/attom_client.py:130](briarwood/data_sources/attom_client.py#L130)
+  — `sale_history_snapshot(...)` and `sale_history_detail(...)` for
+  per-property lookups.
+- [scripts/backfill_outcomes.py](scripts/backfill_outcomes.py) and
+  [scripts/backfill_model_alignment.py](scripts/backfill_model_alignment.py)
+  — downstream consumers of the resulting JSONL.
+- New script: `scripts/fetch_attom_outcomes.py` (proposed name).
+
+**Issue:** Today Stage 4 needs a hand-curated `data/outcomes/*.jsonl`
+file. ATTOM has the public-record sale history per address; we already
+hold an `ATTOM_API_KEY`. A small adapter script can iterate
+`data/saved_properties/*/inputs.json`, call `sale_history_snapshot`
+per address, emit Stage-4-shape outcome rows
+(`{property_id, address, outcome_type: "sale_price", outcome_value,
+outcome_date, source: "attom_sale_history", source_ref}`), and
+optionally chain into `scripts/backfill_outcomes.py` and
+`scripts/backfill_model_alignment.py`.
+
+**Suggested fix:** Single new script
+`scripts/fetch_attom_outcomes.py` with `--dry-run` first, writing to
+`data/outcomes/attom_outcomes_<date>.jsonl`. Skip properties already
+present in any existing outcome file unless `--overwrite`. Rate-limit
+to ATTOM's ~1 req/sec free-tier ceiling. Tests against a fixture
+ATTOM response.
+
+**Out of scope** for Stage 4 closeout. This is the v2 ingestion path
+that subsumes the manual entry once it works; manual entry stays as
+the v1 fallback.
+
+This entry replaces and supersedes the older
+"2026-04-28 — Automate public-record outcome ingestion after Stage 4
+manual loop" framing — same theme, sharper next step.
 
 #### 2026-04-26 — Plumb subject lat/lon through `summary` for per-row CMA distance filtering `[size: M]` `[impact: Property Analysis]`
 

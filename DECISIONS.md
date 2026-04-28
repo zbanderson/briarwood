@@ -2641,3 +2641,70 @@ matched saved properties.
 Cycle 2 / Cycle 4b; [`ROADMAP.md`](ROADMAP.md) §1 sequence step 5 and
 §3.1 Stage 4; [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) Stage 4;
 [`TOOL_REGISTRY.md`](TOOL_REGISTRY.md) Feedback / model-accuracy cluster.
+
+## 2026-04-28 — AI-Native Foundation Stage 4 closed: Loop 1 validated and surfaced its first defect
+
+**Decision.** Stage 4 is RESOLVED. The model-accuracy loop has closed
+end-to-end against a real (owner-estimate) outcome row, and the first
+exercise of Loop 1 surfaced and isolated a real intake bug — exactly the
+kind of finding the loop is designed to surface. Sequence step 5 of
+[`ROADMAP.md`](ROADMAP.md) §1 is marked `✅ RESOLVED 2026-04-28`.
+
+**What landed in this closeout.**
+- Owner supplied the first outcome row at
+  `data/outcomes/property_outcomes.jsonl`
+  (`526-w-end-ave-avon-by-the-sea-nj`, `outcome_type: sale_price`,
+  `outcome_value: 1385000`, `outcome_date: 2026-04-28`,
+  `source: owner_estimate`, `confidence: 0.6`). Marked explicitly in
+  `notes` as a forecast / expected close, not a recorded public-record
+  sale.
+- First backfill run flagged a defect: comp-store lookup returned zero
+  rows because `inputs.json:facts.town` was `"Avon By The Sea Nj"` (state
+  suffix glued onto town string). Same root cause as the open
+  `tests/test_searchapi_zillow_client.py::...test_url_parser_hydrates_listing_fields_via_searchapi`
+  regression and the user-memory note `project_resolver_match_bug.md`.
+- Town string corrected on the saved property (one-line edit to
+  `data/saved_properties/526-w-end-ave-avon-by-the-sea-nj/inputs.json`,
+  preserving original alongside via the surrounding pre-fix
+  `model_alignment` rows for audit trail). Source code parser fix is
+  out of scope for this closeout — tracked in
+  [`ROADMAP.md`](ROADMAP.md) §4 (appended to existing
+  "Zillow URL-intake address normalization regression" entry).
+- Re-run produced 3 honest `model_alignment` rows:
+  `current_value` $1,311,200 / APE 5.33% / alignment_score 0.73;
+  `valuation` $1,311,200 / APE 5.33% / 0.73;
+  `comparable_sales` $1,484,741 from 5 same-town SFR comps + rental
+  income / APE 7.20% / 0.64. All confidences (0.51-0.59) below the 0.75
+  high-confidence threshold; no human-review tuning candidates surfaced.
+- Both pre-fix and post-fix rows persist (5 total); analyzer CLI prints
+  them; dedupe verified.
+
+**Why mark resolved on an owner forecast (not a recorded sale).** The
+Stage 4 plan's resolution gate is "supply a real outcome file …, run the
+backfill, record at least one real alignment row, and review the
+analyzer output for human tuning candidates." The owner-estimate row is
+real owner signal (the underwriter's expectation), not a synthesized
+fixture; treating it as the closure event is honest and unblocks
+sequence step 6 (Phase 4c BROWSE). Public-record sale-price ingestion
+remains queued as a separate v2 path (new
+[`ROADMAP.md`](ROADMAP.md) §4 entry "Backfill `data/outcomes/` from ATTOM
+sale-history endpoint" — the proposed `scripts/fetch_attom_outcomes.py`
+slice).
+
+**What this closeout does NOT do.**
+- Does not fix the URL-parser bug at the source. The `inputs.json` patch
+  is a one-line data fix on one property; the parser regression covers
+  every property onboarded since the regression landed.
+- Does not consolidate the comp-store town-spelling variants
+  (`"Avon By The Sea": 91 rows` vs `"Avon-by-the-Sea": 72 rows`). Filed
+  as a new §4 entry.
+- Does not run the JSONL outcome backfill against
+  `data/learning/intelligence_feedback.jsonl`. That path was implemented
+  in Cycle 2 of the substrate; running it requires the same outcome data
+  the user has now provided. Optional cleanup; not a closure gate.
+
+**Cross-references.**
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) header status;
+[`ROADMAP.md`](ROADMAP.md) §1 step 5, §3.1 Stage 4, §4 (Zillow URL
+parser appendix; comp-store canonicalization; ATTOM outcome backfill);
+[`CURRENT_STATE.md`](CURRENT_STATE.md) Current Known Themes.
