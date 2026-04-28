@@ -19,6 +19,7 @@ import type {
   ResearchUpdateEvent,
   RiskProfileEvent,
   ScenarioTableEvent,
+  ScoutInsightItem,
   StrategyPathEvent,
   TrustSummaryEvent,
   TownSummaryEvent,
@@ -51,6 +52,9 @@ export type ChatMessage = {
   rentOutlook?: RentOutlookEvent;
   trustSummary?: TrustSummaryEvent;
   researchUpdate?: ResearchUpdateEvent;
+  // Phase 4b Cycle 3 — Scout-surfaced angles for the dedicated drilldown
+  // surface. Empty / no-fire turns leave this undefined.
+  scoutInsights?: ScoutInsightItem[];
   modulesRan?: ModuleAttribution[];
   groundingAnchors?: GroundingAnchor[];
   ungroundedDeclaration?: boolean;
@@ -234,6 +238,13 @@ export function useChat({
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantMsgId ? { ...m, researchUpdate: event } : m,
+            ),
+          );
+          break;
+        case "scout_insights":
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId ? { ...m, scoutInsights: event.items } : m,
             ),
           );
           break;

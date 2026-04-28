@@ -22,6 +22,7 @@ import { ResearchUpdateCard } from "./research-update-card";
 import { ModuleBadges } from "./module-badges";
 import { GroundedText } from "./grounded-text";
 import { EntryPointCard } from "./entry-point-card";
+import { ScoutFinds } from "./scout-finds";
 
 // Lazy-load Google Maps so the client-only browser API stays out of SSR.
 const InlineMap = dynamic(
@@ -123,6 +124,7 @@ function AssistantMessage({
   const rentOutlook = message.rentOutlook;
   const trustSummary = message.trustSummary;
   const researchUpdate = message.researchUpdate;
+  const scoutInsights = message.scoutInsights ?? [];
   const modulesRan = message.modulesRan ?? [];
   const anchors = message.groundingAnchors ?? [];
   const muted = message.ungroundedDeclaration === true;
@@ -153,6 +155,11 @@ function AssistantMessage({
             />
           )
         )}
+
+        {/* Phase 4b Cycle 3 — Scout Finds renders under the synthesizer
+            prose and above the existing card stack. Empty array →
+            ScoutFinds renders nothing (its own internal guard). */}
+        <ScoutFinds insights={scoutInsights} onPrompt={onPrompt} />
 
         {strategyPath && <StrategyPathCard strategy={strategyPath} />}
         {strategyPath && onPrompt && (
