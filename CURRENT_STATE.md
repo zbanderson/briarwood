@@ -97,8 +97,13 @@ The latest documented work centers on:
   Loop 1 closed AND surfaced its first defect (intake normalizer bug
   filed in ROADMAP §4). Public-record / ATTOM-automated outcome
   ingestion still a follow-up
-- remaining post-Scout sequence work: Phase 4c BROWSE summary card
-  rebuild (sequence step 6 — now unblocked)
+- Phase 4c BROWSE summary card rebuild in progress (sequence step 6):
+  Cycles 1–2 landed 2026-04-28 — tier-aware render gate live, Section A
+  ("THE READ") fully filled, Section B ("What did Scout dig up?") fills
+  with the playful-yet-intelligent Scout treatment, stance carry-over
+  wired onto the `value_thesis` SSE event. Section C drilldowns + Cycle
+  5 chart-library evaluation + Cycle 6 closeout remain. Plan:
+  `BROWSE_REBUILD_HANDOFF_PLAN.md`
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued
 fixes. Do not rely on this summary when exact details matter.
