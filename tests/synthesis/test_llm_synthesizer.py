@@ -449,3 +449,99 @@ def test_plain_prompt_also_describes_comp_roster() -> None:
             os.environ.pop("BRIARWOOD_SYNTHESIS_NEWSPAPER", None)
         else:
             os.environ["BRIARWOOD_SYNTHESIS_NEWSPAPER"] = prior
+
+
+# -----------------------------------------------------------------------
+# Phase 4b Cycle 2 — scout_insights kwarg + prompt directive
+# -----------------------------------------------------------------------
+
+def _scout_insights() -> list:
+    from briarwood.claims.base import SurfacedInsight
+
+    return [
+        SurfacedInsight(
+            headline="Belmar shows roughly a 12% three-year price uplift.",
+            reason="Town-trend tailwind not foregrounded by the verdict.",
+            supporting_fields=["market_value_history.three_year_change_pct"],
+            confidence=0.78,
+            category="town_trend",
+        ),
+        SurfacedInsight(
+            headline="Rent profile is unusually strong.",
+            reason="rent_support_score sits at 0.74 with monthly rent near $4,200.",
+            supporting_fields=[
+                "rental_option.rent_support_score",
+                "rental_option.monthly_rent_estimate",
+            ],
+            confidence=0.65,
+            category="rent_angle",
+        ),
+    ]
+
+
+def test_scout_insights_kwarg_lands_in_user_payload() -> None:
+    """When scout_insights is passed, every insight's structured payload is
+    serialized into the user message under the `scout_insights` key so the
+    synthesizer can weave one into the `## What's Interesting` beat."""
+
+    llm = _ScriptedLLM(["The town-trend tailwind is the angle worth a closer look."])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+        scout_insights=_scout_insights(),
+    )
+    user_payload = llm.calls[0]["user"]
+    assert '"scout_insights"' in user_payload
+    assert '"town_trend"' in user_payload
+    assert '"rent_angle"' in user_payload
+    assert "Belmar shows roughly a 12% three-year price uplift" in user_payload
+
+
+def test_no_scout_insights_kwarg_omits_field_from_user_payload() -> None:
+    """Back-compat: callers that don't pass scout_insights see a user payload
+    without the `scout_insights` key — same shape as pre-Cycle-2."""
+
+    llm = _ScriptedLLM(["ok"])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    user_payload = llm.calls[0]["user"]
+    assert '"scout_insights"' not in user_payload
+
+
+def test_empty_scout_insights_list_is_treated_as_absent() -> None:
+    """Empty list semantically means 'scout fired but produced nothing' — the
+    synthesizer prompt should fall back to its usual non-obvious-angle judgment
+    rather than seeing an empty array."""
+
+    llm = _ScriptedLLM(["ok"])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+        scout_insights=[],
+    )
+    user_payload = llm.calls[0]["user"]
+    assert '"scout_insights"' not in user_payload
+
+
+def test_system_prompt_pins_scout_insights_directive() -> None:
+    """Regression: the `## What's Interesting` beat MUST instruct the LLM to
+    weave the highest-confidence scout insight when present, name the
+    supporting field, and avoid quoting the headline verbatim."""
+
+    llm = _ScriptedLLM(["ok"])
+    synthesize_with_llm(
+        unified=_unified_with_numbers(),
+        intent=_intent("browse"),
+        llm=llm,
+    )
+    system = llm.calls[0]["system"]
+    assert "scout_insights" in system
+    assert "What's Interesting" in system
+    assert "highest-confidence" in system
+    assert "supporting_field" in system
+    assert "do NOT quote" in system or "do not quote" in system.lower()

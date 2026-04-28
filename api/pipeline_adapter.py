@@ -462,6 +462,7 @@ _MODULE_REGISTRY: list[tuple[str, str, str]] = [
     (events.EVENT_LISTINGS,         "listing_discovery", "Listing Discovery"),
     (events.EVENT_MAP,              "geocoder",          "Geocoder"),
     (events.EVENT_CHART,            "visualizer",        "Visualizer"),
+    (events.EVENT_SCOUT_INSIGHTS,   "value_scout",       "Value Scout"),
 ]
 
 # AUDIT 1.5.4: grounding anchors carry prompt-facing module labels (see
@@ -2118,6 +2119,29 @@ async def _browse_stream_impl(
 
     if isinstance(session.last_rent_outlook_view, dict):
         primary_events.append(events.rent_outlook(session.last_rent_outlook_view))
+
+    # Phase 4b Cycle 2: emit the scout-insights structured payload when the
+    # session has cached any. Positioned as a primary event so the dedicated
+    # drilldown surface (Cycle 3) renders alongside the rest of the answer
+    # cards. The synthesizer's `## What's Interesting` beat already wove
+    # one insight into prose; this event carries the rest plus the
+    # supporting fields the drilldown will deep-link from. `drilldown_target`
+    # is null for now — the Cycle 3 category → route mapping fills it in.
+    if isinstance(session.last_scout_insights, list) and session.last_scout_insights:
+        scout_items = [
+            {
+                "headline": item.get("headline", ""),
+                "reason": item.get("reason", ""),
+                "category": item.get("category"),
+                "confidence": item.get("confidence"),
+                "supporting_fields": list(item.get("supporting_fields") or []),
+                "drilldown_target": None,
+            }
+            for item in session.last_scout_insights
+            if isinstance(item, dict)
+        ]
+        if scout_items:
+            primary_events.append(events.scout_insights(scout_items))
 
     if isinstance(session.last_projection_view, dict):
         payload = _scenario_table_from_view(session.last_projection_view)

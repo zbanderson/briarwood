@@ -1449,6 +1449,144 @@ class BrowseHandlerTests(unittest.TestCase):
         # The handler's downstream session bookkeeping still happened.
         self.assertEqual(session.last_surface_narrative, response)
 
+    def test_browse_runs_scout_and_caches_insights_when_artifact_and_llm_present(self) -> None:
+        """Phase 4b Cycle 2.
+
+        When the chat-tier artifact is populated AND an llm is provided,
+        ``handle_browse`` should call ``scout_unified`` over the unified
+        output and cache the surfaced insights on
+        ``session.last_scout_insights`` for the SSE adapter to emit. Both
+        the scout LLM call (``value_scout.scan``) and the synthesis call
+        (``synthesis.llm``) should appear in the shared ledger.
+        """
+
+        from briarwood.agent.llm_observability import get_llm_ledger
+        from briarwood.value_scout.llm_scout import (
+            _ScoutInsightOut,
+            _ScoutScanResult,
+        )
+
+        artifact = {
+            "answer_type": "browse",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {"outputs": {}, "trace": []},
+            "modules_run": ["valuation"],
+            "unified_output": {
+                "recommendation": "Buy if the price improves.",
+                "decision": "buy",
+                "decision_stance": "buy_if_price_improves",
+                "best_path": "Proceed carefully.",
+                "key_value_drivers": ["Ask sits below comp anchor"],
+                "key_risks": ["Thin carry inputs"],
+                "trust_flags": [],
+                "primary_value_source": "current_value",
+                "value_position": {
+                    "fair_value_base": 1_560_000,
+                    "ask_premium_pct": -0.039,
+                },
+                "rental_option": {"rent_support_score": 0.74},
+                "market_value_history": {"three_year_change_pct": 0.12},
+                "analysis_depth_used": "snapshot",
+            },
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+        scout_result = _ScoutScanResult(
+            insights=[
+                _ScoutInsightOut(
+                    headline="Town shows roughly a 12% three-year uplift.",
+                    reason="market_value_history.three_year_change_pct = 0.12.",
+                    supporting_fields=["market_value_history.three_year_change_pct"],
+                    category="town_trend",
+                    confidence=0.78,
+                ),
+            ]
+        )
+        synth_prose = "At a measured ask the listing reads as a buy."
+
+        class _BrowseStubLLM:
+            def complete(self, *, system: str, user: str, max_tokens: int = 360) -> str:
+                return synth_prose
+
+            def complete_structured(
+                self,
+                *,
+                system: str,
+                user: str,
+                schema,
+                model=None,
+                max_tokens: int = 600,
+            ):
+                return scout_result
+
+        get_llm_ledger().clear()
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=artifact,
+        ), patch(
+            "briarwood.agent.dispatch.compose_browse_surface",
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            response = handle_browse(
+                "what do you think of 526?",
+                self._decision(),
+                session,
+                llm=_BrowseStubLLM(),
+            )
+
+        # Scout output cached on session as serializable dicts.
+        self.assertIsInstance(session.last_scout_insights, list)
+        assert session.last_scout_insights is not None
+        self.assertEqual(len(session.last_scout_insights), 1)
+        cached = session.last_scout_insights[0]
+        self.assertEqual(cached["category"], "town_trend")
+        self.assertEqual(cached["confidence"], 0.78)
+        self.assertIn("market_value_history.three_year_change_pct", cached["supporting_fields"])
+        # Both surfaces in the shared ledger — synth prose and scout co-resident.
+        surfaces = [r.surface for r in get_llm_ledger().records]
+        self.assertIn("value_scout.scan", surfaces)
+        self.assertIn("synthesis.llm", surfaces)
+        # The synthesizer's prose still reaches the user (scout is additive).
+        self.assertIn(synth_prose, response)
+
+    def test_browse_skips_scout_when_no_llm(self) -> None:
+        """When ``llm`` is None, the synthesizer + scout block is skipped
+        entirely; ``session.last_scout_insights`` stays None and the
+        composer fallback path runs as before."""
+
+        artifact = {
+            "answer_type": "browse",
+            "property_summary": {"property_id": REF},
+            "parser_output": {},
+            "module_results": {"outputs": {}, "trace": []},
+            "modules_run": [],
+            "unified_output": {"decision": "buy"},
+            "interaction_trace": {},
+            "shadow_intelligence": None,
+        }
+        composed_prose = "Composer fallback prose."
+        session = Session()
+        with patch(
+            "briarwood.agent.dispatch._browse_chat_tier_artifact",
+            return_value=artifact,
+        ), patch(
+            "briarwood.agent.dispatch.compose_browse_surface",
+            return_value=(composed_prose, None),
+        ), patch(
+            "briarwood.agent.dispatch.search_listings", return_value=[]
+        ):
+            handle_browse(
+                "what do you think of 526?",
+                self._decision(),
+                session,
+                llm=None,
+            )
+
+        self.assertIsNone(session.last_scout_insights)
+
     def test_browse_falls_back_to_composer_when_synthesizer_returns_empty(self) -> None:
         """If the synthesizer returns empty prose (e.g., budget cap, blank
         draft, or all attempts flagged), ``handle_browse`` falls back to the

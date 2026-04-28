@@ -538,6 +538,26 @@ export type GroundingAnnotationsEvent = {
   ungrounded_declaration: boolean;
 };
 
+// Phase 4b Cycle 2 — Value Scout's per-turn surfaced angles. The synthesizer
+// weaves one insight into the "What's Interesting" beat; this event carries
+// the structured payload so the dedicated drilldown surface (Cycle 3) can
+// render the rest. `drilldown_target` is the route Cycle 3 will use to
+// deep-link into the relevant module's drill-in (e.g. "rent_outlook",
+// "value_thesis", "town_context"). Cycle 2 emits null while the category →
+// route mapping is decided.
+export type ScoutInsightItem = {
+  headline: string;
+  reason: string;
+  category: string | null;
+  confidence: number | null;
+  supporting_fields: string[];
+  drilldown_target: string | null;
+};
+export type ScoutInsightsEvent = {
+  type: "scout_insights";
+  items: ScoutInsightItem[];
+};
+
 export type ChatEvent =
   | TextDeltaEvent
   | ToolCallEvent
@@ -567,7 +587,8 @@ export type ChatEvent =
   | ResearchUpdateEvent
   | ModulesRanEvent
   | VerifierReportEvent
-  | GroundingAnnotationsEvent;
+  | GroundingAnnotationsEvent
+  | ScoutInsightsEvent;
 
 // Structured payloads.
 

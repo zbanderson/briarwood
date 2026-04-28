@@ -1096,6 +1096,100 @@ class PipelineAdapterContractTests(unittest.TestCase):
         self.assertEqual(burn_chart.get("provenance"), ["Rent Outlook", "rent_x_cost"])
 
 
+class ScoutInsightsEventTests(unittest.TestCase):
+    """Phase 4b Cycle 2: when handle_browse caches scout-surfaced insights on
+    ``session.last_scout_insights``, the browse stream must emit a
+    ``scout_insights`` event so the dedicated drilldown surface (Cycle 3) can
+    render them. When the session has no cached insights, no event fires."""
+
+    def _minimal_session(self) -> Session:
+        session = Session(session_id="scout-event-test")
+        session.current_property_id = "subject-1"
+        return session
+
+    def _focal(self) -> dict:
+        return {
+            "id": "subject-1",
+            "address_line": "1008 14th Avenue, Belmar, NJ 07719",
+            "city": "Belmar",
+            "state": "NJ",
+            "price": 767000,
+            "beds": 3,
+            "baths": 1.0,
+            "sqft": 960,
+            "status": "active",
+        }
+
+    def test_scout_insights_event_emitted_when_session_populated(self) -> None:
+        session = self._minimal_session()
+        session.last_scout_insights = [
+            {
+                "headline": "Town shows roughly a 12% three-year uplift.",
+                "reason": "market_value_history.three_year_change_pct = 0.12.",
+                "supporting_fields": ["market_value_history.three_year_change_pct"],
+                "category": "town_trend",
+                "confidence": 0.78,
+                "scenario_id": None,
+            },
+        ]
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Narrative."),
+            patch(
+                "api.pipeline_adapter._focal_listing_from_session",
+                return_value=self._focal(),
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                browse_stream(
+                    "what do you think of 1008 14th Avenue, Belmar, NJ",
+                    _decision(AnswerType.BROWSE),
+                    conversation_id="conv-scout-event",
+                )
+            )
+
+        scout_events = [e for e in emitted if e["type"] == events.EVENT_SCOUT_INSIGHTS]
+        self.assertEqual(len(scout_events), 1)
+        items = scout_events[0]["items"]
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        # Payload shape — every field the drilldown surface (Cycle 3) consumes.
+        self.assertEqual(item["headline"], "Town shows roughly a 12% three-year uplift.")
+        self.assertEqual(item["category"], "town_trend")
+        self.assertEqual(item["confidence"], 0.78)
+        self.assertEqual(
+            item["supporting_fields"], ["market_value_history.three_year_change_pct"]
+        )
+        # Cycle 2 emits drilldown_target as null; Cycle 3 fills the mapping.
+        self.assertIsNone(item["drilldown_target"])
+
+    def test_scout_insights_event_absent_when_session_empty(self) -> None:
+        session = self._minimal_session()
+        # last_scout_insights left at its default None — no scout fired.
+
+        with (
+            patch("api.pipeline_adapter._load_or_create_session", return_value=session),
+            patch("api.pipeline_adapter.dispatch", return_value="Narrative."),
+            patch(
+                "api.pipeline_adapter._focal_listing_from_session",
+                return_value=self._focal(),
+            ),
+            patch("api.pipeline_adapter._finalize_session"),
+        ):
+            emitted = _run_stream(
+                browse_stream(
+                    "what do you think of 1008 14th Avenue, Belmar, NJ",
+                    _decision(AnswerType.BROWSE),
+                    conversation_id="conv-scout-empty",
+                )
+            )
+
+        event_types = [e["type"] for e in emitted]
+        self.assertNotIn(events.EVENT_SCOUT_INSIGHTS, event_types)
+
+
 class VerdictFromViewTests(unittest.TestCase):
     """AUDIT 1.2.4: `_verdict_from_view` now round-trips the persisted
     decision-view dict through a Pydantic model. Happy-path shape must be

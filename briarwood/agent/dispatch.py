@@ -5040,12 +5040,33 @@ def handle_browse(
                     comp_roster = [
                         row for row in roster_candidate if isinstance(row, dict)
                     ] or None
+            # Phase 4b Cycle 2: run the LLM scout over the full unified
+            # output before the synthesizer so the "What's Interesting"
+            # beat can weave a scout-surfaced angle into prose. The
+            # raw insights are cached on the session so the SSE adapter
+            # can emit a `scout_insights` event for the dedicated
+            # drilldown surface (Cycle 3). Empty / no-fire turns leave
+            # `last_scout_insights` as None — the synthesizer falls
+            # back to its usual non-obvious-angle judgment.
+            from briarwood.value_scout import scout_unified
+
+            scout_insights, _scout_report = scout_unified(
+                unified=unified,
+                intent=intent,
+                llm=llm,
+            )
+            session.last_scout_insights = (
+                [insight.model_dump(mode="json") for insight in scout_insights]
+                if scout_insights
+                else None
+            )
             synth_prose, synth_report = synthesize_with_llm(
                 unified=unified,
                 intent=intent,
                 llm=llm,
                 charts=chart_summary,
                 comp_roster=comp_roster,
+                scout_insights=scout_insights or None,
             )
             if synth_prose:
                 response = synth_prose

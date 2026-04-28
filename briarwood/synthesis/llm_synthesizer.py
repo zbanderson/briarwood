@@ -48,6 +48,7 @@ from briarwood.agent.composer import (
 )
 from briarwood.agent.llm import LLMClient
 from briarwood.agent.llm_observability import complete_text_observed
+from briarwood.claims.base import SurfacedInsight
 from briarwood.cost_guard import BudgetExceeded
 from briarwood.intent_contract import IntentContract
 from briarwood.synthesis.feedback_hint import current_feedback_hint
@@ -97,6 +98,22 @@ Pick comps that actually carry the verdict — closest to the subject's
 ask, or the ones that clinch the premium / discount read. Do not
 enumerate the whole roster. Cite numbers verbatim from `comp_roster`
 entries; the numeric-grounding rule below covers comp asks too.
+
+Optionally you receive `scout_insights` — Briarwood's Value Scout has
+already scanned the unified output for non-obvious angles the user
+did not explicitly ask about. Each entry has `headline`, `reason`,
+`category` (e.g. `rent_angle`, `town_trend`, `adu_signal`,
+`comp_anomaly`), `confidence` (0-1), and `supporting_fields` (dotted
+paths into `unified` the angle rests on). When `scout_insights` is
+present and non-empty, the `## What's Interesting` beat MUST weave
+the highest-confidence insight into prose. Paraphrase the headline in
+your own voice (do NOT quote it verbatim), name the supporting field
+so the user knows what evidence backs it, and tease the drilldown
+without spoiling the full reason — the user will see the rest in a
+dedicated card. Pick exactly one insight to weave in; the others stay
+available for the drilldown surface. If `scout_insights` is empty or
+absent, fall back to your usual "non-obvious angle" judgment for the
+beat.
 
 Your job is to write a front-page-newspaper-style response for the
 user. The user is making a six-figure financial decision and is
@@ -240,9 +257,15 @@ def _user_prompt(
     intent: IntentContract,
     charts: list[dict[str, Any]] | None = None,
     comp_roster: list[dict[str, Any]] | None = None,
+    scout_insights: list[SurfacedInsight] | None = None,
 ) -> str:
     """Serialize the unified output, intent contract, the selected chart
-    list, and (optionally) the live comp roster as the user message."""
+    list, the live comp roster, and the scout insights as the user message.
+
+    Each optional input is included only when non-empty so the LLM does
+    not see a flock of empty arrays for turns that legitimately have no
+    chart, no comp roster, or no scout output.
+    """
 
     intent_payload = intent.model_dump(mode="json")
     body: dict[str, Any] = {
@@ -253,6 +276,10 @@ def _user_prompt(
         body["charts"] = charts
     if comp_roster:
         body["comp_roster"] = comp_roster
+    if scout_insights:
+        body["scout_insights"] = [
+            insight.model_dump(mode="json") for insight in scout_insights
+        ]
     return json.dumps(body, default=str, sort_keys=True)
 
 
@@ -303,6 +330,7 @@ def synthesize_with_llm(
     max_tokens: int = 360,
     charts: list[dict[str, Any]] | None = None,
     comp_roster: list[dict[str, Any]] | None = None,
+    scout_insights: list[SurfacedInsight] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Render intent-aware prose from a full UnifiedIntelligenceOutput.
 
@@ -322,7 +350,13 @@ def synthesize_with_llm(
     if llm is None or not unified:
         return "", {"empty": True, "reason": "llm_or_unified_missing"}
 
-    user_prompt = _user_prompt(unified, intent, charts=charts, comp_roster=comp_roster)
+    user_prompt = _user_prompt(
+        unified,
+        intent,
+        charts=charts,
+        comp_roster=comp_roster,
+        scout_insights=scout_insights,
+    )
     verifier_inputs = _verifier_inputs(unified, comp_roster)
     system_prompt = _resolve_system_prompt()
     # Stage 2 read-back: when the conversation has a recent thumbs-down,

@@ -59,6 +59,11 @@ class Session:
     last_visual_advice: dict[str, object] | None = None
     last_verifier_report: dict[str, object] | None = None
     last_representation_plan: dict[str, object] | None = None
+    # Phase 4b Cycle 2 (2026-04-28): per-turn snapshot of the LLM scout's
+    # surfaced insights, serialized as plain dicts so the SSE adapter and
+    # downstream React layer can read them without importing the Pydantic
+    # SurfacedInsight model. Empty / no-fire turns leave this None.
+    last_scout_insights: list[dict[str, object]] | None = None
     # F7: per-turn "this enrichment failed" notices. Each entry:
     # {"section": str, "reason": str, "verdict_reliable": bool}.
     # Cleared alongside other per-turn views in `clear_response_views`.
@@ -99,6 +104,7 @@ class Session:
         self.last_visual_advice = None
         self.last_verifier_report = None
         self.last_representation_plan = None
+        self.last_scout_insights = None
         self.last_partial_data_warnings = []
         self.last_claim_events = []
         self.last_claim_rejected = None

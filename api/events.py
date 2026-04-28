@@ -39,6 +39,7 @@ EVENT_VERIFIER_REPORT = "verifier_report"
 EVENT_GROUNDING_ANNOTATIONS = "grounding_annotations"
 EVENT_PARTIAL_DATA_WARNING = "partial_data_warning"
 EVENT_CLAIM_REJECTED = "claim_rejected"
+EVENT_SCOUT_INSIGHTS = "scout_insights"
 
 
 def text_delta(content: str) -> dict[str, Any]:
@@ -336,6 +337,22 @@ def claim_rejected(
         "archetype": archetype,
         "failures": list(failures),
     }
+
+
+def scout_insights(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Phase 4b Cycle 2: Value Scout's per-turn surfaced angles.
+
+    Each item is `{headline, reason, category, confidence, supporting_fields,
+    drilldown_target}`. `category` is a short snake_case label
+    (e.g. `rent_angle`, `town_trend`) and `confidence` is a numeric `[0, 1]`
+    self-rating from the LLM scout. `drilldown_target` is the route the
+    Cycle 3 dedicated drilldown surface will link into when present;
+    Cycle 2 emits this as `null` while the mapping is still being decided.
+    The synthesizer's "What's Interesting" beat already weaves one insight
+    into prose; this event carries the structured payload so the dedicated
+    drilldown surface (Cycle 3) can render the rest.
+    """
+    return {"type": EVENT_SCOUT_INSIGHTS, "items": items}
 
 
 def encode_sse(event: dict[str, Any]) -> str:
