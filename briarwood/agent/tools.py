@@ -294,7 +294,6 @@ def _manual_comp_input_from_row(row: dict[str, Any]) -> dict[str, Any] | None:
             "comp_origin": origin,
             "comp_origin_label": source_label,
             "selected_by": "user" if origin == "user_input_comp" else "briarwood",
-            "feeds_fair_value": True,
         },
     }
 
@@ -383,7 +382,6 @@ def _selected_comp_rows(comp_payload: Any) -> list[dict[str, Any]]:
                 "source_summary": _comp_source_summary(comp),
                 "inclusion_reason": getattr(comp, "selection_rationale", None) or getattr(comp, "source_notes", None),
                 "selected_by": provenance.get("selected_by"),
-                "feeds_fair_value": provenance.get("feeds_fair_value", True),
             }
         )
     return rows

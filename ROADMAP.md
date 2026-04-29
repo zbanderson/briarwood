@@ -194,6 +194,18 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    nested boxed cards. See `BROWSE_REBUILD_HANDOFF_PLAN.md` for the cycle
    plan (5 cycles + closeout, including the §3.4.7 chart-library eval as
    Cycle 5).
+   *Cycle 1 outcome (2026-04-28 — LANDED):* tier marker + section primitive
+   + Section A ("THE READ") fully filled.
+   *Cycle 2 outcome (2026-04-28 — LANDED):* Section B ("What did Scout dig
+   up?") fill + stance carry-over.
+   *Cycle 3 outcome (2026-04-28 — LANDED):* Section C drilldowns (Comps /
+   Value thesis / Projection) over the new `BrowseDrilldown` primitive +
+   first-time coach-mark hint + `framed` borderless-card threading;
+   absorbed §3.4.1 + §3.4.3 drive-bys; bundled `turn_meta` early tier
+   marker to eliminate the BROWSE first-load flicker (§3.4.4 sub-symptom).
+   Cycle 4 fills the remaining 5 drilldowns (Rent / Town / Risk /
+   Confidence / Path) and prototypes a one-line italic teaser hook beneath
+   each row.
 
 Sequencing call recorded in [DECISIONS.md](DECISIONS.md) 2026-04-27 entry —
 that entry formally fixes steps 2–5; steps 1 and 6 are bookends inherited
@@ -1254,7 +1266,7 @@ quality gain available in the project today.
 - 2026-04-26 — `value_opportunity` y-axis "Comp" vertical character stack (formerly Low tactical).
 - 2026-04-26 — `cma_positioning` source-view drift in non-BROWSE handlers (formerly Medium tactical, partial-resolved 2026-04-26).
 
-#### §3.4.1 `cma_positioning` "CHOSEN COMPS: Context only" chip + `feeds_fair_value` dead architecture `[impact: UI & Charts]`
+#### ✅ §3.4.1 `cma_positioning` "CHOSEN COMPS: Context only" chip + `feeds_fair_value` dead architecture `[impact: UI & Charts]` — RESOLVED 2026-04-28 — Phase 4c Cycle 3 drive-by
 
 **Severity:** Low — cosmetic / misleading copy + dead architectural
 baggage. Surfaced during CMA Phase 4a Cycle 5 browser smoke.
@@ -1299,8 +1311,52 @@ test fixtures — dead architecture that's ripe for a single sweep.
 Recommend doing both as a single sweep — they share the same files.
 Cleanup, ~1 hour.
 
-**Out of scope** for any specific cycle today; pick up in this umbrella
-or as a drive-by fix during Phase 4c BROWSE rebuild.
+**Resolution (2026-04-28, Phase 4c Cycle 3 drive-by).** Both halves of this
+entry landed in a single sweep:
+
+- **Chip retired.** The `MetricChip` "Chosen comps / Context only" on the
+  `cma_positioning` chart footer was replaced by a `Comp set` chip computed
+  from `listing_status` + `is_cross_town` counts via the new exported
+  `formatCompSetChip(...)` helper in
+  [`web/src/components/chat/chart-frame.tsx`](web/src/components/chat/chart-frame.tsx).
+  The same helper feeds the BROWSE Section C "Comps" drilldown
+  `SummaryChip`, so chart-prose alignment between the two surfaces is
+  structural (a code comment in `chart-frame.tsx` names the shared source
+  so the two chips can't drift apart).
+- **Flag retired end-to-end.** `feeds_fair_value` is gone from
+  `briarwood/agent/tools.py::_manual_comp_input_from_row` and
+  `_selected_comp_rows`; `briarwood/agent/dispatch.py::comp_set_mode` follow-up
+  no longer splits comps into chosen/contextual (the split was structurally
+  degenerate post-retirement; replaced with a direct "led by top three"
+  sentence); `api/pipeline_adapter.py::_native_cma_chart` no longer
+  projects the field into chart spec; `_sanitize_valuation_module_comps`
+  lost its provenance gate (the dict-shape defensive check stays — the
+  "rows came from the valuation pipeline" invariant is now structural by
+  construction since `_selected_comp_rows` is the sole constructor path);
+  `web/src/lib/chat/events.ts` dropped the field from
+  `CmaPositioningChartSpec.comps[]` and `ValueThesisCompRow`;
+  `cma-table-card.tsx` dropped the "In fair value" column from the
+  valuation-variant table; `chart-surface.ts::cmaSurface(...)` companion
+  text rewritten to narrate SOLD vs ACTIVE provenance instead of
+  "in/out of model".
+- **Marker fallback retired.** Pre-Cycle-5 cached payloads with null
+  `listing_status` previously fell through to a `feeds_fair_value`-keyed
+  marker tone; the fallback is gone — legacy rows render with the SOLD
+  marker by default (saved-store comps in legacy transcripts were all
+  SOLD by construction, so visual fidelity of cached turns is preserved).
+- **Test fixtures cleaned up.** Two now-irrelevant regression tests
+  deleted from `tests/test_pipeline_adapter_contracts.py`
+  (`test_guard_drops_live_market_row_without_feeds_fair_value`,
+  `test_guard_drops_row_with_feeds_fair_value_false`); fixtures across
+  `tests/test_pipeline_adapter_suggestions.py`,
+  `tests/test_pipeline_adapter_contracts.py`, and
+  `tests/agent/test_dispatch.py` lost their `feeds_fair_value` keys.
+- **README discipline.** `briarwood/representation/README.md` Changelog
+  entry filed per Job 3 (this is a contract change to the SSE chart spec
+  event type).
+
+See [`DECISIONS.md`](DECISIONS.md) `2026-04-28 — Phase 4c Cycle 3 landed`
+for the full landing notes.
 
 #### §3.4.2 `value_opportunity` chart y-axis label "Comp" renders as a vertical character stack `[impact: UI & Charts]`
 
@@ -1324,7 +1380,7 @@ and confirm the y-axis branch uses a transform-rotated `<text>` element
 with proper `text-anchor` rather than per-character `<text>` placement.
 The fix is a few lines in the SVG rendering helper.
 
-#### §3.4.3 `cma_positioning` chart-prose alignment `[impact: UI & Charts]`
+#### ✅ §3.4.3 `cma_positioning` chart-prose alignment `[impact: UI & Charts]` — RESOLVED 2026-04-28 — Phase 4c Cycle 3 drive-by
 
 **Severity:** Low — cosmetic / coherence. Surfaced during CMA Phase 4a
 Cycle 5 browser smoke (1008 14th Ave, Belmar — Turn 2 prose cited "103
@@ -1345,6 +1401,18 @@ comps that exist in the roster but didn't make the chart's slice.
 passes to `synthesize_with_llm` to the same top-N the chart renders
 (8). Mirror the slice exactly, ideally via a shared helper. Alternative:
 bump the chart's row cap from 8 to 10.
+
+**Resolution (2026-04-28, Phase 4c Cycle 3 drive-by).** New helper
+`_clamp_market_support_comp_roster(market_view)` in
+[`briarwood/agent/dispatch.py`](briarwood/agent/dispatch.py) clamps the
+roster passed to `synthesize_with_llm` to `_CMA_ROSTER_MAX_COMPS = 8`
+(module-level constant). Comments in both `dispatch.py` and
+`api/pipeline_adapter.py::_native_cma_chart` cross-reference each other
+so the chart-side `priced_rows[:8]` slice and the synthesizer-side roster
+clamp stay in lock-step. New `CompRosterClampTests` regression class in
+`tests/agent/test_dispatch.py` (4 cases: long-roster clamp, short-roster
+passthrough, missing-view None handling, non-dict-row filtering). See
+[`DECISIONS.md`](DECISIONS.md) `2026-04-28 — Phase 4c Cycle 3 landed`.
 
 #### §3.4.4 Live SSE rendering requires a page reload to display correctly `[impact: UI & Charts]`
 
@@ -1373,6 +1441,33 @@ progressively rendering), (b) is the SSE consumer queueing events
 properly so partial state doesn't render, (c) are there any race
 conditions between the prose stream, the structured-card events, and
 the chart events that cause the layout to flicker?
+
+**Sub-symptom resolved 2026-04-28 — BROWSE first-load flicker (Phase 4c
+Cycle 3).** Cycle 3 browser smoke surfaced a specific case of this
+umbrella issue: the assistant `message` SSE event (which carries
+`answer_type` and gates the BROWSE three-section render) was emitted
+second-to-last in the stream. So BROWSE turns rendered the legacy card
+stack against streaming events for ~half a second before the terminal
+`message` event flipped the layout to the three-section view ("first
+load → real load" flicker, more visually dramatic post-Cycle-3 because
+the legacy stack and the three-section layout are now substantively
+different). Resolved by adding a new lightweight `turn_meta` SSE event
+that fires immediately after `classify_turn` (before any structured
+event in the stream), carrying only `answer_type`. The React reducer
+stamps `answerType` on the in-flight assistant slot from `turn_meta`
+and idempotently re-stamps from the terminal `message` event. Files:
+[`api/events.py`](api/events.py) (`EVENT_TURN_META` + `turn_meta(answer_type)`
+factory), [`api/main.py`](api/main.py) (emit at line ~424),
+[`web/src/lib/chat/events.ts`](web/src/lib/chat/events.ts) (`TurnMetaEvent`
+in the union), [`web/src/lib/chat/use-chat.ts`](web/src/lib/chat/use-chat.ts)
+(`case "turn_meta"` reducer arm). Parity test in
+[`tests/test_chat_api.py`](tests/test_chat_api.py) asserts `turn_meta`
+fires before the first `text_delta` and carries the routed `answer_type`.
+
+The broader umbrella concern (chart events arriving after prose, partial
+state rendering, SSE event ordering audit) remains open. The first-load
+flicker was the most visible specific manifestation of the umbrella;
+remaining audits track here.
 
 #### §3.4.5 `cma_positioning` source-view drift in non-BROWSE handlers `[impact: UI & Charts]`
 
@@ -1550,6 +1645,10 @@ rebuild can't honestly hold together:
 **Cycle 1 outcome (2026-04-28 — LANDED).** Tier marker `message.answer_type` plumbed end-to-end (SSE wire + `messages.answer_type` column projection in `get_conversation`); shared `BrowseSection` primitive + Section A (`BrowseRead`) shipped fully filled with subject line + ask/fair-value headline + masthead `market_trend` chart + flowed prose; Sections B and C are Cycle 1 stubs (`BrowseScout` returns null; `BrowseDeeperRead` is a "Drilldowns coming in Cycles 2–4" placeholder). `AssistantMessage` now gates the existing card stack behind `!isBrowse`; non-BROWSE tiers render unchanged. One known limitation deferred to Cycle 2's carry-over: the BROWSE-tier stance pill renders `Undecided` because stance lives on the `verdict` event (DECISION-only); fix is a 1-field addition to the `value_thesis` event. See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 1 closeout for the full landing notes.
 
 **Cycle 2 outcome (2026-04-28 — LANDED).** Section B (`BrowseScout`) ships the playful-yet-intelligent Scout treatment: sentence-case sub-head **"What did Scout dig up?"** with an inline four-pointed amber sparkle glyph, magazine-sidebar L-bracket frame (warm-amber top + left rules, no four-sided box — honors the "no nested boxed cards" rule), faint warm tonal background. Cards inside come from the now-exported `ScoutFindCard` so BROWSE Section B and the legacy non-BROWSE inline `ScoutFinds` share one source of truth. Cycle 1's stance carry-over landed in the same cycle: `decision_stance` is lifted from `session.last_unified_output` onto the `value_thesis` SSE event via `_value_thesis_payload(session, view)` applied at all three `events.value_thesis(...)` emit sites; `ValueThesisEvent.stance` + `decision_stance` mirrored in TS; `BrowseRead` coalesces stance from `valueThesis` first, then `verdict`. The `STANCE_TONE` map widened to cover the full `DecisionStance` vocabulary so `strong_buy` / `interesting_but_fragile` / `execution_dependent` light up correctly (`conditional` deliberately falls through to neutral). One material deviation from plan: empty Scout state renders the section with a `Scout was quiet on this one.` italic teaser instead of returning null — owner judgment that Scout's section presence on the screen is itself part of the product story for the one-shot demo. New regression test pins three contracts (lifted when present, absent when snapshot missing, dropped when stance is unknown vocabulary). 43/44 pipeline-adapter contract tests green (1 pre-existing baseline failure on chart-kind assertion, unrelated to Cycle 2). `tsc --noEmit` / `eslint` / `next build` clean. Live browser smoke 2026-04-28 confirmed. See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 2 closeout for the full landing notes.
+
+**Cycle 3 outcome (2026-04-28 — LANDED).** Section C ("THE DEEPER READ") fills with three drilldown rows (Comps / Value thesis / Projection) over a new `BrowseDrilldown` "Civic Ledger" primitive — chevron list rows on 1px rules, 17px custom-SVG chevron at stroke-width 1.75 (idle `text-muted`, hover/open `text`, 200ms `rotate-90` on open), `bg-[var(--color-surface)]/40` hover plate, sentence-case label, right-aligned `tabular-nums` summary chip, `pl-[26px]` open-body indent, independent open state per row, **no nested boxed cards** anywhere in the body. Surface-2 chips are naked-text "Editorial Eyebrows" (`text-[11px] uppercase tracking-[0.08em]`) with container-query `@[480px]:` collapse to compact forms on narrow bubbles. New `ValueThesisDrilldownBody` (fresh component per owner pick #2 — merged content, no hide-flag composition). New `framed?: boolean` (default `true`) prop on `ChartFrame`, `CompsTableCard`, `ScenarioTable` — outer wrapper only, internal layout unchanged; drilldown bodies pass `framed={false}`. First-time coach-mark tooltip ("Tap any row to see the evidence.") with chevron-aligned arrow, `localStorage["briarwood:section-c-hint-seen"]` persistence, `useSyncExternalStore`-backed state (the `react-hooks/set-state-in-effect` lint that caught Cycle 2's FeedbackBar effect rewrite drove the canonical-pattern choice). Cycle 3 also folds two `§3.4` drive-bys: **§3.4.1** (`feeds_fair_value` retired end-to-end across `tools.py`, `dispatch.py`, `pipeline_adapter.py`'s `_native_cma_chart` + `_sanitize_valuation_module_comps`, the SSE event types, the React component's marker fallback + chip + valuation column, the chart-surface companion text, and the test fixtures; replaced with a `Comp set` chip computed from `listing_status` counts via `formatCompSetChip(...)` — same helper feeds both the chart-footer chip and the drilldown row chip per owner pick #4) and **§3.4.3** (`comp_roster` clamped to top-8 via new `_clamp_market_support_comp_roster(market_view)` helper + module constant `_CMA_ROSTER_MAX_COMPS = 8` mirroring `_native_cma_chart`'s `priced_rows[:8]`). One material deviation from plan: Cycle 3 also bundled a fix for the BROWSE first-load flicker (a sub-symptom of §3.4.4) via a new `turn_meta` SSE event that fires immediately after `classify_turn` so React stamps `answerType` on the in-flight assistant slot before any structured event lands. 156 focused tests pass; one pre-existing baseline failure (chart-kind assertion); `tsc` / `eslint` / `next build` clean; live browser smoke confirmed three-section layout, drilldowns, chips, hint behavior, FAIR-spacing fix, and elimination of the first-load flicker. See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 3 closeout for the full landing notes.
+
+**Cycle 4 carry-over (filed 2026-04-28).** Owner browser smoke noted the Surface-2 summary chips tell the user the *shape* of the evidence (`8 SOLD`, `FAIR $1.31M · 6.0% APE`, `5Y $686K – $796K`) but not *why they'd care*. Cycle 4 to prototype an italic one-line teaser below each closed row (`text-[13px] text-muted`, e.g. `1209 16th led the set at $800K — 6 within $50K of subject`) across all 8 drilldowns at once rather than retrofitted onto Cycle 3's three rows in isolation. Newspaper-rhythm constraint preserved: italic teaser is text inline with the row, NOT a boxed card.
 
 **Plan reframe (2026-04-28).** Owner sign-off arrived in two passes. The
 first pass approved a "one rich summary card with drilldowns" shape; the
@@ -1736,6 +1835,67 @@ the synthesizer would have an empty or fragmented
 [DECISIONS.md](DECISIONS.md) "Chat-tier fragmented execution"
 2026-04-25, user-memory `project_llm_guardrails.md`.
 
+#### 2026-04-26 — Zillow URL-intake address normalization regression `[size: S]` `[impact: Property Analysis]`
+
+**Severity:** **High** — promoted from Medium on 2026-04-28 during
+Phase 4c Cycle 3 closeout. Owner explicitly flagged that the two
+shapes the parser produces (`"1223 Briarwood Rd Belmar Nj 07719"` vs
+`"1223 Briarwood Rd, Belmar, NJ 07719"`) are the *same property* — and
+that the difference is propagating into `property_id` slug generation
+and the property-identity resolver, which means saved-property records,
+cache keys, and freshly-promoted records can fork on the same address.
+Affects every user who pastes a Zillow URL to onboard a property.
+
+**Files:**
+- `tests/test_searchapi_zillow_client.py::SearchApiZillowClientTests::test_url_parser_hydrates_listing_fields_via_searchapi` — pinned the expected output ("1223 Briarwood Rd, Belmar, NJ 07719") but actual is "1223 Briarwood Rd Belmar Nj 07719".
+- `tests/test_listing_intake.py::ListingIntakeTests::test_zillow_url_listing_can_be_hydrated_via_searchapi` — same regression, second test file asserting the same fix point.
+- Likely culprits: `briarwood/listing_intake/parsers.py::ZillowUrlParser` or the address-fallback path in `briarwood/data_sources/searchapi_zillow_client.py::_normalize_listing` / `_compose_address`.
+
+**Issue:** Test was passing at some prior commit; failing on `main` as
+of 2026-04-26. Confirmed pre-existing (failure reproduces with
+`git stash` of all 2026-04-26 changes). Not caused by CMA Phase 4a
+Cycle 3a. Surfaced during Cycle 3a regression sweep per CLAUDE.md
+"Contradictions, Drifts, and Bugs Found During Work" — flagged here,
+not fixed (out of scope for the current handoff).
+
+**Suggested fix:** `git bisect` between the test passing and `main` to
+identify the regressing commit. The address normalization helpers
+(`_normalize_address_string`, `_compose_address`,
+`_parse_address_parts`) are likely candidates. The fallback
+`_address_hint_from_url` (used when SearchApi returns no row matching)
+parses the URL slug and may be uppercasing/lowercasing inconsistently.
+
+**Out of scope** for CMA Phase 4a (which was focused on the
+search-listings CMA path, not the URL-intake hydration path).
+
+**Updated 2026-04-28 (Stage 4 closeout):** This same parser bug
+corrupts `facts.town` in `data/saved_properties/<id>/inputs.json` —
+state suffix glues onto the town string (e.g.,
+`"Avon By The Sea Nj"`). Downstream impact: the comp store is keyed by
+`town.strip().upper().replace(' ', '-')`, so the corrupted town hits
+zero matches and `comparable_sales` collapses to `mode: fallback` with
+confidence 0; `current_value` and `valuation` similarly lose
+town-context anchoring and underpredict by ~30%. Stage 4 alignment
+backfill on `526-w-end-ave-avon-by-the-sea-nj` was the canonical
+reproducer: APE 32% pre-fix vs 5–7% post-fix across all three priority
+modules. Implies every property onboarded via the broken URL parser
+since the regression has the same data hazard. Suggested expansion of
+the fix: along with the parser fix, add a one-shot scan
+(`scripts/audit_saved_property_facts.py`?) that finds saved
+`inputs.json` rows where `facts.town` ends in the state code and
+corrects them. Two-letter state codes ending in `Nj` / `Ny` /
+`Nc` / etc. are the matchable signature.
+
+**Updated 2026-04-28 (Phase 4c Cycle 3 closeout — promoted to High).**
+Cycle 3 wider regression sweep re-surfaced this. Owner reframe: the
+two shapes are the *same property*, so any downstream code path that
+keys on the address string (slug generation, identity resolver, cache
+keys, saved-property storage) silently forks on the same address.
+Filed as the first work item of the next Cycle 4 round. Fold the
+parser fix and the saved-property `facts.town` audit script into a
+single slice so the data-correction sweep runs immediately after the
+parser fix lands.
+
 ### Medium
 
 #### 2026-04-26 — Property resolver matches wrong slug ("526 West End Ave" → NC instead of NJ) `[size: S]` `[impact: Routing & Orchestration]`
@@ -1763,53 +1923,6 @@ has prior NJ context.
 
 **Out of scope** for the active CMA Phase 4a work. Drive-by fix during
 any future dispatch-handler touch.
-
-#### 2026-04-26 — Zillow URL-intake address normalization regression `[size: S]` `[impact: Property Analysis]`
-
-**Severity:** Medium — affects every user who pastes a Zillow URL to
-onboard a property. Address comes back lowercased + missing comma
-separators ("1223 Briarwood Rd Belmar Nj 07719" instead of "1223
-Briarwood Rd, Belmar, NJ 07719").
-
-**Files:**
-- `tests/test_searchapi_zillow_client.py::SearchApiZillowClientTests::test_url_parser_hydrates_listing_fields_via_searchapi` — pinned the expected output ("1223 Briarwood Rd, Belmar, NJ 07719") but actual is "1223 Briarwood Rd Belmar Nj 07719".
-- `tests/test_listing_intake.py::ListingIntakeTests::test_zillow_url_listing_can_be_hydrated_via_searchapi` — same regression, second test file asserting the same fix point.
-- Likely culprits: `briarwood/listing_intake/parsers.py::ZillowUrlParser` or the address-fallback path in `briarwood/data_sources/searchapi_zillow_client.py::_normalize_listing` / `_compose_address`.
-
-**Issue:** Test was passing at some prior commit; failing on `main` as
-of 2026-04-26. Confirmed pre-existing (failure reproduces with
-`git stash` of all 2026-04-26 changes). Not caused by CMA Phase 4a
-Cycle 3a. Surfaced during Cycle 3a regression sweep per CLAUDE.md
-"Contradictions, Drifts, and Bugs Found During Work" — flagged here,
-not fixed (out of scope for the current handoff).
-
-**Suggested fix:** `git bisect` between the test passing and `main` to
-identify the regressing commit. The address normalization helpers
-(`_normalize_address_string`, `_compose_address`,
-`_parse_address_parts`) are likely candidates. The fallback
-`_address_hint_from_url` (used when SearchApi returns no row matching)
-parses the URL slug and may be uppercasing/lowercasing inconsistently.
-
-**Out of scope** for CMA Phase 4a (which is focused on the
-search-listings CMA path, not the URL-intake hydration path).
-
-**Updated 2026-04-28 (Stage 4 closeout):** This same parser bug
-corrupts `facts.town` in `data/saved_properties/<id>/inputs.json` —
-state suffix glues onto the town string (e.g.,
-`"Avon By The Sea Nj"`). Downstream impact: the comp store is keyed by
-`town.strip().upper().replace(' ', '-')`, so the corrupted town hits
-zero matches and `comparable_sales` collapses to `mode: fallback` with
-confidence 0; `current_value` and `valuation` similarly lose
-town-context anchoring and underpredict by ~30%. Stage 4 alignment
-backfill on `526-w-end-ave-avon-by-the-sea-nj` was the canonical
-reproducer: APE 32% pre-fix vs 5–7% post-fix across all three priority
-modules. Implies every property onboarded via the broken URL parser
-since the regression has the same data hazard. Suggested expansion of
-the fix: along with the parser fix, add a one-shot scan
-(`scripts/audit_saved_property_facts.py`?) that finds saved
-`inputs.json` rows where `facts.town` ends in the state code and
-corrects them. Two-letter state codes ending in `Nj` / `Ny` /
-`Nc` / etc. are the matchable signature.
 
 #### 2026-04-26 — Renovation premium pass-through to live comps (deferred from Cycle 4.3) `[size: M]` `[impact: Property Analysis]`
 

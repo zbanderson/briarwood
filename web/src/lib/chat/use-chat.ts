@@ -282,6 +282,20 @@ export function useChat({
             );
           }
           break;
+        case "turn_meta":
+          // Phase 4c Cycle 3 — early tier marker. Stamp `answerType` on the
+          // in-flight assistant message slot so the BROWSE three-section
+          // layout renders from the first text_delta. The terminal `message`
+          // event still fires at stream-end with the real id; that arm
+          // re-stamps `answerType` (idempotent).
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, answerType: event.answer_type ?? null }
+                : m,
+            ),
+          );
+          break;
         case "done":
           setMessages((prev) =>
             prev.map((m) =>

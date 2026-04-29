@@ -1,11 +1,13 @@
 # Phase 4c — BROWSE Summary Card Rebuild (Handoff Plan)
 
-**Status:** Cycle 2 LANDED 2026-04-28 (Section B "What did Scout dig up?"
-fill with playful-yet-intelligent treatment; stance carry-over wired onto
-the `value_thesis` SSE event; empty-state teaser preserves section
-presence). Cycles 1–2 shipped; Cycle 3 (Section C drilldowns: Comps /
-Value-thesis / Projection) ready to start. Plan APPROVED 2026-04-28 with
-the three-section newspaper-hierarchy reframe.
+**Status:** Cycle 3 LANDED 2026-04-28 (Section C drilldowns — Comps /
+Value-thesis / Projection — over the new `BrowseDrilldown` "Civic Ledger"
+primitive; first-time coach-mark hint; `framed` borderless-card threading;
+absorbed §3.4.1 + §3.4.3 drive-bys; bundled `turn_meta` early SSE event
+that eliminated the BROWSE first-load flicker). Cycles 1–3 shipped; Cycle
+4 (remaining 5 drilldowns + one-line teaser hook prototype) ready to
+start. Plan APPROVED 2026-04-28 with the three-section
+newspaper-hierarchy reframe.
 **Owner:** Zach
 **Origin:** 2026-04-26 BROWSE walkthrough Thread 1; parking-lot entry at
 [`ROADMAP.md`](ROADMAP.md) §3.5; sequence step 6 of [`ROADMAP.md`](ROADMAP.md)
@@ -511,6 +513,41 @@ BROWSE-tier surface that isn't a final decision.
 ---
 
 ### Cycle 3 — Section C drilldowns: Comps + Value-thesis + Projection
+
+**Status:** ✅ **LANDED 2026-04-28.**
+
+**Closeout (2026-04-28).** All scope items shipped. Section C ("THE DEEPER READ") fills with three chevron-list drilldown rows over the new `BrowseDrilldown` "Civic Ledger" primitive (`web/src/components/chat/browse-drilldown.tsx`): `py-3.5 px-3 -mx-3` + per-row `border-t` (`first:border-t-0`), 17px custom-SVG chevron at stroke-width 1.75 (idle `text-muted`, hover/open `text`, 200ms `rotate-90`), `bg-[var(--color-surface)]/40` hover plate, sentence-case `text-[14px] font-medium tracking-tight` label, right-aligned `tabular-nums` summary chip slot, `pl-[26px] mt-4 mb-3` open-body indent, independent open state per row, **no nested boxed cards anywhere in the body**. Surface-2 chips are naked-text "Editorial Eyebrow" (`text-[11px] uppercase tracking-[0.08em] tabular-nums`) via `SummaryChip` + `ChipEyebrow` + `ChipFigure` exports, with container-query `@[480px]:` collapse to compact forms on narrow bubbles (e.g. `FAIR $1.31M · 5.3% APE` → `$1.31M · 5.3%` to keep both numbers per owner pick #5). Comps drilldown chip uses `formatCompSetChip(...)` — same helper feeds the chart-footer chip in `cma_positioning` so the two surfaces can't drift apart (owner pick #4). Value-thesis drilldown body is a fresh `ValueThesisDrilldownBody` component (owner pick #2 — fresh component over hide-flag composition), merging `EntryPointCard` + `ValueThesisCard` content into one borderless body. New `framed?: boolean` (default `true`) prop on `ChartFrame`, `CompsTableCard`, `ScenarioTable` — outer wrapper only per owner pick #1; drilldown bodies pass `framed={false}` to drop the `rounded-2xl border bg-[var(--color-surface)] p-4` chrome and inner `border-b` dividers, with chart titles dropping from `text-[18px] font-bold` to `text-[14px] font-semibold` so they don't compete with the drilldown row label. First-time coach-mark tooltip ("Tap any row to see the evidence.") with chevron-aligned arrow via stacked CSS triangles, `useSyncExternalStore`-backed `localStorage["briarwood:section-c-hint-seen"]` persistence (the `react-hooks/set-state-in-effect` lint that caught Cycle 2's FeedbackBar effect rewrite drove the canonical-pattern choice), `animate-in fade-in slide-in-from-top-1` ~250ms gated behind `prefers-reduced-motion: no-preference`, auto-dismiss on first-row expand or × button.
+
+Cycle 3 also folds two `§3.4` drive-bys end-to-end:
+- **§3.4.1 (`feeds_fair_value` retired).** The flag is gone from `briarwood/agent/tools.py::_manual_comp_input_from_row` + `_selected_comp_rows`, `briarwood/agent/dispatch.py::comp_set_mode` follow-up (degenerate post-retirement; replaced with a "led by top three" sentence), `api/pipeline_adapter.py::_native_cma_chart` spec, `_sanitize_valuation_module_comps` provenance gate (dict-shape defensive check stays — the "rows came from the valuation pipeline" invariant is now structural by construction), `web/src/lib/chat/events.ts` (`CmaPositioningChartSpec.comps[]` + `ValueThesisCompRow`), `chart-frame.tsx` marker fallback, `cma-table-card.tsx` "In fair value" column, and `chart-surface.ts::cmaSurface(...)` companion text. Replaced with a `Comp set` chip (`5 SOLD · 3 ACTIVE`, `5 SOLD (2 CROSS-TOWN) · 3 ACTIVE`) computed via the new exported `formatCompSetChip(...)`. `briarwood/representation/README.md` Changelog entry filed per Job 3.
+- **§3.4.3 (`comp_roster` clamp).** New `_clamp_market_support_comp_roster(market_view)` helper at `briarwood/agent/dispatch.py` clamps the synthesizer roster to `_CMA_ROSTER_MAX_COMPS = 8`, mirroring `_native_cma_chart`'s `priced_rows[:8]`. Comments in both files cross-reference the lock-step. New `CompRosterClampTests` regression class with 4 cases.
+
+**One material deviation from plan, recorded.** Cycle 3 also bundled a fix for the BROWSE first-load flicker — a sub-symptom of `§3.4.4` ("Live SSE rendering requires a page reload"). Owner browser smoke surfaced that the assistant `message` event (carrying `answer_type` and gating the BROWSE three-section render) was emitted second-to-last in the stream, so BROWSE turns rendered the legacy card stack against streaming events for ~half a second before the terminal `message` event flipped the layout to the three-section view. Owner judgment: bundle the fix into Cycle 3 rather than file as a §3.4.4 sub-item. The fix added a new lightweight `turn_meta` SSE event that fires immediately after `classify_turn` (before any structured event in the stream), carrying only `answer_type`. ~30 lines across `api/events.py`, `api/main.py`, `web/src/lib/chat/events.ts`, `web/src/lib/chat/use-chat.ts` + parity test in `tests/test_chat_api.py`. The terminal `message` event still fires at stream-end with the real id; the React reducer treats both arms as additive so the second emit is idempotent on `answerType`. Smoke-confirmed elimination of the flicker.
+
+**Open Design Decisions resolved at Cycle 3 start.**
+- **OD #3 — Drilldown affordance.** Resolved: locked to chevron list rows on 1px rules. NO mini-cards inside Section C, NO accordions, NO four-sided boxed frames. Section C reads as the calm third section against Section A's lead and Section B's warm-amber accent.
+- **OD #4 — Drilldown expansion behavior.** Resolved: default-CLOSED, independent open/close per row. Owner direction: chevron must be VERY OBVIOUSLY expandable — implemented as 17px custom SVG (heavier than CSS `›`) at stroke-width 1.75 + hover plate + cursor pointer + 200ms `rotate-90`.
+- **Pick #1 — Borderless variant pattern.** Resolved: `framed?: boolean` controls the OUTER WRAPPER ONLY; internal layout unchanged.
+- **Pick #2 — Value-thesis "merged" body.** Resolved: build `ValueThesisDrilldownBody` as a fresh component rather than composing existing cards with hide-flags.
+- **Pick #3 — `_sanitize_valuation_module_comps` provenance assertion deletion.** Resolved: greenlight delete after a 5-minute grep confirmed `_selected_comp_rows` is the sole construction path for valuation_comps event rows.
+- **Pick #4 — Comp-set chip co-source.** Resolved: same `formatCompSetChip(...)` helper feeds both the chart-footer chip and the drilldown row chip, with a code comment naming the shared source.
+- **Pick #5 — Responsive chip collapse.** Resolved: container-query axis, compact forms preserve both numbers.
+- **First-time hint variant.** Resolved: Variant Q (quiet coach-mark tooltip).
+
+**Carry-overs to Cycle 4.**
+- **Bigger hook per drilldown chip.** Owner browser smoke noted that the Surface-2 chips tell the user the *shape* of the evidence (`8 SOLD`, `FAIR $1.31M · 6.0% APE`, `5Y $686K – $796K`) but not *why they'd care*. Cycle 4 prototypes a one-line italic teaser below each closed row (`text-[13px] text-muted`) across all 8 drilldowns at once.
+- **`ROADMAP.md` §4 address-normalization promotion (Medium → High).** Cycle 3 wider regression sweep re-surfaced the Zillow URL-intake parser regression. Owner reframe: the two shapes (`'1223 Briarwood Rd Belmar Nj 07719'` vs `'1223 Briarwood Rd, Belmar, NJ 07719'`) are the *same property*, so any code path that keys on the address string forks on the same property silently. Filed as the FIRST work item of the next Cycle 4 round, before any drilldown polish work.
+
+**Files touched (count from this cycle).**
+- NEW: `web/src/components/chat/browse-drilldown.tsx`, `value-thesis-drilldown-body.tsx`, `inline-prompt.tsx`.
+- MODIFIED (web/): `browse-deeper-read.tsx` (replaced placeholder), `messages.tsx` (extracted `InlinePrompt` to its own file; pass session-view props into `BrowseDeeperRead`), `chart-frame.tsx` (`framed` prop + §3.4.1 chip + marker fallback retirement + `formatCompSetChip` export), `cma-table-card.tsx` (`framed` + drop "In fair value" column), `scenario-table.tsx` (`framed`), `lib/chat/events.ts` (drop `feeds_fair_value` from two types + add `TurnMetaEvent`), `lib/chat/chart-surface.ts` (companion text rewrite), `lib/chat/use-chat.ts` (add `turn_meta` arm), `app/globals.css` (coach-mark keyframes).
+- MODIFIED (server-side): `briarwood/agent/dispatch.py` (`_clamp_market_support_comp_roster` helper + `_CMA_ROSTER_MAX_COMPS` constant + `comp_set_mode` simplification + `_comp_row_from_cma` no longer projects `feeds_fair_value`), `briarwood/agent/tools.py` (drop `feeds_fair_value: True` from two construction paths), `api/events.py` (add `EVENT_TURN_META` + `turn_meta(...)` factory + valuation_comps docstring update), `api/main.py` (emit `turn_meta` after classify), `api/pipeline_adapter.py` (drop `feeds_fair_value` from `_native_cma_chart` spec.comps + `_sanitize_valuation_module_comps` provenance gate retired).
+- MODIFIED (tests): `tests/test_chat_api.py` (turn_meta parity), `tests/test_pipeline_adapter_contracts.py` (delete two now-irrelevant tests + drop `feeds_fair_value` fixtures + restore `_LIVE_MARKET_ROW` inline), `tests/test_pipeline_adapter_suggestions.py` (drop fixture field), `tests/agent/test_dispatch.py` (drop fixture field + new `CompRosterClampTests` class with 4 cases + import `_CMA_ROSTER_MAX_COMPS` and `_clamp_market_support_comp_roster`).
+- MODIFIED (docs): `briarwood/representation/README.md` (Changelog + `Last Updated` per Job 3), `DECISIONS.md` (Cycle 3 closeout entry), `ROADMAP.md` (§3.4.1 + §3.4.3 marked RESOLVED, §3.4.4 sub-symptom note, §3.5 Cycle 3 outcome + Cycle 4 carry-over, §1 step 6 cycle outcomes, §4 Zillow URL-intake promoted Medium → High), `CURRENT_STATE.md` (Cycles 1–3 themes update), this plan doc.
+
+**Verification gates green.** Focused Python: 156 passed across `tests/test_pipeline_adapter_contracts.py` + `tests/test_chat_api.py` + `tests/agent/test_dispatch.py` + `tests/test_pipeline_adapter_suggestions.py`; one pre-existing baseline failure (`test_browse_stream_emits_briefing_cards_before_text_and_scenarios_after` chart-kind assertion). Wider regression scan: 16 failures total; 4/5 sampled confirmed pre-existing on clean HEAD via stash + re-run; no Cycle 3 regression. `tsc --noEmit` clean. ESLint clean on touched directories (one pre-existing `_chrome` warning from 2026-04-26 commit `ee9e4b8`). `next build` clean (1407ms compile, 4 static pages, no warnings). Live browser smoke 2026-04-28 confirmed three-section layout, drilldowns with real chips ("8 SOLD", "FAIR $721K · 6.0% APE", "5Y $686K – $796K"), chevrons rotating, embedded charts/cards rendering borderless, coach-mark tooltip behavior, FAIR-spacing fix, and elimination of the first-load flicker. DECISION/EDGE/VALUATION/TRUST follow-up turns render the legacy card stack unchanged.
+
+---
 
 **Goal.** First three drilldowns inside Section C — the highest-evidence-density
 trio. Drilldown affordance (chevron list rows on rules — OD #3) is locked

@@ -14,6 +14,8 @@ from unittest.mock import patch
 from briarwood.agent.dispatch import (
     _analysis_overrides,
     _build_town_summary,
+    _CMA_ROSTER_MAX_COMPS,
+    _clamp_market_support_comp_roster,
     _deepen_browse_followup,
     _escalate_browse_affirmative,
     handle_edge,
@@ -282,7 +284,6 @@ class DecisionHandlerTests(unittest.TestCase):
                     "source_summary": "Saved nearby comp",
                     "inclusion_reason": "Closest match on layout.",
                     "selected_by": "valuation",
-                    "feeds_fair_value": True,
                 },
             ],
         }
@@ -3591,6 +3592,54 @@ class MicroLocationHandlerTests(unittest.TestCase):
             response = handle_micro_location("how close to the beach is this house?", decision, session, llm=None)
         self.assertIn("1600-l-street-belmar-nj-07719", response)
         self.assertIn("micro-location row", response)
+
+
+class CompRosterClampTests(unittest.TestCase):
+    """Phase 4c Cycle 3 (§3.4.3): the synthesizer's `comp_roster` mirrors
+    the `cma_positioning` chart's top-N slice so prose can only cite comps
+    the chart actually shows. Source-of-truth count lives at
+    ``_CMA_ROSTER_MAX_COMPS``; the chart's own slice is in
+    ``api/pipeline_adapter.py::_native_cma_chart`` and must move in
+    lock-step with this constant."""
+
+    def _row(self, idx: int) -> dict[str, object]:
+        return {
+            "property_id": f"comp-{idx}",
+            "address": f"{idx + 100} Test Avenue",
+            "ask_price": 700_000 + idx * 1_000,
+            "listing_status": "sold" if idx % 2 == 0 else "active",
+        }
+
+    def test_clamps_long_roster_to_top_n(self) -> None:
+        rows = [self._row(i) for i in range(12)]
+        result = _clamp_market_support_comp_roster({"comps": rows})
+        self.assertIsNotNone(result)
+        assert result is not None  # for type checker
+        self.assertEqual(len(result), _CMA_ROSTER_MAX_COMPS)
+        # Clamp is positional [:N] — first N rows preserved in order.
+        self.assertEqual(result[0]["property_id"], "comp-0")
+        self.assertEqual(result[-1]["property_id"], f"comp-{_CMA_ROSTER_MAX_COMPS - 1}")
+
+    def test_passes_short_roster_through(self) -> None:
+        rows = [self._row(i) for i in range(3)]
+        result = _clamp_market_support_comp_roster({"comps": rows})
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(len(result), 3)
+
+    def test_returns_none_on_missing_view(self) -> None:
+        self.assertIsNone(_clamp_market_support_comp_roster(None))
+        self.assertIsNone(_clamp_market_support_comp_roster({}))
+        self.assertIsNone(_clamp_market_support_comp_roster({"comps": []}))
+        self.assertIsNone(_clamp_market_support_comp_roster({"comps": "not a list"}))
+
+    def test_filters_non_dict_rows(self) -> None:
+        rows = [self._row(0), "not a dict", self._row(1), None, self._row(2)]
+        result = _clamp_market_support_comp_roster({"comps": rows})
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(len(result), 3)
+        self.assertEqual([r["property_id"] for r in result], ["comp-0", "comp-1", "comp-2"])
 
 
 class BrowseChartSetEnforcementTests(unittest.TestCase):

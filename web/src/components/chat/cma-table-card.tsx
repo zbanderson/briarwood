@@ -13,6 +13,12 @@ type Variant = "valuation" | "market_support";
 type Props = {
   table: CompsTableEvent;
   variant: Variant;
+  /** Phase 4c Cycle 3 — Section C drilldowns embed this card with no extra
+   * border around it. `framed=false` drops the outer `rounded-2xl border ...
+   * bg-[var(--color-surface)] p-4` wrapper; internal layout (table, header
+   * eyebrow, row spacing) is unchanged. Default `true` preserves non-BROWSE
+   * rendering. */
+  framed?: boolean;
 };
 
 function money(n: number | null | undefined) {
@@ -31,14 +37,15 @@ const HEADINGS: Record<Variant, { eyebrow: string; blurb: string }> = {
   },
 };
 
-export function CompsTableCard({ table, variant }: Props) {
+export function CompsTableCard({ table, variant, framed = true }: Props) {
   if (table.rows.length === 0) return null;
   const heading = HEADINGS[variant];
   return (
     <div
       className={cn(
-        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)] p-4",
+        framed
+          ? "mt-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4"
+          : "mt-2",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -67,9 +74,6 @@ export function CompsTableCard({ table, variant }: Props) {
               <th className="pb-2 font-medium">Dims</th>
               <th className="pb-2 font-medium">Price</th>
               <th className="pb-2 font-medium">Origin</th>
-              {variant === "valuation" ? (
-                <th className="pb-2 font-medium">In fair value</th>
-              ) : null}
               <th className="pb-2 font-medium">Why it is here</th>
             </tr>
           </thead>
@@ -84,15 +88,10 @@ export function CompsTableCard({ table, variant }: Props) {
                     .filter(Boolean)
                     .join(" · ") || "—"}
                 </td>
-                <td className="py-2 pr-3">{money(row.ask_price)}</td>
+                <td className="py-2 pr-3 tabular-nums">{money(row.ask_price)}</td>
                 <td className="py-2 pr-3">
                   {[row.source_label, row.selected_by].filter(Boolean).join(" · ") || "—"}
                 </td>
-                {variant === "valuation" ? (
-                  <td className="py-2 pr-3">
-                    {row.feeds_fair_value == null ? "—" : row.feeds_fair_value ? "Yes" : "No"}
-                  </td>
-                ) : null}
                 <td className="py-2">{row.inclusion_reason ?? row.source_summary ?? "—"}</td>
               </tr>
             ))}

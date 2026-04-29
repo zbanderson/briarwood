@@ -98,11 +98,18 @@ The latest documented work centers on:
   filed in ROADMAP §4). Public-record / ATTOM-automated outcome
   ingestion still a follow-up
 - Phase 4c BROWSE summary card rebuild in progress (sequence step 6):
-  Cycles 1–2 landed 2026-04-28 — tier-aware render gate live, Section A
+  Cycles 1–3 landed 2026-04-28 — tier-aware render gate live, Section A
   ("THE READ") fully filled, Section B ("What did Scout dig up?") fills
-  with the playful-yet-intelligent Scout treatment, stance carry-over
-  wired onto the `value_thesis` SSE event. Section C drilldowns + Cycle
-  5 chart-library evaluation + Cycle 6 closeout remain. Plan:
+  with the playful-yet-intelligent Scout treatment, Section C ("THE
+  DEEPER READ") fills with three drilldowns (Comps / Value thesis /
+  Projection) over the new `BrowseDrilldown` "Civic Ledger" primitive +
+  first-time coach-mark hint + `framed` borderless-card threading.
+  Cycle 3 also folded §3.4.1 (`feeds_fair_value` retired end-to-end),
+  §3.4.3 (`comp_roster` clamped to chart's top-N), and bundled a
+  `turn_meta` early SSE event that eliminated the BROWSE first-load
+  flicker (a §3.4.4 sub-symptom). Cycle 4 fills the remaining 5
+  drilldowns + prototypes a one-line teaser hook beneath each row;
+  Cycle 5 chart-library evaluation + Cycle 6 closeout remain. Plan:
   `BROWSE_REBUILD_HANDOFF_PLAN.md`
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued

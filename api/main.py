@@ -422,6 +422,16 @@ async def chat(req: ChatRequest) -> StreamingResponse:
                 confidence=decision.confidence,
                 reason=decision.reason,
             )
+            # Phase 4c Cycle 3 — emit the tier marker BEFORE the stream
+            # starts so the React layer can stamp `answerType` on the
+            # in-flight assistant message slot. Without this, the
+            # assistant `message` event (carrying `answer_type`) lands
+            # second-to-last in the stream and BROWSE turns flicker
+            # through the legacy card stack before swapping to the
+            # three-section newspaper layout.
+            yield events.encode_sse(
+                events.turn_meta(decision.answer_type.value)
+            )
         elif classify_raised:
             record_note("classify_turn raised; falling back to echo")
 

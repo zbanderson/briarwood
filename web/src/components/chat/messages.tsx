@@ -26,6 +26,7 @@ import { ScoutFinds } from "./scout-finds";
 import { BrowseRead } from "./browse-read";
 import { BrowseScout } from "./browse-scout";
 import { BrowseDeeperRead } from "./browse-deeper-read";
+import { InlinePrompt } from "./inline-prompt";
 
 // Lazy-load Google Maps so the client-only browser API stays out of SSR.
 const InlineMap = dynamic(
@@ -166,7 +167,14 @@ function AssistantMessage({
               ungroundedDeclaration={muted}
             />
             <BrowseScout insights={scoutInsights} onPrompt={onPrompt} />
-            <BrowseDeeperRead />
+            <BrowseDeeperRead
+              valueThesis={valueThesis}
+              valuationComps={valuationComps ?? undefined}
+              marketSupportComps={marketSupportComps ?? undefined}
+              scenarioTable={scenarioTable ?? undefined}
+              charts={charts}
+              onPrompt={onPrompt}
+            />
           </>
         )}
 
@@ -645,33 +653,6 @@ function CriticPanel({
         )}
       </div>
     </details>
-  );
-}
-
-function InlinePrompt({
-  label,
-  prompt,
-  onPick,
-}: {
-  label: string;
-  prompt: string;
-  onPick: (prompt: string) => void;
-}) {
-  return (
-    <div className="mt-2">
-      <button
-        type="button"
-        onClick={() => onPick(prompt)}
-        className={cn(
-          "rounded-full border border-[var(--color-border-subtle)] px-3 py-1.5 text-xs",
-          "text-[var(--color-text-muted)] hover:text-[var(--color-text)]",
-          "hover:border-[var(--color-border)] hover:bg-[var(--color-surface)]",
-          "transition-colors",
-        )}
-      >
-        {label}
-      </button>
-    </div>
   );
 }
 

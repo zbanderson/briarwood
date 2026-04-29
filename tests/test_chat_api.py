@@ -129,6 +129,25 @@ class ChatApiTests(unittest.TestCase):
             assistant_message_payload.get("answer_type"),
             AnswerType.DECISION.value,
         )
+        # Phase 4c Cycle 3: a `turn_meta` event also carries `answer_type`
+        # and MUST fire before the first text_delta so the React layer
+        # stamps `answerType` on the in-flight assistant slot before any
+        # structured event lands. Eliminates the BROWSE first-load flicker.
+        turn_meta_index = next(
+            idx
+            for idx, payload in enumerate(payloads)
+            if payload["type"] == events.EVENT_TURN_META
+        )
+        first_text_delta_index = next(
+            idx
+            for idx, payload in enumerate(payloads)
+            if payload["type"] == events.EVENT_TEXT_DELTA
+        )
+        self.assertLess(turn_meta_index, first_text_delta_index)
+        self.assertEqual(
+            payloads[turn_meta_index].get("answer_type"),
+            AnswerType.DECISION.value,
+        )
         self.assertEqual(store.added[0][1], "user")
         self.assertEqual(store.added[-1][1], "assistant")
         self.assertEqual(store.added[-1][2], "First reply.")

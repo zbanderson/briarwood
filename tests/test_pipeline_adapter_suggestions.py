@@ -116,7 +116,7 @@ class SlotDerivedChipsTests(unittest.TestCase):
     def test_valuation_comps_add_fair_value_chip(self) -> None:
         s = _session()
         s.last_value_thesis_view = {
-            "comps": [{"address": "1302 L Street", "feeds_fair_value": True}],
+            "comps": [{"address": "1302 L Street"}],
         }
         chips = _slot_derived_chips(s)
         self.assertIn("Which comps actually fed fair value?", chips)

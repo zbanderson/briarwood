@@ -105,14 +105,22 @@ function scenarioSurface(spec: ScenarioFanChartSpec): ChartSurface {
 function cmaSurface(spec: CmaPositioningChartSpec): ChartSurface {
   const priced = spec.comps.filter((comp) => isNumber(comp.ask_price));
   if (priced.length === 0) return { shouldRender: false };
-  const inModel = priced.filter((comp) => comp.feeds_fair_value).length;
+  // Phase 4c Cycle 3 (§3.4.1) — `feeds_fair_value` retired. Companion text
+  // now narrates SOLD vs ACTIVE provenance instead of "in / out of model"
+  // since every comp in the set is load-bearing.
+  const sold = priced.filter((c) => c.listing_status === "sold").length;
+  const active = priced.filter((c) => c.listing_status === "active").length;
+  const provenanceParts: string[] = [];
+  if (sold > 0) provenanceParts.push(`${sold} sold`);
+  if (active > 0) provenanceParts.push(`${active} active`);
+  const provenanceLine =
+    provenanceParts.length > 0
+      ? `${provenanceParts.join(" + ")} comp${priced.length === 1 ? "" : "s"} support this read`
+      : `${priced.length} comp${priced.length === 1 ? "" : "s"} support this read`;
   return {
     title: "Where the comps sit",
-    summary: `This shows where the chosen comps land relative to the ask and Briarwood's fair value range.`,
-    companion:
-      inModel > 0
-        ? `${inModel} comp${inModel === 1 ? "" : "s"} are currently feeding fair value; use the CMA table to see why each one is in or out.`
-        : "Use the CMA table to see which comps are supporting the read and which ones are only contextual.",
+    summary: `This shows where the comp set lands relative to the ask and Briarwood's fair value range.`,
+    companion: `${provenanceLine}; use the CMA table for per-comp inclusion reasons.`,
     shouldRender: true,
   };
 }

@@ -763,24 +763,18 @@ def _market_support_comps_from_view(view: dict[str, Any] | None) -> dict[str, An
 def _sanitize_valuation_module_comps(
     payload: dict[str, Any],
 ) -> tuple[dict[str, Any] | None, bool]:
-    """Filter out valuation_comps rows that did not originate from the
-    valuation module's ``comps_used`` set. Returns the cleaned payload (or
-    ``None`` if every row was dropped) along with a drift flag the caller
+    """Filter out malformed valuation_comps rows. Returns the cleaned payload
+    (or ``None`` if every row was dropped) along with a drift flag the caller
     can use to emit a ``partial_data_warning``.
 
-    F2 contract guard: the valuation_comps event promises rows that fed the
-    fair value computation. ``briarwood.agent.tools._selected_comp_rows``
-    — the canonical projection of ``comparable_sales.comps_used`` —
-    stamps ``feeds_fair_value=True`` on every row by construction
-    (provenance can override, but falls back to True). Any row without that
-    flag is either a live-market context comp or a browse-path neighbor —
-    neither belongs in this event.
-
-    Historically this guard raised ``AssertionError`` and aborted the
-    stream. NEW-V-007 softened it: a single drifted row now triggers a
-    logged warning and a user-visible banner instead of killing the
-    response, because the verdict itself remains reliable — we just don't
-    want to render an un-trusted comp alongside it.
+    Phase 4c Cycle 3 (§3.4.1) retired the ``feeds_fair_value`` provenance
+    gate this guard previously enforced. The single canonical constructor
+    path for valuation_comps event rows is
+    ``briarwood.agent.tools._selected_comp_rows`` (the projection of
+    ``comparable_sales.comps_used``), so the "rows in this event came from
+    the valuation pipeline" invariant is now structural by construction.
+    The dict-shape check stays — it's the only check that catches actual
+    payload corruption.
     """
     rows = payload.get("rows") or []
     good_rows: list[dict[str, Any]] = []
@@ -789,17 +783,6 @@ def _sanitize_valuation_module_comps(
         if not isinstance(row, dict):
             _logger.warning(
                 "valuation_comps row %d is not a dict: %r", index, row
-            )
-            drift = True
-            continue
-        if row.get("feeds_fair_value") is not True:
-            _logger.warning(
-                "valuation_comps row %d provenance drift: feeds_fair_value=%r "
-                "(source_label=%r, selected_by=%r)",
-                index,
-                row.get("feeds_fair_value"),
-                row.get("source_label"),
-                row.get("selected_by"),
             )
             drift = True
             continue
@@ -1014,13 +997,13 @@ def _native_cma_chart(
                     "ask_price": row.get("ask_price"),
                     "source_label": row.get("source_label"),
                     "selected_by": row.get("selected_by"),
-                    "feeds_fair_value": row.get("feeds_fair_value"),
                     # CMA Phase 4a Cycle 5: provenance for the marker scheme.
                     # ``listing_status`` is "sold" / "active" (legacy CMA rows
-                    # without provenance default to None and render as the
-                    # generic comp marker). ``is_cross_town`` qualifies SOLD
-                    # rows pulled from neighbouring towns when same-town SOLD
-                    # count was below MIN_SOLD_COUNT.
+                    # without provenance default to None and render with the
+                    # SOLD marker after Phase 4c Cycle 3 retired the
+                    # ``feeds_fair_value`` fallback). ``is_cross_town``
+                    # qualifies SOLD rows pulled from neighbouring towns when
+                    # same-town SOLD count was below MIN_SOLD_COUNT.
                     "listing_status": row.get("listing_status"),
                     "is_cross_town": bool(row.get("is_cross_town")),
                 }

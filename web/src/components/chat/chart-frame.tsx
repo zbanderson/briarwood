@@ -20,6 +20,14 @@ import type {
 
 type Props = {
   chart: ChartEvent;
+  /** Phase 4c Cycle 3 — Section C drilldowns embed charts inline with no
+   * extra border around them (constraint: "no nested boxed cards"). When
+   * `framed=false`, drop the outer `<figure>` rounded-2xl border + bg, drop
+   * inner border-b dividers, drop horizontal padding (parent provides it),
+   * and reduce the title weight so the chart's title doesn't compete with
+   * the drilldown row's label. Default `true` preserves non-BROWSE
+   * rendering. */
+  framed?: boolean;
 };
 
 const SVG_W = 640;
@@ -89,6 +97,36 @@ function formatTick(value: number, format: ChartValueFormat | null | undefined) 
   if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
   if (abs >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
   return `$${Math.round(value).toLocaleString()}`;
+}
+
+// Phase 4c Cycle 3 (§3.4.1) — shared formatter for the `Comp set` chip on
+// `cma_positioning` and the "Comps" drilldown SummaryChip in
+// `browse-deeper-read.tsx`. Both consume the same `CmaPositioningChartSpec`
+// payload so the chart-prose alignment that §3.4.1 demands is structural.
+//
+// Format: "5 SOLD · 3 ACTIVE", or "5 SOLD (2 CROSS-TOWN) · 3 ACTIVE" when
+// a SOLD subset is cross-town. When everything is null (legacy cached
+// payloads with no provenance), falls back to total comp count.
+export function formatCompSetChip(counts: {
+  sold: number;
+  active: number;
+  crossTown: number;
+  total: number;
+}): string {
+  const { sold, active, crossTown, total } = counts;
+  const parts: string[] = [];
+  if (sold > 0) {
+    parts.push(
+      crossTown > 0
+        ? `${sold} SOLD (${crossTown} CROSS-TOWN)`
+        : `${sold} SOLD`,
+    );
+  }
+  if (active > 0) parts.push(`${active} ACTIVE`);
+  if (parts.length === 0) {
+    return total > 0 ? `${total} COMPS` : "—";
+  }
+  return parts.join(" · ");
 }
 
 function strokeDashFor(style: ChartLegendItem["style"]): string | undefined {
@@ -249,7 +287,7 @@ function NativeChart({ spec, chrome }: { spec: ChartSpec; chrome: ChartChrome })
   return null;
 }
 
-export function ChartFrame({ chart }: Props) {
+export function ChartFrame({ chart, framed = true }: Props) {
   const [loaded, setLoaded] = useState(false);
   const surface = getChartSurface(chart);
   const title = surface.title ?? chartTitle(chart);
@@ -263,27 +301,46 @@ export function ChartFrame({ chart }: Props) {
 
   if (!surface.shouldRender) return null;
 
+  // Phase 4c Cycle 3 — `framed=false` drops the outer rounded-2xl border, the
+  // inner section-divider border-b lines, and the horizontal padding (parent
+  // drilldown body provides indent). Title weight reduces so it doesn't
+  // compete with the drilldown row's label.
+  const outerClass = framed
+    ? cn(
+        "mt-4 overflow-hidden rounded-2xl border border-[var(--color-border-subtle)]",
+        "bg-[var(--color-surface)]",
+      )
+    : "mt-2";
+  const headerClass = framed
+    ? "border-b border-[var(--color-border-subtle)] px-4 pt-4 pb-3"
+    : "pb-2";
+  const titleClass = framed
+    ? "text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]"
+    : "text-[14px] font-semibold leading-tight tracking-tight text-[var(--color-text)]";
+  const bodyClass = framed ? "px-3 pt-3 pb-3" : "";
+  const provenanceWrapperClass = framed ? "" : "mb-2";
+  const summaryWrapperClass = framed
+    ? "border-b border-[var(--color-border-subtle)] px-4 py-3 text-[13px] text-[var(--color-text-muted)]"
+    : "mb-3 text-[13px] text-[var(--color-text-muted)]";
+  const legendWrapperClass = framed ? "px-4 pb-2" : "mt-3";
+  const companionWrapperClass = framed
+    ? "border-t border-[var(--color-border-subtle)] px-4 py-3 text-[12px] text-[var(--color-text-faint)]"
+    : "mt-3 text-[12px] text-[var(--color-text-faint)]";
+
   if (chart.spec) {
     const body = <NativeChart spec={chart.spec} chrome={chrome} />;
     if (!body) return null;
     return (
-      <figure
-        className={cn(
-          "mt-4 overflow-hidden rounded-2xl border border-[var(--color-border-subtle)]",
-          "bg-[var(--color-surface)]",
-        )}
-      >
-        <div className="border-b border-[var(--color-border-subtle)] px-4 pt-4 pb-3">
-          <h3 className="text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]">
-            {title}
-          </h3>
+      <figure className={outerClass}>
+        <div className={headerClass}>
+          <h3 className={titleClass}>{title}</h3>
           {subtitle && (
             <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
               {subtitle}
             </p>
           )}
         </div>
-        <div className="px-3 pt-3 pb-3">
+        <div className={bodyClass}>
           {chart.provenance && chart.provenance.length > 0 && (
             <ProvenanceChips items={chart.provenance} />
           )}
@@ -316,16 +373,9 @@ export function ChartFrame({ chart }: Props) {
   if (!chart.url) return null;
 
   return (
-    <figure
-      className={cn(
-        "mt-4 overflow-hidden rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)]",
-      )}
-    >
-      <div className="border-b border-[var(--color-border-subtle)] px-4 pt-4 pb-3">
-        <h3 className="text-[18px] font-bold leading-tight tracking-tight text-[var(--color-text)]">
-          {title}
-        </h3>
+    <figure className={outerClass}>
+      <div className={headerClass}>
+        <h3 className={titleClass}>{title}</h3>
         {subtitle && (
           <p className="mt-1 text-[13px] leading-snug text-[var(--color-text-muted)]">
             {subtitle}
@@ -334,14 +384,18 @@ export function ChartFrame({ chart }: Props) {
       </div>
       <div className="relative">
         {chart.provenance && chart.provenance.length > 0 && (
-          <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
+          <div
+            className={cn(
+              framed
+                ? "border-b border-[var(--color-border-subtle)] px-4 py-3"
+                : provenanceWrapperClass,
+            )}
+          >
             <ProvenanceChips items={chart.provenance} />
           </div>
         )}
         {surface.summary && (
-          <div className="border-b border-[var(--color-border-subtle)] px-4 py-3 text-[13px] text-[var(--color-text-muted)]">
-            {surface.summary}
-          </div>
+          <div className={summaryWrapperClass}>{surface.summary}</div>
         )}
         {!loaded && (
           <div
@@ -359,14 +413,12 @@ export function ChartFrame({ chart }: Props) {
         />
       </div>
       {legend && legend.length > 0 && (
-        <div className="px-4 pb-2">
+        <div className={legendWrapperClass}>
           <LegendRow items={legend} />
         </div>
       )}
       {surface.companion && (
-        <div className="border-t border-[var(--color-border-subtle)] px-4 py-3 text-[12px] text-[var(--color-text-faint)]">
-          {surface.companion}
-        </div>
+        <div className={companionWrapperClass}>{surface.companion}</div>
       )}
     </figure>
   );
@@ -574,8 +626,25 @@ function CmaPositioningChart({
   const compValues = spec.comps
     .map((comp) => comp.ask_price)
     .filter(isNumber);
-  const explicitChosen = spec.comps.filter((comp) => comp.feeds_fair_value != null);
-  const chosenCount = explicitChosen.filter((comp) => comp.feeds_fair_value).length;
+  // Phase 4c Cycle 3 (§3.4.1) — `feeds_fair_value` is retired. Every comp in
+  // a BROWSE / DECISION CMA set is load-bearing, so the "Chosen comps /
+  // Context only" chip is replaced by a `Comp set` provenance chip computed
+  // from `listing_status`. Source-of-truth count is the same chart spec
+  // (`spec.comps`) the SVG renders, so chart-prose drift is structural.
+  // Keep this in sync with the drilldown-row "Comps" SummaryChip in
+  // browse-deeper-read.tsx, which derives the same counts from the same
+  // event payload.
+  const soldCount = spec.comps.filter((c) => c.listing_status === "sold").length;
+  const activeCount = spec.comps.filter((c) => c.listing_status === "active").length;
+  const crossTownCount = spec.comps.filter(
+    (c) => c.listing_status === "sold" && Boolean(c.is_cross_town),
+  ).length;
+  const compSetSummary = formatCompSetChip({
+    sold: soldCount,
+    active: activeCount,
+    crossTown: crossTownCount,
+    total: spec.comps.length,
+  });
   const values = [
     spec.subject_ask,
     spec.fair_value_base,
@@ -657,9 +726,10 @@ function CmaPositioningChart({
           const isCrossTown = !isActive && Boolean(comp.is_cross_town);
           // SOLD = filled circle (CHART.bull). ACTIVE = open triangle
           // (stroke-only on CHART.neutral). Cross-town SOLD = filled circle
-          // with a dashed CHART.base outline. Unknown listing_status
-          // (legacy / pre-Cycle-5 payloads) keeps the prior `feeds_fair_value`
-          // colouring so cached transcripts don't degrade.
+          // with a dashed CHART.base outline. Phase 4c Cycle 3 retires the
+          // `feeds_fair_value` fallback — pre-Cycle-5 cached payloads with
+          // null `listing_status` now render with the SOLD marker (legacy
+          // saved-store comps were all SOLD by construction).
           let marker: ReactNode;
           if (isActive) {
             marker = (
@@ -670,8 +740,8 @@ function CmaPositioningChart({
                 strokeWidth="1.5"
               />
             );
-          } else if (comp.listing_status === "sold") {
-            marker = isCrossTown ? (
+          } else if (isCrossTown) {
+            marker = (
               <circle
                 cx={cx}
                 cy={y}
@@ -681,12 +751,10 @@ function CmaPositioningChart({
                 strokeDasharray="2 2"
                 strokeWidth="1.5"
               />
-            ) : (
-              <circle cx={cx} cy={y} r="6" fill={CHART.bull} />
             );
           } else {
-            const tone = comp.feeds_fair_value ? CHART.bull : CHART.neutral;
-            marker = <circle cx={cx} cy={y} r="6" fill={tone} />;
+            // SOLD or unknown listing_status (legacy payloads pre-Cycle-5).
+            marker = <circle cx={cx} cy={y} r="6" fill={CHART.bull} />;
           }
           return (
             <g key={`${comp.address ?? "comp"}-${index}`}>
@@ -712,11 +780,7 @@ function CmaPositioningChart({
               : "—"
           }
         />
-        <MetricChip
-          label="Chosen comps"
-          value={explicitChosen.length > 0 ? `${chosenCount} in model` : "Context only"}
-          tone="emerald"
-        />
+        <MetricChip label="Comp set" value={compSetSummary} tone="emerald" />
       </div>
     </div>
   );

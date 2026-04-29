@@ -1638,10 +1638,13 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
     fair value") would be a lie.
 
     These tests pin the contract two ways:
-    1. Emission filter (``_sanitize_valuation_module_comps``) drops bad rows
-       and reports drift so the stream can surface a ``partial_data_warning``
-       (NEW-V-007: the guard used to raise; softened so a single stray row
-       no longer aborts the whole response).
+    1. Emission filter (``_sanitize_valuation_module_comps``) drops malformed
+       (non-dict) rows and reports drift so the stream can surface a
+       ``partial_data_warning``. Phase 4c Cycle 3 (§3.4.1) retired the
+       per-row ``feeds_fair_value`` provenance gate this guard previously
+       enforced — the "row came from the valuation pipeline" invariant is
+       now structural (sole constructor path is
+       ``briarwood.agent.tools._selected_comp_rows``).
     2. Source projection (``_valuation_comps_from_view``) returns ``None``
        when the view has no comps, so no event is emitted at all.
     """
@@ -1654,18 +1657,6 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
         "ask_price": 735000.0,
         "source_label": "Saved comp",
         "selected_by": "valuation",
-        "feeds_fair_value": True,
-    }
-    _LIVE_MARKET_ROW = {
-        "property_id": "1302-l-street",
-        "address": "1302 L Street, Belmar, NJ 07719",
-        "beds": 3,
-        "baths": 2.0,
-        "ask_price": 850000.0,
-        "source_label": "Live market comp",
-        "selected_by": "briarwood",
-        # hallmark of a non-valuation row: feeds_fair_value flag is absent
-        # (a valuation-module row ALWAYS sets it True, per _selected_comp_rows)
     }
 
     def test_guard_accepts_valuation_module_rows(self) -> None:
@@ -1674,26 +1665,6 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
         self.assertFalse(drift)
         self.assertIsNotNone(cleaned)
         self.assertEqual(len(cleaned["rows"]), 1)
-
-    def test_guard_drops_live_market_row_without_feeds_fair_value(self) -> None:
-        payload = {
-            "rows": [dict(self._VALUATION_ROW), dict(self._LIVE_MARKET_ROW)],
-        }
-        cleaned, drift = _sanitize_valuation_module_comps(payload)
-        self.assertTrue(drift)
-        self.assertIsNotNone(cleaned)
-        # Only the valuation-module row survives.
-        self.assertEqual(len(cleaned["rows"]), 1)
-        self.assertEqual(cleaned["rows"][0]["selected_by"], "valuation")
-
-    def test_guard_drops_row_with_feeds_fair_value_false(self) -> None:
-        row = dict(self._VALUATION_ROW)
-        row["feeds_fair_value"] = False
-        payload = {"rows": [row]}
-        cleaned, drift = _sanitize_valuation_module_comps(payload)
-        self.assertTrue(drift)
-        # All rows dropped → no payload, but verdict itself is still reliable.
-        self.assertIsNone(cleaned)
 
     def test_guard_drops_non_dict_row(self) -> None:
         payload = {"rows": ["not a dict", dict(self._VALUATION_ROW)]}
@@ -1748,8 +1719,20 @@ class ValuationCompsProvenanceTests(unittest.TestCase):
         self.assertEqual(event["source"], "valuation_module")
 
     def test_market_support_comps_event_source_is_live_market(self) -> None:
+        # Phase 4c Cycle 3 (§3.4.1): row provenance is no longer flag-keyed.
+        # The event-source labelling is unaffected; this test only pins the
+        # shape of the event envelope, not row provenance.
+        live_market_row = {
+            "property_id": "1302-l-street",
+            "address": "1302 L Street, Belmar, NJ 07719",
+            "beds": 3,
+            "baths": 2.0,
+            "ask_price": 850000.0,
+            "source_label": "Live market comp",
+            "selected_by": "briarwood",
+        }
         event = events.market_support_comps(
-            {"rows": [dict(self._LIVE_MARKET_ROW)], "summary": "foo"}
+            {"rows": [live_market_row], "summary": "foo"}
         )
         self.assertEqual(event["type"], events.EVENT_MARKET_SUPPORT_COMPS)
         self.assertEqual(event["source"], "live_market")

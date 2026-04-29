@@ -40,6 +40,7 @@ EVENT_GROUNDING_ANNOTATIONS = "grounding_annotations"
 EVENT_PARTIAL_DATA_WARNING = "partial_data_warning"
 EVENT_CLAIM_REJECTED = "claim_rejected"
 EVENT_SCOUT_INSIGHTS = "scout_insights"
+EVENT_TURN_META = "turn_meta"
 
 
 def text_delta(content: str) -> dict[str, Any]:
@@ -77,6 +78,29 @@ def message_event(
     answer_type: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {"type": EVENT_MESSAGE, "id": message_id, "role": role}
+    if answer_type is not None:
+        payload["answer_type"] = answer_type
+    return payload
+
+
+def turn_meta(answer_type: str | None) -> dict[str, Any]:
+    """Phase 4c Cycle 3 — early tier marker.
+
+    Fires immediately after the router classifies the turn, before any
+    structured stream events. Lets the frontend stamp ``answerType`` on the
+    in-flight assistant message slot so the BROWSE three-section layout
+    renders from the first ``text_delta``. Without this event, the
+    assistant ``message`` event (which is the canonical carrier of
+    ``answer_type``) lands at the very end of the stream — every
+    structured event in between renders against ``answerType=undefined``,
+    which routes BROWSE turns through the legacy card stack briefly
+    before the terminal swap to the three-section layout. Visible flicker.
+
+    The terminal ``message`` event still fires at stream-end with the real
+    server-assigned id; the React reducer treats both arms as additive
+    so the second emit is idempotent on ``answerType``.
+    """
+    payload: dict[str, Any] = {"type": EVENT_TURN_META}
     if answer_type is not None:
         payload["answer_type"] = answer_type
     return payload
@@ -225,9 +249,11 @@ def valuation_comps(payload: dict[str, Any]) -> dict[str, Any]:
     """Comps that actually fed the fair value computation.
 
     F2 split: sourced from the valuation module's ``comparable_sales``
-    output (``comps_used``). Each row carries ``feeds_fair_value`` provenance
-    so the UI can label these as the evidence behind the price read — not
-    market-context comps. Never populated from live Zillow market search.
+    output (``comps_used``). Phase 4c Cycle 3 (§3.4.1) retired the
+    per-row ``feeds_fair_value`` flag — the "row came from the valuation
+    pipeline" invariant is now structural (sole constructor path is
+    ``briarwood.agent.tools._selected_comp_rows``). Never populated from
+    live Zillow market search.
     """
     return {"type": EVENT_VALUATION_COMPS, "source": "valuation_module", **payload}
 

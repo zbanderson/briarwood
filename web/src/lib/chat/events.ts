@@ -70,11 +70,12 @@ export type CmaPositioningChartSpec = {
     ask_price?: number | null;
     source_label?: string | null;
     selected_by?: string | null;
-    feeds_fair_value?: boolean | null;
-    // CMA Phase 4a Cycle 5: provenance for the marker scheme. SOLD = filled
-    // circle, ACTIVE = open triangle, cross-town SOLD = filled circle with
-    // dashed outline. Legacy/missing values default to the generic SOLD
-    // marker for back-compat with pre-Cycle-5 cached payloads.
+    // CMA Phase 4a Cycle 5 / Phase 4c Cycle 3: provenance for the marker
+    // scheme. SOLD = filled circle, ACTIVE = open triangle, cross-town SOLD
+    // = filled circle with dashed outline. Legacy/missing `listing_status`
+    // values render with the SOLD marker after Phase 4c Cycle 3 retired the
+    // ``feeds_fair_value`` fallback (legacy cached payloads were all SOLD
+    // by construction).
     listing_status?: "sold" | "active" | null;
     is_cross_town?: boolean | null;
   }>;
@@ -332,7 +333,6 @@ export type ValueThesisCompRow = {
   source_summary?: string | null;
   inclusion_reason?: string | null;
   selected_by?: string | null;
-  feeds_fair_value?: boolean | null;
 };
 export type HiddenUpsideItem = {
   kind: string;
@@ -577,6 +577,18 @@ export type ScoutInsightsEvent = {
   items: ScoutInsightItem[];
 };
 
+// Phase 4c Cycle 3 — early tier marker. Fires immediately after the router
+// classifies the turn (before any structured stream events) so the assistant
+// message slot can stamp `answerType` on its in-flight message and pick the
+// right render tree from the very first text_delta. Eliminates the
+// first-load-then-real-load flicker on BROWSE turns where the legacy card
+// stack would otherwise render briefly before the terminal `message` event
+// flipped the layout to the three-section newspaper view.
+export type TurnMetaEvent = {
+  type: "turn_meta";
+  answer_type?: string | null;
+};
+
 export type ChatEvent =
   | TextDeltaEvent
   | ToolCallEvent
@@ -586,6 +598,7 @@ export type ChatEvent =
   | SuggestionsEvent
   | ConversationEvent
   | MessageEvent
+  | TurnMetaEvent
   | DoneEvent
   | ErrorEvent
   | ChartEvent

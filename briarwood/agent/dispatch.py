@@ -2936,6 +2936,30 @@ def _format_cma_comp_lines(comps: list[dict[str, object]]) -> list[str]:
     return lines
 
 
+# Phase 4c Cycle 3 (§3.4.3): max comp count passed to the synthesizer's
+# `comp_roster` slice. Mirrors the `priced_rows[:8]` cap inside
+# `_native_cma_chart` (api/pipeline_adapter.py); keep these in lock-step.
+_CMA_ROSTER_MAX_COMPS = 8
+
+
+def _clamp_market_support_comp_roster(
+    market_view: object,
+) -> list[dict[str, object]] | None:
+    """Phase 4c Cycle 3 (§3.4.3) — return the synthesizer's `comp_roster`
+    slice for BROWSE turns: typed dict rows from
+    ``session.last_market_support_view["comps"]`` clamped to
+    ``_CMA_ROSTER_MAX_COMPS`` so the synthesizer can only cite comps the
+    ``cma_positioning`` chart actually shows.
+    """
+    if not isinstance(market_view, dict):
+        return None
+    candidate = market_view.get("comps")
+    if not isinstance(candidate, list) or not candidate:
+        return None
+    typed_rows = [row for row in candidate if isinstance(row, dict)]
+    return typed_rows[:_CMA_ROSTER_MAX_COMPS] or None
+
+
 def _comp_row_from_cma(comp: ComparableProperty) -> dict[str, object]:
     return {
         "property_id": comp.property_id,
@@ -3982,21 +4006,18 @@ def handle_edge(
             (thesis.get("comp_selection_summary") or (cma_result.comp_selection_summary if cma_result else None) or "These are the comps Briarwood is leaning on for this read.")
         ]
         if comps:
-            chosen = [comp for comp in comps if comp.get("feeds_fair_value") is True]
-            contextual = [comp for comp in comps if comp.get("feeds_fair_value") is False]
-            if chosen:
+            # Phase 4c Cycle 3 (§3.4.1) — `feeds_fair_value` is retired. Every
+            # comp in the BROWSE / DECISION valuation set is load-bearing, so
+            # the chosen/contextual split goes degenerate; lead with the top
+            # comps directly.
+            led_by = [
+                f"{comp.get('address')} ({comp.get('source_label') or 'comp'})"
+                for comp in comps[:3]
+                if comp.get("address")
+            ]
+            if led_by:
                 fallback_lines.append(
-                    "The fair-value set is led by "
-                    + "; ".join(
-                        f"{comp.get('address')} ({comp.get('source_label') or 'comp'})"
-                        for comp in chosen[:3]
-                        if comp.get("address")
-                    )
-                    + "."
-                )
-            elif contextual:
-                fallback_lines.append(
-                    "Right now the visible comp table is still more contextual than fully selected into fair value."
+                    "The fair-value set is led by " + "; ".join(led_by) + "."
                 )
             reasons = [
                 str(comp.get("inclusion_reason") or comp.get("source_summary") or "")
@@ -5062,20 +5083,15 @@ def handle_browse(
                 intent=intent,
                 llm=llm,
             )
-            # CMA Phase 4a Cycle 5: pass the live comp roster so the
-            # synthesizer can cite specific comps with provenance
-            # ("1209 16th Ave sold for $800k", "812 16th Ave is currently
-            # asking $799k", "a $760k sale in Bradley Beach"). The roster
-            # mirrors session.last_market_support_view["comps"] — same
-            # rows as the cma_positioning chart.
-            comp_roster: list[dict[str, object]] | None = None
-            market_support = session.last_market_support_view
-            if isinstance(market_support, dict):
-                roster_candidate = market_support.get("comps")
-                if isinstance(roster_candidate, list) and roster_candidate:
-                    comp_roster = [
-                        row for row in roster_candidate if isinstance(row, dict)
-                    ] or None
+            # CMA Phase 4a Cycle 5 / Phase 4c Cycle 3 (§3.4.3): pass the live
+            # comp roster so the synthesizer can cite specific comps with
+            # provenance ("1209 16th Ave sold for $800k", "a $760k sale in
+            # Bradley Beach"). Clamped to `_CMA_ROSTER_MAX_COMPS` so the
+            # synthesizer can only cite comps the cma_positioning chart
+            # actually shows — chart-prose alignment is structural.
+            comp_roster = _clamp_market_support_comp_roster(
+                session.last_market_support_view,
+            )
             # Phase 4b Cycle 2: run the LLM scout over the full unified
             # output before the synthesizer so the "What's Interesting"
             # beat can weave a scout-surfaced angle into prose. The

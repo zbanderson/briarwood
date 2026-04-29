@@ -5,6 +5,11 @@ import type { ScenarioRow, ScenarioTableEvent } from "@/lib/chat/events";
 
 type Props = {
   table: ScenarioTableEvent;
+  /** Phase 4c Cycle 3 — Section C Projection drilldown embeds this card with
+   * no extra border. `framed=false` drops the outer rounded-2xl wrapper;
+   * internal table layout is unchanged. Default `true` preserves non-BROWSE
+   * rendering. */
+  framed?: boolean;
 };
 
 const SCENARIO_TONE: Record<string, string> = {
@@ -32,7 +37,7 @@ function deltaTone(n: number | null | undefined) {
   return "text-[var(--color-text-muted)]";
 }
 
-export function ScenarioTable({ table }: Props) {
+export function ScenarioTable({ table, framed = true }: Props) {
   const { rows, address, ask_price, basis_label, spread } = table;
   if (!rows || rows.length === 0) return null;
   const basisName = (basis_label ?? "ask")
@@ -42,8 +47,9 @@ export function ScenarioTable({ table }: Props) {
   return (
     <div
       className={cn(
-        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)] p-4",
+        framed
+          ? "mt-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4"
+          : "mt-2",
       )}
     >
       <div className="flex items-baseline justify-between gap-3">
