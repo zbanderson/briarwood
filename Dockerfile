@@ -49,6 +49,11 @@ COPY data/comps /opt/seed/comps
 COPY data/local_intelligence /opt/seed/local_intelligence
 COPY data/eval /opt/seed/eval
 COPY data/town_county /opt/seed/town_county
+COPY data/market_history /opt/seed/market_history
+COPY data/listing_index /opt/seed/listing_index
+COPY data/model_quality /opt/seed/model_quality
+COPY data/outcomes /opt/seed/outcomes
+COPY data/manual_entries /opt/seed/manual_entries
 
 # Entrypoint: ensures /app/data directory tree exists on the mounted volume,
 # then no-clobber-copies seed data from /opt/seed onto the volume on first

@@ -61,11 +61,11 @@ data/cache
 data/web
 data/saved_properties
 data/learning
-data/outcomes
-data/listing_index
-data/manual_entries
-data/market_history
-data/model_quality
+# data/outcomes — small Stage 4 ground-truth, shipped as seed (~16 KB)
+# data/listing_index — small index.json, shipped as seed (~8 KB)
+# data/manual_entries — small hand-curated property entries, shipped as seed
+# data/market_history — small zillow_zhvi_history.json, shipped as seed (~4.5 KB)
+# data/model_quality — small fixtures, shipped as seed (~16 KB)
 
 # --- Secrets ---
 .env

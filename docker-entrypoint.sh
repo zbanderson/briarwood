@@ -29,7 +29,7 @@ mkdir -p \
 
 # Seed data: copy from image to volume on first boot only.
 if [ -d "${SEED_ROOT}" ]; then
-  for sub in comps local_intelligence eval town_county; do
+  for sub in comps local_intelligence eval town_county market_history listing_index model_quality outcomes manual_entries; do
     if [ -d "${SEED_ROOT}/${sub}" ]; then
       mkdir -p "${DATA_ROOT}/${sub}"
       # cp -rn: no-clobber, preserves volume's existing files. -T-equivalent
