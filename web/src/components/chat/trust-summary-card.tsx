@@ -5,6 +5,11 @@ import type { TrustSummaryEvent } from "@/lib/chat/events";
 
 type Props = {
   summary: TrustSummaryEvent;
+  /** Phase 4c Cycle 4 — Section C drilldowns embed this card with no extra
+   * border (parent drilldown body is the frame). `framed=false` drops the
+   * outer rounded-2xl wrapper + bg + padding; default `true` preserves the
+   * non-BROWSE rendering. */
+  framed?: boolean;
 };
 
 function pct(value: number | null | undefined) {
@@ -12,12 +17,13 @@ function pct(value: number | null | undefined) {
   return `${Math.round(value * 100)}%`;
 }
 
-export function TrustSummaryCard({ summary }: Props) {
+export function TrustSummaryCard({ summary, framed = true }: Props) {
   return (
     <div
       className={cn(
-        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)] p-4",
+        framed
+          ? "mt-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4"
+          : "",
       )}
     >
       <div className="flex items-start justify-between gap-3">

@@ -181,35 +181,388 @@ The ordered list of major moves. Each step carries a `[source]` tag —
    rebuild) now unblocked. Real public-record sale ingestion remains a
    follow-up under §4 ("Automate public-record outcome ingestion") and
    the new ATTOM-outcome adapter slice.
-6. **Phase 4c — BROWSE summary card rebuild** `[ROADMAP banner]` — **ACTIVE 2026-04-28**, plan: [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+6. **Phase 4c — BROWSE summary card rebuild** `[DECISIONS.md 2026-04-29]` ✅ RESOLVED 2026-04-29
    *Why now:* Substrate (real comps + Scout outputs + closed model-accuracy
-   loop) is in place; the rebuilt response surface needs all three to
+   loop) was in place; the rebuilt response surface needed all three to
    honestly hold together.
-   *Plan reframe (2026-04-28):* original "one rich summary card with
-   drilldowns" replaced with **three stacked sections inside the assistant
-   bubble** — Section A (`BrowseRead`: stance pill + headline + masthead
-   chart + prose), Section B (`BrowseScout`: peer section, conditional
-   null), Section C (`BrowseDeeperRead`: 8 chevron-list drilldowns).
-   Newspaper-front-page hierarchy via section sub-heads + thin rules + no
-   nested boxed cards. See `BROWSE_REBUILD_HANDOFF_PLAN.md` for the cycle
-   plan (5 cycles + closeout, including the §3.4.7 chart-library eval as
-   Cycle 5).
-   *Cycle 1 outcome (2026-04-28 — LANDED):* tier marker + section primitive
-   + Section A ("THE READ") fully filled.
-   *Cycle 2 outcome (2026-04-28 — LANDED):* Section B ("What did Scout dig
-   up?") fill + stance carry-over.
-   *Cycle 3 outcome (2026-04-28 — LANDED):* Section C drilldowns (Comps /
-   Value thesis / Projection) over the new `BrowseDrilldown` primitive +
-   first-time coach-mark hint + `framed` borderless-card threading;
-   absorbed §3.4.1 + §3.4.3 drive-bys; bundled `turn_meta` early tier
-   marker to eliminate the BROWSE first-load flicker (§3.4.4 sub-symptom).
-   Cycle 4 fills the remaining 5 drilldowns (Rent / Town / Risk /
-   Confidence / Path) and prototypes a one-line italic teaser hook beneath
-   each row.
+   *Outcome:* Landed via [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+   Cycles 1–6 across 2026-04-28 → 2026-04-29. BROWSE turns now render the
+   three-section newspaper layout (Section A `BrowseRead` stance pill +
+   headline + masthead `market_trend` chart + prose, Section B
+   `BrowseScout` peer section with the playful Scout treatment,
+   Section C `BrowseDeeperRead` with eight chevron-list drilldowns
+   over the new `BrowseDrilldown` primitive — Comps / Value thesis /
+   Projection / Rent / Town context / Risk / Confidence & data /
+   Recommended path). Tier-aware render gate keyed off
+   `ChatMessage.answerType === "browse"`; non-BROWSE tiers render the
+   existing card stack unchanged. Drive-by §3.4.1 (`feeds_fair_value`
+   retired end-to-end) + §3.4.3 (`comp_roster` clamped to chart's top-N) +
+   `turn_meta` early SSE event eliminating BROWSE first-load flicker.
+   `framed?` prop on `ChartFrame` / `CompsTableCard` / `ScenarioTable` +
+   the five absorbed cards so drilldown bodies drop the boxed-card chrome.
+   Cycle 5 produced the chart-library eval memo at
+   [`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md);
+   owner picked Apache ECharts (override of the memo's "stay native"
+   recommendation), and the actual chart-renderer migration is filed as a
+   fresh handoff at [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+   (§3.6) — **not** folded into Phase 4c. OD #6 (editor pass) closed as
+   deferred-indefinitely; OD #7 (StrategyPathCard fate) closed as
+   drilldown-row in v1. Owner browser smoke signed off 2026-04-29 with
+   no layout iterations.
 
 Sequencing call recorded in [DECISIONS.md](DECISIONS.md) 2026-04-27 entry —
 that entry formally fixes steps 2–5; steps 1 and 6 are bookends inherited
 from the prior banner.
+
+---
+
+## Deployment & Pilot Launch
+
+The path from local-only execution to a hosted pilot serving 5–10 users.
+The goal of the pilot is unfiltered user feedback against a deployed
+instance with full observability — not a public launch. The plan is
+five phases (A–E) with explicit "done signals" so progress is
+unambiguous. Each phase assumes the prior phase's done signal has
+fired; phases do not parallelize across the boundary.
+
+### Phase A — Foundations (Days 1–3)
+
+Stack decision goes to **Railway** as the primary recommendation:
+integrated Postgres + Redis, git-push deploys, and pilot-tier pricing
+that comfortably covers a 5–10 user footprint without optimization
+work. Fly and Render are acceptable alternatives if a Railway
+constraint surfaces (egress shape, regional pinning, build limits) —
+but we don't shop platforms preemptively.
+
+Domain purchase is a $12 line item from Namecheap. Candidates in
+preference order: `briarwood.app`, `briarwood.ai`,
+`briarwoodintel.com`. Deploy first, attach domain second — the
+skeleton deploy should be reachable on the platform's default URL
+before DNS is touched, so domain attachment is a clean cutover rather
+than a debugging variable.
+
+Skeleton deploy is an empty FastAPI app with Postgres and Redis
+provisioned, a `/health` endpoint live, and HTTPS confirmed end to
+end. No Briarwood pipeline code yet — this phase is purely about
+proving the platform shape works.
+
+**Done signal:** `curl https://<domain>/health` returns 200 from
+production.
+
+### Phase B — Data layer (Days 4–7)
+
+Postgres schema mirrors the existing JSONL shape so the migration is
+a copy operation, not a redesign. Tables to create:
+
+- `users`
+- `sessions`
+- `layer_timings`
+- `specialist_outputs`
+- `contribution_maps`
+- `feedback_rows`
+- `model_performance_log`
+- `frontend_events`
+
+The migration runs as a **dual-write** for one week:
+`intelligence_capture.py` writes to both JSONL and Postgres while we
+verify row counts, schema fidelity, and query patterns against the
+new store. The file writer is retired only after a clean week of
+parity. This buys a recovery window if the Postgres shape needs a
+correction — the JSONL remains the source of truth until we say
+otherwise.
+
+Backfill is a one-shot script that inserts the 293 historical
+feedback rows with their already-deterministic `session_ids` and the
+equal-weight contribution maps already established. No reshaping —
+the deterministic ids are the join key that lets historical
+contribution analysis continue to work after cutover.
+
+**F3 is the deploy-blocker in this phase.** Per-worker process-global
+caches must be moved into Redis with explicit TTLs **before any user
+hits the deployed instance**. F3 was P2 in local execution because a
+single Python process owned the cache; in a multi-worker hosted
+setup it becomes P0 because cache incoherence across workers would
+let the same property return different verdicts to different users
+on consecutive requests. This is non-negotiable before Phase C
+opens.
+
+**Done signal:** dual-write parity confirmed for seven consecutive
+days; 293 historical rows backfilled and queryable; F3 caches
+serving from Redis with TTLs in place.
+
+### Phase C — Auth and access (Days 8–10)
+
+Magic-link auth via **Resend** (free tier covers pilot volume).
+Endpoints: `/auth/request` and `/auth/verify`, with signed session
+cookies for the persistence layer. The pilot allow-list is a
+hardcoded list of emails — no self-signup, no admin UI for invites.
+The simplest possible gate.
+
+Every `PipelineSession.session_id` ties to an authenticated `user_id`
+on creation. This is the join key for all downstream observability:
+funnel analysis, per-user latency, per-user feedback rate, and
+per-user model contribution all depend on it being present from the
+first request.
+
+A per-user rate limit of **50 tear sheets/day/user** bounds compute
+exposure during the pilot. The cap is not a product-quality
+constraint — it's a blast-radius constraint while we still trust
+unfamiliar prompts and unfamiliar users equally.
+
+**Done signal:** an allow-listed user can request a magic link,
+verify, and run a tear sheet through the deployed instance, with the
+session row and `user_id` join visible in Postgres.
+
+### Phase D — Pilot instrumentation (Days 11–14)
+
+Frontend event capture, every event tagged with `session_id`. Events
+to capture:
+
+- `tear_sheet_opened`
+- `section_viewed`
+- `chart_interacted`
+- `scroll_depth`
+- `tear_sheet_abandoned`
+- `feedback_submitted`
+
+All write to the `frontend_events` table from Phase B's schema.
+
+Internal dashboard ships at `/admin/dashboard`, gated to the admin
+email only. Required charts on v0.1:
+
+- Sessions per day
+- p50 / p95 latency per pipeline layer
+- Model contribution distribution
+- Drop-off funnel by section
+- Recent feedback feed
+
+Sentry on the free tier handles error monitoring. We do not invest
+in additional third-party telemetry — the internal dashboard is the
+monitoring stack for the pilot, and Sentry is the error tail.
+
+**Done signal:** running a tear sheet against the deployed instance
+populates every event type listed above; the admin dashboard
+displays each required chart with non-empty data; an intentionally
+thrown error appears in Sentry within one minute.
+
+### Phase E — Pilot prep (Days 15–18)
+
+One full week of running self-traffic against the deployed instance
+before the first user is onboarded. Goal: generate 20+ real tear
+sheets, watch the dashboard, and surface the prod-only bugs that
+local execution doesn't expose — timezones, env-var drift,
+cold-start behavior, worker-boundary state assumptions, anything
+that only shows up under hosted multi-worker conditions.
+
+A one-page onboarding doc covers what Briarwood does, how to access
+it, how to give feedback, and who to contact when it breaks. Plain
+prose, no marketing.
+
+Feedback channel is friction-free over elegant: a dedicated Slack
+channel or a shared doc, whichever the user already lives in. The
+goal is unfiltered reactions, not structured intake — we'll reshape
+the channel after we know what feedback actually looks like.
+
+Onboarding is **staggered**, not batched. First user lands Day 15;
+second user lands Day 17. Each user's first session should teach us
+something — about copy, about latency, about a broken edge case —
+before the next user arrives, so we don't burn two onboardings on
+the same fixable bug.
+
+**Done signal:** 20+ self-traffic tear sheets logged with full
+observability; onboarding doc finalized; feedback channel live;
+first pilot user successfully completes a tear sheet on Day 15
+without manual intervention.
+
+### Explicitly out of scope for pilot
+
+What we will **not** build before users are on:
+
+- Multi-region or autoscaling infrastructure
+- Background job queues (Celery, Redis-based task queues, etc.)
+- Separate staging environment — use feature flags like the existing
+  `BRIARWOOD_CLAIMS_ENABLED` pattern
+- Comprehensive third-party monitoring stacks (Datadog, New Relic) —
+  the internal dashboard is the monitoring stack
+- CI/CD beyond the platform's built-in git-push deploys
+
+Each of these is a real future-state need; none of them is a
+pilot-state need, and each one is a multi-day distraction from
+getting a real user in front of the product.
+
+### Deploy-blocking items
+
+**F3 — Redis cache migration is the single P0 that must ship before
+any user hits production.** Process-global caches behave differently
+under multi-worker hosted execution than under single-process local
+execution; shipping without F3 means the same property can return
+different verdicts to different users on consecutive requests. F3
+lands in Phase B and is the gate on Phase C opening.
+
+All other open audit items (F6, NF4, wedge Phase 3 follow-ups, the
+remaining items under §2 Closing Out and §4 Tactical Backlog) are
+**non-blocking for deploy**. They can ship in parallel with these
+phases or after the pilot is live, sequenced against the existing
+roadmap rather than the deployment timeline.
+
+---
+
+## Observability & Unit Economics
+
+Briarwood's edge against larger competitors is the ability to
+decompose every step of the pipeline for measurement, attribution,
+and improvement. The same substrate that surfaces drop-off and
+accuracy also surfaces per-query cost, which makes the pilot a
+**pricing-research instrument** as well as a product-feedback
+instrument. Observability is the moat — every decision must be
+decomposable, attributable, and measurable, including cost. The
+internal dashboard described in the Deployment section is both the
+operational tool and the pricing research instrument for the pilot.
+
+### What we already have
+
+To keep the gap analysis honest, the observability primitives
+already in place from prior architecture work:
+
+- `session_id` flowing end-to-end from `PipelineSession` through
+  every layer into feedback capture
+- `contribution_map` per session, attributing weight to each
+  specialist
+- 293 backfilled historical feedback rows plus the new format going
+  forward
+- Eval harness writing `model_performance_log.jsonl` for per-model
+  scoring over time
+- Coherence check in the Unified Intelligence Agent for
+  cross-model conflict detection (leading indicator of
+  disagreement)
+
+### What we need to add
+
+The gaps group into four workstreams. The first three are
+pilot-scoped; the fourth is a longer-horizon item captured here so
+the eventual sequencing is unambiguous.
+
+#### 1. Operational telemetry
+
+Per-layer wall-clock latency captured in a `LayerTiming` field on
+`PipelineSession`, populated by the executor as each layer
+completes. This is the foundation for the dashboard's latency
+panel and for any subsequent cost-vs-latency analysis — without it
+every other observability question becomes harder to answer.
+
+Frontend drop-off events tied to `session_id` are covered by the
+Deployment section's Phase D event capture, but they are the input
+feed for funnel analysis here. The list of events is owned by Phase
+D; this section consumes them.
+
+Error rates per layer, surfaced through Sentry plus the internal
+dashboard. Sentry is the error tail; the dashboard is the
+aggregate view.
+
+#### 2. Accuracy and ground truth
+
+The eval harness scores against feedback today, but feedback is
+sparse — most sessions never produce a thumbs-up/thumbs-down and
+even fewer produce structured corrections. The fix is a
+**delayed-feedback ingestion path** that backfills long-horizon
+truth values into the same `session_id` rows once they become
+observable: actual sale price vs. base case, realized rental yield
+vs. ISR projection, observed days-on-market vs. predicted
+absorption.
+
+This converts the eval harness from a feedback-driven scorer into a
+**ground-truth-driven scorer** over time. The change is structural,
+not cosmetic — the harness's accuracy claims become defensible
+against external data rather than against user disposition alone.
+
+#### 3. Cost and margin tracking (new — explicit pricing research goal)
+
+Every user query must produce a cost record so the pilot doubles as
+pricing research. The data captured per session:
+
+- **LLM token spend per layer:** input tokens, output tokens, model
+  name, $ cost. Captured at the **API client layer** so every call
+  site is covered automatically rather than relying on
+  instrumentation discipline at each call site.
+- **External data API costs per session:** third-party real-estate
+  data calls, geocoding, comp lookups, etc., tagged to `session_id`.
+- **Compute cost allocation:** pilot-stage flat cost per session
+  amortized from infrastructure spend. Refine to actual measured
+  cost once volume justifies it.
+- **Total cost per session:** `LLM + external APIs + compute
+  allocation`, written to a `session_costs` table joined on
+  `session_id`.
+
+The dashboard surfaces four views over this data:
+
+- **Cost per session distribution** (median, p90, p99) — identifies
+  the long-tail expensive queries that would break flat-rate
+  pricing.
+- **Cost per user per week** — projects what each pilot user would
+  pay at various pricing tiers.
+- **Cost-to-engagement ratio** — sessions that cost the most should
+  also be the ones generating the most user value (measured by
+  dashboard-visible engagement signals like feedback submission,
+  return visits, deep-section views). When they don't, that's a
+  margin leak worth investigating.
+- **Cost vs. accuracy trade-offs per specialist model** — if the
+  Location model costs 3× more than the Risk model but moves the
+  final decision less, that's a model-economics question worth
+  surfacing in the dashboard rather than discovering retroactively
+  in the bill.
+
+#### 4. The closed feedback loop (longer horizon)
+
+This is forward-looking, not pilot-blocking. The eval harness
+should eventually write **model weights back to a config the
+Triage Agent reads on each session**, so dashboard findings adjust
+orchestration without a code deploy. This is the asymmetric
+advantage vs. larger competitors whose model weights are baked
+into release cycles — Briarwood's orchestration becomes data, not
+code.
+
+Sequenced **after** the pilot data validates that the dashboard's
+findings are trustworthy. Wiring writeback before the dashboard's
+signal quality is proven would amplify wrong signals into routing
+decisions.
+
+### Pricing research framing for the pilot
+
+The 5–10 user pilot generates the data needed to answer four
+pricing questions:
+
+- What does a representative session cost us at production scale?
+- What's the cost variance between a quick lookup and a deep tear
+  sheet generation? Does it justify tiered pricing, or favor flat
+  pricing with a usage cap?
+- Which user segments produce the highest-cost sessions, and do
+  those correlate with willingness to pay (size of deal, frequency
+  of use, depth of engagement)?
+- At what price point does each pilot user's behavior suggest
+  they'd convert to paid? (Asked directly in feedback, validated
+  against measured engagement.)
+
+Pilot users are **not charged**. The cost data is internal research;
+the user feedback is qualitative pricing research. Both feed the
+post-pilot pricing decision — neither is intended to support a
+billing system at pilot stage.
+
+### Sequencing
+
+In order of dependency, not necessarily chronological:
+
+1. **Per-layer latency capture** — one day's work, foundation for
+   the dashboard.
+2. **LLM cost capture at the API client layer** — must happen
+   **before** the first deployed user query, so no session is
+   uncosted. This is the hard ordering constraint in the list.
+3. **Internal dashboard v0.1** — reads from `session_costs`,
+   `layer_timings`, and `frontend_events`.
+4. **Delayed ground-truth ingestion path.**
+5. **Eval harness extensions** to score cost-vs-accuracy alongside
+   confidence calibration.
+6. **Closed-loop weight writeback** — post-pilot, gated on
+   dashboard signal quality being trusted.
 
 ---
 
@@ -1358,27 +1711,36 @@ entry landed in a single sweep:
 See [`DECISIONS.md`](DECISIONS.md) `2026-04-28 — Phase 4c Cycle 3 landed`
 for the full landing notes.
 
-#### §3.4.2 `value_opportunity` chart y-axis label "Comp" renders as a vertical character stack `[impact: UI & Charts]`
+#### ✅ §3.4.2 `value_opportunity` chart y-axis label "Comp" renders as a vertical character stack `[impact: UI & Charts]` — RESOLVED 2026-04-30 — Chart-renderer migration Cycle 2 drive-by
 
 **Severity:** Low — cosmetic. Surfaced during CMA Phase 4a Cycle 5
-browser smoke.
+browser smoke; closed by §3.6 Cycle 2 (chart-renderer migration to
+Apache ECharts).
 
-**Files:**
-- [web/src/components/chat/chart-frame.tsx](web/src/components/chat/chart-frame.tsx) `ValueOpportunityChart` — uses the shared `AxisLabels` component to render the y-axis label.
-- The `_native_value_chart` payload in [api/pipeline_adapter.py](api/pipeline_adapter.py) sets `y_axis_label="Comp"`.
+**Resolution.** The bug class is structurally gone in the ECharts
+renderer. `value_opportunity` now renders as a number-line dot plot
+with the y axis suppressed entirely (`yAxis.show = false`); when other
+chart kinds need a rotated y-axis label they use ECharts'
+declarative `nameRotate: 90` on `yAxis.name`, which routes through
+ECharts' text layout (proper transform-rotated text node) instead of
+the per-character SVG fallback that triggered the original bug.
+The hand-rolled `AxisLabels` SVG helper that contained the bug was
+removed from `chart-frame.tsx` in the same change.
 
-**Issue:** When the y-axis label is a single short word (e.g.
-`"Comp"`), the SVG text path falls through to per-character placement
-and the user sees `C / o / m / p` stacked vertically — one character
-per visual line — rather than the word rendered horizontally with a
+**Files (final):**
+- [web/src/components/chat/chart-echarts.tsx](web/src/components/chat/chart-echarts.tsx) — `buildValueOpportunityOption` returns `yAxis: { ..., show: false }`. The other chart kinds use `yAxis.name` + `nameRotate: 90`.
+- [api/pipeline_adapter.py](api/pipeline_adapter.py) — `_native_value_chart` payload still sets `y_axis_label="Comp"`; the renderer ignores it for this chart kind. Producer-side cleanup (drop the field for `value_opportunity`) is optional follow-up — the chart no longer surfaces the bug regardless.
+
+**Original (pre-resolution) write-up retained for handoff continuity:**
+When the y-axis label is a single short word (e.g. `"Comp"`), the SVG
+text path fell through to per-character placement and the user saw
+`C / o / m / p` stacked vertically — one character per visual line —
+rather than the word rendered horizontally with a
 `transform="rotate(-90)"`. Reproduced on the second turn of the
 2026-04-26 Cycle 5 smoke ("What rent would make this deal work?" —
-value_opportunity chart).
-
-**Suggested fix:** Audit `AxisLabels` (likely defined in the same file)
-and confirm the y-axis branch uses a transform-rotated `<text>` element
-with proper `text-anchor` rather than per-character `<text>` placement.
-The fix is a few lines in the SVG rendering helper.
+value_opportunity chart). The §3.6 owner pick of Apache ECharts gave
+us the declarative `nameRotate` API that made this disappear without
+a targeted fix.
 
 #### ✅ §3.4.3 `cma_positioning` chart-prose alignment `[impact: UI & Charts]` — RESOLVED 2026-04-28 — Phase 4c Cycle 3 drive-by
 
@@ -1498,9 +1860,26 @@ an optional `secondary_source_view` (or a typed
 `source_views: dict[role, view_key]` mapping) so multi-view charts are
 first-class instead of patched per-chart.
 
-#### §3.4.6 Other items in the umbrella `[impact: UI & Charts]`
+#### ✅ §3.4.6 Other items in the umbrella (chart styling / marker diversity) `[impact: UI & Charts]` — PARTIALLY RESOLVED 2026-04-30 — Chart-renderer migration Cycles 1-2 drive-by
 
-These items are listed in the umbrella body but do not yet have detailed
+**Resolution (renderer side).** The "chart styling is utilitarian"
+prong is closed by §3.6: every chart kind now uses ECharts' declarative
+`series.symbol` / `series.itemStyle` / `series.emphasis` for marker
+classes, ECharts' built-in animation on data updates, and tooltip
+hover affordances on every chart kind. The native renderer's hand-rolled
+`<polygon>` and `<circle>` markers are gone.
+
+**Carry-over (producer side).** The `cma_positioning` marker-diversity
+prong is **not** closed by §3.6 — it's a producer-side question, not a
+renderer one. Belmar's comp pool is genuinely all-SOLD same-town; the
+chart now correctly renders that fact. Whether the comp scorer should
+prefer marker-class diversity at the top-N selection step is a separate
+conversation under [§3.4.5](#345-cma_positioning-source-view-drift-in-non-browse-handlers-impact-ui--charts)
+and the broader CMA module work; not absorbed here.
+
+**Original (pre-resolution) write-up retained for handoff continuity:**
+
+These items were listed in the umbrella body but did not yet have detailed
 filings:
 
 - **`cma_positioning` marker diversity in real comp sets** — owner
@@ -1508,15 +1887,34 @@ filings:
   because Belmar's top-8 by weighted_score is all SOLD same-town
   (Cycle 5 marker scheme works but never triggers ACTIVE / cross-town
   glyphs in this market — comp set scoring needs to surface diversity,
-  or the chart should sample for it).
+  or the chart should sample for it). **Status:** carry-over to producer-side work.
 - **Chart styling is utilitarian** — markers are circles + triangles;
   legend is a flat row; no animation, no hover affordances, no
   progressive disclosure. The decision-tier surface needs to feel
   premium because the user is making a six-figure call.
+  **Status:** ✅ closed by §3.6 (Apache ECharts migration).
 
-#### §3.4.7 Evaluate React-native charting library to replace Plotly-iframe `[impact: UI & Charts]`
+#### ✅ §3.4.7 Evaluate React-native charting library to replace Plotly-iframe `[impact: UI & Charts]` — RESOLVED 2026-04-29 — Phase 4c Cycle 5 produced eval memo + owner pick = Apache ECharts
 
-**Severity:** Medium — visual quality is the user's #2 UI complaint per
+**Resolution.** Phase 4c Cycle 5 (2026-04-29) produced a recommendation
+memo at
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+comparing the production native-SVG `cma_positioning` renderer against
+Recharts 3.8, Apache ECharts 6 (`echarts-for-react`), and Nivo 0.99
+(`@nivo/scatterplot`) on the same Belmar dataset. Bundle deltas
+(gzipped, per `next build` against per-library sub-routes): native
+0 KB / Nivo 70 KB / Recharts 84 KB / ECharts 364 KB. Memo
+recommendation was **stay native**; owner reviewed all four candidate
+routes and picked **Apache ECharts** (override; consistent with the
+running "perfect product first, optimize cost later" stance). The
+actual chart-renderer migration is filed as a fresh handoff at
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+and tracked under §3.6 — **not** folded into Phase 4c. See
+[DECISIONS.md](DECISIONS.md) 2026-04-29 entry "Phase 4c Cycle 5
+landed: chart-library eval + Apache ECharts picked" for the full
+closeout notes.
+
+**Severity (historical):** Medium — visual quality is the user's #2 UI complaint per
 user-memory `project_ui_enhancements.md`; current architecture caps how
 much polish is achievable without leaving the Plotly-iframe paradigm.
 Filed 2026-04-28 during Stage 2 (feedback loop) plan-mode pass after
@@ -1613,8 +2011,15 @@ post-grounding"); [PRESENTATION_HANDOFF_PLAN.md](PRESENTATION_HANDOFF_PLAN.md)
 
 ### §3.5 Phase 4c — BROWSE summary card rebuild `[size: XL]` `[impact: Output & Presentation]`
 
-**Status:** ACTIVE 2026-04-28 — promoted from parking lot. Plan doc:
-[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md).
+**Status:** ✅ RESOLVED 2026-04-29 — all six cycles landed across
+2026-04-28 → 2026-04-29 via
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md). See
+[DECISIONS.md](DECISIONS.md) 2026-04-29 entry "Phase 4c BROWSE rebuild
+closed" for the closeout notes. Cycle 5 produced a chart-library eval
+memo and an owner pick (Apache ECharts); the actual chart-renderer
+migration is filed as a fresh handoff at
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+and tracked under §3.6 — **not** part of Phase 4c.
 
 **Severity:** Medium-High — most-asked product surface; substrate (Phase 4a
 real comps + Phase 4b Scout + Stage 4 model-accuracy loop) is now in place
@@ -1650,6 +2055,12 @@ rebuild can't honestly hold together:
 
 **Cycle 4 carry-over (filed 2026-04-28).** Owner browser smoke noted the Surface-2 summary chips tell the user the *shape* of the evidence (`8 SOLD`, `FAIR $1.31M · 6.0% APE`, `5Y $686K – $796K`) but not *why they'd care*. Cycle 4 to prototype an italic one-line teaser below each closed row (`text-[13px] text-muted`, e.g. `1209 16th led the set at $800K — 6 within $50K of subject`) across all 8 drilldowns at once rather than retrofitted onto Cycle 3's three rows in isolation. Newspaper-rhythm constraint preserved: italic teaser is text inline with the row, NOT a boxed card.
 
+**Cycle 4 outcome (2026-04-29 — LANDED).** Section C fills out completely. Five new drilldowns shipped on the Cycle 3 `BrowseDrilldown` primitive: **Rent** (chip `$X · Yx CARRY` / body `RentOutlookCard` + `RentBurnChart` + `RentRampChart`), **Town context** (chip `3Y ±X.X%` from `market_trend` spec / body `TownSummaryCard` only — `market_trend` chart stays in Section A masthead, no double-render), **Risk** (chip `N FLAGS · TIER` / body `RiskProfileCard` + `RiskBarChart`), **Confidence & data** (chip `BAND · X%` / body `TrustSummaryCard`), **Recommended path** (chip `<best-path>` / body `StrategyPathCard`). The Cycle 3 → Cycle 4 carry-over (italic teaser hook) shipped via a new optional `teaser?: ReactNode` prop on `BrowseDrilldown` that renders below the closed-row label (`text-[13px] italic leading-snug text-[var(--color-text-muted)]`, `pl-[29px]`-aligned with label start; hides on open). All eight drilldowns supply data-derived teasers from event payloads already on the message — no LLM text on the closed-row affordance (per AGENTS.md OpenAI boundary, teasers are layer-3 presentation, not synthesis). The five absorbed cards (`RentOutlookCard`, `RiskProfileCard`, `TownSummaryCard`, `TrustSummaryCard`, `StrategyPathCard`) each grew a `framed?: boolean` (default `true`) prop mirroring Cycle 3's pattern on `ChartFrame` / `CompsTableCard` / `ScenarioTable`; outer wrapper only, internal layout unchanged; drilldown bodies pass `framed={false}`. **OD #6** (editor-pass closure / `PRESENTATION_HANDOFF_PLAN.md` OD #7) resolved as **(7c) deferred indefinitely** — Phase 4c rebuild solves the layout complaint structurally; if post-Cycle-5 smoke shows residual list-y prose, file editor pass as a fresh handoff (closure recorded in `DECISIONS.md` 2026-04-29 entry). **OD #7** (`StrategyPathCard` fate) resolved as **drilldown row in v1**; absorb-or-retire is post-smoke. `tsc --noEmit` / ESLint / `next build` clean. Focused Python: 44 + 3 passed; one pre-existing baseline failure (`test_browse_stream_emits_briefing_cards_before_text_and_scenarios_after`'s `value_opportunity` chart-kind assertion) carries over from Cycle 3 — confirmed unrelated to Cycle 4. Owner browser smoke SIGNED OFF 2026-04-29 with no layout iterations. Cycle 5 (chart-library eval) now unblocked. See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 4 closeout for the full landing notes.
+
+**Cycle 5 outcome (2026-04-29 — LANDED).** Sandboxed evaluation of React-native chart libraries against the production native-SVG `cma_positioning` renderer produced a recommendation memo and an owner pick. Eval prototypes for Recharts 3.8 / Apache ECharts 6 (`echarts-for-react`) / Nivo 0.99 (`@nivo/scatterplot`) plus a standalone copy of the production native-SVG renderer for direct comparison. Sandbox at `/eval/charts` with per-library sub-routes so `next build` reports per-library bundle deltas. Real `CmaPositioningChartSpec` payload extracted from a captured BROWSE turn against `1008-14th-ave-belmar-nj-07719` (the `1228-briarwood-road-belmar-nj` saved property has all-null pricing fields and isn't a usable BROWSE target without first promoting/enriching it; 1008 14th Ave is in the same town, has 8 priced comps). Bundle deltas (gzipped): Native 0 KB / Nivo 70 KB / Recharts 84 KB / **ECharts 364 KB** (4.3× Recharts). LOC similar across all four (199–240). Memo at [`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md). Memo recommendation: **stay on the native-SVG renderer**. **Owner pick: Apache ECharts** (override of memo recommendation; consistent with the "perfect product first, optimize cost later" stance). The actual chart-renderer migration is filed as a fresh handoff at [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md) and tracked under §3.6 — **not** folded into Phase 4c. Drive-bys §3.4.2 (vertical-character y-axis label) + §3.4.6 (marker diversity / utilitarian styling) absorbed into the migration handoff's Cycle 2 (the bug class mostly disappears in ECharts' declarative axis API). `tsc --noEmit` / ESLint / `next build` clean (one harmless Recharts SSR-prerender warning). Focused Python: 44 + 3 passed; one pre-existing baseline failure carries over (`value_opportunity` chart-kind assertion). See [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 5 closeout + [DECISIONS.md](DECISIONS.md) 2026-04-29 entry "Phase 4c Cycle 5 landed: chart-library eval + Apache ECharts picked" for the full landing notes.
+
+**Cycle 6 outcome (2026-04-29 — LANDED).** Doc reconciliation closing Phase 4c. Updates to: this file (§1 step 6 → ✅ RESOLVED, §3.4.7 → ✅ RESOLVED, §3.5 status header → ✅ RESOLVED, §3.6 new chart-renderer migration entry filed, §10 Resolved Index appended); [`DECISIONS.md`](DECISIONS.md) (Cycle 5 + Phase 4c closeout entries); [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) (top header → ✅ RESOLVED 2026-04-29 with six-cycle summary); [`CURRENT_STATE.md`](CURRENT_STATE.md) (Current Known Themes refreshed; Last Updated bumped); [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) (UI surface map mentions tier-aware BROWSE three-section layout); [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md) (Layer 4 note: BROWSE no longer a compatibility surface; chart-renderer migration filed as open gap); [`docs/current_docs_index.md`](docs/current_docs_index.md) (BROWSE plan marked historical; CHART_MIGRATION plan added). Module READMEs unchanged in Cycle 6 — no contract-level changes per `.claude/skills/readme-discipline/SKILL.md` Job 3.
+
 **Plan reframe (2026-04-28).** Owner sign-off arrived in two passes. The
 first pass approved a "one rich summary card with drilldowns" shape; the
 second pass reframed it as **three stacked sections** organized like a
@@ -1677,6 +2088,208 @@ Phase 4c Cycle 5 per the 2026-04-28 owner sequencing call.
 
 **Dependencies:** Phase 4a complete ✅; Phase 4b complete ✅; Stage 4
 complete ✅. All three substrate prerequisites met 2026-04-28.
+
+---
+
+### ✅ §3.6 Chart-renderer migration to Apache ECharts `[size: M-L]` `[impact: UI & Charts]` — RESOLVED 2026-04-30 — three cycles + closeout landed in one session
+
+**Status:** ✅ RESOLVED 2026-04-30. All eight production chart kinds
+render through Apache ECharts via a single `next/dynamic({ ssr: false })`
+boundary at [web/src/components/chat/chart-frame.tsx](web/src/components/chat/chart-frame.tsx).
+The ECharts engine chunk (~366 KB gz) loads lazily; non-chart routes
+carry zero ECharts cost in their first-load chunks. `web/package.json`
+no longer carries `recharts`, `@nivo/core`, or `@nivo/scatterplot`;
+the eval sandbox at `web/src/components/chat/_eval/` and the
+`/eval/charts` route tree are deleted. §3.4.2 (vertical-character
+y-axis label) and the renderer-side prong of §3.4.6 (utilitarian
+chart styling) are closed as drive-bys; the producer-side §3.4.6
+prong (`cma_positioning` marker diversity in real comp sets) carries
+over as a comp-scorer follow-up. Plan doc:
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+(now ✅ RESOLVED).
+
+**Cycle-by-cycle outcomes.**
+
+*Cycle 1 outcome (2026-04-30 — LANDED).* Migration substrate +
+`cma_positioning` end-to-end. Added
+[web/src/lib/chat/chart-tokens.ts](web/src/lib/chat/chart-tokens.ts)
+exporting `getChartTokens()` (resolves the `--chart-*` /
+`--color-bg-sunken` / surface CSS-var palette to concrete hex via
+`getComputedStyle(document.documentElement)` at first call, with
+SSR-safe static fallback). Added a Cycle-1-only
+`web/src/components/chat/cma-positioning-echarts.tsx` (later
+consolidated into `chart-echarts.tsx` in Cycle 2). Wrapped the
+ECharts component in `next/dynamic({ ssr: false })` from
+`chart-frame.tsx` with a 320 px solid-shimmer Suspense fallback.
+Owner browser-smoke against `1008-14th-ave-belmar-nj-07719` BROWSE
++ DECISION turns confirmed visual parity / better polish than the
+native renderer. Per-route bundle delta (gz, first-load): `/`
+−0.4 KB / `/admin` ±0 / `/admin/turn/[turn_id]` ±0 / `/c/[id]`
+−0.4 KB. Open-Design resolutions: theme-token cache invalidation =
+read-once + cache (v1); Suspense fallback = solid shimmer with
+implicit ~paint-time minimum-display.
+
+*Cycle 2 outcome (2026-04-30 — LANDED).* Bulk migration of the
+remaining seven chart kinds following Cycle 1's pattern, but
+consolidated into a single `chart-echarts.tsx` router that
+default-exports a `<ChartECharts>` component switching on `spec.kind`.
+Cycle 1's `cma-positioning-echarts.tsx` was rolled into the router
+and deleted. Each chart-kind option-builder is a top-level function
+in the file: `buildCmaOption`, `buildScenarioFanOption`,
+`buildMarketTrendOption`, `buildRiskBarOption`, `buildRentBurnOption`,
+`buildRentRampOption`, `buildValueOpportunityOption`,
+`buildHorizontalBarWithRangesOption`. ECharts patterns used: scatter
++ markLine + markArea (CMA), stacked transparent + fill for the
+between-two-lines fan band (scenario_fan, rent_burn), markPoint
+anchors (market_trend), declarative bars with category y-axis
+(risk_bar, horizontal_bar_with_ranges), zero-line markLine
+(rent_ramp), suppressed y-axis number-line (value_opportunity).
+Hover-sync wiring on `cma_positioning` preserved internally via
+`useEffect` + `dispatchAction({type:"highlight"})` against the
+ECharts instance ref; the chart self-highlights when given a
+`hoveredAddress` prop. (No production call sites consume hover-sync
+yet — preserved as eval-prototype pattern for a future
+Comps-table-row sync follow-up; not in scope of §3.6.) `chart-frame.tsx`
+shrank by ~700 LOC: removed `SVG_W`, `SVG_H`, the `CHART` palette,
+`formatTick`, `AxisLabels`, `linePath`, `areaPath`, `chartBounds`;
+each chart-kind wrapper became a thin shell over
+`<LazyChartECharts>` + its MetricChip row + footer-note chrome.
+§3.4.2 (vertical-character y-axis label) and the renderer-side
+prong of §3.4.6 (utilitarian chart styling / hand-rolled markers)
+both close as drive-bys. Per-route bundle delta vs pre-Cycle-1
+baseline (gz, first-load): `/` −3.3 KB / `/admin` ±0 /
+`/admin/turn/[turn_id]` ±0 / `/c/[id]` −3.3 KB — the chart route
+is *smaller* than pre-migration because all native-SVG body code is
+now in a lazy chunk. Owner combined browser-smoke against the same
+fixture confirmed parity across all eight chart kinds; no
+regressions on non-BROWSE tier card stacks. Open-Design
+resolution: `LegendRow` JSX in `chart-frame.tsx` stays (already
+styled to match page chrome; ECharts' built-in legend doesn't add
+capability we need).
+
+*Cycle 3 outcome (2026-04-30 — LANDED).* Cleanup + closeout. Deleted
+`web/src/components/chat/_eval/` (seven prototype files) and
+`web/src/app/eval/` (hub + four per-library routes). Removed
+`recharts`, `@nivo/core`, `@nivo/scatterplot` from
+`web/package.json`; `pnpm install` purged 72 transitive packages
+from the lockfile. Final `next build` is clean — the carry-over
+Recharts SSR-prerender warning that lingered through Cycles 1-2 is
+also gone now that the only remaining chart consumer is the
+dynamic chat route, which never SSR-prerenders. Per-route bundle
+delta vs pre-Cycle-1 baseline (gz, first-load): `/` −3.4 KB /
+`/admin` ±0 / `/admin/turn/[turn_id]` ±0 / `/c/[id]` −3.4 KB.
+Single ECharts lazy chunk at 365.8 KB gz (matches the
+[CHART_LIBRARY_EVAL_2026-04-29.md](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+~364 KB estimate); confirmed not in any of the non-chart routes'
+`firstLoadChunkPaths` per `.next/diagnostics/route-bundle-stats.json`.
+Module READMEs unchanged — no contract-level changes (`ChartSpec`
+discriminated union and the `_native_*_chart` builders both
+unchanged); `briarwood/representation/README.md`'s prose continues
+to describe chart selection at the registry layer, not the
+renderer, so no Job-3 update.
+
+**Carry-overs filed for follow-up:**
+- 2026-04-30 — Chart-content review (bull/base/bear spread looks
+  formulaic; broader chart-logic audit) — see [§4 Medium](#medium).
+- 2026-04-30 — Chart interaction affordances: expand-to-overlay +
+  download-as-tear-sheet — see [§4 Medium](#medium).
+- §3.4.6 producer-side prong (`cma_positioning` marker diversity in
+  real comp sets) — comp-scorer follow-up; not in §3.6 scope.
+
+---
+
+**Original (pre-resolution) entry retained for handoff continuity:**
+
+**Status:** ACTIVE 2026-04-29 — filed at Phase 4c Cycle 5 closeout. Plan
+doc: [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md).
+
+**Severity:** Medium — visual polish on charts is one of the user's
+two top-line UI complaints (per user-memory `project_ui_enhancements.md`)
+and the chart surface differentiates Briarwood from Zillow/Redfin
+(per `project_scout_apex.md`). Migration is the execution arm of the
+2026-04-29 chart-library decision; the decision itself is recorded
+under §3.4.7 ✅.
+
+**Origin.** Phase 4c Cycle 5 (2026-04-29) produced an eval memo
+([`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md))
+that recommended staying on the native-SVG renderer and named Recharts
+as the runner-up if a third-party library was picked. The owner reviewed
+the four candidate routes and overrode the recommendation toward Apache
+ECharts on the strength of its hover affordances and full-vocab marker
+rendering. Migration was filed as a fresh handoff per the 2026-04-28
+sequencing call ("a fresh handoff plan opens AFTER Cycle 5 closes
+[NOT folded into Phase 4c]").
+
+**Why this is a separate handoff.**
+- Phase 4c was a presentation-layout rebuild; the chart-renderer swap
+  is a chart-by-chart implementation pass that touches a different
+  axis of the codebase.
+- Cycle 6 closed Phase 4c with the three-section layout shipped;
+  layering renderer migration on top would have made closeout
+  unbounded.
+- The migration's success criteria are bundle-budget + per-chart
+  visual parity; Phase 4c's were narrative coherence + glance-density.
+
+**Scope.**
+- Swap `web/src/components/chat/chart-frame.tsx`'s eight native-SVG
+  chart implementations (`scenario_fan`, `cma_positioning`,
+  `value_opportunity`, `market_trend`, `risk_bar`, `rent_burn`,
+  `rent_ramp`, `horizontal_bar_with_ranges`) for Apache ECharts
+  equivalents under a `dynamic()` lazy-import boundary so chart code
+  arrives after the page is interactive.
+- Drive-by §3.4.2 (`value_opportunity` y-axis "Comp" rendering as a
+  vertical character stack) and §3.4.6 (chart marker diversity /
+  utilitarian styling) — both bug classes mostly disappear in
+  ECharts' declarative axis + symbol API.
+- Retire the sandbox `web/src/components/chat/_eval/` directory and
+  the `/eval/charts` routes after the migration is complete.
+- Remove unused candidate libraries (`recharts`, `@nivo/core`,
+  `@nivo/scatterplot`) from `web/package.json` once Cycle 1 confirms
+  ECharts is the only renderer in use.
+
+**Hard constraints (from the eval memo).**
+- No changes to `api/events.py`, `briarwood/agent/dispatch.py`, or
+  the `ChartSpec` discriminated union in `web/src/lib/chat/events.ts`.
+  The migration is a renderer swap; the chart-event payload contract
+  is unchanged.
+- No new LLM prompts. No changes to the synthesizer, Scout, or any
+  decision-model module.
+- Bundle-cost mitigation: lazy import is mandatory for the ECharts
+  chunk so non-chart routes don't pay; `next build` per-route delta
+  for non-chart routes must stay at the pre-Cycle-5 baseline.
+- Theme tokens routed through the chart at render time (ECharts can't
+  resolve CSS vars natively; the migration mirrors the resolved hex
+  from `globals.css` into the chart options object via a small
+  shared helper).
+
+**Cycle structure** (full detail in
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)).
+1. **Cycle 1 — Substrate + first migration.** Lazy-import wiring;
+   color-token bridge; migrate `cma_positioning` (the highest-stakes
+   chart) end-to-end; verify hover-sync against the existing
+   `BrowseDrilldown` Comps row.
+2. **Cycle 2 — Bulk migration.** Migrate the remaining 7 chart kinds.
+   Drive-by §3.4.2 + §3.4.6.
+3. **Cycle 3 — Cleanup + closeout.** Retire `_eval/` + `/eval/charts`
+   sandbox; remove unused candidate deps from `web/package.json`;
+   doc reconciliation; `briarwood/representation/README.md` Job 3
+   update if the renderer change reaches that boundary.
+
+**Estimate.** 60–120 LLM-development-minutes across the three cycles.
+
+**Risk.** Medium. The chart-renderer change is a cross-cutting frontend
+swap with one strong gating criterion (bundle delta on non-chart routes
+must stay at baseline) and eight per-chart visual-parity gates.
+
+**Cross-references.** §3.4.7 ✅ (eval origin); §3.5 ✅ (Phase 4c
+closeout where the migration was filed); §3.4.2 + §3.4.6 (drive-bys
+absorbed into Cycle 2); user-memory `project_ui_enhancements.md`
+(chart polish complaint), `project_llm_guardrails.md`
+(perfect-product-first stance), `project_scout_apex.md` (Briarwood
+differentiates on polish, not parity);
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+(eval memo); [DECISIONS.md](DECISIONS.md) 2026-04-29 entry "Phase 4c
+Cycle 5 landed: chart-library eval + Apache ECharts picked".
 
 ---
 
@@ -1897,6 +2510,76 @@ single slice so the data-correction sweep runs immediately after the
 parser fix lands.
 
 ### Medium
+
+#### 2026-04-30 — Chart interaction affordances: expand-to-overlay + download-as-tear-sheet `[size: M]` `[impact: UI & Charts, Output & Presentation]`
+
+**Severity:** Medium — owner-flagged at Cycle 2 closeout of the
+chart-renderer migration ([§3.6](#36-chart-renderer-migration-to-apache-echarts-size-m-l-impact-ui--charts)).
+With the ECharts substrate in place, two interaction surfaces are
+naturally cheap to add and would change the chart from "supporting
+visual" to "first-class artifact the user takes with them."
+
+**Files (anchor points; nothing changes here yet):**
+- [web/src/components/chat/chart-frame.tsx](web/src/components/chat/chart-frame.tsx) — `<figure>` chrome that owns the chart's title, subtitle, provenance chips. The two new affordances would render as small icon buttons in the figure header.
+- [web/src/components/chat/chart-echarts.tsx](web/src/components/chat/chart-echarts.tsx) — ECharts component. Has access to the chart instance via the `ref`; both affordances key off it.
+- A new `chart-tear-sheet.tsx` (or similar) for the download artifact.
+
+**Affordance 1 — Expand to overlay.**
+- A small "expand" icon button in the figure header.
+- On click, render the chart in a centered overlay (modal or sheet) at a much larger size (~80vw × ~80vh), with the conversation visibly dimmed behind. The chart breathes; comp tick labels, multi-line endpoint annotations, and provenance chips get their full width back.
+- Close on Escape, backdrop click, or a corner X. Preserve any in-chart hover-sync state (CMA chart's marker highlight) on entry/exit.
+- Implementation note: ECharts can re-render at the new container size via `resize()` or by remounting at the new dimensions; both work — pick the one that animates smoothest.
+
+**Affordance 2 — Download as tear sheet.**
+- A small "download" icon button alongside expand.
+- On click, generate a single-page PDF (or PNG, owner pick) styled as a research tear sheet: subject address + ask + fair value at top; the chart at full width; the chart's MetricChips and provenance chips below; the figure's `why_this_chart` line as a caption; date stamp + Briarwood / Scout brand mark in the footer.
+- Source of the chart image: ECharts' built-in `getDataURL({ type: "png", pixelRatio: 2, backgroundColor: <surface token> })`. The surrounding tear-sheet layout is HTML/CSS rendered to canvas (e.g. `html2canvas`) or assembled in `pdf-lib` — owner to pick the lighter tooling at design time.
+- Naming: `briarwood-{property-slug}-{chart-kind}-{date}.pdf`. Persistence: client-side download; no backend roundtrip.
+- This is the seed of a richer "send me the thesis" surface the owner has talked about — worth designing the tear sheet so the same generator can later compose multiple charts into a single PDF.
+
+**Hard constraints to apply when this lands:**
+- No backend changes. `api/events.py` / `dispatch.py` / `ChartSpec` discriminated union all stay.
+- Lazy-import boundary is preserved. The PDF / overlay code lives behind a `next/dynamic` boundary so non-chart routes don't pay for it. The expand button itself is light enough to ship on the chart's main path; the modal renderer + PDF generator are deferred.
+- No new LLM prompts.
+- Tear-sheet design is a small standalone design task before implementation — file it as a follow-up under §3.4 once owner picks the layout.
+
+**Suggested cycle structure if size grows:**
+1. Cycle A — expand-to-overlay, all eight chart kinds.
+2. Cycle B — download-as-tear-sheet (PNG first; PDF when layout firms up).
+3. Cycle C — multi-chart tear sheet ("send me the whole thesis").
+
+**Cross-references.** §3.6 (chart-renderer migration — direct predecessor; ECharts' `getDataURL` API is what makes Affordance 2 cheap); the 2026-04-30 chart-content-review entry above (independent — content tuning vs. interaction; no conflict);
+user-memory `project_scout_apex.md` (Briarwood differentiates on polish, including export polish);
+user-memory `project_ui_enhancements.md` (chart polish complaint — content polish + interaction polish are the two open prongs after §3.6 lands).
+
+#### 2026-04-30 — Chart-content review (bull/base/bear spread looks formulaic; broader chart-logic audit) `[size: M-L]` `[impact: UI & Charts, Property Analysis]`
+
+**Severity:** Medium — owner-flagged at Cycle 2 closeout of the
+chart-renderer migration ([§3.6](#36-chart-renderer-migration-to-apache-echarts-size-m-l-impact-ui--charts)).
+Visual-parity is now in place under ECharts; the next problem the
+charts surface is **content meaning**, not rendering. Owner observation:
+"the bull/base/bear chart looks like bull is just 3% over base and
+bear 3% below — doesn't look like it's telling us anything."
+
+**Files (anchor points):**
+- [briarwood/modules/bull_base_bear.py](briarwood/modules/bull_base_bear.py) — `BullBaseBearModule.run` composes scenario values from `bull_drift + bull_location_pct + bull_risk_pct + bull_optionality_pct` (and the symmetric base / bear versions). Each component is bounded by per-component caps in `BullBaseBearSettings`.
+- [briarwood/decision_model/scoring_config.py](briarwood/decision_model/scoring_config.py) — `BullBaseBearSettings` (cap and weight constants for drift, location, risk, optionality, stress).
+- [api/pipeline_adapter.py](api/pipeline_adapter.py) `_native_scenario_fan_chart` — chart spec consumer; transforms module view → `ScenarioFanChartSpec`.
+- [web/src/components/chat/chart-echarts.tsx](web/src/components/chat/chart-echarts.tsx) `buildScenarioFanOption` — pure renderer over the spec; no logic to tune here.
+- Each of the other seven chart kinds has an analogous "what is this chart actually telling the user" question — `market_trend` (one-year vs three-year change framing), `value_opportunity` (premium/discount thresholds), `rent_burn` (band width derivation), `rent_ramp` (escalation step choice), `risk_bar` (penalty share normalization), `cma_positioning` (comp set size targets), `horizontal_bar_with_ranges` (scenario picking).
+
+**Issue.** The renderer pipeline is now structurally sound (Phase 4c §3.6 closed). But the producer-side numbers don't always carry signal proportional to the chart real estate. In particular, the scenario_fan looks symmetric and narrow on real production fixtures — a buy-side reader can't distinguish "the underlying signals say there's no spread here" from "the math is structurally narrow under any inputs." The two readings have different product implications and are currently indistinguishable to the user.
+
+**Suggested investigation (multi-step; not a fix yet):**
+1. **Instrument the scenario_fan inputs.** For ten saved properties spanning all six target Monmouth towns + Wall + Asbury Park, log the four component shares (`drift`, `location`, `risk`, `optionality`) per scenario and the BCV anchor. Look at the realized spread distribution — is it narrow because the cap math is tight, or because the inputs are genuinely flat?
+2. **Audit `BullBaseBearSettings` caps.** If the per-component caps are the binding constraint, the chart isn't expressing real model uncertainty — it's expressing the cap structure. Decide whether the caps are still load-bearing or whether the model has matured past them.
+3. **Stress-case visibility.** `stress_case_value` is computed but rarely shown — confirm whether it ships through to BROWSE / DECISION turns when applicable, and whether the chart reads better when it's present.
+4. **Repeat the audit on each other chart kind** in priority order. The point isn't a redesign — it's deciding for each chart, "does the data underneath actually justify the visual real estate, or is the chart vacuous on most production fixtures?"
+5. **File outcomes.** Each chart-kind audit produces either (a) a tuning entry under §3.4 if the math needs adjustment, (b) a producer-side data gap entry if upstream signals are too sparse, or (c) a "ship as-is, but reduce visual prominence" entry under presentation if the chart can't carry the weight it currently does.
+
+**Out of scope for this entry:** the renderer migration itself (§3.6 — closing this week). This is the producer-side conversation that the renderer migration unblocked.
+
+**Cross-references.** §3.6 (chart-renderer migration to ECharts; this entry is the natural follow-up); user-memory `project_ui_enhancements.md` (chart polish complaint — partially addressed by §3.6, content polish remains); user-memory `project_scout_apex.md` (Briarwood differentiates on polish, including content polish).
 
 #### 2026-04-26 — Property resolver matches wrong slug ("526 West End Ave" → NC instead of NJ) `[size: S]` `[impact: Routing & Orchestration]`
 
@@ -3238,6 +3921,16 @@ heading and a `**Status:** RESOLVED YYYY-MM-DD — …` line in the rubric.
 | 16 | 2026-04-28 | Phase 4b — Scout buildout | [SCOUT_HANDOFF_PLAN.md](SCOUT_HANDOFF_PLAN.md) Cycles 1-7 — LLM Scout, ScoutFinds, shared dispatcher, deterministic rails, telemetry, and closeout docs | §3.2 Strategic Initiatives |
 | 17 | 2026-04-28 | Sequence step 4 — Phase 4b Scout | Scout closeout (step 5 — AI-Native Foundation Stage 4 — now unblocked) | §1 The Sequence |
 | 18 | 2026-04-28 | `docs/current_docs_index.md` missing authoritative orientation docs | Docs index convergence pass — added DECISIONS, ROADMAP, ARCHITECTURE_CURRENT, GAP_ANALYSIS, TOOL_REGISTRY, and complete handoff plans | §4 Medium |
+| 19 | 2026-04-28 | AI-Native Foundation Stage 4 — model-accuracy loop | [STAGE4_HANDOFF_PLAN.md](STAGE4_HANDOFF_PLAN.md) — substrate landed; Loop 1 closed against the owner-estimate row at `data/outcomes/property_outcomes.jsonl` | §3.1 Strategic Initiatives |
+| 20 | 2026-04-28 | Sequence step 5 — AI-Native Foundation Stage 4 — model-accuracy loop | Stage 4 closeout (step 6 — Phase 4c BROWSE rebuild — now unblocked) | §1 The Sequence |
+| 21 | 2026-04-29 | §3.4.1 — `cma_positioning` "CHOSEN COMPS: Context only" chip + `feeds_fair_value` dead architecture | Phase 4c Cycle 3 drive-by | §3.4 Chart umbrella |
+| 22 | 2026-04-29 | §3.4.3 — `cma_positioning` chart-prose alignment | Phase 4c Cycle 3 drive-by | §3.4 Chart umbrella |
+| 23 | 2026-04-29 | §3.4.7 — Evaluate React-native charting library | Phase 4c Cycle 5 produced [`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md); owner picked Apache ECharts; migration filed under §3.6 as fresh handoff | §3.4 Chart umbrella |
+| 24 | 2026-04-29 | Phase 4c — BROWSE summary card rebuild | [BROWSE_REBUILD_HANDOFF_PLAN.md](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycles 1-6 — three-section newspaper layout, eight Section C drilldowns, chart-library eval memo, OD #6 + OD #7 closed | §3.5 Strategic Initiatives |
+| 25 | 2026-04-29 | Sequence step 6 — Phase 4c — BROWSE summary card rebuild | Phase 4c closeout (sequence-bookend step now resolved; chart-renderer migration filed under §3.6 as fresh handoff, **not** the next sequence step — see §1 wording on bookends) | §1 The Sequence |
+| 26 | 2026-04-30 | §3.6 — Chart-renderer migration to Apache ECharts | [CHART_MIGRATION_HANDOFF_PLAN.md](CHART_MIGRATION_HANDOFF_PLAN.md) Cycles 1-3 — substrate + bulk migration of all 8 chart kinds + sandbox/dep cleanup; bundle delta on non-chart routes ±0; chart route −3.4 KB gz vs pre-migration baseline | §3.6 Strategic Initiatives |
+| 27 | 2026-04-30 | §3.4.2 — `value_opportunity` chart y-axis label "Comp" renders as a vertical character stack | §3.6 Cycle 2 drive-by — ECharts' declarative `nameRotate` + suppressed y-axis on `value_opportunity` make the bug class structurally gone | §3.4 Chart umbrella |
+| 28 | 2026-04-30 | §3.4.6 — Chart styling utilitarian / hand-rolled markers (renderer-side prong) | §3.6 Cycles 1-2 drive-by — declarative `series.symbol` / `series.itemStyle` / `series.emphasis` replace hand-rolled SVG primitives; producer-side prong (CMA marker diversity in real comp sets) carries over to comp-scorer follow-up | §3.4 Chart umbrella |
 
 **Convention.** When an entry closes:
 1. Add `✅` prefix to its section heading.

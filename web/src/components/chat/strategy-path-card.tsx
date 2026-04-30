@@ -5,6 +5,11 @@ import type { StrategyPathEvent } from "@/lib/chat/events";
 
 type Props = {
   strategy: StrategyPathEvent;
+  /** Phase 4c Cycle 4 — Section C drilldowns embed this card with no extra
+   * border (parent drilldown body is the frame). `framed=false` drops the
+   * outer rounded-2xl wrapper + bg + padding; default `true` preserves the
+   * non-BROWSE rendering. */
+  framed?: boolean;
 };
 
 function money(n: number | null | undefined) {
@@ -23,7 +28,7 @@ function score(n: number | null | undefined) {
   return n.toFixed(2);
 }
 
-export function StrategyPathCard({ strategy }: Props) {
+export function StrategyPathCard({ strategy, framed = true }: Props) {
   const location = [strategy.town, strategy.state].filter(Boolean).join(", ");
   const badge =
     strategy.best_path?.replace(/_/g, " ") ??
@@ -41,8 +46,9 @@ export function StrategyPathCard({ strategy }: Props) {
   return (
     <div
       className={cn(
-        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)] p-4",
+        framed
+          ? "mt-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4"
+          : "",
       )}
     >
       <div className="flex items-start justify-between gap-3">

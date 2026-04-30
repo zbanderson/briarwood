@@ -2905,3 +2905,653 @@ need work), `project_scout_apex.md` (Scout-as-peer-section rationale),
 **Guardrail Review (per `project_llm_guardrails.md` directive).** No LLM additions in scope; no LLM prompts modified. The `_native_cma_chart` chart spec change is data-only (drops a flag from row dicts). The dispatch.py `comp_set_mode` follow-up's degenerate split removal preserves the same composer-fallback prose path; no LLM behavior change. Numeric guardrail rule preserved through synthesizer + scout — both unchanged in Cycle 3.
 
 **Cross-references.** [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md) Cycle 3 closeout (status flipped to ✅; plan status header updated to "Cycle 3 LANDED"); [`ROADMAP.md`](ROADMAP.md) §3.4.1 (`✅ RESOLVED 2026-04-28 — Phase 4c Cycle 3`), §3.4.3 (`✅ RESOLVED 2026-04-28 — Phase 4c Cycle 3`), §3.5 (Cycle 3 outcome appended), §4 (address-normalization Medium → High); [`briarwood/representation/README.md`](briarwood/representation/README.md) Changelog entry filed per Job 3; user-memory `project_ui_enhancements.md` (BROWSE first-load flicker call-out closed by `turn_meta`), `project_resolver_match_bug.md` (related to the address-normalization promotion).
+
+
+## 2026-04-29 — Phase 4c Cycle 4 — Section C drilldowns complete; OD #6 + OD #7 closed
+
+**Cycle outcome.** Section C ("THE DEEPER READ") fills out completely.
+Five new drilldowns (Rent, Town context, Risk, Confidence & data,
+Recommended path) ship on the `BrowseDrilldown` "Civic Ledger" primitive
+introduced in Cycle 3. Each drilldown row now also carries a one-line
+italic teaser hook below the label (`text-[13px] italic leading-snug
+text-[var(--color-text-muted)]`, `pl-[29px]` aligned with label start),
+data-derived per row, that tells the reader *why* the drilldown is
+interesting before they expand it. The teaser was the Cycle 3 → Cycle 4
+carry-over filed in ROADMAP §3.5 — owner browser smoke had noted that
+chips communicated the *shape* of the evidence but not *why care*.
+Implemented across all 8 drilldowns in one pass rather than retrofitted
+onto Cycle 3's three rows in isolation.
+
+**OD #6 — editor pass (PRESENTATION_HANDOFF_PLAN Open Design Decision #7)
+closure.** Resolved as **(7c) deferred indefinitely**. The 2026-04-26
+framing was that the layout problem (paragraph + 5 charts in a row) was
+conflated with the prose problem; Phase 4c's three-section newspaper
+rebuild solves the **layout** structurally — section sub-heads + thin
+rules + chart-inside-its-relevant-drilldown + no nested boxed cards —
+without touching prose. If post-Cycle-5 browser smoke shows the prose
+still feels list-y once layout is fixed, file an editor pass as a fresh
+handoff (NOT a Phase 4c follow-on). PRESENTATION_HANDOFF_PLAN's OD #7 is
+considered closed by this DECISIONS entry.
+
+**OD #7 — `StrategyPathCard` fate.** Resolved as **drilldown row in v1**.
+The card is absorbed into Section C as the "Recommended path" drilldown
+with `framed={false}`; non-BROWSE tiers continue to render the card
+unchanged at top of the card stack. Absorb-or-retire is a post-smoke
+follow-up, not a Cycle 4 task. Rationale: v1 keeps behavior change
+minimal — same data surfacing under a chevron — and lets the owner
+review the rebuilt layout end-to-end before deciding whether the
+strategy path is better expressed as Section A's headline (since the
+recommendation IS the headline) or as a stand-alone drilldown.
+
+**Files changed.**
+- `web/src/components/chat/browse-drilldown.tsx` — new optional `teaser?: ReactNode` prop on `BrowseDrilldown`; renders below the label when the row is closed and hides on open. Button restructured from a single `flex` row to a `block` button with an inner flex row (label + chip) plus an optional second-line teaser. Indent matches the chevron+gap so the teaser visually hangs under the label.
+- `web/src/components/chat/browse-deeper-read.tsx` — five new drilldowns (Rent / Town context / Risk / Confidence & data / Recommended path) added to the existing three (Comps / Value thesis / Projection). Per-row chip + per-row data-derived teaser. New props `rentOutlook`, `townSummary`, `riskProfile`, `trustSummary`, `strategyPath`, `onSelectTownSignal`. The `market_trend` chart deliberately stays in Section A (BrowseRead masthead) and is NOT double-rendered inside the Town drilldown body.
+- `web/src/components/chat/messages.tsx` — wires the new event props through to `BrowseDeeperRead` from `AssistantMessage`. The non-BROWSE card stack continues to render the same five cards unchanged.
+- `web/src/components/chat/{rent-outlook-card,risk-profile-card,town-summary-card,trust-summary-card,strategy-path-card}.tsx` — new `framed?: boolean` (default `true`) prop on each. Mirrors the Cycle 3 prop introduced on `ChartFrame`, `CompsTableCard`, `ScenarioTable`. Outer wrapper only — internal layout unchanged. Drilldown bodies pass `framed={false}` to drop the `mt-4 rounded-2xl border bg-[var(--color-surface)] p-4` chrome.
+
+**Teaser content rules (per drilldown).** All teasers are deterministic
+and derived from event payloads already on the message — no
+LLM-generated text on the closed-row affordance. Per AGENTS.md OpenAI
+boundary: teasers are layer-3 presentation, not synthesis.
+- *Comps:* "Top sale: <addr-short> at <price> · <N> within ±10% of ask".
+  Source: `cma_positioning` chart spec comps (same source-of-truth as
+  the chip + the chart's "Comp set" footer chip).
+- *Value thesis:* "Fair <X> sits <Y>% under/over ask · top driver: <text>".
+  Source: `value_thesis` event's `fair_value_base`, `premium_discount_pct`,
+  and `key_value_drivers` (or `value_drivers` fallback).
+- *Projection:* "<+X>% bull / <-Y>% bear vs base <$Z>". Source:
+  `scenario_table` event Bull/Base/Bear rows.
+- *Rent:* "<$X>/mo · <ease-label> to rent · covers <ratio>× carry".
+  Source: `rent_outlook` event.
+- *Town context:* "Median <$X> · <N> bullish vs <M> bearish". Source:
+  `town_summary` event.
+- *Risk:* "Lead: <first-flag> · <N> risk drivers, <M> trust flags".
+  Source: `risk_profile` event.
+- *Confidence & data:* "<band> (<N>%) · limit: <first-flag> ·
+  <K> contradictions". Source: `trust_summary` event.
+- *Recommended path:* "<best-path> · <±$X>/mo · <Y>% cash-on-cash".
+  Source: `strategy_path` event.
+
+**Verification.**
+- `tsc --noEmit` clean. ESLint clean on the eight touched files.
+- `next build` clean — 1140ms compile, 4 static pages generated.
+- Focused Python: `tests/test_pipeline_adapter_contracts.py` (44 passed),
+  `tests/test_chat_api.py` (3 passed). One pre-existing baseline failure
+  carries over (`test_browse_stream_emits_briefing_cards_before_text_and_scenarios_after`'s
+  `value_opportunity` chart-kind assertion), unrelated to Cycle 4 — same
+  failure logged in Cycle 2 and Cycle 3 closeouts on a clean HEAD.
+- Browser smoke SIGNED OFF 2026-04-29. Owner ran the eight-drilldown
+  layout end-to-end against the newspaper-front-page bar and signed
+  off with no layout iterations. Cycle 5 (chart-library evaluation)
+  is now unblocked.
+
+**What did NOT change (intentional).**
+- The synthesizer (`briarwood/synthesis/llm_synthesizer.py`), Scout
+  (`briarwood/value_scout/`), Representation Agent
+  (`briarwood/representation/agent.py`), and any decision-model module
+  are untouched. Cycle 4 is a presentation rebuild only.
+- The Section A masthead `market_trend` chart placement is unchanged.
+  The Town drilldown body is the `TownSummaryCard` content only — the
+  chart deliberately does not double-render.
+- The non-BROWSE card stack in `messages.tsx` renders identically to
+  pre-Cycle-4. All five cards still receive `framed={true}` (their
+  default) when called from non-BROWSE branches.
+- The first-time coach-mark hint, hint-storage key
+  (`briarwood:section-c-hint-seen`), and `useSyncExternalStore` pattern
+  introduced in Cycle 3 are unchanged.
+
+**Carry-overs to Cycle 5.**
+- Owner browser smoke on the eight-drilldown layout. Plan note (Cycle 4
+  Risk: medium): heaviest qualitative gate of the phase; expect 1–2
+  layout iterations before sign-off.
+- §3.4.7 React-native chart-library evaluation begins after sign-off,
+  scoped to `cma_positioning` against 2–3 candidate libraries with
+  glance-readability as the gating criterion. Per the 2026-04-28 owner
+  sequencing call.
+
+**Cross-references.** [`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+Cycle 4 closeout; [`ROADMAP.md`](ROADMAP.md) §3.5 (Cycle 4 outcome
+appended); [`PRESENTATION_HANDOFF_PLAN.md`](PRESENTATION_HANDOFF_PLAN.md)
+Open Design Decision #7 (closed by this entry — see OD #6 closure
+above).
+
+## 2026-04-29 — Phase 4c Cycle 5 landed: chart-library eval + Apache ECharts picked
+
+Cycle 5 of the Phase 4c BROWSE rebuild — a sandboxed evaluation of
+React-native chart libraries against the production native-SVG
+`cma_positioning` renderer — produced a recommendation memo and an
+owner pick. The cycle's goal was the **decision**, not a migration;
+the migration is filed as a fresh handoff per the 2026-04-28 sequencing
+call and is **not** folded into Phase 4c.
+
+**Eval setup.** Sandbox-only prototypes under
+`web/src/components/chat/_eval/` and per-library routes
+`/eval/charts/{native,recharts,echarts,nivo}` so `next build` reports
+per-library bundle deltas independently. Real `CmaPositioningChartSpec`
+payload extracted from a captured BROWSE turn against
+`1008-14th-ave-belmar-nj-07719`. The `1228-briarwood-road-belmar-nj`
+saved property named in the handoff prompt has all-null pricing fields
+(`ask_price=null`, `bcv=null`, `missing_input_count=4`) and isn't a
+usable BROWSE target without first promoting/enriching it; 1008 14th
+Ave is in the same town, has 8 priced comps, and is one of the
+canonical fixtures listed in the testing-strategy section of
+`BROWSE_REBUILD_HANDOFF_PLAN.md`. Substitution documented in
+`_eval/cma-fixture.ts`.
+
+**Bundle deltas (gzipped) per `next build`.**
+- Native SVG (production today): **0 KB** — already shipped.
+- @nivo/scatterplot 0.99: **70 KB** for one chart kind only;
+  realistic full-catalog cost (line + bar + swarm + …) ~180–250 KB gz.
+- Recharts 3.8: **84 KB**.
+- Apache ECharts 6: **364 KB** — 4.3× Recharts.
+
+**Code volume per chart.** Native 199 LOC, ECharts 214, Nivo 223,
+Recharts 240 — similar across all four. None saves material code volume
+at the per-chart level.
+
+**Memo recommendation: stay on the native-SVG renderer.** Phase 3 Cycle
+A already retired iframe-Plotly for hand-written native SVG inside
+`chart-frame.tsx` — the native renderer **is** the React-native
+solution §3.4.7 was reaching for. Remaining gaps (animation, hover
+affordances, marker diversity, the §3.4.2 vertical-character y-axis
+bug) are 30–90 LLM-development-min of polish each in `chart-frame.tsx`,
+cheaper than absorbing 70–364 KB gz of third-party code plus ongoing
+API maintenance. Recharts named as the runner-up; ECharts ruled out by
+bundle weight; Nivo ruled out by per-chart-kind package sprawl + the
+missing categorical-y axis. Memo at
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md).
+
+**Owner pick: Apache ECharts (override of memo recommendation).**
+Owner reviewed all four candidate routes against the **full-vocab**
+fixture (synthetic SOLD/ACTIVE/cross-town markers + value-band
+overlay) and picked ECharts on visual quality and the polish of the
+hover affordances. The memo's recommendation against ECharts was
+weighted on bundle cost; the owner override is **consistent with** the
+running "perfect product first, optimize cost later" stance recorded
+in user-memory `project_llm_guardrails.md` and explicitly affirmed
+again in this session.
+
+**Bundle-cost trade explicitly accepted.** 364 KB gz over a residential
+4G connection (~5 Mbps real-world) translates to roughly 600 ms
+download + ~300 ms parse on a mid-range phone — about 1 second extra
+to first chart paint on the first BROWSE turn of a new session, then
+cached. On fiber/wifi the cost is invisible. The migration handoff is
+expected to mitigate further via lazy import (`dynamic()`) so the page
+becomes interactive on schedule and the chart paints a beat later.
+
+**Why this matters beyond aesthetics.** ECharts' polish is the kind of
+trade Briarwood has explicitly chosen to make: it differentiates the
+product from Zillow/Redfin (per user-memory `project_scout_apex.md`
+on the Scout-as-apex thesis) and the chart surface is one of the
+two top-line UI complaints (`project_ui_enhancements.md`). The owner
+weighted product polish over bundle weight, knowing the cost.
+
+**What this decision is NOT.**
+- It is **not** a backend data-shape change. Production data sometimes
+  lacks ACTIVE comps or `value_low` / `value_high`; the migration
+  handoff inherits that data shape unchanged. The "full vocab" fixture
+  used in the eval was synthetic, included specifically so each
+  library's marker vocabulary could be visually compared. Whether
+  production should emit full-vocab data more often is a separate
+  backend conversation in the CMA module — not blocked on this
+  decision.
+- It is **not** a swap of the SSE event shape. `ChartSpec` (the
+  discriminated union in `web/src/lib/chat/events.ts` mirrored by
+  `api/events.py`) stays exactly as it is today; only the React-side
+  renderer in `chart-frame.tsx` swaps.
+- It is **not** part of Phase 4c. The migration is a fresh handoff
+  per the 2026-04-28 sequencing call ("a fresh handoff plan opens
+  AFTER Cycle 5 closes").
+
+**Migration filed as new handoff.** Plan doc:
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md).
+Tracked in `ROADMAP.md` §3.6 as a new strategic initiative
+(`[size: M-L]` `[impact: UI & Charts]`). Cycle structure: (1) substrate
++ lazy-load wiring + first chart migration (`cma_positioning`),
+(2) bulk migration of remaining 7 chart kinds + drive-by §3.4.2
+(vertical y-axis label) + §3.4.6 (marker diversity), (3) cleanup
+(remove unused candidate libs, retire `_eval/`, doc reconciliation).
+
+**Files changed in Cycle 5.**
+- `web/package.json`, `web/pnpm-lock.yaml` — added `recharts`,
+  `echarts`, `echarts-for-react`, `@nivo/core`, `@nivo/scatterplot`.
+  Recharts and Nivo will be removed in the migration handoff's Cycle
+  3 cleanup; ECharts + echarts-for-react stay.
+- `web/src/components/chat/_eval/{cma-fixture.ts, eval-card.tsx,
+  eval-route-shell.tsx, cma-native.tsx, cma-recharts.tsx,
+  cma-echarts.tsx, cma-nivo.tsx}` — sandbox prototypes. Retired in
+  the migration handoff's cleanup cycle.
+- `web/src/app/eval/charts/page.tsx`,
+  `web/src/app/eval/charts/{native,recharts,echarts,nivo}/page.tsx`
+  — sandbox routes. Retired in the migration handoff's cleanup cycle.
+- `docs/CHART_LIBRARY_EVAL_2026-04-29.md` — eval memo.
+
+**Verification.**
+- `tsc --noEmit` clean. ESLint clean on the eval directory + the
+  `app/eval` route directory.
+- `next build` clean — 5 new static routes generated. One harmless
+  build-time warning from Recharts about `width(-1)`/`height(-1)`
+  during static prerender (Recharts can't measure dimensions during
+  SSR; chart measures correctly client-side; will be sidestepped in
+  the migration via lazy import).
+- Focused Python: `tests/test_pipeline_adapter_contracts.py` 44 passed
+  + 1 pre-existing baseline failure on
+  `test_browse_stream_emits_briefing_cards_before_text_and_scenarios_after`'s
+  `value_opportunity` chart-kind assertion (carries over from Cycles
+  2/3/4); `tests/test_chat_api.py` 3 passed. No new failures.
+
+**What did NOT change.**
+- `api/events.py` / `dispatch.py` / the `ChartSpec` discriminated
+  union are untouched. The eval reads existing payloads.
+- No new LLM prompts. No changes to the synthesizer, Scout, or any
+  decision-model module. Per AGENTS.md OpenAI boundary: this is
+  Layer 4 (Representation) presentation work only.
+- Module READMEs under `briarwood/` — Cycle 5 didn't change any
+  module's contract. Per `.claude/skills/readme-discipline/SKILL.md`
+  Job 3, no README updates required by this cycle. The migration
+  handoff's Cycle 1 will update `briarwood/representation/README.md`
+  if/when the chart-renderer change reaches that boundary.
+
+**Cross-references.**
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+Cycle 5 closeout (status flipped to ✅; plan-doc top header set to
+"✅ RESOLVED 2026-04-29");
+[`ROADMAP.md`](ROADMAP.md) §3.4.7 (`✅ RESOLVED 2026-04-29 — Phase 4c
+Cycle 5 produced eval memo + owner pick = ECharts`), §3.5 (Cycle 5
+outcome appended), §3.6 (new chart-renderer migration entry filed),
+§10 Resolved Index (Phase 4c entry appended);
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+(eval memo);
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+(new migration plan); user-memory
+`project_ui_enhancements.md` (chart polish complaint),
+`project_llm_guardrails.md` (perfect-product-first stance),
+`project_scout_apex.md` (Briarwood differentiates on polish, not
+parity).
+
+## 2026-04-29 — Phase 4c BROWSE rebuild closed
+
+Phase 4c (BROWSE summary card rebuild — three-section newspaper-front-page
+layout) closes with all six cycles landed. Plan doc:
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md).
+
+**What landed.**
+- **Cycle 1** (2026-04-28) — Tier marker `message.answer_type` plumbed
+  end-to-end; shared `BrowseSection` primitive; Section A
+  (`BrowseRead`) fully filled.
+- **Cycle 2** (2026-04-28) — Section B (`BrowseScout`) playful
+  Scout treatment; `decision_stance` carry-over wired onto
+  `value_thesis`.
+- **Cycle 3** (2026-04-28) — Section C (`BrowseDeeperRead`) drilldown
+  primitive `BrowseDrilldown`; first three drilldowns (Comps / Value
+  thesis / Projection); `framed?` prop on `ChartFrame` /
+  `CompsTableCard` / `ScenarioTable`; coach-mark hint; `turn_meta`
+  early SSE event eliminating BROWSE first-load flicker; drive-bys
+  §3.4.1 (`feeds_fair_value` retired) + §3.4.3 (`comp_roster`
+  clamped to chart's top-N).
+- **Cycle 4** (2026-04-29) — Remaining five Section C drilldowns
+  (Rent / Town context / Risk / Confidence & data / Recommended
+  path); italic teaser hook below each closed row; `framed?` prop on
+  the five absorbed cards; OD #6 (editor pass) resolved as deferred
+  indefinitely; OD #7 (StrategyPathCard fate) resolved as drilldown
+  row in v1.
+- **Cycle 5** (2026-04-29) — Chart-library evaluation memo + owner
+  pick (Apache ECharts). Migration filed as fresh handoff. (Closeout
+  entry above.)
+- **Cycle 6** (2026-04-29) — Doc reconciliation (this entry +
+  ROADMAP / CURRENT_STATE / ARCHITECTURE_CURRENT / GAP_ANALYSIS /
+  current_docs_index updates).
+
+**Phase 4c success criteria — verification (per
+`BROWSE_REBUILD_HANDOFF_PLAN.md` §"Phase 4c success criteria").**
+1. ✅ Tier-aware rendering — `ChatMessage.answerType === "browse"`
+   gates the three-section layout.
+2. ✅ Three stacked sections rendering on BROWSE turns; existing card
+   stack preserved on DECISION/EDGE/PROJECTION/RISK/STRATEGY/RENT_LOOKUP.
+3. ✅ Newspaper visual hierarchy with sub-heads, thin rules, ~2rem
+   padding; no nested boxed cards.
+4. ✅ Section B conditional render is honest (renders nothing when
+   scout is empty — minor exception: empty-state italic teaser
+   shipped in Cycle 2 per owner judgment that Scout's section
+   presence is part of the product story).
+5. ✅ Real evidence in the body — Section A's headline and each
+   Section C drilldown chip cite real comps/numbers from
+   `UnifiedIntelligenceOutput`.
+6. ✅ Charts inside their sections — `market_trend` in Section A;
+   `cma_positioning` / `value_opportunity` / `scenario_fan` /
+   `risk_bar` / `rent_burn` / `rent_ramp` inside relevant Section C
+   drilldowns. No trailing `charts.map` block on BROWSE.
+7. ✅ Scout retains its existing affordances — category badge /
+   confidence% / headline / reason / Drill-in routing.
+8. ✅ Open Design Decision #7 (PRESENTATION_HANDOFF_PLAN) closed —
+   posture (7c) deferred indefinitely; recorded in 2026-04-29 OD #6
+   closure entry above.
+9. ✅ Chart-library evaluation produced — memo at
+   `docs/CHART_LIBRARY_EVAL_2026-04-29.md`; §3.4.7 marked ✅;
+   owner picked Apache ECharts; migration filed as new handoff.
+10. ✅ No silent expansion — non-BROWSE card stacks unchanged;
+    component files preserved.
+11. ✅ Doc discipline — per-cycle `DECISIONS.md` entries landed;
+    ROADMAP §1 step 6 + §3.5 + §3.4.7 + absorbed §3.4 sub-items all
+    marked ✅ in this closeout pass.
+
+**Follow-ups not folded into Phase 4c.**
+- Chart-renderer migration (Apache ECharts) — fresh handoff at
+  [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md);
+  ROADMAP §3.6.
+- §3.4.2 (vertical-character y-axis label) and §3.4.6 (marker
+  diversity / utilitarian styling) absorbed into the migration
+  handoff's Cycle 2 drive-bys (the bug class mostly disappears in
+  ECharts' declarative axis API).
+- Editor pass (PRESENTATION_HANDOFF_PLAN OD #7 / Phase 4c OD #6) —
+  deferred indefinitely; revisit only if post-migration smoke shows
+  residual list-y prose.
+- StrategyPathCard absorb-or-retire (Phase 4c OD #7) — post-smoke
+  follow-up; not blocking.
+
+**Cross-references.**
+[`ROADMAP.md`](ROADMAP.md) §1 step 6 (`✅ RESOLVED 2026-04-29 —
+BROWSE_REBUILD_HANDOFF_PLAN.md`), §3.5 (`✅ RESOLVED 2026-04-29` with
+six-cycle index), §3.6 (new migration entry), §10 Resolved Index
+(Phase 4c entry appended);
+[`BROWSE_REBUILD_HANDOFF_PLAN.md`](BROWSE_REBUILD_HANDOFF_PLAN.md)
+(plan-doc top header set to `✅ RESOLVED 2026-04-29` with six-cycle
+summary);
+[`CURRENT_STATE.md`](CURRENT_STATE.md) (Current Known Themes
+refreshed to mark Phase 4c closed);
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md) (UI surface map
+mentions tier-aware BROWSE rendering);
+[`GAP_ANALYSIS.md`](GAP_ANALYSIS.md) (Layer 4 note: BROWSE no longer
+a compatibility surface; chart-renderer migration filed as open
+gap);
+[`docs/current_docs_index.md`](docs/current_docs_index.md)
+(BROWSE_REBUILD_HANDOFF_PLAN marked historical; CHART_MIGRATION
+plan added).
+
+## 2026-04-30 — Chart-renderer migration Cycle 1 landed: substrate + cma_positioning
+
+Chart-renderer migration to Apache ECharts ([§3.6](ROADMAP.md#36-chart-renderer-migration-to-apache-echarts-size-m-l-impact-ui--charts);
+plan doc [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md))
+opens with Cycle 1 — substrate plus the `cma_positioning` chart end-to-end.
+The Cycle 5 eval prototype is now the production renderer for that chart;
+the gating decision for whether the migration approach works in production
+is taken with this cycle's owner sign-off.
+
+**Files changed.**
+- New: `web/src/lib/chat/chart-tokens.ts` — `getChartTokens()` resolves the
+  production CSS-var palette (`--chart-base/bull/bear/stress/neutral/grid/text-faint`,
+  `--color-bg-sunken/surface/text/text-muted/border-subtle`) to concrete
+  hex via `getComputedStyle(document.documentElement)` at first call,
+  with SSR-safe static fallback. Read-once + cache (no `useSyncExternalStore`
+  on `prefers-color-scheme` until light/dark theming lands).
+- New (transient — folded into Cycle 2): `web/src/components/chat/cma-positioning-echarts.tsx`
+  with the ported eval prototype.
+- `web/src/components/chat/chart-frame.tsx` — `CmaPositioningChart` is now
+  a thin wrapper around the lazy ECharts component plus its existing
+  MetricChip row. Lazy boundary: `dynamic(() => import("./cma-positioning-echarts"), { ssr: false, loading: ShimmerFallback })`.
+  Suspense fallback is a 320 px solid shimmer matching the chart's outer
+  rounded rectangle (Open-Design resolution: solid shimmer).
+- `web/src/components/chat/_eval/cma-echarts.tsx` — eval prototype
+  swapped from local `CHART_COLORS` constants to `getChartTokens()` so
+  the sandbox tracks production palette changes for free.
+
+**Files unchanged (per hard constraints).** `api/events.py`,
+`briarwood/agent/dispatch.py`, `api/pipeline_adapter.py`'s
+`_native_*_chart` builders, the `ChartSpec` discriminated union in
+`web/src/lib/chat/events.ts` — all untouched. The migration is a
+renderer swap; the chart-event payload contract is unchanged.
+
+**Open Design resolutions.**
+- *Theme-token cache invalidation strategy.* v1: read-once + cache.
+  `useSyncExternalStore` on `prefers-color-scheme` is deferred until
+  light/dark theming lands.
+- *Suspense fallback shape.* Solid shimmer matching the chart's outer
+  rounded rectangle, with implicit paint-time minimum-display. Layout is
+  not-flashy on fast wifi and explicit on Slow 4G.
+
+**Bundle delta (gz, first-load).**
+- `/` 186.3 → 185.9 KB (−0.4 KB) — well within ±2 KB tolerance.
+- `/admin` 145.0 → 145.0 KB (±0).
+- `/admin/turn/[turn_id]` 145.0 → 145.0 KB (±0).
+- `/c/[id]` 186.3 → 185.9 KB (−0.4 KB).
+ECharts engine + the new component land in separate lazy chunks (~362 KB
+gz + ~83.5 KB gz) — neither chunk is in any non-chart route's
+`firstLoadChunkPaths`.
+
+**Verification.**
+- tsc clean. ESLint clean on touched files.
+- `next build` clean (one carry-over harmless ECharts SSR-prerender warning
+  that was present at Cycle 5 as well).
+- Focused pytest: 44 passing, 1 failing — the carry-over baseline
+  `value_opportunity` chart-kind assertion failure on
+  `tests/test_pipeline_adapter_contracts.py`. No new failures.
+- Owner browser smoke against `1008-14th-ave-belmar-nj-07719` — BROWSE
+  Comps drilldown renders `cma_positioning` through ECharts with
+  subject-ask vertical, fair-value vertical, value band (when present),
+  SOLD/ACTIVE/cross-town markers, axis labels, comp address tick labels.
+  DECISION turn against the same property — non-`cma` charts still
+  render through the native-SVG path (Cycle 1 preserves this); chart
+  events on the DECISION-tier card stack render correctly.
+
+**Surfaced contradiction (handed off to Cycle 2 / follow-up):** the
+Cycle 1 prompt and plan call for "verifying the existing hover-sync
+wiring with BrowseDrilldown's Comps row" — but no production hover-sync
+wiring exists today between the Comps drilldown body and the chart.
+Hover-sync exists only in the eval prototype's `EvalCard` +
+`CompChipRail`. The new ECharts component preserves the
+`dispatchAction({type:"highlight"})` + `useEffect`-on-`hoveredAddress`
+pattern internally so a future Comps-table-row mirror is "wire one
+`onMouseEnter` against the chart's instance ref" — but lifting state
+up to `BrowseDeeperRead` and wiring `CompsTableCard` rows is filed as
+a small follow-up under §3.6, not part of Cycle 1.
+
+**Cross-references.**
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+(Cycle 1 spec); [`ROADMAP.md`](ROADMAP.md) §3.6 (Cycle 1 outcome
+appended in this closeout).
+
+## 2026-04-30 — Chart-renderer migration Cycle 2 landed: bulk migration of remaining 7 chart kinds + drive-by §3.4.2 / §3.4.6
+
+Cycle 2 migrates the remaining seven chart kinds (`market_trend`,
+`scenario_fan`, `risk_bar`, `rent_burn`, `rent_ramp`,
+`value_opportunity`, `horizontal_bar_with_ranges`) following Cycle 1's
+substrate. Drive-bys §3.4.2 (vertical-character y-axis label) and the
+renderer-side prong of §3.4.6 (utilitarian styling / hand-rolled
+markers) close as drive-bys. Cycle 1's per-chart file
+(`cma-positioning-echarts.tsx`) was consolidated into a single
+multi-kind router so there's one lazy boundary for all chart code.
+
+**Files changed.**
+- New: `web/src/components/chat/chart-echarts.tsx` — default-exports a
+  `<ChartECharts>` router that switches on `spec.kind` and renders one
+  of eight option-builder functions (`buildCmaOption`,
+  `buildScenarioFanOption`, `buildMarketTrendOption`,
+  `buildRiskBarOption`, `buildRentBurnOption`, `buildRentRampOption`,
+  `buildValueOpportunityOption`, `buildHorizontalBarWithRangesOption`).
+  All colors resolve through `getChartTokens()`. CMA hover-sync wiring
+  preserved on this kind only.
+- Removed: `web/src/components/chat/cma-positioning-echarts.tsx`
+  (Cycle 1's transient file; logic rolled into the router).
+- `web/src/components/chat/chart-frame.tsx`:
+  - Single `LazyChartECharts = dynamic(() => import("./chart-echarts"), { ssr: false, loading: ShimmerFallback })` replaces the per-chart Cycle 1 dynamic.
+  - Each chart-kind wrapper (`ScenarioFanChart`, `CmaPositioningChart`,
+    `RiskBarChart`, `RentBurnChart`, `RentRampChart`,
+    `ValueOpportunityChart`, `HorizontalBarWithRangesChart`,
+    `MarketTrendChart`) shrunk to a thin shell over
+    `<LazyChartECharts>` plus its existing MetricChip row /
+    chip rail / footer-note chrome.
+  - Removed unused native-SVG helpers: `SVG_W`, `SVG_H`, the `CHART`
+    palette, `formatTick`, `AxisLabels`, `linePath`, `areaPath`,
+    `chartBounds`. `LegendRow`, `strokeDashFor`, `formatCompSetChip`,
+    `MetricChip`, `breakEvenLabel` stay (still in use).
+  - `NativeChart` dispatch function renamed to `ChartBody` since
+    nothing renders natively on this path anymore.
+- ~700 LOC removed from `chart-frame.tsx`; ~1,200 LOC added in
+  `chart-echarts.tsx`. Net code size roughly comparable; the structural
+  win is the one-boundary lazy graph.
+
+**ECharts patterns picked per chart kind.**
+- `cma_positioning` — three scatter series (SOLD / cross-town SOLD /
+  ACTIVE) with `markLine` verticals + `markArea` band. Same as Cycle 1.
+- `scenario_fan` — bull/base/bear/stress lines with shaded band via
+  the "stacked transparent + delta-fill" pattern; ECharts `endLabel`
+  for Upside / Base / Downside / Floor annotations.
+- `market_trend` — single line with three `markPoint` anchors
+  (Now / 1y / 3y).
+- `risk_bar` — declarative horizontal bars on a category y-axis;
+  rose for `tone === "risk"`, amber for `tone === "trust"`.
+- `rent_burn` — base + obligation + market lines plus two stacked
+  bands (bull/bear scenario, market low/high).
+- `rent_ramp` — three rent-escalation lines (0% / 3% / 5%) with a
+  zero-line `markLine`.
+- `value_opportunity` — number-line dot plot with two annotated dots
+  (Fair / Ask). y-axis suppressed entirely (`yAxis.show = false`),
+  which structurally closes §3.4.2.
+- `horizontal_bar_with_ranges` — stacked transparent-offset + range
+  bar, plus a median-tick scatter; tones: `stress` for emphasized,
+  `bear` for subject, `base` for others.
+
+**Drive-by closures.**
+- ✅ §3.4.2 — `value_opportunity` y-axis label "Comp" rendering as a
+  vertical character stack. The bug class is structurally gone:
+  `value_opportunity` suppresses its y axis entirely; other chart
+  kinds use ECharts' declarative `nameRotate: 90` on `yAxis.name`,
+  which routes through ECharts' text layout instead of the
+  per-character SVG fallback that triggered the original bug. The
+  hand-rolled `AxisLabels` SVG helper containing the bug was deleted.
+- ✅ §3.4.6 (renderer-side prong) — every chart's marker scheme is
+  now declarative `series.symbol` / `series.itemStyle` /
+  `series.emphasis`. Hand-rolled `<polygon>` / `<circle>` / `<rect>`
+  primitives are gone. The producer-side prong (CMA marker diversity
+  in real comp sets — owner observation that Belmar's top-N is
+  all-SOLD same-town) carries over to a comp-scorer follow-up.
+
+**Files unchanged (per hard constraints).** Same as Cycle 1 — backend
+contract surfaces all untouched.
+
+**Open Design resolutions.**
+- *Whether `LegendRow` JSX in `chart-frame.tsx` stays or moves into
+  ECharts' built-in legend.* Stays. It's already styled to match the
+  page chrome; ECharts' legend doesn't add capability we need.
+
+**Bundle delta vs pre-Cycle-1 baseline (gz, first-load).**
+- `/` 186.3 → 183.0 KB (−3.3 KB).
+- `/admin` 145.0 → 145.0 KB (±0).
+- `/admin/turn/[turn_id]` 145.0 → 145.0 KB (±0).
+- `/c/[id]` 186.3 → 183.0 KB (−3.3 KB).
+The chart route is now *smaller* than pre-migration because all
+native-SVG body code lives in a lazy chunk. ECharts engine chunk
+(~362 KB gz) confirmed not present in any non-chart route's
+`firstLoadChunkPaths`.
+
+**Verification.** tsc + ESLint + `next build` clean (carry-over
+SSR-prerender warning persists in Cycle 2; goes away in Cycle 3 once
+the eval routes are deleted). Focused pytest 44 passing + 1 carry-over
+baseline failure. Owner combined browser-smoke against the canonical
+Belmar fixture confirmed parity across all eight chart kinds; no
+regressions on non-BROWSE tier card stacks.
+
+**Carry-over to follow-ups.** Two new §4 Medium tactical items filed
+during this cycle:
+- *Chart-content review (bull/base/bear spread looks formulaic;
+  broader chart-logic audit)* — owner-flagged at Cycle 2 closeout.
+  Lead anchor: `briarwood/modules/bull_base_bear.py`. The renderer is
+  fine; the producer-side numbers may not always carry signal
+  proportional to chart real estate.
+- *Chart interaction affordances: expand-to-overlay +
+  download-as-tear-sheet* — owner-flagged at Cycle 2 closeout.
+  ECharts' `getDataURL` + a `next/dynamic` PDF generator make both
+  cheap.
+
+**Cross-references.**
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md)
+(Cycle 2 spec); [`ROADMAP.md`](ROADMAP.md) §3.6 (Cycle 2 outcome
+appended in this closeout); ROADMAP §3.4.2 / §3.4.6 (drive-by closures).
+
+## 2026-04-30 — Chart-renderer migration Cycle 3 + closeout: sandbox cleanup, dep removal, doc reconciliation
+
+Cycle 3 — sandbox cleanup, removal of unused candidate libraries, doc
+reconciliation. With Cycle 3 landed, §3.6 (chart-renderer migration to
+Apache ECharts) closes.
+
+**Files changed.**
+- Deleted `web/src/components/chat/_eval/` (seven prototype files:
+  `cma-fixture.ts`, `eval-card.tsx`, `eval-route-shell.tsx`,
+  `cma-native.tsx`, `cma-recharts.tsx`, `cma-echarts.tsx`,
+  `cma-nivo.tsx`).
+- Deleted `web/src/app/eval/charts/` (hub `page.tsx` + four per-library
+  routes: `native/`, `recharts/`, `echarts/`, `nivo/`).
+- `web/package.json` — removed `recharts` (^3.8.1), `@nivo/core`
+  (^0.99.0), `@nivo/scatterplot` (^0.99.0). `pnpm install` purged 72
+  transitive packages from the lockfile.
+- `web/pnpm-lock.yaml` updated.
+
+**Bundle delta vs pre-Cycle-1 baseline (gz, first-load).**
+- `/` 186.3 → 182.9 KB (−3.4 KB).
+- `/admin` 145.0 → 145.0 KB (±0).
+- `/admin/turn/[turn_id]` 145.0 → 145.0 KB (±0).
+- `/c/[id]` 186.3 → 182.9 KB (−3.4 KB).
+- 5 `/eval/charts/*` routes removed from the build entirely.
+
+Final ECharts lazy chunk: 365.8 KB gz (matches the
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+~364 KB estimate). Confirmed not present in the chat route's
+`firstLoadChunkPaths`. Recharts and Nivo no longer in any chunk.
+
+**Verification.** tsc clean, ESLint clean, `next build` clean (the
+carry-over Recharts SSR-prerender warning that lingered through Cycles
+1-2 is also gone now that the only remaining chart consumer is the
+dynamic chat route, which never SSR-prerenders). Focused pytest:
+44 passing, 1 failing (carry-over baseline only).
+
+**Doc reconciliation pass (this cycle).**
+- This file: three new entries (Cycle 1, Cycle 2, this closeout).
+- [`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md):
+  top status header → ✅ RESOLVED 2026-04-30 with three-cycle summary.
+- [`ROADMAP.md`](ROADMAP.md): §3.6 → ✅ RESOLVED 2026-04-30 with
+  per-cycle outcomes; §3.4.2 → ✅ RESOLVED in §3.6 Cycle 2;
+  §3.4.6 → ✅ PARTIALLY RESOLVED (renderer prong closed; producer
+  prong carries over); §10 Resolved Index entries 26 / 27 / 28 added.
+- [`CURRENT_STATE.md`](CURRENT_STATE.md): Current Known Themes
+  refreshed to mark §3.6 closed; `Last Updated` bumped.
+- [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md):
+  `chart-frame.tsx` row updated from "Native-SVG renderer for the
+  eight `ChartSpec` kinds" to "Apache ECharts renderer for the eight
+  `ChartSpec` kinds (lazy-imported via `next/dynamic`); eval-sandbox
+  reference removed.
+- [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md): Layer 4 chart-renderer-migration
+  gap flipped to closed.
+- [`docs/current_docs_index.md`](docs/current_docs_index.md):
+  CHART_MIGRATION plan marked historical.
+
+**Module READMEs.** Unchanged.
+[`briarwood/representation/README.md`](briarwood/representation/README.md)'s
+prose continues to describe chart selection at the registry layer
+(not the renderer); the chart-spec contract is unchanged; no Job-3
+update warranted per
+[`.claude/skills/readme-discipline/SKILL.md`](.claude/skills/readme-discipline/SKILL.md).
+
+**Closeout summary — three-cycle stats.**
+- Estimate: 60–120 LLM-development-minutes across the three cycles
+  (per the handoff plan). Actual: all three cycles + closeout in one
+  session (2026-04-30) following the Cycle 1 owner sign-off and the
+  Cycle 2 combined-smoke sign-off.
+- Net code size: roughly neutral (chart-frame.tsx shrank by ~700 LOC;
+  chart-echarts.tsx added ~1,200 LOC). The structural win is the
+  single lazy boundary, the declarative chart APIs, and the deletion
+  of three rejected candidate libraries.
+- Net bundle: chart route −3.4 KB gz vs pre-migration baseline; ECharts
+  engine (~366 KB gz) loads lazily and is never in a non-chart route's
+  first-load.
+- Open follow-ups filed: chart-content review (bull/base/bear),
+  chart interaction affordances (expand + download tear sheet),
+  CMA marker-diversity producer-side prong of §3.4.6.
+
+**Cross-references.** This entry is the closeout; the per-cycle
+entries above hold the implementation detail.
+[`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md);
+[`ROADMAP.md`](ROADMAP.md) §3.6 + §3.4.2 + §3.4.6 + §10;
+[`CURRENT_STATE.md`](CURRENT_STATE.md);
+[`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md);
+[`GAP_ANALYSIS.md`](GAP_ANALYSIS.md);
+[`docs/current_docs_index.md`](docs/current_docs_index.md).

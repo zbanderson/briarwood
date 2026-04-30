@@ -6,6 +6,11 @@ import type { TownSignalItem, TownSummaryEvent } from "@/lib/chat/events";
 type Props = {
   summary: TownSummaryEvent;
   onSelectSignal?: (signal: TownSignalItem) => void;
+  /** Phase 4c Cycle 4 — Section C drilldowns embed this card with no extra
+   * border (parent drilldown body is the frame). `framed=false` drops the
+   * outer rounded-2xl wrapper + bg + padding; default `true` preserves the
+   * non-BROWSE rendering. */
+  framed?: boolean;
 };
 
 const TIER_TONE: Record<string, string> = {
@@ -29,7 +34,7 @@ function tierLabel(tier: string | null | undefined) {
   return tier[0]!.toUpperCase() + tier.slice(1);
 }
 
-export function TownSummaryCard({ summary, onSelectSignal }: Props) {
+export function TownSummaryCard({ summary, onSelectSignal, framed = true }: Props) {
   const tier = summary.confidence_tier ?? null;
   const tone = tier ? TIER_TONE[tier] : undefined;
   const conf = summary.confidence_raw;
@@ -39,8 +44,9 @@ export function TownSummaryCard({ summary, onSelectSignal }: Props) {
   return (
     <div
       className={cn(
-        "mt-4 rounded-2xl border border-[var(--color-border-subtle)]",
-        "bg-[var(--color-surface)] p-4",
+        framed
+          ? "mt-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4"
+          : "",
       )}
     >
       <div className="flex items-start justify-between gap-3">

@@ -89,14 +89,17 @@ The adjacent infrastructure is the grounding verifier in [briarwood/agent/compos
 
 **Current state.** **This layer substantially exists.** [briarwood/representation/agent.py:128-187](briarwood/representation/agent.py#L128-L187) uses `gpt-4o-mini` structured output to map `UnifiedIntelligenceOutput` + `module_views` to a `RepresentationPlan` — a list of `RepresentationSelection` entries, each binding a claim type to a chart id from the registry at [briarwood/representation/charts.py](briarwood/representation/charts.py). Deterministic heuristic fallback when the LLM is unavailable.
 
-**Gap.** Two narrower pieces:
+**Gap.** Three narrower pieces:
 
 1. **Triggering is gated on the claims flag.** The Representation Agent runs inside the claim-object path; the legacy synthesis path emits chart events directly from handlers. Broadening the Representation Agent to run on every turn is mostly plumbing.
-2. **Chart registry is small.** Eight chart kinds per [web/src/lib/chat/events.ts](web/src/lib/chat/events.ts) (`scenario_fan`, `cma_positioning`, `risk_bar`, `rent_burn`, `rent_ramp`, `value_opportunity`, `horizontal_bar_with_ranges`, plus legacy iframe). The Representation Agent can only select from what exists.
+2. **Chart registry is small.** Eight chart kinds per [web/src/lib/chat/events.ts](web/src/lib/chat/events.ts) (`scenario_fan`, `cma_positioning`, `risk_bar`, `rent_burn`, `rent_ramp`, `value_opportunity`, `horizontal_bar_with_ranges`, `market_trend`). The Representation Agent can only select from what exists. Phase 3 Cycle A retired the iframe-Plotly path; chart-renderer migration to Apache ECharts closed 2026-04-30 — production renderer is now [`web/src/components/chat/chart-echarts.tsx`](web/src/components/chat/chart-echarts.tsx) lazy-loaded from [`web/src/components/chat/chart-frame.tsx`](web/src/components/chat/chart-frame.tsx).
+3. **Chart-renderer migration closed 2026-04-30** ([`CHART_MIGRATION_HANDOFF_PLAN.md`](CHART_MIGRATION_HANDOFF_PLAN.md) ✅ RESOLVED, [`ROADMAP.md`](ROADMAP.md) §3.6). All eight production chart kinds render through Apache ECharts via a single `next/dynamic({ ssr: false })` boundary; the ECharts engine chunk (~366 KB gz) loads lazily so non-chart routes carry zero ECharts cost in first-load chunks. Eval sandbox and Recharts + Nivo deps deleted in Cycle 3. Drive-by §3.4.2 (vertical-character y-axis label) and the renderer-side prong of §3.4.6 (utilitarian styling / hand-rolled markers) closed; producer-side prong of §3.4.6 (CMA marker diversity in real comp sets) carries over to comp-scorer follow-up. Two new §4 Medium tactical items filed during Cycle 2 closeout: chart-content review (bull/base/bear spread looks formulaic) and chart interaction affordances (expand-to-overlay + download-as-tear-sheet).
 
-**Complexity.** Trivial to moderate. Unflagging the agent's triggering is code-path work; expanding the chart registry is prompt + frontend component work per chart.
+**Complexity.** Trivial to moderate for layer-triggering work; medium for the now-closed chart-renderer migration (cross-cutting frontend swap with one strong gating criterion — non-chart route bundle delta must stay at baseline — and eight per-chart visual-parity gates).
 
-**Risks.** Least-risky layer. Most of the work is already done. The main design question — "what's the contract between synthesis and rendering?" — has been answered with `ClaimSpec` + `chart_id` + `evidence`. Adding charts is additive.
+**Risks.** Layer-triggering and chart-registry expansion are low-risk additive work. The chart-renderer migration's bundle-budget risk (364 KB gz at the chart route, ~1 second extra to first chart paint on residential 4G mobile, invisible on fiber/wifi) was explicitly accepted in the 2026-04-29 owner pick and mitigated by `dynamic()` lazy import; verified at closeout that non-chart routes carry zero ECharts cost in first-load chunks.
+
+**Status (2026-04-30).** Phase 4c BROWSE rebuild closed 2026-04-29; chart-renderer migration closed 2026-04-30. Layer 4 has no open gating work; remaining items are Representation Agent triggering breadth (mostly plumbing) and chart-registry expansion (additive).
 
 ---
 

@@ -172,8 +172,18 @@ function AssistantMessage({
               valuationComps={valuationComps ?? undefined}
               marketSupportComps={marketSupportComps ?? undefined}
               scenarioTable={scenarioTable ?? undefined}
+              rentOutlook={rentOutlook ?? undefined}
+              townSummary={townSummary ?? undefined}
+              riskProfile={riskProfile ?? undefined}
+              trustSummary={trustSummary ?? undefined}
+              strategyPath={strategyPath ?? undefined}
               charts={charts}
               onPrompt={onPrompt}
+              onSelectTownSignal={
+                onSelectTownSignal
+                  ? (signal) => onSelectTownSignal(signal, subjectListing)
+                  : undefined
+              }
             />
           </>
         )}

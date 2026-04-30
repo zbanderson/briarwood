@@ -19,6 +19,13 @@ type Props = {
   /** Right-aligned naked-text summary; expected to be a `<SummaryChip />`
    * but any inline content works. */
   summary?: ReactNode;
+  /** Phase 4c Cycle 4 — one-line italic explainer that renders BELOW the
+   * row label when the row is closed. Tells the user *why* this drilldown
+   * is interesting before they expand it. Hides on open (the body has the
+   * full evidence). Newspaper rhythm rule: text inline with the row, NEVER
+   * a boxed mini-card. Caller computes the line from data — pass `null` /
+   * omit when the drilldown has nothing concrete to tease. */
+  teaser?: ReactNode;
   /** Default open state. Owner-locked default = closed. */
   defaultOpen?: boolean;
   /** Fired the first time the user expands any drilldown in the page —
@@ -30,6 +37,7 @@ type Props = {
 export function BrowseDrilldown({
   label,
   summary,
+  teaser,
   defaultOpen = false,
   onFirstExpand,
   children,
@@ -52,18 +60,25 @@ export function BrowseDrilldown({
         aria-expanded={open}
         aria-controls={bodyId}
         className={cn(
-          "group flex w-full items-baseline gap-3 py-3.5 px-3 -mx-3",
+          "group block w-full py-3.5 px-3 -mx-3",
           "rounded-md transition-colors duration-150",
           "hover:bg-[var(--color-surface)]/40",
           "cursor-pointer text-left",
         )}
       >
-        <Chevron open={open} />
-        <span className="text-[14px] font-medium tracking-tight text-[var(--color-text)]">
-          {label}
-        </span>
-        {summary && (
-          <span className="ml-auto shrink-0 tabular-nums">{summary}</span>
+        <div className="flex items-baseline gap-3">
+          <Chevron open={open} />
+          <span className="text-[14px] font-medium tracking-tight text-[var(--color-text)]">
+            {label}
+          </span>
+          {summary && (
+            <span className="ml-auto shrink-0 tabular-nums">{summary}</span>
+          )}
+        </div>
+        {!open && teaser && (
+          <div className="mt-1 pl-[29px] text-[13px] italic leading-snug text-[var(--color-text-muted)]">
+            {teaser}
+          </div>
         )}
       </button>
       {open && (

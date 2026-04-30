@@ -52,17 +52,39 @@ Use this file as the starting point for product and implementation work.
   receiver hooks, and analyzer reporting. Implementation substrate landed
   2026-04-28; real outcome data still needs to be supplied and run through
   the backfills.
+- `CHART_MIGRATION_HANDOFF_PLAN.md`
+  Historical Apache ECharts migration plan. ✅ RESOLVED 2026-04-30 —
+  all three cycles landed in one session against the canonical Belmar
+  fixture. All eight chart kinds now render through ECharts via a
+  single `next/dynamic({ ssr: false })` boundary at
+  `web/src/components/chat/chart-frame.tsx` →
+  `web/src/components/chat/chart-echarts.tsx`. Eval sandbox at
+  `web/src/components/chat/_eval/` + the `/eval/charts/` route tree
+  deleted in Cycle 3; `recharts`, `@nivo/core`, `@nivo/scatterplot`
+  removed from `web/package.json`. Drive-by §3.4.2 + §3.4.6
+  renderer-side prong closed. Useful for future chart work as a
+  template for cycle structure (substrate / bulk / cleanup) and for
+  the lazy-import wiring pattern.
+- `docs/CHART_LIBRARY_EVAL_2026-04-29.md`
+  Phase 4c Cycle 5 chart-library eval memo. Compares the production
+  native-SVG `cma_positioning` renderer against Recharts 3.8, Apache
+  ECharts 6, and Nivo 0.99 on the same Belmar dataset. Bundle deltas
+  (gzipped): native 0 KB / Nivo 70 KB / Recharts 84 KB / ECharts
+  364 KB. Memo recommendation was stay native; owner picked Apache
+  ECharts (override). Migration tracked in
+  `CHART_MIGRATION_HANDOFF_PLAN.md`.
 - `BROWSE_REBUILD_HANDOFF_PLAN.md`
-  Phase 4c plan for rebuilding the BROWSE response into three stacked
-  sections (`BrowseRead` / `BrowseScout` / `BrowseDeeperRead`) with
-  newspaper-front-page hierarchy. APPROVED 2026-04-28; **Cycles 1–2
-  LANDED 2026-04-28** (Cycle 1: tier marker + section primitive +
-  Section A fully filled; Cycle 2: Section B "What did Scout dig up?"
-  fill with playful-yet-intelligent treatment + stance carry-over wired
-  onto `value_thesis`). Section C remains a Cycle-1 placeholder until
-  Cycle 3 fills the Comps / Value-thesis / Projection drilldowns. Folds
-  the §3.4.7 chart-library evaluation as Cycle 5 and closes
-  `PRESENTATION_HANDOFF_PLAN.md` Open Design Decision #7 at Cycle 4.
+  Historical Phase 4c BROWSE summary card rebuild plan. ✅ RESOLVED
+  2026-04-29 — six cycles landed across 2026-04-28 → 2026-04-29.
+  Three-section newspaper-hierarchy layout (`BrowseRead` /
+  `BrowseScout` / `BrowseDeeperRead`) with eight Section C drilldowns
+  over the `BrowseDrilldown` primitive ships on BROWSE turns; non-BROWSE
+  tiers render the legacy card stack unchanged. Cycle 5 produced the
+  chart-library eval memo at `docs/CHART_LIBRARY_EVAL_2026-04-29.md`;
+  the actual chart-renderer migration is `CHART_MIGRATION_HANDOFF_PLAN.md`,
+  filed as a fresh handoff (NOT part of Phase 4c per the 2026-04-28
+  sequencing call). Closed `PRESENTATION_HANDOFF_PLAN.md` Open Design
+  Decision #7 (deferred indefinitely).
 - `briarwood/routing_schema.py`
   Canonical routing and output contracts
 - `briarwood/orchestrator.py`

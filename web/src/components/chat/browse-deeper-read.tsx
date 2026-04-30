@@ -6,7 +6,14 @@ import type {
   ChartEvent,
   CmaPositioningChartSpec,
   MarketSupportCompsEvent,
+  MarketTrendChartSpec,
+  RentOutlookEvent,
+  RiskProfileEvent,
   ScenarioTableEvent,
+  StrategyPathEvent,
+  TownSignalItem,
+  TownSummaryEvent,
+  TrustSummaryEvent,
   ValuationCompsEvent,
   ValueThesisEvent,
 } from "@/lib/chat/events";
@@ -20,19 +27,28 @@ import {
 import { ChartFrame, formatCompSetChip } from "./chart-frame";
 import { CompsTableCard } from "./cma-table-card";
 import { InlinePrompt } from "./inline-prompt";
+import { RentOutlookCard } from "./rent-outlook-card";
+import { RiskProfileCard } from "./risk-profile-card";
 import { ScenarioTable } from "./scenario-table";
+import { StrategyPathCard } from "./strategy-path-card";
+import { TownSummaryCard } from "./town-summary-card";
+import { TrustSummaryCard } from "./trust-summary-card";
 import { ValueThesisDrilldownBody } from "./value-thesis-drilldown-body";
 
-// Phase 4c Cycle 3 — Section C ("THE DEEPER READ") fully filled. Three
-// drilldowns (Comps, Value thesis, Projection) sit on chevron-list rows
-// over 1px rules. Each drilldown row has a SummaryChip on the right that
-// previews the underlying evidence in one glance ("5 SOLD · 3 ACTIVE",
-// "FAIR $1.31M · 5.3% APE", "5Y $1.18M – $1.65M"). Independent open state
-// per row; embedded charts and structured cards inside open bodies render
-// borderless via the `framed={false}` prop wired in this cycle.
+// Phase 4c Cycle 3 — Section C ("THE DEEPER READ") shipped three drilldowns
+// (Comps, Value thesis, Projection) on the `BrowseDrilldown` "Civic Ledger"
+// primitive. Each drilldown row had a SummaryChip on the right that previewed
+// the underlying evidence in one glance ("8 SOLD", "FAIR $1.31M · 5.3% APE",
+// "5Y $1.18M – $1.65M").
 //
-// Cycle 4 will add Rent / Town / Risk / Confidence / Recommended-path
-// drilldowns inside the same `BrowseDrilldown` primitive.
+// Phase 4c Cycle 4 — Section C fills out completely:
+//   * five new drilldowns added: Rent / Town / Risk / Confidence / Path
+//   * cross-cutting teaser hooks: each closed row carries a one-line italic
+//     explainer below the label, derived from real data (see
+//     ROADMAP §3.5 Cycle 4 carry-over). Newspaper rhythm preserved — the
+//     teaser is text inline with the row, NEVER a boxed card.
+// The hint coach-mark, ChipEyebrow / ChipFigure surface-2 chip system, and
+// the `framed={false}` borderless body convention are unchanged from Cycle 3.
 
 const HINT_STORAGE_KEY = "briarwood:section-c-hint-seen";
 
@@ -94,8 +110,14 @@ type Props = {
   valuationComps?: ValuationCompsEvent;
   marketSupportComps?: MarketSupportCompsEvent;
   scenarioTable?: ScenarioTableEvent;
+  rentOutlook?: RentOutlookEvent;
+  townSummary?: TownSummaryEvent;
+  riskProfile?: RiskProfileEvent;
+  trustSummary?: TrustSummaryEvent;
+  strategyPath?: StrategyPathEvent;
   charts: ChartEvent[];
   onPrompt?: (prompt: string) => void;
+  onSelectTownSignal?: (signal: TownSignalItem) => void;
 };
 
 function compactMoney(n: number | null | undefined): string {
@@ -119,13 +141,34 @@ function isCmaSpec(
   return spec != null && spec.kind === "cma_positioning";
 }
 
+function isMarketTrendSpec(
+  spec: ChartEvent["spec"] | null | undefined,
+): spec is MarketTrendChartSpec {
+  return spec != null && spec.kind === "market_trend";
+}
+
+// Cycle 4 — short street-only address for inline teaser sentences. Strips a
+// trailing town/state if a full address came through. Keeps "1209 16th Ave"
+// out of the noise floor of "1209 16th Ave, Belmar, NJ 07719".
+function shortAddress(addr: string | null | undefined): string | null {
+  if (!addr) return null;
+  const head = addr.split(",")[0]?.trim();
+  return head && head.length > 0 ? head : null;
+}
+
 export function BrowseDeeperRead({
   valueThesis,
   valuationComps,
   marketSupportComps,
   scenarioTable,
+  rentOutlook,
+  townSummary,
+  riskProfile,
+  trustSummary,
+  strategyPath,
   charts,
   onPrompt,
+  onSelectTownSignal,
 }: Props) {
   const showHint = useSyncExternalStore(
     subscribeHint,
@@ -136,9 +179,12 @@ export function BrowseDeeperRead({
     markHintSeen();
   }, []);
 
-  // Comps drilldown — chip counts derive from the cma_positioning chart's
-  // spec.comps (same source-of-truth as the chart's MetricChip "Comp set"
-  // chip in chart-frame.tsx; cf. formatCompSetChip).
+  // ------------------------------------------------------------------
+  // Comps drilldown (Cycle 3) — chip + Cycle 4 teaser
+  // ------------------------------------------------------------------
+  // Chip counts derive from the cma_positioning chart's spec.comps (same
+  // source-of-truth as the chart's MetricChip "Comp set" chip in
+  // chart-frame.tsx; cf. formatCompSetChip).
   const cmaChart = findChart(charts, "cma_positioning");
   const cmaSpec = isCmaSpec(cmaChart?.spec) ? cmaChart.spec : null;
   const compsChip = (() => {
@@ -165,6 +211,50 @@ export function BrowseDeeperRead({
     );
   })();
 
+  // Cycle 4 teaser — "Top sale: <addr> at <price> · <N> within ±10% of ask".
+  // Uses the same `cmaSpec.comps` data the chart and chip already cite, so
+  // the teaser can't drift from what's visible in the chart.
+  const compsTeaser = (() => {
+    if (!cmaSpec) return null;
+    const sold = cmaSpec.comps.filter(
+      (c) =>
+        c.listing_status === "sold" &&
+        typeof c.ask_price === "number" &&
+        Number.isFinite(c.ask_price),
+    );
+    if (sold.length === 0) return null;
+    const top = sold.reduce<typeof sold[number] | null>((acc, comp) => {
+      if (!acc) return comp;
+      const accPrice = acc.ask_price ?? -Infinity;
+      const compPrice = comp.ask_price ?? -Infinity;
+      return compPrice > accPrice ? comp : acc;
+    }, null);
+    const subjectAsk = cmaSpec.subject_ask;
+    const withinBand =
+      subjectAsk != null && Number.isFinite(subjectAsk)
+        ? cmaSpec.comps.filter((c) => {
+            if (c.ask_price == null || !Number.isFinite(c.ask_price)) {
+              return false;
+            }
+            return Math.abs(c.ask_price - subjectAsk) / subjectAsk <= 0.1;
+          }).length
+        : null;
+    const topAddr = shortAddress(top?.address);
+    const topPrice =
+      top?.ask_price != null && Number.isFinite(top.ask_price)
+        ? compactMoney(top.ask_price)
+        : null;
+    if (!topAddr || !topPrice) return null;
+    const tail =
+      withinBand != null
+        ? ` · ${withinBand} within ±10% of ask`
+        : "";
+    return `Top sale: ${topAddr} at ${topPrice}${tail}`;
+  })();
+
+  // ------------------------------------------------------------------
+  // Value thesis drilldown (Cycle 3) — chip + Cycle 4 teaser
+  // ------------------------------------------------------------------
   // Value thesis chip — "FAIR $1.31M · 5.3% APE" full / "$1.31M · 5.3%"
   // compact (compress to keep both numbers per owner pick #5).
   const fairValue = valueThesis?.fair_value_base ?? null;
@@ -185,11 +275,11 @@ export function BrowseDeeperRead({
     if (apeStr) {
       if (fullParts.length > 0) {
         fullParts.push(
-          <ChipFigure key="dot">{" · "}</ChipFigure>,
+          <ChipFigure key="dot">{" · "}</ChipFigure>,
         );
       }
       fullParts.push(<ChipFigure key="ape-fig">{apeStr}</ChipFigure>);
-      fullParts.push(<ChipEyebrow key="ape-eyebrow">{" APE"}</ChipEyebrow>);
+      fullParts.push(<ChipEyebrow key="ape-eyebrow">{" APE"}</ChipEyebrow>);
     }
     const compactParts: React.ReactNode[] = [];
     if (fairValue != null) {
@@ -198,7 +288,7 @@ export function BrowseDeeperRead({
     if (apeStr) {
       if (compactParts.length > 0) {
         compactParts.push(
-          <ChipFigure key="c-dot">{" · "}</ChipFigure>,
+          <ChipFigure key="c-dot">{" · "}</ChipFigure>,
         );
       }
       compactParts.push(<ChipFigure key="c-ape">{apeStr}</ChipFigure>);
@@ -208,13 +298,40 @@ export function BrowseDeeperRead({
     );
   })();
 
-  // Projection chip — "5Y $1.18M – $1.65M" — bull/bear from scenarioTable.
-  const projectionChip = (() => {
-    if (!scenarioTable || !scenarioTable.rows || scenarioTable.rows.length === 0) {
-      return null;
+  // Cycle 4 teaser — describes the SHAPE of the value gap and the lead
+  // value driver. "Fair $1.31M sits 5.3% under ask · top driver: <text>".
+  const valueThesisTeaser = (() => {
+    if (!valueThesis) return null;
+    const parts: string[] = [];
+    if (fairValue != null && apePct != null) {
+      const direction = (premium ?? 0) >= 0 ? "over" : "under";
+      parts.push(
+        `Fair ${compactMoney(fairValue)} sits ${apePct.toFixed(1)}% ${direction} ask`,
+      );
+    } else if (fairValue != null) {
+      parts.push(`Fair ${compactMoney(fairValue)}`);
     }
-    const bull = scenarioTable.rows.find((r) => r.scenario === "Bull");
-    const bear = scenarioTable.rows.find((r) => r.scenario === "Bear");
+    const drivers =
+      valueThesis.key_value_drivers?.length
+        ? valueThesis.key_value_drivers
+        : valueThesis.value_drivers;
+    const topDriver = drivers && drivers.length > 0 ? drivers[0] : null;
+    if (topDriver) {
+      parts.push(`top driver: ${topDriver.toLowerCase()}`);
+    }
+    if (parts.length === 0) return null;
+    return parts.join(" · ");
+  })();
+
+  // ------------------------------------------------------------------
+  // Projection drilldown (Cycle 3) — chip + Cycle 4 teaser
+  // ------------------------------------------------------------------
+  // Projection chip — "5Y $1.18M – $1.65M" — bull/bear from scenarioTable.
+  const projectionRows = scenarioTable?.rows ?? [];
+  const bull = projectionRows.find((r) => r.scenario === "Bull");
+  const bear = projectionRows.find((r) => r.scenario === "Bear");
+  const base = projectionRows.find((r) => r.scenario === "Base");
+  const projectionChip = (() => {
     if (
       !bull ||
       !bear ||
@@ -229,25 +346,325 @@ export function BrowseDeeperRead({
         full={
           <>
             <ChipEyebrow>5Y</ChipEyebrow>
-            <ChipFigure>{" "}{range}</ChipFigure>
+            <ChipFigure>{" "}{range}</ChipFigure>
           </>
         }
       />
     );
   })();
 
+  // Cycle 4 teaser — describes the SPREAD versus base, not the absolute
+  // range. "+22% bull / -15% bear vs base $1.32M".
+  const projectionTeaser = (() => {
+    if (!bull || !bear || !base) return null;
+    const bullV = bull.value;
+    const bearV = bear.value;
+    const baseV = base.value;
+    if (
+      bullV == null ||
+      bearV == null ||
+      baseV == null ||
+      !Number.isFinite(bullV) ||
+      !Number.isFinite(bearV) ||
+      !Number.isFinite(baseV) ||
+      baseV === 0
+    ) {
+      return null;
+    }
+    const bullPct = ((bullV - baseV) / baseV) * 100;
+    const bearPct = ((bearV - baseV) / baseV) * 100;
+    const bullStr = `${bullPct >= 0 ? "+" : ""}${bullPct.toFixed(0)}% bull`;
+    const bearStr = `${bearPct >= 0 ? "+" : ""}${bearPct.toFixed(0)}% bear`;
+    return `${bullStr} / ${bearStr} vs base ${compactMoney(baseV)}`;
+  })();
+
+  // ------------------------------------------------------------------
+  // Cycle 4 — Rent drilldown
+  // ------------------------------------------------------------------
+  const rentChip = (() => {
+    if (!rentOutlook) return null;
+    const monthly = rentOutlook.monthly_rent ?? rentOutlook.effective_monthly_rent;
+    if (monthly == null || !Number.isFinite(monthly)) return null;
+    const monthlyStr = compactMoney(monthly);
+    const ratio = rentOutlook.carry_offset_ratio;
+    const ratioStr =
+      ratio != null && Number.isFinite(ratio) ? `${ratio.toFixed(2)}x` : null;
+    return (
+      <SummaryChip
+        full={
+          <>
+            <ChipFigure>{monthlyStr}</ChipFigure>
+            {ratioStr && (
+              <>
+                <ChipFigure>{" · "}</ChipFigure>
+                <ChipFigure>{ratioStr}</ChipFigure>
+                <ChipEyebrow>{" CARRY"}</ChipEyebrow>
+              </>
+            )}
+          </>
+        }
+        compact={<ChipFigure>{monthlyStr}/mo</ChipFigure>}
+      />
+    );
+  })();
+
+  // Rent teaser — lead with the rental ease label + carry-coverage. Falls
+  // back to the basis-to-rent framing when ease isn't graded.
+  const rentTeaser = (() => {
+    if (!rentOutlook) return null;
+    const parts: string[] = [];
+    const monthly = rentOutlook.monthly_rent ?? rentOutlook.effective_monthly_rent;
+    if (monthly != null && Number.isFinite(monthly)) {
+      parts.push(`${compactMoney(monthly)}/mo`);
+    }
+    if (rentOutlook.rental_ease_label) {
+      parts.push(`${rentOutlook.rental_ease_label.toLowerCase()} to rent`);
+    }
+    if (
+      rentOutlook.carry_offset_ratio != null &&
+      Number.isFinite(rentOutlook.carry_offset_ratio)
+    ) {
+      parts.push(`covers ${rentOutlook.carry_offset_ratio.toFixed(2)}× carry`);
+    }
+    if (parts.length === 0) return null;
+    return parts.join(" · ");
+  })();
+
+  // ------------------------------------------------------------------
+  // Cycle 4 — Town drilldown
+  // ------------------------------------------------------------------
+  // Chip pulls 3y change% from market_trend chart spec (per BROWSE plan:
+  // "Summary chip: 3y change%"). Falls through to median price when the
+  // chart didn't ship.
+  const marketTrendChart = findChart(charts, "market_trend");
+  const marketTrendSpec = isMarketTrendSpec(marketTrendChart?.spec)
+    ? marketTrendChart.spec
+    : null;
+  const townChip = (() => {
+    const threeY = marketTrendSpec?.three_year_change_pct;
+    if (threeY != null && Number.isFinite(threeY)) {
+      const sign = threeY >= 0 ? "+" : "";
+      const txt = `${sign}${(threeY * 100).toFixed(1)}%`;
+      return (
+        <SummaryChip
+          full={
+            <>
+              <ChipEyebrow>{"3Y "}</ChipEyebrow>
+              <ChipFigure>{txt}</ChipFigure>
+            </>
+          }
+        />
+      );
+    }
+    if (
+      townSummary?.median_price != null &&
+      Number.isFinite(townSummary.median_price)
+    ) {
+      return (
+        <SummaryChip
+          full={
+            <>
+              <ChipEyebrow>{"MEDIAN "}</ChipEyebrow>
+              <ChipFigure>{compactMoney(townSummary.median_price)}</ChipFigure>
+            </>
+          }
+        />
+      );
+    }
+    return null;
+  })();
+
+  // Town teaser — bullish / bearish signal balance gives the user an honest
+  // read of which way the town is leaning before they expand.
+  const townTeaser = (() => {
+    if (!townSummary) return null;
+    const bullCount = townSummary.bullish_signals?.length ?? 0;
+    const bearCount = townSummary.bearish_signals?.length ?? 0;
+    if (bullCount === 0 && bearCount === 0) return null;
+    const parts: string[] = [];
+    if (townSummary.median_price != null) {
+      parts.push(`Median ${compactMoney(townSummary.median_price)}`);
+    }
+    parts.push(`${bullCount} bullish vs ${bearCount} bearish`);
+    return parts.join(" · ");
+  })();
+
+  // ------------------------------------------------------------------
+  // Cycle 4 — Risk drilldown
+  // ------------------------------------------------------------------
+  const riskBarChart = findChart(charts, "risk_bar");
+  const riskFlagCount = riskProfile?.risk_flags?.length ?? 0;
+  const riskChip = (() => {
+    if (!riskProfile) return null;
+    const tier = riskProfile.confidence_tier;
+    const tierLabel =
+      tier == null ? null : tier[0]!.toUpperCase() + tier.slice(1);
+    if (riskFlagCount === 0 && !tierLabel) return null;
+    const fullParts: React.ReactNode[] = [];
+    if (riskFlagCount > 0) {
+      fullParts.push(
+        <ChipFigure key="rf">
+          {riskFlagCount} {riskFlagCount === 1 ? "FLAG" : "FLAGS"}
+        </ChipFigure>,
+      );
+    }
+    if (tierLabel) {
+      if (fullParts.length > 0) {
+        fullParts.push(<ChipFigure key="rf-dot">{" · "}</ChipFigure>);
+      }
+      fullParts.push(<ChipEyebrow key="rf-tier">{tierLabel.toUpperCase()}</ChipEyebrow>);
+    }
+    const compactParts: React.ReactNode[] = [];
+    if (riskFlagCount > 0) {
+      compactParts.push(
+        <ChipFigure key="rfc">
+          {riskFlagCount} {riskFlagCount === 1 ? "FLAG" : "FLAGS"}
+        </ChipFigure>,
+      );
+    } else if (tierLabel) {
+      compactParts.push(<ChipEyebrow key="rfc-tier">{tierLabel.toUpperCase()}</ChipEyebrow>);
+    }
+    return <SummaryChip full={<>{fullParts}</>} compact={<>{compactParts}</>} />;
+  })();
+
+  // Risk teaser — lead with the dominant flag (first risk_flag), then total
+  // counts. Honest UI: if there are zero risk flags, surface the trust-flag
+  // count instead so the row isn't silent.
+  const riskTeaser = (() => {
+    if (!riskProfile) return null;
+    const lead = riskProfile.risk_flags?.[0] ?? null;
+    const trustCount = riskProfile.trust_flags?.length ?? 0;
+    const parts: string[] = [];
+    if (lead) {
+      parts.push(`Lead: ${lead.toLowerCase()}`);
+    } else if (trustCount > 0) {
+      parts.push("No hard risk flags");
+    } else {
+      return null;
+    }
+    const tail: string[] = [];
+    if (riskFlagCount > 0) tail.push(`${riskFlagCount} risk drivers`);
+    if (trustCount > 0) tail.push(`${trustCount} trust flags`);
+    if (tail.length > 0) parts.push(tail.join(", "));
+    return parts.join(" · ");
+  })();
+
+  // ------------------------------------------------------------------
+  // Cycle 4 — Confidence & data drilldown
+  // ------------------------------------------------------------------
+  const trustChip = (() => {
+    if (!trustSummary) return null;
+    const band = trustSummary.band ?? null;
+    const conf = trustSummary.confidence;
+    if (!band && conf == null) return null;
+    const confStr =
+      conf != null && Number.isFinite(conf) ? `${Math.round(conf * 100)}%` : null;
+    const fullParts: React.ReactNode[] = [];
+    if (band) {
+      fullParts.push(<ChipEyebrow key="tb">{band.toUpperCase()}</ChipEyebrow>);
+    }
+    if (confStr) {
+      if (fullParts.length > 0) {
+        fullParts.push(<ChipFigure key="tb-dot">{" · "}</ChipFigure>);
+      }
+      fullParts.push(<ChipFigure key="tb-conf">{confStr}</ChipFigure>);
+    }
+    return <SummaryChip full={<>{fullParts}</>} />;
+  })();
+
+  // Confidence teaser — band + first trust flag (the lead constraint on
+  // certainty) + contradiction count when present.
+  const trustTeaser = (() => {
+    if (!trustSummary) return null;
+    const parts: string[] = [];
+    if (trustSummary.band) {
+      const conf =
+        trustSummary.confidence != null && Number.isFinite(trustSummary.confidence)
+          ? ` (${Math.round(trustSummary.confidence * 100)}%)`
+          : "";
+      parts.push(`${trustSummary.band}${conf}`);
+    }
+    const lead = trustSummary.trust_flags?.[0];
+    if (lead) {
+      parts.push(`limit: ${lead.toLowerCase()}`);
+    }
+    const contra = trustSummary.contradiction_count;
+    if (contra != null && contra > 0) {
+      parts.push(`${contra} contradiction${contra === 1 ? "" : "s"}`);
+    }
+    if (parts.length === 0) return null;
+    return parts.join(" · ");
+  })();
+
+  // ------------------------------------------------------------------
+  // Cycle 4 — Recommended path drilldown (StrategyPathCard absorbed)
+  // ------------------------------------------------------------------
+  const pathChip = (() => {
+    if (!strategyPath) return null;
+    const path = strategyPath.best_path?.replace(/_/g, " ") ?? null;
+    if (!path) return null;
+    return (
+      <SummaryChip
+        full={<ChipEyebrow>{path.toUpperCase()}</ChipEyebrow>}
+      />
+    );
+  })();
+
+  // Path teaser — short read on what the recommendation buys you. Lead
+  // with the path label, then carry-flow + cash-on-cash so the reader has
+  // the financial shape before opening the body.
+  const pathTeaser = (() => {
+    if (!strategyPath) return null;
+    const parts: string[] = [];
+    if (strategyPath.best_path) {
+      parts.push(strategyPath.best_path.replace(/_/g, " "));
+    } else if (strategyPath.recommendation) {
+      const trimmed =
+        strategyPath.recommendation.length > 80
+          ? `${strategyPath.recommendation.slice(0, 77)}…`
+          : strategyPath.recommendation;
+      parts.push(trimmed);
+    }
+    const flow = strategyPath.monthly_cash_flow;
+    if (flow != null && Number.isFinite(flow)) {
+      const sign = flow < 0 ? "-" : "+";
+      parts.push(`${sign}${compactMoney(Math.abs(flow))}/mo`);
+    }
+    const coc = strategyPath.cash_on_cash_return;
+    if (coc != null && Number.isFinite(coc)) {
+      parts.push(`${(coc * 100).toFixed(1)}% cash-on-cash`);
+    }
+    if (parts.length === 0) return null;
+    return parts.join(" · ");
+  })();
+
   const valueOpportunityChart = findChart(charts, "value_opportunity");
   const scenarioFanChart = findChart(charts, "scenario_fan");
+  const rentBurnChart = findChart(charts, "rent_burn");
+  const rentRampChart = findChart(charts, "rent_ramp");
 
   const hasComps =
     Boolean(cmaSpec) || Boolean(valuationComps) || Boolean(marketSupportComps);
   const hasValueThesis = Boolean(valueThesis);
   const hasProjection = Boolean(scenarioTable);
+  const hasRent = Boolean(rentOutlook);
+  const hasTown = Boolean(townSummary);
+  const hasRisk = Boolean(riskProfile);
+  const hasTrust = Boolean(trustSummary);
+  const hasStrategy = Boolean(strategyPath);
 
   // If we have nothing to render in any drilldown, the section still renders
   // its sub-head + a one-line italic note so the user knows where the
   // deeper-read area is. Loud absence is honest UI.
-  const anyDrilldownContent = hasComps || hasValueThesis || hasProjection;
+  const anyDrilldownContent =
+    hasComps ||
+    hasValueThesis ||
+    hasProjection ||
+    hasRent ||
+    hasTown ||
+    hasRisk ||
+    hasTrust ||
+    hasStrategy;
 
   return (
     <BrowseSection label="The Deeper Read" ariaLabel="The Deeper Read">
@@ -263,6 +680,7 @@ export function BrowseDeeperRead({
               <BrowseDrilldown
                 label="Comps"
                 summary={compsChip}
+                teaser={compsTeaser}
                 onFirstExpand={dismissHint}
               >
                 {cmaChart && <ChartFrame chart={cmaChart} framed={false} />}
@@ -293,6 +711,7 @@ export function BrowseDeeperRead({
               <BrowseDrilldown
                 label="Value thesis"
                 summary={valueThesisChip}
+                teaser={valueThesisTeaser}
                 onFirstExpand={dismissHint}
               >
                 <ValueThesisDrilldownBody thesis={valueThesis} />
@@ -312,6 +731,7 @@ export function BrowseDeeperRead({
               <BrowseDrilldown
                 label="Projection"
                 summary={projectionChip}
+                teaser={projectionTeaser}
                 onFirstExpand={dismissHint}
               >
                 <ScenarioTable table={scenarioTable} framed={false} />
@@ -322,6 +742,107 @@ export function BrowseDeeperRead({
                   <InlinePrompt
                     prompt="Show me the downside case in more detail"
                     label="Drill into scenarios"
+                    onPick={onPrompt}
+                  />
+                )}
+              </BrowseDrilldown>
+            )}
+            {hasRent && rentOutlook && (
+              <BrowseDrilldown
+                label="Rent"
+                summary={rentChip}
+                teaser={rentTeaser}
+                onFirstExpand={dismissHint}
+              >
+                <RentOutlookCard outlook={rentOutlook} framed={false} />
+                {rentBurnChart && (
+                  <ChartFrame chart={rentBurnChart} framed={false} />
+                )}
+                {rentRampChart && (
+                  <ChartFrame chart={rentRampChart} framed={false} />
+                )}
+                {onPrompt && (
+                  <InlinePrompt
+                    prompt="What rent would make this deal work?"
+                    label="Drill into rent"
+                    onPick={onPrompt}
+                  />
+                )}
+              </BrowseDrilldown>
+            )}
+            {hasTown && townSummary && (
+              <BrowseDrilldown
+                label="Town context"
+                summary={townChip}
+                teaser={townTeaser}
+                onFirstExpand={dismissHint}
+              >
+                {/* market_trend chart deliberately stays in Section A
+                    (BrowseRead masthead) — do not double-render here.
+                    See BROWSE_REBUILD_HANDOFF_PLAN Cycle 4 scope. */}
+                <TownSummaryCard
+                  summary={townSummary}
+                  onSelectSignal={onSelectTownSignal}
+                  framed={false}
+                />
+                {onPrompt && (
+                  <InlinePrompt
+                    prompt="What's driving the town outlook?"
+                    label="Drill into town context"
+                    onPick={onPrompt}
+                  />
+                )}
+              </BrowseDrilldown>
+            )}
+            {hasRisk && riskProfile && (
+              <BrowseDrilldown
+                label="Risk"
+                summary={riskChip}
+                teaser={riskTeaser}
+                onFirstExpand={dismissHint}
+              >
+                <RiskProfileCard profile={riskProfile} framed={false} />
+                {riskBarChart && (
+                  <ChartFrame chart={riskBarChart} framed={false} />
+                )}
+                {onPrompt && (
+                  <InlinePrompt
+                    prompt="What's the biggest risk here?"
+                    label="Drill into risk"
+                    onPick={onPrompt}
+                  />
+                )}
+              </BrowseDrilldown>
+            )}
+            {hasTrust && trustSummary && (
+              <BrowseDrilldown
+                label="Confidence & data"
+                summary={trustChip}
+                teaser={trustTeaser}
+                onFirstExpand={dismissHint}
+              >
+                <TrustSummaryCard summary={trustSummary} framed={false} />
+                {onPrompt && (
+                  <InlinePrompt
+                    prompt="What data is missing or estimated?"
+                    label="Drill into confidence"
+                    onPick={onPrompt}
+                  />
+                )}
+              </BrowseDrilldown>
+            )}
+            {hasStrategy && strategyPath && (
+              <BrowseDrilldown
+                label="Recommended path"
+                summary={pathChip}
+                teaser={pathTeaser}
+                onFirstExpand={dismissHint}
+              >
+                <StrategyPathCard strategy={strategyPath} framed={false} />
+                {onPrompt && (
+                  <InlinePrompt
+                    prompt="Walk me through the recommended path"
+                    label="Drill into strategy"
                     onPick={onPrompt}
                   />
                 )}

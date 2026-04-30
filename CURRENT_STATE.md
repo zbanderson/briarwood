@@ -1,6 +1,6 @@
 # Briarwood Current State
 
-Last Updated: 2026-04-28
+Last Updated: 2026-04-30 (Chart-renderer migration to Apache ECharts closed — all 3 cycles landed in one session; §3.6 ✅ RESOLVED)
 
 This file is the short bootstrap context for new AI coding sessions. It
 does not replace `CODEX.md`, `AGENTS.md`, `DECISIONS.md`,
@@ -97,20 +97,39 @@ The latest documented work centers on:
   Loop 1 closed AND surfaced its first defect (intake normalizer bug
   filed in ROADMAP §4). Public-record / ATTOM-automated outcome
   ingestion still a follow-up
-- Phase 4c BROWSE summary card rebuild in progress (sequence step 6):
-  Cycles 1–3 landed 2026-04-28 — tier-aware render gate live, Section A
-  ("THE READ") fully filled, Section B ("What did Scout dig up?") fills
-  with the playful-yet-intelligent Scout treatment, Section C ("THE
-  DEEPER READ") fills with three drilldowns (Comps / Value thesis /
-  Projection) over the new `BrowseDrilldown` "Civic Ledger" primitive +
-  first-time coach-mark hint + `framed` borderless-card threading.
-  Cycle 3 also folded §3.4.1 (`feeds_fair_value` retired end-to-end),
-  §3.4.3 (`comp_roster` clamped to chart's top-N), and bundled a
-  `turn_meta` early SSE event that eliminated the BROWSE first-load
-  flicker (a §3.4.4 sub-symptom). Cycle 4 fills the remaining 5
-  drilldowns + prototypes a one-line teaser hook beneath each row;
-  Cycle 5 chart-library evaluation + Cycle 6 closeout remain. Plan:
-  `BROWSE_REBUILD_HANDOFF_PLAN.md`
+- Phase 4c BROWSE summary card rebuild closed 2026-04-29 (sequence step
+  6): all six cycles landed across 2026-04-28 → 2026-04-29 via
+  `BROWSE_REBUILD_HANDOFF_PLAN.md`. The BROWSE response now renders as
+  three stacked sections (`BrowseRead` masthead with stance pill +
+  headline + masthead `market_trend` chart + flowed prose;
+  `BrowseScout` peer section with the playful Scout treatment;
+  `BrowseDeeperRead` with eight chevron-list drilldowns — Comps / Value
+  thesis / Projection / Rent / Town context / Risk / Confidence & data
+  / Recommended path) gated on `ChatMessage.answerType === "browse"`;
+  non-BROWSE tiers render the existing card stack unchanged. Cycle 5
+  produced the chart-library eval memo at
+  `docs/CHART_LIBRARY_EVAL_2026-04-29.md`; owner picked Apache ECharts
+  (override of the memo's "stay native" recommendation). The actual
+  chart-renderer migration is filed as a fresh handoff under
+  `CHART_MIGRATION_HANDOFF_PLAN.md` (ROADMAP §3.6) — **not** part of
+  Phase 4c, per the 2026-04-28 sequencing call
+- Chart-renderer migration to Apache ECharts closed 2026-04-30 (§3.6 ✅
+  RESOLVED): all three cycles landed in one session. All eight production
+  chart kinds (`scenario_fan`, `cma_positioning`, `value_opportunity`,
+  `market_trend`, `risk_bar`, `rent_burn`, `rent_ramp`,
+  `horizontal_bar_with_ranges`) now render through Apache ECharts via a
+  single `next/dynamic({ ssr: false })` boundary at
+  `web/src/components/chat/chart-frame.tsx` → `web/src/components/chat/chart-echarts.tsx`.
+  ECharts engine (~366 KB gz) loads lazily; non-chart routes carry zero
+  ECharts cost in first-load chunks. `web/package.json` no longer carries
+  `recharts`, `@nivo/core`, `@nivo/scatterplot`; eval sandbox at
+  `web/src/components/chat/_eval/` and `/eval/charts/` route tree
+  deleted. Drive-by §3.4.2 (vertical-character y-axis label) and the
+  renderer-side prong of §3.4.6 (utilitarian styling / hand-rolled
+  markers) closed. Carry-overs filed under §4 Medium: chart-content
+  review (bull/base/bear spread looks formulaic), chart interaction
+  affordances (expand-to-overlay + download-as-tear-sheet). Plan:
+  `CHART_MIGRATION_HANDOFF_PLAN.md` (✅ RESOLVED).
 
 See `DECISIONS.md` for owner decisions and `ROADMAP.md` for queued
 fixes. Do not rely on this summary when exact details matter.
