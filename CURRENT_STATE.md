@@ -1,6 +1,6 @@
 # Briarwood Current State
 
-Last Updated: 2026-04-30 (Chart-renderer migration to Apache ECharts closed — all 3 cycles landed in one session; §3.6 ✅ RESOLVED)
+Last Updated: 2026-04-30 (May 2026 Launch Cycle 1 — Sunday Scaffold — landed end-to-end; api/web hosted at briarwood.fly.dev + briarwood-ai.vercel.app; ATTOM backfill partial at 1968/3085 due to 401 quota wall; active-listings refresh complete for all 8 towns; §3.8 sub-streams 1a/1b/1c posted as outcome notes)
 
 This file is the short bootstrap context for new AI coding sessions. It
 does not replace `CODEX.md`, `AGENTS.md`, `DECISIONS.md`,
@@ -71,6 +71,31 @@ Expected handoff rhythm:
 - `ROADMAP.md` — actionable backlog items discovered during work.
 - `CURRENT_STATE.md` — short bootstrap context for fresh sessions.
 - `.github/PULL_REQUEST_TEMPLATE.md` — required PR / handoff structure.
+
+---
+
+## May 2026 Launch (active)
+
+Owner-aligned 2026-04-30 via a structured grill-me session. **Cycle 1 (Sunday Scaffold) landed 2026-04-30**, four days ahead of the wall-clock deadline.
+
+- **Live URLs:**
+  - API: `https://briarwood.fly.dev` (Fly app `briarwood`, region `ewr`, `shared-cpu-1x`, 1 GB encrypted volume `briarwood_data` mounted at `/app/data` with daily snapshots).
+  - Web: `https://briarwood-ai.vercel.app` (Vercel project `briarwood-ai`, root `web`, Next.js + pnpm, `maxDuration 300` on the SSE chat route).
+  - No custom domain (locked decision); no auth at launch (Vercel/Cloudflare Access SSO comes before user demo).
+- **Cycle 1 outcomes** (per [`ROADMAP.md`](ROADMAP.md) §3.8 + [`DECISIONS.md`](DECISIONS.md) 2026-04-30 entry "Launch Cycle 1 (Sunday Scaffold) landed"):
+  - **1a Hosting** ✅. Three deploy-blocking bugs in the Stream 2 drafts caught in flight (volume-mask-seed-data, missing pandas/requests/python-dotenv in requirements.txt, 5 seed dirs excluded by `.dockerignore`); all fixed. Smoke tests pass: `/healthz`, SEARCH turn (8 listings + 6 map pins), BROWSE turn (194 SSE events through 8 modules with full three-section hierarchy + 4 charts).
+  - **1b ATTOM backfill** ✅ partial. 922 ATTOM matches → 854 newly-eligible + 687 sqft fixes across 1,968 rows; 1,117 candidate rows blocked by ATTOM 401 daily-quota wall. Comp-store eligible pool effectively doubled (833 → ~1,687). Filed as §4 follow-up: "ATTOM backfill remaining 1,117 candidate rows".
+  - **1c Active-listings refresh** ✅. 176 listings across all 8 towns (was 59); all 8 clear ≥10. SearchApi quota cost: 8 cache-hit calls.
+- **Two personas, one product flow:** small investors derisking renovation/hold/flip decisions, AND realtors using auto-CMA. Same browse-and-drill flow for both at launch.
+- **Headline UX is browse-first.** Per-property page uses the Phase 4c three-section newspaper hierarchy (`BrowseRead` + `BrowseScout` + `BrowseDeeperRead`).
+- **Geo scope:** Monmouth coast (Belmar, Manasquan, Avon By The Sea, Spring Lake, Sea Girt, Bradley Beach, Asbury Park, Wall). Hard scope.
+- **Trust posture:** ranges + caveats + Scout, AND meaningfully better accuracy. §3.7 Cycle 2A baseline median APE 28–32%; the launch-gate accuracy number gets decided empirically from the post-full-backfill backtest in Cycle 2 (after ATTOM quota recovers).
+- **Sequence after Sunday — what's next:**
+  1. ~~Sunday: Fly.io + Vercel scaffold; ATTOM backfill; active-listings refresh.~~ ✅ LANDED 2026-04-30.
+  2. **Week 1 (now):** ATTOM backfill full re-run against the unprocessed 1,117 (after ATTOM quota recovers); re-run §3.7 Cycle 2A backtest against the densified comp store; Cycle 2B `comparable_sales` per-fixture audit; Layer 3 LLM synthesizer (`synthesize_with_llm` over full `UnifiedIntelligenceOutput` with numeric guardrails); renovation-options composer change rides on Layer 3.
+  3. Week 2: Phase B (MissingInputManifest substrate — schema, SSE event, frontend affordance, persistence path).
+  4. Demo gate: accuracy bar met (TBD from data) + Phase B + Layer 3 + renovation-options framing + Vercel/Cloudflare Access SSO with 10-email allowlist.
+- **Launch initiative tracked under [ROADMAP §3.8](ROADMAP.md).**
 
 ---
 

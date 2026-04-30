@@ -3555,3 +3555,908 @@ entries above hold the implementation detail.
 [`ARCHITECTURE_CURRENT.md`](ARCHITECTURE_CURRENT.md);
 [`GAP_ANALYSIS.md`](GAP_ANALYSIS.md);
 [`docs/current_docs_index.md`](docs/current_docs_index.md).
+
+## 2026-04-30 — Chart-content review Cycle 1 landed: bull/base/bear audit memo
+
+Cycle 1 of the multi-cycle chart-content audit umbrella (ROADMAP §4
+Medium / 2026-04-30). Read-only diagnostic; no producer-side math
+changes, no chart-spec changes, no live API calls. Deliverable is a
+memo + per-fixture instrumentation, not a code change.
+
+**Memo.** [`docs/CHART_CONTENT_REVIEW_2026-04-30.md`](docs/CHART_CONTENT_REVIEW_2026-04-30.md).
+
+**Reading.** **Reading A (model is honest) — confirmed.** Cap-binding
+analysis across ten Monmouth fixtures shows 0 of 10 fixtures hit a cap
+or floor on any of the four BBB components in any of the three
+scenarios. `BullBaseBearSettings` is not the binding constraint
+anywhere. **Reading B (caps binding) is fully ruled out.**
+
+**But.** The instrumentation surfaced a separable producer-side problem
+that the original two-reading framing missed: the input pipeline is
+severely undifferentiated across the eight target Monmouth towns.
+Eight of ten fixtures share **identical** `trailing_1yr` (4.55%) and
+`trailing_3yr_cagr` (3.41%) drift inputs because
+`MarketValueHistoryModule` falls back to a Monmouth-county-wide ZHVI
+series for seven of the eight target towns. Only Belmar carries a
+town-specific series. Risk scores collapse to two distinct values
+(77.0 / 85.0) across ten fixtures; scarcity to three; town_score has
+a three-way fallback collision (Avon-by-the-Sea alt, Wall Township,
+Asbury Park all sit at 27.8); `trailing_5yr_cagr` is 0.00% on every
+fixture (long-tail series empty). The chart looks formulaic because
+the inputs ARE formulaic, not because the math clamps.
+
+**Recommendation.** Do not tune `BullBaseBearSettings`. File a fresh
+ROADMAP entry to audit and densify the four BBB input modules
+(`MarketValueHistoryModule`, `TownCountyOutlookModule`,
+`RiskConstraintsModule`, `ScarcitySupportModule`). Filed at
+[ROADMAP §4 / 2026-04-30 — BBB input pipeline densification](ROADMAP.md).
+Secondary recommendation: visualize `stress_case_value` (currently
+computed but not rendered) as the highest-leverage content-density
+change available without touching any module math — files cleanly as
+a Cycle 2-or-later follow-up.
+
+**Spread distribution.** Across ten fixtures: min 8.37%, max 13.90%,
+median 11.19% of BCV. The user-reported "3% over base, 3% under"
+narrowness is **not** what the math produces — bull−base ≈ 6.4% of
+BCV and base−bear ≈ 4.5% of BCV at the median. The "3% / 3%"
+perception likely comes from the chart anchoring on **ask** (not BCV)
+and the visual compression that produces when ask ≈ BCV.
+
+**Files.** No code or contract changes.
+- New memo: [`docs/CHART_CONTENT_REVIEW_2026-04-30.md`](docs/CHART_CONTENT_REVIEW_2026-04-30.md).
+- New instrumentation script: [`scripts/eval/chart_content_review_bbb.py`](scripts/eval/chart_content_review_bbb.py) (run via `venv/bin/python3 -m scripts.eval.chart_content_review_bbb`).
+- New per-fixture data: [`data/eval/chart_content_review_2026-04-30.jsonl`](data/eval/chart_content_review_2026-04-30.jsonl).
+- ROADMAP §4 chart-content-review umbrella entry — appended Cycle 1
+  outcome note; entry remains OPEN (Cycle 1 covers BBB only; Cycles
+  2-8 cover the seven other chart kinds).
+- ROADMAP §4 — new entry "BBB input pipeline densification" filed at
+  the top of Medium.
+- [`docs/current_docs_index.md`](docs/current_docs_index.md) — initially
+  added a memo entry; reverted by the user/linter at sign-off. The
+  memo is discoverable via the ROADMAP umbrella entry and this
+  DECISIONS entry, so the index revert does not orphan the document.
+
+**Module READMEs.** Unchanged — no module under `briarwood/` had
+contract-level changes; the audit was read-only against
+`briarwood/modules/bull_base_bear.py` and its dependencies, none of
+which carry per-module READMEs.
+
+**Verification.** No code under `briarwood/` was modified, so the
+focused-pytest baseline is unchanged. The new instrumentation script
+runs cleanly: `venv/bin/python3 -m scripts.eval.chart_content_review_bbb`
+produces the JSONL artifact in ~1 second using cached SearchApi/ATTOM
+payloads only — no network calls.
+
+**Cross-references.** ROADMAP §4 Medium chart-content-review umbrella;
+new ROADMAP §4 Medium "BBB input pipeline densification" entry
+(now ABSORBED into §3.7 — see entry below);
+[`docs/CHART_LIBRARY_EVAL_2026-04-29.md`](docs/CHART_LIBRARY_EVAL_2026-04-29.md)
+(structural precedent — same shape memo, different question).
+
+## 2026-04-30 — Filed §3.7: Model-output audit + conversational data-fill loop
+
+Same-day owner reframe of the BBB-input-densification entry. The
+narrower §4 entry filed at the Cycle 1 closeout was correct in
+diagnosis but wrong in scope: auditing one model at a time misses
+the meta-pattern. The owner's framing: "Audit all of the model
+outputs. Ensure they are sucking in the right amount of data and
+test what their outputs are. The user and the app should be having
+a conversation — 'it seems that this house is missing square
+footage, do you want to add it' — that introduces new data into
+the feedback loop to improve the validity of the answer from the
+models."
+
+**Decision.** File a new strategic-initiative umbrella at
+[ROADMAP §3.7](ROADMAP.md). Two phases:
+- **Phase A (system-wide model-output instrumentation)** — extend
+  Cycle 1's runner pattern to every scoped-registry model. Per
+  model: pick a fixture set, instrument inputs/outputs, classify
+  as honest / input-coarse / clamping / mixed, write a memo, file
+  per-model follow-ups. Absorbs the standalone "BBB input pipeline
+  densification" entry filed earlier today; absorbs Cycles 2-8 of
+  the chart-content review umbrella (the per-chart audits reduce
+  to one-line carry-overs once the per-model audit lands).
+- **Phase B (conversational data-fill loop)** — turn Phase A's
+  per-fixture "missing/defaulted inputs that visibly affect
+  output quality" lists into a user-facing affordance. Adds a
+  `MissingInputManifest` aggregated at the orchestrator, surfaces
+  it in the chat UI as inline prompts ("Got the square footage
+  handy?"), persists corrections to `inputs.json` +
+  `data/learning/user_corrections.jsonl`, and re-runs only the
+  affected modules via cache invalidation.
+
+**Why a strategic initiative, not a tactical entry.** Phase A is
+~15 model audits at ~75 minutes each; Phase B is 4-6 substrate
+cycles touching the schema, orchestrator, SSE protocol, frontend,
+and saved-property write path. Together this is a 2-4 week
+initiative, not a one-handoff drop. The user-loop closure is also
+the first concrete instance of design_doc.md § 3.4 principle 4
+("Closed Feedback Loops") where the user is part of the loop, not
+just outcome-vs-model alignment (Stage 4 covers that one).
+
+**Files changed.** ROADMAP.md only — new §3.7 section inserted
+between §3.6 (Resolved 2026-04-30) and §4. The standalone
+"BBB input pipeline densification" entry under §4 Medium was
+flagged ABSORBED with a back-pointer to §3.7; the entry stays
+in-place for handoff continuity.
+
+**Cross-references.** §3.1 (AI-Native Foundation umbrella —
+principle 4); §3.3 (Semantic-model audit umbrella — overlap to
+reconcile when Phase A opens); §3.4 (Chart visual quality push —
+Phase A subsumes Cycles 2-8 of the chart-content review);
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (the OTHER
+feedback loop — outcome-vs-model alignment, complementary not
+competing); user memories `project_scout_apex.md`,
+`project_llm_guardrails.md`, `project_ui_enhancements.md`.
+
+**Recommended next action.** Open Phase A by picking
+`current_value` (BCV anchor) as the first model. It's the most
+load-bearing model in the system; every other model reads from it;
+a Cycle 1-style audit of its inputs will surface anything broken
+upstream of BBB too.
+
+## 2026-04-30 — Model-output audit Cycle 1 landed: current_value audit memo
+
+Cycle 1 of the §3.7 Phase A per-model sweep. Read-only diagnostic;
+no producer-side math changes; no chart-spec changes; no live API
+calls. Same shape as the BBB chart-content review Cycle 1 closeout
+filed earlier today.
+
+**Memo.** [`docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md`](docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md).
+
+**Classification.** **HONEST with bounded confidence clamping
+from user-side input gaps.** Across eleven Monmouth-area fixtures
+(the ten BBB Cycle 1 fixtures + one triplex + ADU saved property
+added to cover the multi-unit / hybrid-valuation path), all 11
+BCV values are distinct (range $468,948 → $1,223,291), 9 distinct
+overall confidence values (0.47 → 0.66), and 0/11 fixtures hit
+the overall confidence floor (0.10) or ceiling (0.92). Two of
+eleven fixtures bind on a user-input cap
+(`confidence_cap_insurance_missing` 0.62 on Belmar saved;
+`confidence_cap_rent_missing` 0.60 on Wall Township) — both are
+diagnostic seed data for §3.7 Phase B's MissingInputManifest, not
+internal math constraints. The load-bearing reason `current_value`
+avoids BBB Cycle 1's input-coarseness signature: comparable_sales
+is the dominant component anchor (normalized weight 41.9-64.8%
+across the eleven fixtures) and it differentiates cleanly per
+fixture, plus the agent has an explicit ZHVI-vs-direct-comp
+de-emphasis branch that fires on 8/11 fixtures, multiplying the
+market_adjusted component's confidence by 0.35 when county-level
+ZHVI diverges >30% from healthy direct comps.
+
+**Recommendation.** Do not tune `current_value` internals. The
+math is structurally honest. Continue §3.7 Phase A with
+`comparable_sales` (Cycle 2) since it carries the load-bearing
+signal for BCV — if comparable_sales is itself input-coarse or
+clamping, current_value's apparent honesty is partially illusory.
+
+**Files (no code or contract changes — module READMEs unchanged).**
+- New memo: [`docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md`](docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md).
+- New runner: [`scripts/eval/model_output_audit_current_value.py`](scripts/eval/model_output_audit_current_value.py)
+  (run via `venv/bin/python3 -m scripts.eval.model_output_audit_current_value`).
+- New per-fixture data: [`data/eval/model_output_audit_current_value_2026-04-30.jsonl`](data/eval/model_output_audit_current_value_2026-04-30.jsonl) (11 rows).
+- New shared seed file: [`data/eval/missing_inputs_seed.jsonl`](data/eval/missing_inputs_seed.jsonl) (31 rows from this cycle; future Phase A cycles append). v1 schema: `{model, fixture_label, fixture_slug, field, severity, evidence, value_observed, audit_date}`. Re-running Cycle 1 is idempotent — overwrites only this cycle's rows by `(model, audit_date)`.
+- ROADMAP §3.7 — appended "Cycle 1 outcome (2026-04-30 — LANDED)" note. Umbrella stays OPEN; ~14 model audits remain.
+- ROADMAP §4 Tactical Low — new entry "Quiet `current_value._apply_input_confidence_caps` warnings on unbinding caps" filed from a Cycle 1 observation.
+
+**Phase B seed-data summary.** 31 rows across 11 fixtures.
+Top-3 most-frequent missing-or-defaulted fields:
+`down_payment_percent_or_interest_rate` (degrading, 11/11 — every
+synthetic and saved fixture lacks complete financing inputs);
+`listing_date` (degrading, 10/11 — backdated_listing component
+drops to 0 weight when listing_date + days_on_market +
+price_history are all empty); `estimated_monthly_rent` (degrading
+or enriching, 7/11 — either rent_source_type='estimated' which
+caps confidence at 0.72, or rent_source_type='missing' which caps
+at 0.60 and zeroes the income component).
+
+**Anomalies surfaced (filed for owner awareness, no in-cycle
+action).**
+1. `briarwood/agents/current_value/README_current_value.md`
+   referenced in the handoff prompt does NOT exist in the working
+   tree. Source treated as authoritative for the contract.
+   (Surfaced per CLAUDE.md "do not silently reconcile".)
+2. The agent's `_apply_input_confidence_caps` emits a warning
+   every time a cap *could apply* regardless of whether the cap
+   is actually the binding constraint, producing noisy
+   `output.warnings` lists. Filed as §4 Tactical Low.
+3. All 11 fixtures have `financing_complete=False`, but the
+   `confidence_cap_financing_incomplete` (0.65) is unbinding on
+   every fixture because realized confidence sits ≤0.66 on the
+   richest fixture. The cap could never bind on this fixture
+   set. Open question for the owner: is the cap meant to be a
+   meaningful trust signal, or is its current value (0.65)
+   effectively a no-op? Filed for Phase B sequencing, not for
+   immediate change.
+
+**Verification.** No code under `briarwood/` was modified, so the
+focused-pytest baseline is unchanged. Pre-existing failures
+(`tests/test_pipeline_adapter_contracts.py` value_opportunity
+chart-kind assertion; `tests/modules/test_resale_scenario_isolated.py`)
+remain — both confirmed pre-existing during BBB Cycle 1 against a
+clean tree. The new instrumentation runner ran cleanly:
+`venv/bin/python3 -m scripts.eval.model_output_audit_current_value`
+produced both JSONL artifacts in ~5 seconds using cached comp store
+and ZHVI/town-context lookups only — no network calls.
+
+**Cross-references.** §3.7 Phase A umbrella entry; BBB Cycle 1
+chart-content review memo at
+[`docs/CHART_CONTENT_REVIEW_2026-04-30.md`](docs/CHART_CONTENT_REVIEW_2026-04-30.md)
+(structural precedent — same shape memo, different question);
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (the OTHER
+feedback loop — outcome-vs-model alignment); user memories
+`project_scout_apex.md`, `project_llm_guardrails.md`,
+`project_ui_enhancements.md`.
+
+## 2026-04-30 — Confidence-ceiling framing for §3.7 Phase A: defer calibration to Cycle 2 evidence
+
+Same-day owner reflection on Cycle 1's findings. Cycle 1 classified
+`current_value` as "honest with bounded clamping," but on owner
+review the more product-relevant question is **whether 0.50-0.66
+overall confidence is shippable** — not whether the math is broken.
+
+**The structural observation.** `CurrentValueAgent._overall_confidence`
+does a weighted average of the five component confidences and then
+floors at 0.10 / ceilings at 0.92. Mathematically the output is
+bounded at or below the strongest input. Across all eleven Cycle 1
+fixtures, no single component's confidence exceeded ~0.66, so the
+overall couldn't either. The richest production fixture (Belmar
+saved — 5 comps, real listing date, real rent) capped at 0.62.
+The triplex hit the highest at 0.66, but only because the hybrid
+path uses its own blending (`0.55 × output + 0.45 × hybrid_conf`,
+floor 0.40, ceiling 0.86) that bypasses the standard weighted
+average.
+
+**The implication for §3.7 Phase B's expected ROI.** Phase B's
+conversational data-fill loop fills user-side gaps (financing,
+listing_date, rent, insurance). On the Cycle 1 fixture set, that
+probably moves the model from ~0.50 to ~0.65 — useful, but **not
+to 0.85+**. The remaining ceiling is set by component-confidence
+calibration, not by missing inputs. **Phase B alone is not the
+answer to the confidence ceiling.**
+
+**The decision.** Do NOT open a confidence-calibration cycle yet.
+Let Cycle 2 (`comparable_sales`) tell us where the ceiling actually
+sits before deciding the remediation shape:
+
+- If `comparable_sales` emits ~0.85 confidence on a healthy comp
+  set and `current_value` is just stacking attenuation on top, the
+  fix is small: loosen one or two attenuation factors in the agent
+  (likely `_overall_confidence`'s active-component or
+  weighted-average treatment, or one of the `× 0.35` de-emphasis
+  multipliers).
+- If `comparable_sales` itself emits ~0.50 confidence on a healthy
+  comp set, then the binding constraint sits there, not in
+  `current_value`. That's the actual broken thing and a tuning
+  cycle should target the comp-confidence emission.
+
+**Why defer.** The confidence-ceiling problem is structural; the
+fix depends on where the constraint actually sits. Choosing a
+remediation before Cycle 2's data is a guess. Cycle 2 is already
+the next cycle of §3.7 Phase A on dependency-order grounds (comp
+sales is the load-bearing component anchor for `current_value`);
+its data resolves the ceiling diagnostic at no additional cost.
+
+**What this changes for Phase A's framing.** Add an explicit
+`confidence_emission` characterization to every per-model audit:
+"on the highest-data fixture in this set, what overall confidence
+does this model emit?" If that number sits ≤0.70 even on a clean
+fixture, flag the model as a candidate for the
+confidence-calibration cycle. After Cycle 2 lands, decide whether
+that calibration cycle is one prong, several prongs, or its own
+strategic-initiative split.
+
+**What this changes for Phase B.** Nothing structurally — the
+data-fill loop is still worth shipping. But adjust the framing
+from "Phase B closes the BCV-confidence loop" to "Phase B fills
+the user-side gaps that the missing-inputs manifest will surface;
+component-confidence calibration is a separate, parallel question."
+Phase B copy and product framing should reflect that the user is
+sharpening the model's evidence base, not directly lifting its
+confidence number.
+
+**Files (no code changes).**
+- DECISIONS.md (this entry).
+- Will update ROADMAP §3.7 with a short pointer to this framing
+  on next edit.
+- Will update Cycle 1 memo with a one-paragraph "post-cycle owner
+  reflection" pointer.
+- Will reflect in the Cycle 2 prompt — the "ceiling diagnostic" is
+  now an explicit Cycle 2 deliverable.
+
+**Cross-references.** §3.7 Phase A umbrella; Cycle 1 outcome
+entry above (2026-04-30); Cycle 1 memo at
+[`docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md`](docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md);
+the Phase B Open Design Decisions in §3.7 (especially #1 on
+blocking vs optional and #5 on whose voice asks — both should
+reflect that confidence-lifting and gap-filling are separable
+benefits).
+
+## 2026-04-30 — Backtest substrate as new §3.7 Phase A prong
+
+Same-day owner reframe of the Phase A audit shape. After the
+confidence-ceiling framing landed (entry above), the owner pointed
+out a deeper gap: **audit-by-instrumentation answers "what is the
+model doing?" but not "is the answer right?"** The 11-fixture
+per-component instrumentation in Cycle 1 is diagnostic of behavior;
+it doesn't measure accuracy. The 3,900-row comp store gives ground
+truth at scale — every row has an actual closed sale price — and
+should be used as a leave-one-out backtest harness.
+
+**The decision.** Open a new prong under §3.7 Phase A specifically
+for the backtest substrate. Sequence: Cycle 2A builds the
+substrate; Cycle 2B is the original `comparable_sales` audit but
+with backtest evidence folded in; Cycles 3+ inherit the substrate
+and every per-cycle audit memo gets a "population-level evidence"
+section.
+
+**Why this matters for the confidence-ceiling diagnostic.** The
+calibration question ("does emitted confidence 0.62 actually
+correspond to ±5% APE, or ±25%?") cannot be answered from
+instrumentation alone. It needs population-level prediction-vs-
+actual data. The backtest substrate produces exactly that.
+
+**What this enables that Cycle 1's audit shape couldn't.**
+
+1. **Calibration check.** Bucket predictions by emitted confidence
+   band, compute median absolute APE per bucket. If 0.62 confidence
+   corresponds to 5% median APE, the model is honestly calibrated —
+   the cap structure is tight but the answer is right. If 0.62
+   corresponds to 25% APE, the model is overconfident and the cap
+   *should* be lower. If 0.62 corresponds to 2% APE, the model is
+   underconfident and the cap should be lifted. **This resolves the
+   confidence-ceiling diagnostic with population-level evidence.**
+2. **Component tuning signal.** Vary an attenuation factor, rerun
+   the backtest, watch the APE distribution shift. That's a real
+   optimization gradient. Without backtest, every tuning change is
+   a guess.
+3. **Tail surfacing.** The 11 hand-picked fixtures are roughly
+   representative; they don't surface the worst 1% of cases where
+   the model fails badly. The backtest's worst-N triage is exactly
+   that surface.
+4. **Per-town and per-property-class breakdowns.** Cycle 1's audit
+   found "all 11 BCV values distinct" but that's only one fixture
+   per town. Per-town APE distributions across hundreds of fixtures
+   per town surface systematic per-town bias that the audit can't
+   see.
+
+**Leakage controls (load-bearing).**
+
+1. **Leave-one-out:** when valuing comp X, remove X from the comp
+   pool before running. Otherwise the model trivially "predicts"
+   its own input.
+2. **Time-filter:** when valuing comp X (sale date T), only use
+   comps with `sale_date < T`. Otherwise the model uses future
+   information. This makes the backtest a legitimate prediction
+   task, not a fitting task.
+3. **ZHVI backdating:** the BCV calculation uses ZHVI as of "today."
+   For a backtest against a 2023 sale, BCV's market-adjusted
+   component will reflect 2026 market levels, biasing the
+   prediction upward. Acceptable for a first pass with the bias
+   documented; a follow-up cycle can backdate ZHVI if the spot-
+   check shows the bias is meaningful.
+4. **Feature completeness gap:** comp rows lack listing_date,
+   financing, insurance — same pattern Cycle 1 found. The backtest
+   inherits that gap. The same Phase B seed data applies to
+   backtest fixtures, with one important caveat: the backtest is a
+   prediction task on synthetic-from-comp-store fixtures, so the
+   gaps are structural to the comp dataset, not user-supplied gaps
+   the way Cycle 1's saved-property fixtures had.
+
+**Stage 4 overlap.** `STAGE4_HANDOFF_PLAN.md` +
+[`data/outcomes/property_outcomes.jsonl`](data/outcomes/property_outcomes.jsonl)
++ `model_alignment` table is the existing model-accuracy alignment
+pipeline for owner-supplied outcomes. As of 2026-04-28 closeout it
+has 1 outcome row in production. **The backtest substrate is the
+at-scale complement** — 3,900 rows of comp-store ground truth that
+doesn't require owner-supplied outcomes. The two should eventually
+connect (Stage 4 receives the comp-store backtest as another
+alignment source) but for now keep the artifact separate in
+`data/eval/` to avoid polluting Stage 4's substrate. Filing a
+follow-up entry is appropriate output for the Cycle 2A memo if the
+calibration evidence is actionable.
+
+**What this changes for Phase A's framing.**
+
+- Cycle 2 splits into Cycle 2A (build the backtest substrate) and
+  Cycle 2B (the original `comparable_sales` audit, now with
+  population-level evidence folded in).
+- Every Phase A cycle from 2B onward gets a "backtest population
+  evidence" section in its memo, citing the relevant subset of the
+  per-comp JSONL.
+- The "confidence_emission_ceiling" diagnostic from the prior
+  framing decision now has population-level evidence as input —
+  the diagnostic conclusion will be stronger because it's not just
+  "what the math can produce" but "what the math actually produces
+  vs ground truth."
+- The original Cycle 2 prompt (the `comparable_sales` audit) is
+  preserved in conversation history and can be regenerated as
+  Cycle 2B; the only structural change is the addition of a
+  "Backtest population evidence" section to the memo template.
+
+**What this doesn't change.**
+
+- Phase B's substrate (MissingInputManifest schema, SSE event,
+  orchestrator aggregation, chat-UI affordance, persistence) — out
+  of scope; Phase A still has to land first.
+- The 11-fixture per-component instrumentation pattern — still
+  load-bearing for the "why does the model produce this number?"
+  question. Backtest answers a different question. Both are needed.
+- The `data/eval/missing_inputs_seed.jsonl` v1 schema or the
+  Cycle 1 deliverables. Backtest is a separate artifact.
+
+**Files (no code changes in this entry).**
+- DECISIONS.md (this entry).
+- ROADMAP §3.7: appended a short pointer to this framing on next
+  edit.
+- `MODEL_OUTPUT_AUDIT_NEXT_PROMPT.md`: replaced with the Cycle 2A
+  (substrate) prompt; the Cycle 2B (`comparable_sales` audit)
+  prompt is preserved in conversation history and queued.
+
+**Cross-references.** §3.7 Phase A umbrella entry; the
+2026-04-30 confidence-ceiling framing entry above (this is a
+strict expansion of that framing — the calibration question
+becomes answerable);
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (the OTHER
+feedback loop — owner-supplied outcomes; backtest is the
+at-scale complement); Cycle 1 outcome entry above (2026-04-30);
+Cycle 1 memo at
+[`docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md`](docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md).
+
+## 2026-04-30 — Model-output backtest substrate landed (§3.7 Phase A Cycle 2A)
+
+Cycle 2A of the §3.7 Phase A per-model sweep — the new prong filed
+the same day for population-level evidence under leave-one-out +
+time-filter. Read-only diagnostic; no producer-side math changes;
+no live API calls; the comp-pool injection seam used (`ComparableSalesModule(agent=ComparableSalesAgent(_BackTestProvider(...)))`)
+was already present in production code.
+
+**Memo.** [`docs/MODEL_BACKTEST_2026-04-30.md`](docs/MODEL_BACKTEST_2026-04-30.md).
+
+**Calibration verdict.** **Well-calibrated by the formal rule
+(median APE ≤ 1.5 × (1 − Cmid)) but loose vs product
+expectations.** On the 1,523 plausible-`sqft` filtered targets:
+`comparable_sales` realizes median absolute APE **28.6%** at
+confidence band 0.50–0.65 (n=771 successful predictions; 49% of
+eligible targets hit `comp_count=0` and emit no value). `current_value`
+realizes median APE **32.1%** at the same band (n=1,222) and 36.3%
+at band 0.30–0.50 (n=300). Both bands pass the formal rule
+(0.286, 0.321, 0.363 all sit at or below their 1.5×(1−Cmid)
+thresholds). Signed median bias: `comparable_sales` −1.6%
+(essentially unbiased); `current_value` **−16.4%** (systematic
+underprediction in luxury towns where comp depth is thin). At
+confidence ~0.62 the model says "the answer is within ~32%"
+which is not the user's intuitive reading of a 0.62 confidence
+number.
+
+**Confidence-ceiling diagnostic resolves to "data, not stacking."**
+The same-day Cycle 1 reflection left two hypotheses: either
+`comparable_sales` emits ~0.85 confidence on healthy data (and
+`current_value` stacks attenuation on top — small fix), or
+`comparable_sales` itself caps at ~0.50 (binding constraint sits
+there). Population evidence shows a third reading: `comparable_sales`
+emits in band 0.50–0.65 on **all** 771 successful predictions — it
+never emits higher, and `current_value` adds only ~3pp of
+additional median error (32.1% vs 28.6%). The marginal stacking
+attenuation is small. The dominant lever is `comparable_sales`'s
+data substrate, not its math: 78.7% of the comp store fails the
+existing `comp_eligibility_gate` (= `market_only`); 58% have
+`sqft > 10,000` (likely SR1A bulk-encoding leakage); the worst-N
+tail is dominated by non-arms-length transactions ($79K–$500K
+sale prices on $1M–$2M-profile properties).
+
+**Recommendation.** **Do not open a confidence-calibration tuning
+cycle.** Open three comp-store data-substrate cycles instead:
+eligibility-gate densification (promote `market_only` rows where
+SR1A provenance allows); sqft-corruption cleanup (re-ingest or
+repair the 2,264 implausible-sqft rows); non-arms-length sale
+filter (drop or flag rows with `sale_price < 0.30 ×`
+same-town/class median). After those land, re-run this cycle's
+runners — if `comparable_sales` then emits >0.65 confidence on a
+meaningful share of fixtures and realized median APE drops below
+20%, the model is then a candidate for calibration tuning. If
+only the APE drops without the confidence emission lifting, the
+agent's `_confidence_summary` is a tuning target at *that* point.
+This is materially cheaper than tuning the agent against a
+contaminated data substrate.
+
+**Cycle 1 fixture cross-check.** The eight Cycle-1 sales_comp
+fixtures (the two saved-property fixtures and the triplex are
+not in the comp store, so they don't appear in the backtest):
+- 4/8 hit `comp_count=0` in `comparable_sales` under LOO +
+  time-filter (Manasquan, Spring Lake, Belmar sales_comp,
+  Avon By The Sea — all are early-2025 sale dates where the
+  eligible-and-prior pool is too thin in their towns).
+- The four that produce `comparable_sales` predictions span
+  9.8%–44.8% APE (Wall Township 9.8%; Asbury Park 27.7%;
+  Bradley Beach 37.0%; Sea Girt 44.8%).
+- `current_value` predictions for all 8 span 4.4%–67.1% APE:
+  three under 15% (Wall Township 4.4%; Belmar 10.1%; Bradley
+  Beach 14.2%); five between 23% and 67%.
+- Cycle 1's "honest" classification holds at the math level
+  (the model does what it says it does) but does **not** imply
+  product-grade accuracy. The 0.47–0.66 confidence range from
+  Cycle 1 corresponds to per-fixture APE between 4% and 67% —
+  a 15× spread in error at a 0.19 spread in confidence.
+
+**Files.**
+- New memo: [`docs/MODEL_BACKTEST_2026-04-30.md`](docs/MODEL_BACKTEST_2026-04-30.md).
+- New shared substrate: [`scripts/eval/_backtest_lib.py`](scripts/eval/_backtest_lib.py).
+- New runners: [`scripts/eval/backtest_comparable_sales.py`](scripts/eval/backtest_comparable_sales.py),
+  [`scripts/eval/backtest_current_value.py`](scripts/eval/backtest_current_value.py).
+- New analysis helpers: [`scripts/eval/_backtest_analysis.py`](scripts/eval/_backtest_analysis.py),
+  [`scripts/eval/_backtest_analysis_filtered.py`](scripts/eval/_backtest_analysis_filtered.py).
+- New per-comp data: [`data/eval/backtest_comparable_sales_2026-04-30.jsonl`](data/eval/backtest_comparable_sales_2026-04-30.jsonl)
+  (3,917 rows), [`data/eval/backtest_current_value_2026-04-30.jsonl`](data/eval/backtest_current_value_2026-04-30.jsonl)
+  (3,917 rows).
+- ROADMAP §3.7 — appended "Cycle 2A outcome (2026-04-30 — LANDED)"
+  note. Three new ROADMAP §4 Medium entries filed for the
+  data-substrate follow-ups.
+
+**Verification.**
+- Leakage spot-check on 10 random successful `comparable_sales`
+  predictions (30 leakage opportunities surfaced in
+  `comps_used_sample`): zero target-in-pool leakage; zero
+  future-comp leakage. Pre-flight on the first 50 targets: zero
+  leakage on 5 random successful predictions.
+- Both runners cover 3,917 of 3,919 raw rows (2 lacked
+  `sale_date`; 10 had pool size below the 10-row minimum after
+  LOO + time-filter, all 2022).
+- No code under `briarwood/` modified — focused-pytest baseline
+  unchanged from Cycle 1's verification (16 pre-existing
+  failures, none related to this cycle's surface area).
+- Wall-clock: `comparable_sales` ~2 minutes, `current_value` ~7
+  minutes on the full 3,917 targets via streaming JSONL writes.
+
+**Anomalies surfaced (filed for owner awareness, no in-cycle
+action).**
+1. The unfiltered `current_value` worst-10 produces predictions
+   in the **$1.1B–$1.5B** range when `target_sqft` is in the
+   1M–10M range. The agent's internal `_property_adjustment_factor`
+   never bounds-checks the input. Downstream of the sqft-corruption
+   cleanup this issue evaporates, so no in-cycle remediation is
+   needed; flagged so future agent-tuning work knows the bounds
+   gap exists.
+2. The Cycle 2A runners do not write to the Stage 4
+   `model_alignment` table. The artifact stays in `data/eval/`
+   for now. Filed as a Cycle 2A follow-up to evaluate the
+   connection after Stage 4 has more owner-supplied outcome rows
+   of its own.
+3. ZHVI is not backdated to `target.sale_date`. Per the Cycle 2A
+   prompt's hard constraint, this is acceptable for a first
+   pass; the signed-median bias is **negative** on `current_value`
+   (−16.4%), the opposite of what ZHVI-as-today inflation would
+   produce, so the data-thinness underprediction dominates over
+   the ZHVI inflation bias and the calibration analysis is not
+   invalidated. A future cycle may revisit if the comp-densification
+   cycles change the picture.
+
+**What this doesn't change.**
+- Phase B's substrate (MissingInputManifest schema, SSE event,
+  orchestrator aggregation, chat-UI affordance, persistence) —
+  unchanged. Phase B remains worth shipping for product reasons
+  (per-property gap-fill, Scout-adjacent affordance) but is not
+  the answer to the system-wide calibration question.
+- The 11-fixture per-component instrumentation pattern — still
+  load-bearing for the "why does the model produce this number?"
+  question. Backtest answers a different question. Both are
+  needed.
+- The `data/eval/missing_inputs_seed.jsonl` v1 schema or the
+  Cycle 1 deliverables. Backtest is a separate artifact and does
+  not write to that file.
+
+**Cross-references.** §3.7 Phase A umbrella entry in
+[ROADMAP.md](ROADMAP.md); the 2026-04-30 "Backtest substrate as
+new §3.7 Phase A prong" entry above (this entry's authority);
+the 2026-04-30 "Confidence-ceiling framing for §3.7 Phase A"
+entry above (the framing this evidence resolves);
+[`docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md`](docs/MODEL_OUTPUT_AUDIT_current_value_2026-04-30.md)
+(Cycle 1 instrumentation memo); [`docs/CHART_CONTENT_REVIEW_2026-04-30.md`](docs/CHART_CONTENT_REVIEW_2026-04-30.md)
+(structural precedent — same memo shape, different question);
+[`STAGE4_HANDOFF_PLAN.md`](STAGE4_HANDOFF_PLAN.md) (the OTHER
+feedback loop — owner-supplied outcomes; backtest is the
+at-scale complement).
+
+## 2026-04-30 — May 2026 launch readiness: alignment session
+
+A structured grill-me alignment session between owner and Claude
+(2026-04-30) locked down the shape of the launch initiative. Goal of
+the entry: future sessions reading this file can reconstruct the
+"what is this app for?" framing without re-interviewing the owner.
+
+### Context
+
+§3.7 Phase A Cycle 2A backtest landed earlier on 2026-04-30, surfacing
+median APE of 28–32% on the existing comp store and a comp-store
+data-substrate problem (78.7% `market_only`-gated rows; 58% rows with
+implausible sqft). Two parallel streams were spawned the same session:
+Stream 1 (ATTOM-driven comp-store backfill) and Stream 2 (hosting
+scaffold via Vercel + Fly.io / Railway / Render). Owner then paused
+implementation and asked for an explicit alignment check before any
+further build, on the grounds that backtracking after building is
+more expensive than answering questions now.
+
+### Locked decisions
+
+**Launch shape and timing.**
+Sunday 2026-05-04 EOD = **scaffolding-complete**: hosted on the
+chosen providers, accessible from phone+laptop, all data + analysis
+pipelines live; default subdomains; no auth. The actual user demo
+with 5–10 trusted people is **later**, gated on accuracy + Phase B +
+Layer 3 prose synthesis. Owner words: *"My expectation is not that
+the demo is going to go out to users on Sunday. I would like to be
+at a point where it's pretty close for users on Sunday. So I think
+we need to have the scaffolding completed and ready to go by Sunday."*
+
+**Target users (two personas, one product flow).**
+- **Small investors** derisking renovation/hold/flip decisions. Owner
+  framing: *"I am buying an older house, but I want to derisk my
+  decision — if I invest money into this house am I going to get it
+  back, and what are my options? Renovate-and-sell vs renovate-and-rent
+  vs no-reno-rent vs no-reno-flip. Once I put capital in, what's the
+  risk of getting it back out?"*
+- **Realtors** running automated CMA to pitch options to clients
+  faster. Distribution play; the realtor-specific PDF/tear-sheet export
+  surface is post-launch (existing 2026-04-30 §4 entry "chart
+  interaction affordances" is the eventual landing site).
+- **Same browse-and-drill flow for both at launch.** No persona-mode
+  toggle. Realtor-specific affordances ride on top later.
+
+**Headline UX is browse-first, not paste-URL-first.**
+Owner words: *"What are the properties for sale in [town]" — the app
+will surface the properties and then the user will drill into the
+questions from there. That's why we really need to nail the analysis
+piece of this.* This reverses the implicit "paste a Zillow URL"
+assumption. Implication: active-listings stocking for the 8 supported
+towns becomes a launch prerequisite (see Cycle 1c below).
+
+**Per-property page = Phase 4c three-section newspaper hierarchy.**
+Reuse the existing `BrowseRead` masthead + `BrowseScout` peer
+section + `BrowseDeeperRead` chevron drilldowns that landed in Phase
+4c. The four-options renovation-framing lands in the
+`BrowseDeeperRead` drilldowns — not as a new dedicated tier. Lowest
+scope; preserves existing polish work.
+
+**Geographic scope: Monmouth coast 8–10 towns only.** Hard scope at
+launch. Belmar, Manasquan, Avon By The Sea / Avon-by-the-Sea, Spring
+Lake, Sea Girt, Bradley Beach, Asbury Park, Wall / Wall Township.
+National scope is explicitly out.
+
+**Trust posture: ranges + caveats + Scout, AND meaningfully better
+accuracy.** Owner words: *"I am OK with ranges and caveats + Scout,
+but we really need to make the accuracy better or else we lose
+credibility."* Concrete bar: re-run §3.7 Phase A Cycle 2A backtest
+after the ATTOM densification lands, then **decide the launch-gate
+accuracy number empirically from the new median APE distribution.**
+No pre-committed threshold — most empirical path.
+
+**Hosting: Fly.io (api/+briarwood/) + Vercel (web/).**
+Stream 2's comparison memo at
+[`docs/HOSTING_COMPARISON_2026-04-30.md`](docs/HOSTING_COMPARISON_2026-04-30.md)
+recommended Fly.io specifically because SQLite-on-volume is the
+documented happy path — zero application code changes, vs. ~1–2 days
+of work to port `api/store.py` to Postgres for Railway/Render. All
+deploy drafts in working tree (Dockerfile, fly.toml, web/vercel.json,
+.dockerignore, launch checklist). Default subdomains
+(`briarwood.vercel.app` + `briarwood-api.fly.dev`) for Sunday — zero
+external waiting periods. Custom-domain decision deferred until just
+before user demo.
+
+**Auth: none for Sunday scaffold; Vercel/Cloudflare Access SSO via
+Google with 10-email allowlist before user demo.** No application
+code change required — Access works at the platform layer.
+
+**Layer 3 LLM synthesizer is in scope, separate from the
+renovation-options framing.** Owner words: *"I think the synthesize
+is important but I don't want you to think that the rent/reno/etc
+is the only question trying to be answered. So I think it's probably
+2."* Layer 3 is built as the general substrate (full
+`UnifiedIntelligenceOutput` → LLM prose with numeric guardrails);
+the renovation-options framing rides on top as one specific question
+shape. Promotes the 2026-04-25 ROADMAP "Layer 3 LLM synthesizer"
+entry (and its prerequisite "Consolidate chat-tier execution") into
+the launch initiative.
+
+**Phase B (data-fill loop) and Cycle 2B (`comparable_sales` audit)
+are both in scope before user demo.** Owner words: *"They're what
+makes the product Briarwood-shaped."* This is the most ambitious of
+the four available scope choices and meaningfully expands the
+launch-readiness window beyond Sunday. Both ride after the Sunday
+scaffold lands.
+
+**Active-listings refresh is a launch prerequisite.** Current state
+(2026-04-30): `data/comps/active_listings.json` has only 59 active
+listings, dominated by Belmar (27) and Avon-by-the-Sea spelling
+variants (16 across both spellings). Manasquan = 0, Asbury Park = 0,
+Sea Girt = 0, Wall = 0. **Without refreshed listings, the headline
+"what's for sale in [town]" flow returns nothing for half the
+supported towns.** Owner approves a SearchApi/Zillow refresh for all
+8 towns and accepts the SearchApi quota upgrade.
+
+**Brand at launch URL.** Default subdomains for Sunday. Custom-domain
+brand decision (Briarwood vs Scout vs other) deferred until before
+the user demo. The `project_brand_evolution.md` memory still applies
+post-launch: user-facing brand splits to Scout / Finds vocabulary;
+internals stay Briarwood-namespaced.
+
+### Sequenced cycle plan (canonical)
+
+| Cycle | Window | Scope |
+|---|---|---|
+| 1a | Sunday | Hosting deploy (Fly + Vercel; default subdomains; pre-deploy key rotation per launch checklist). |
+| 1b | Sunday | ATTOM full-pool comp-store backfill (~35–60 min wall-clock; closes 2 of 3 §4 Cycle 2A follow-ups). |
+| 1c | Sunday | SearchApi active-listings refresh for all 8 towns (~10–30 listings/town target). |
+| 2 | Week of 2026-05-05 | Re-run Cycle 2A backtest against densified comp store; open §3.7 Cycle 2B (`comparable_sales` per-fixture audit) with backtest population evidence folded in; targeted fixes. |
+| 3 | Week of 2026-05-05 → 2026-05-12 | Layer 3 LLM synthesizer substrate (`synthesize_with_llm` over full `UnifiedIntelligenceOutput`; numeric guardrails reused; rides on chat-tier consolidation). |
+| 4 | Week of 2026-05-05 → 2026-05-12 | Renovation-options framing — composer change first (Layer 3-driven), dedicated UI card in BrowseDeeperRead drilldowns if scope permits. |
+| 5 | Week of 2026-05-12 → 2026-05-19 | Phase B substrate — `MissingInputManifest` schema + orchestrator aggregation + SSE event + frontend affordance + persistence path + cache-invalidation re-run policy. |
+| 6 | Week of 2026-05-19+ | Demo gate — verify accuracy bar; switch on Vercel/Cloudflare Access SSO; (optional) custom domain; issue test-user invitations. |
+
+The ROADMAP §3.8 entry holds the same plan with file-level anchor
+points and per-cycle success criteria.
+
+### What's explicitly NOT in the launch initiative
+
+- **Public marketing site.** Sunday delivers an internal/personal
+  hosted instance; no marketing landing page, no SEO, no analytics
+  beyond the existing turn-trace observability.
+- **National geographic scope.** Hard-bounded to Monmouth coast.
+- **Realtor-specific PDF/tear-sheet export.** Post-launch.
+- **Persona-mode toggle.** Same flow for both personas.
+- **2026-04-26 Zillow URL-intake address normalization regression.**
+  Was High-tier as a launch blocker for paste-URL flows; with the
+  pivot to browse-first, paste-URL is secondary and the parser fix
+  is deferred to a post-launch handoff.
+- **National domain / brand-final URL.** Default subdomains for
+  Sunday; brand-final URL choice deferred.
+
+### Why this entry exists
+
+The launch shape was implicit in scattered decisions across the
+2026-04-15 → 2026-04-30 window. Future sessions reading
+`CURRENT_STATE.md`, `ROADMAP.md` §3.8, and the various §3.x umbrellas
+should be able to reconstruct the "what are we building, for whom,
+by when" context without re-interviewing the owner. This entry is
+the single canonical source for that framing as of 2026-04-30.
+
+### Files updated in this alignment session (no code changes)
+
+- [`CURRENT_STATE.md`](CURRENT_STATE.md) — new "May 2026 Launch
+  (active)" section between the front-matter and "Current Known
+  Themes."
+- [`ROADMAP.md`](ROADMAP.md) — new §3.8 strategic-initiative section
+  between §3.7 Phase A and §4 Tactical Backlog.
+- DECISIONS.md (this entry).
+- Memory updates: `project_prototype_plan.md` (renamed in spirit to
+  "Launch goal (May 2026)"); `project_hosting_choice.md` (new);
+  `project_headline_ux.md` (new — browse-first flow); MEMORY.md
+  index updated.
+
+### Cross-references
+
+- ROADMAP §3.8 May 2026 Launch Readiness (the canonical sequenced
+  plan).
+- ROADMAP §3.7 Phase A umbrella (Cycle 2B + Phase B both ride into
+  the launch initiative).
+- 2026-04-25 "Consolidate chat-tier execution" + "Layer 3 LLM
+  synthesizer" — both promoted into Cycle 3 of this initiative.
+- 2026-04-30 §4 Tactical Cycle 2A follow-ups (eligibility-gate
+  densification, sqft cleanup, non-arms-length filter) — Cycles 1b
+  and a separate post-launch handoff close them.
+- [`docs/HOSTING_COMPARISON_2026-04-30.md`](docs/HOSTING_COMPARISON_2026-04-30.md),
+  [`docs/LAUNCH_CHECKLIST_2026-05-04.md`](docs/LAUNCH_CHECKLIST_2026-05-04.md)
+  (Stream 2 outputs).
+- [`docs/ATTOM_BACKFILL_INVESTIGATION_2026-04-30.md`](docs/ATTOM_BACKFILL_INVESTIGATION_2026-04-30.md),
+  [`scripts/data_quality/attom_comp_store_backfill.py`](scripts/data_quality/attom_comp_store_backfill.py)
+  (Stream 1 outputs).
+- [`docs/MODEL_BACKTEST_2026-04-30.md`](docs/MODEL_BACKTEST_2026-04-30.md)
+  (the empirical baseline that drives the accuracy bar).
+
+## 2026-04-30 — Launch Cycle 1 (Sunday Scaffold) landed (§3.8)
+
+Sunday 2026-05-04 launch-readiness scaffolding shipped 4 days ahead
+of the wall-clock deadline. Briarwood is hosted and running under
+the owner's accounts.
+
+### Live URLs
+
+- **API:** `https://briarwood.fly.dev` (Fly app `briarwood`, region
+  `ewr`, `shared-cpu-1x` 1 GB always-on, 1 GB encrypted volume
+  `briarwood_data` mounted at `/app/data` with daily snapshots).
+- **Web:** `https://briarwood-ai.vercel.app` (Vercel project
+  `briarwood-ai`, root directory `web`, Next.js + pnpm,
+  `maxDuration 300` on the SSE chat route).
+- No custom domain (locked decision per launch prompt).
+- No auth (Sunday scaffold; Vercel/Cloudflare Access SSO with
+  10-email allowlist comes before user demo).
+
+### Cycle 1 sub-streams
+
+- **1a — Hosting deploy.** ✅ Landed.
+- **1b — ATTOM full-pool comp-store backfill.** ✅ Partial land.
+  922 ATTOM matches → 854 promotions to `eligible` + 687 sqft
+  corruption fixes across 1,968 rows processed before the ATTOM
+  API key returned 401 Unauthorized server-side persistent block
+  (likely daily quota; verification deferred to next-day reset).
+  Remaining 1,117 candidate rows tracked as a §4 follow-up.
+  Promoted file: `data/comps/sales_comps.json`. Pre-promotion
+  backup: `data/comps/sales_comps_pre_attom_backfill_2026-04-30.json`.
+- **1c — SearchApi active-listings refresh.** ✅ Landed.
+  176 listings across all 8 supported towns (170 in target towns +
+  6 bleed-over from Zillow's geocoder); all 8 cleared the ≥10
+  threshold. New refresh script at
+  `scripts/data_quality/refresh_active_listings.py`. SearchApi
+  quota usage: 8 calls (cache-hit on all 8 — no new quota burn).
+
+### Comp store + listings counts
+
+- `data/comps/sales_comps.json`: 3,919 rows total. Pre-Cycle-1b:
+  833 eligible / 3,084 market_only. Post-Cycle-1b promotion:
+  approximately 1,687 eligible (833 already-eligible + 854 newly
+  promoted) / approximately 2,230 market_only / 2 rejected. The
+  effective comp pool for the agent's gate doubled.
+- `data/comps/active_listings.json`: 176 rows (was 59 pre-1c).
+  Per-town: Asbury Park 40, Manasquan 30, Wall 28, Avon By The
+  Sea 20, Belmar 16, Sea Girt 14, Bradley Beach 11, Spring Lake
+  11, plus 6 bleed-over rows from adjacent municipalities.
+
+### §3.7 Cycle 2A 50-row spot-check post-promotion
+
+Median APE 28.6% on 19 successful predictions out of 50 sampled
+targets. Identical to the pre-backfill baseline. Read as
+signal-poor (n=19; partial backfill = densification only ~30%
+completed; the unprocessed 1,117-row tail still produces
+`comp_count=0` for many targets) rather than as a regression. Real
+accuracy verdict deferred to §3.8 Cycle 2 when the full backfill
+re-runs against a quota-restored ATTOM key.
+
+### Deviations from the launch prompt
+
+- **Cycle 1b ran partial, not full.** ATTOM 401 wall stopped the
+  run at row 1,968 of 3,085 candidates. Filed as §4 follow-up
+  ("ATTOM backfill remaining 1,117 candidate rows").
+- **Original Stream 2 hosting drafts had 3 deploy-blocking bugs**
+  caught in flight, all fixed before user-visible failure:
+  1. **Volume-mask-seed-data.** Original drafts COPY'd seed data
+     into `/app/data/*`, which the Fly volume mount masks on first
+     boot. Fixed by moving seed COPY targets to `/opt/seed/*` and
+     adding a `docker-entrypoint.sh` that no-clobber-copies seed
+     onto the mounted volume.
+  2. **`requirements.txt` missing 3 runtime deps** (`pandas`,
+     `requests`, `python-dotenv`). Caught when BROWSE turn returned
+     `Browse failed: No module named 'pandas'` post-deploy. Added.
+  3. **5 small seed dirs excluded by `.dockerignore`**
+     (`market_history`, `listing_index`, `model_quality`,
+     `outcomes`, `manual_entries`). Caught when BROWSE turn
+     returned `[Errno 2] No such file or directory:
+     '/app/data/market_history/zillow_zhvi_history.json'` after
+     the pandas fix. Added to COPY + entrypoint, removed from
+     `.dockerignore`.
+- **Owner-side blip:** Fly's "Launch from GitHub" auto-generated
+  a phantom app name `app-blue-forest-4682`. The GitHub-triggered
+  auto-deploy keeps failing harmlessly to that phantom; manual
+  `fly deploy --app briarwood` is the deploy path. Disconnect the
+  GitHub integration in the Fly dashboard as a §4 cleanup.
+
+### Cross-references
+
+- [`ROADMAP.md`](ROADMAP.md) §3.8: appended Cycle 1a / 1b / 1c
+  outcome notes.
+- [`CURRENT_STATE.md`](CURRENT_STATE.md): "May 2026 Launch
+  (active)" section updated to landed-state framing.
+- §4 follow-ups newly filed:
+  - ATTOM backfill remaining 1,117 candidate rows (post-401
+    quota wall).
+- Commits: `157d6c4` (deploy-prep snapshot), `dfe9e71`
+  (requirements.txt), `a5ddb52` (seed-data dirs).
+
+### What Cycle 2 opens
+
+Per the launch prompt's tail: re-run §3.7 Cycle 2A backtest
+against the densified comp store (full backfill required —
+needs §4 follow-up landed first), write
+`docs/MODEL_BACKTEST_<date>.md` Cycle 2 version, decide the
+launch-gate accuracy bar empirically. Then Cycle 2B
+(`comparable_sales` per-fixture audit) folds in the new
+population evidence. Cycles 3–5 (Layer 3 LLM synthesizer +
+renovation-options framing + Phase B substrate) sequence after.
