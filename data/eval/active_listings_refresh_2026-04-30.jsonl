@@ -1,0 +1,8 @@
+{"count": 14, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Belmar, NJ", "raw_count": 14, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Belmar"}
+{"count": 24, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Manasquan, NJ", "raw_count": 24, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Manasquan"}
+{"count": 20, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Avon By The Sea, NJ", "raw_count": 20, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Avon By The Sea"}
+{"count": 16, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Spring Lake, NJ", "raw_count": 16, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Spring Lake"}
+{"count": 13, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Sea Girt, NJ", "raw_count": 13, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Sea Girt"}
+{"count": 11, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Bradley Beach, NJ", "raw_count": 11, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Bradley Beach"}
+{"count": 40, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Asbury Park, NJ", "raw_count": 40, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Asbury Park"}
+{"count": 38, "elapsed_ms": 0, "error": null, "fetched_at": "2026-04-30T12:14:08Z", "from_cache": true, "query": "Wall Township, NJ", "raw_count": 38, "skipped_no_address": 0, "skipped_no_price": 0, "town": "Wall"}

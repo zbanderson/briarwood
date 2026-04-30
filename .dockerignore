@@ -1,0 +1,78 @@
+# Build context filter for the API container. Keep the image small and avoid
+# leaking dev artifacts or large unused datasets.
+
+# --- VCS / IDE ---
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# --- Python dev ---
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.egg-info
+dist
+build
+
+# --- Node / web (built and deployed separately on Vercel) ---
+web
+node_modules
+.pnpm-store
+.cache
+
+# --- Tests / dev fixtures ---
+tests
+audit_scripts
+analysis
+outputs
+
+# --- Documentation and handoff prose (not needed at runtime) ---
+*.md
+!README.md
+docs
+phase_*.md
+PHASE*.md
+PRESENTATION_HANDOFF_PLAN.md
+SCOUT_HANDOFF_PLAN.md
+PROMOTION_PLAN.md
+ROADMAP.md
+DECISIONS.md
+ARCHITECTURE_CURRENT.md
+GAP_ANALYSIS.md
+TOOL_REGISTRY.md
+CURRENT_STATE.md
+
+# --- Large datasets we never read at runtime ---
+# Public records bulk dumps are 412 MB and are only used by offline curation.
+data/public_records
+# JSONL sinks are recreated at runtime on the volume; don't ship dev contents.
+data/llm_calls.jsonl
+data/agent_artifacts
+data/agent_sessions
+data/agent_feedback
+data/cache
+data/web
+data/saved_properties
+data/learning
+data/outcomes
+data/listing_index
+data/manual_entries
+data/market_history
+data/model_quality
+
+# --- Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Misc ---
+*.log
+.DS_Store
+Makefile

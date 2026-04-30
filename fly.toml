@@ -1,0 +1,63 @@
+# Fly.io app config for the Briarwood API.
+#
+# First-time setup (one-time, owner runs locally):
+#   fly auth login
+#   fly apps create briarwood-api          # or another unique name
+#   fly volumes create briarwood_data --region ewr --size 1
+#   fly secrets set OPENAI_API_KEY=... ANTHROPIC_API_KEY=... \
+#                   ATTOM_API_KEY=... GOOGLE_MAPS_API_KEY=... \
+#                   TAVILY_API_KEY=... SEARCHAPI_API_KEY=...
+#   fly deploy
+#
+# Deploy after edits:
+#   fly deploy
+#
+# Logs:        fly logs
+# Shell:       fly ssh console
+# Open:        fly open
+
+app = "briarwood"               # owner-claimed app name on Fly (2026-04-30)
+primary_region = "ewr"          # Newark — closest to NJ data subjects + Vercel default
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  # Point the conversations.db and the data tree at the mounted volume.
+  BRIARWOOD_WEB_DB = "/app/data/web/conversations.db"
+  # Admin dashboard — leave OFF for launch. Flip to "1" after launch hardening.
+  BRIARWOOD_ADMIN_ENABLED = "0"
+  # Cost guardrails — match .env.example defaults; tune in fly secrets if needed.
+  BRIARWOOD_BUDGET_ATTOM_CALLS = "50"
+  BRIARWOOD_BUDGET_WEBSEARCH_CALLS = "20"
+  BRIARWOOD_BUDGET_OPENAI_USD = "1.00"
+
+[[mounts]]
+  source = "briarwood_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false       # Always-on for launch. Flip to true to save $ post-launch.
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "get"
+    timeout = "5s"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+  cpus = 1
